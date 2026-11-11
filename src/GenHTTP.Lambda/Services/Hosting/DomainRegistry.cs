@@ -62,7 +62,10 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
             return new WwwOfDomain(host, domain);
         }
 
-        return addresses.Resolve(host);
+        // a host that is neither a lambda's nor one of the platform's names is
+        // nobody's - the site served there would be a copy of it at somebody
+        // else's name, which crawlers keep and come back to
+        return addresses.Resolve(host) ?? (addresses.IsPlatform(host) ? null : new UnknownHost(host));
     }
 
     public string? DomainOf(string publicKey) => _served.ByKey.GetValueOrDefault(publicKey);

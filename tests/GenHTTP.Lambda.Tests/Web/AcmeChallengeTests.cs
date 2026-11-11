@@ -1,6 +1,7 @@
 using System.Net;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -54,6 +55,21 @@ public sealed class AcmeChallengeTests
     }
 
     [TestMethod]
+    public async Task AChallengeIsAnsweredForADomainNobodyHasYet()
+    {
+        // the certificate is issued before the owner enters the domain, on an
+        // installation that turns away every host it does not know
+        await using var fixture = await CreateAsync(out var root, o => o with { PublicUrl = "https://genhttp.dev" });
+
+        Write(root, Token, Answer);
+
+        using var response = await fixture.GetAsync($"/.well-known/acme-challenge/{Token}", host: "shop.example.com");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(Answer, await response.GetContentAsync());
+    }
+
+    [TestMethod]
     public async Task AMissingChallengeIsNotFound()
     {
         await using var fixture = await CreateAsync(out _);
@@ -90,7 +106,7 @@ public sealed class AcmeChallengeTests
         Assert.Contains(LambdaFixture.SpaMarkup, await response.GetContentAsync(), "the single page application catches it, as before");
     }
 
-    private static Task<LambdaFixture> CreateAsync(out string root)
+    private static Task<LambdaFixture> CreateAsync(out string root, Func<LambdaOptions, LambdaOptions>? configure = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", "acme-" + Guid.NewGuid().ToString("n"));
 
@@ -98,7 +114,7 @@ public sealed class AcmeChallengeTests
 
         root = directory;
 
-        return LambdaFixture.CreateAsync(o => o with { AcmeDirectory = directory });
+        return LambdaFixture.CreateAsync(o => (configure?.Invoke(o) ?? o) with { AcmeDirectory = directory });
     }
 
     private static void Write(string root, string token, string answer)
