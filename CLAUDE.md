@@ -731,8 +731,11 @@ Admin section, in English like the panel.
 - **Reading and the export stay**: the code belongs to its owner. The owner is
   told it was blocked - a banner in both views of the editor, which leaves out
   what would only be refused (the Change, Showcase and Open source sections,
-  putting a version online) - never why: the reason is the operator's note, and naming the
-  rule tells whoever broke it how to go around it.
+  putting a version online) - **and why - decided by the owner**: the
+  operator's reason, as they wrote it, is in that banner and in `blockReason`
+  of the lambda, since an owner may understand why it was blocked. The panel
+  tells the operator so as they write it. Not in the refusals, which may end
+  up in a build log others read; they leave it to the editor.
 - **What it shows the public goes with it**: offline, out of the showcase, its
   published source not found - kept, and back once the block is lifted.
 - **Kept until the operator decides**: a blocked lambda is never removed for

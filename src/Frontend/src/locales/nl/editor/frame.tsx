@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Geblokkeerd door de beheerder van deze site.',
+  blockedReason: (reason) => `De opgegeven reden: ‘${reason}’`,
   blocked: (write) => (
     <>
       Hij staat offline en kan niet meer worden aangepast of online gezet. Alles wat hij heeft, kun je nog wel bekijken en

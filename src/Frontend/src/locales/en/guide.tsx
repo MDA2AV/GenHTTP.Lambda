@@ -439,7 +439,7 @@ export const guide = {
     'Everything else is there, including the whole of the GenHTTP module API. If something is refused you are told which line and why, not simply that it failed.',
   /** The last paragraph of "What it will not let you do": what happens to a lambda that breaks the terms. */
   limitsBlocked:
-    'A lambda that breaks the terms - phishing, malware, attacks on others - can be blocked by whoever runs the site. It goes offline, and nothing about it can be changed or put online until the block is lifted; the control center says so at the top. What it has can still be read and downloaded.',
+    'A lambda that breaks the terms - phishing, malware, attacks on others - can be blocked by whoever runs the site. It goes offline, and nothing about it can be changed or put online until the block is lifted; the control center says so at the top, with the reason given. What it has can still be read and downloaded.',
 
   away: ((k) => (
     <>

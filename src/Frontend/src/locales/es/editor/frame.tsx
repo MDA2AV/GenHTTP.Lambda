@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Bloqueada por el operador de este sitio.',
+  blockedReason: (reason) => `El motivo indicado: «${reason}»`,
   blocked: (write) => (
     <>
       Está desconectada y ya no se puede cambiar ni poner en línea. Todo lo que tiene se puede seguir leyendo y

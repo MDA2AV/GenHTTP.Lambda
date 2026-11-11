@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Zablokowane przez administratora tego serwisu.',
+  blockedReason: (reason) => `Podany powód: „${reason}”`,
   blocked: (write) => (
     <>
       Lambda jest wyłączona i nie można jej już zmieniać ani udostępniać. Wszystko, co zawiera, nadal można przeczytać i

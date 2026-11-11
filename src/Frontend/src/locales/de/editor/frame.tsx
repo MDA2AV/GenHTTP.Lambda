@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Vom Betreiber dieser Seite gesperrt.',
+  blockedReason: (reason) => `Angegebener Grund: „${reason}“`,
   blocked: (write) => (
     <>
       Es ist offline und kann nicht mehr geändert oder online gestellt werden. Alles, was es enthält, lässt sich weiterhin

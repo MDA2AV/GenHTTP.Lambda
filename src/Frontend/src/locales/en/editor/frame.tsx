@@ -62,7 +62,9 @@ export const frame = {
   ),
   /** Above every section of an app the operator of the site has blocked, in both views. */
   blockedTitle: 'Blocked by the operator of this site.',
-  /** Under blockedTitle; `write` links to the site's mail address. */
+  /** Under blockedTitle, when the operator gave a reason: `reason` is their note, as they wrote it (usually in English). */
+  blockedReason: (reason: string) => `The reason given: “${reason}”`,
+  /** Under blockedTitle, and blockedReason where there is one; `write` links to the site's mail address. */
   blocked: (write: (text: string) => Node) => (
     <>
       It is offline, and it can no longer be changed or put online. Everything it has can still be read and downloaded. If

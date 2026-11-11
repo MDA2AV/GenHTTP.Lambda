@@ -51,8 +51,8 @@ There are no accounts. A lambda has two keys:
 A key that names no lambda is answered with `404`, the same way as one whose
 lambda was deleted. The demos' editor keys are public. A demo can be read like
 any other lambda, but every change is refused with `403`. So is every change
-to a lambda the operator blocked, until they lift the block: it is offline, and
-can still be read and exported.
+to a lambda the operator blocked, until they lift the block: it is offline, its
+`blockReason` says why, and it can still be read and exported.
 
 The operations under *Operating the installation* are for whoever runs the
 server. They take the token of the installation in the `X-Admin-Token` header:

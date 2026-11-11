@@ -39,6 +39,8 @@ export interface Lambda {
    * lifts the block.
    */
   blocked?: string;
+  /** Why the operator blocked it, in their words; absent while it is not, and when they gave no reason. */
+  blockReason?: string;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */

@@ -440,7 +440,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
   limitsBlocked:
-    'Ein Lambda, das gegen die Bedingungen verstößt – Phishing, Schadsoftware, Angriffe auf andere –, kann vom Betreiber der Seite gesperrt werden. Es geht offline, und bis die Sperre aufgehoben ist, lässt sich nichts daran ändern oder online stellen; das Kontrollzentrum weist oben darauf hin. Was es enthält, lässt sich weiterhin lesen und herunterladen.',
+    'Ein Lambda, das gegen die Bedingungen verstößt – Phishing, Schadsoftware, Angriffe auf andere –, kann vom Betreiber der Seite gesperrt werden. Es geht offline, und bis die Sperre aufgehoben ist, lässt sich nichts daran ändern oder online stellen; das Kontrollzentrum weist oben darauf hin und nennt den angegebenen Grund. Was es enthält, lässt sich weiterhin lesen und herunterladen.',
 
   away: (k) => (
     <>

@@ -432,7 +432,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Todo lo demás está disponible, incluida toda la API de módulos de GenHTTP. Si algo se rechaza, te decimos en qué línea y por qué, no solo que falló.',
   limitsBlocked:
-    'Una lambda que incumple las condiciones (phishing, malware, ataques a otros) puede ser bloqueada por quien gestiona el sitio. Se desconecta, y no se puede cambiar ni poner en línea nada de ella hasta que se levante el bloqueo; el centro de control lo indica arriba del todo. Lo que tiene se puede seguir leyendo y descargando.',
+    'Una lambda que incumple las condiciones (phishing, malware, ataques a otros) puede ser bloqueada por quien gestiona el sitio. Se desconecta, y no se puede cambiar ni poner en línea nada de ella hasta que se levante el bloqueo; el centro de control lo indica arriba del todo, con el motivo indicado. Lo que tiene se puede seguir leyendo y descargando.',
 
   away: (k) => (
     <>

@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Bloqueada pelo operador deste site.',
+  blockedReason: (reason) => `O motivo informado: “${reason}”`,
   blocked: (write) => (
     <>
       Ela está fora do ar e não pode mais ser mudada nem colocada no ar. Tudo o que ela tem ainda pode ser lido e baixado.

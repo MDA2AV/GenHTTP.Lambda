@@ -440,7 +440,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Al het andere is er, inclusief de hele module-API van GenHTTP. Wordt er iets geweigerd, dan hoor je welke regel en waarom, niet alleen dat het misging.',
   limitsBlocked:
-    'Een lambda die de voorwaarden overtreedt - phishing, malware, aanvallen op anderen - kan worden geblokkeerd door wie de site beheert. Hij gaat dan offline en er kan niets meer aan worden aangepast of online gezet totdat de blokkade is opgeheven; het dashboard meldt dat bovenaan. Wat hij heeft, kun je nog wel bekijken en downloaden.',
+    'Een lambda die de voorwaarden overtreedt - phishing, malware, aanvallen op anderen - kan worden geblokkeerd door wie de site beheert. Hij gaat dan offline en er kan niets meer aan worden aangepast of online gezet totdat de blokkade is opgeheven; het dashboard meldt dat bovenaan, met de opgegeven reden. Wat hij heeft, kun je nog wel bekijken en downloaden.',
 
   away: (k) => (
     <>

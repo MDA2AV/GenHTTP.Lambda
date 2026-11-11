@@ -443,7 +443,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Tout le reste est là, y compris toute l’API des modules GenHTTP. Si quelque chose est refusé, on vous dit quelle ligne et pourquoi, pas simplement que ça a échoué.',
   limitsBlocked:
-    'Une lambda qui enfreint les conditions d’utilisation - hameçonnage, logiciel malveillant, attaques contre d’autres personnes - peut être bloquée par celui qui exploite le site. Elle est mise hors ligne, et rien ne peut être modifié ni mis en ligne tant que le blocage n’est pas levé ; le tableau de bord l’indique tout en haut. Ce qu’elle contient peut encore être lu et téléchargé.',
+    'Une lambda qui enfreint les conditions d’utilisation - hameçonnage, logiciel malveillant, attaques contre d’autres personnes - peut être bloquée par celui qui exploite le site. Elle est mise hors ligne, et rien ne peut être modifié ni mis en ligne tant que le blocage n’est pas levé ; le tableau de bord l’indique tout en haut, avec la raison donnée. Ce qu’elle contient peut encore être lu et téléchargé.',
 
   away: (k) => (
     <>

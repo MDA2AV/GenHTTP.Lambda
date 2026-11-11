@@ -1983,7 +1983,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 lifetime = $"A free lambda goes offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
                 deleting = "Deleting a lambda deletes its versions, its features and its data together. Nothing else deletes versions one by one.",
-                blocked = "Whoever runs the installation can block a lambda that breaks its terms. It goes offline with its features' previews, and every change - every tool that writes, deploys or deletes - is refused with a message saying it is blocked, until they lift the block. Reading it still works. Do not try again or work around it: tell the user."
+                blocked = "Whoever runs the installation can block a lambda that breaks its terms. It goes offline with its features' previews, and every change - every tool that writes, deploys or deletes - is refused with a message saying it is blocked, until they lift the block. Reading it still works. Do not try again or work around it: tell the user, whose editor shows the reason they gave."
             }
         },
         documentationAndTests = new

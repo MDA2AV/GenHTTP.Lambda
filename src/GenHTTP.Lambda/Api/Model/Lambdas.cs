@@ -64,7 +64,9 @@ public sealed record LambdaResponse(
     [Summary("Where it is cloned with git and pushed to, on this site. The versions are the commits of `main`, the features the other branches. Holds the editor key, like the editor's path.")]
     string GitPath,
     [Summary("Since when the operator has blocked it; absent while it is not. A blocked lambda is offline, and every change to it is refused with `Blocked` (403) until the operator lifts the block. It can still be read and exported.")]
-    DateTime? Blocked = null
+    DateTime? Blocked = null,
+    [Summary("Why the operator blocked it, in their words, as the editor shows it to the owner. Absent while it is not blocked, and when they gave no reason.")]
+    string? BlockReason = null
 );
 
 /// <summary>
@@ -95,7 +97,8 @@ public static class LambdaDescription
         lambda.Address,
         lambda.View,
         GitPath(lambda.PrivateKey, lambda.PublicKey),
-        lambda.Blocked
+        lambda.Blocked,
+        lambda.BlockReason
     );
 
     /// <summary>
