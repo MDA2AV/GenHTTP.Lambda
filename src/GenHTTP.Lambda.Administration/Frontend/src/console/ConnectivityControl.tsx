@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
-import { ApiError, api, isDemo, refusedToken, type AdminLambdaDetail, type Egress, type EgressStatus } from '@genhttp-lambda/kit/api';
+import { ApiError, api, isDemo, refusedToken, type AdminLambdaDetail, type Connectivity, type ConnectivityStatus } from '@genhttp-lambda/kit/api';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconGlobe, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
@@ -16,7 +16,7 @@ import { Ago } from '@genhttp-lambda/kit/ui/ui';
  *
  * In English, like the panel it is a part of.
  */
-export function EgressControl({ token, detail, onChanged, deny }: {
+export function ConnectivityControl({ token, detail, onChanged, deny }: {
   token: string;
   detail: AdminLambdaDetail;
   onChanged: (detail: AdminLambdaDetail) => void;
@@ -28,7 +28,7 @@ export function EgressControl({ token, detail, onChanged, deny }: {
   const [deciding, setDeciding] = useState<boolean | null>(null);
 
   const { lambda, connects } = detail;
-  const egress = lambda.egress;
+  const connectivity = lambda.connectivity;
 
   const demo = isDemo(lambda.tier);
   const blocked = detail.block != null;
@@ -39,38 +39,38 @@ export function EgressControl({ token, detail, onChanged, deny }: {
     toast(allow ? `"${lambda.publicKey}" may connect to other servers from its next request.` : `"${lambda.publicKey}" may no longer connect to other servers.`, 'success');
   };
 
-  const status = egress.included
+  const status = connectivity.included
     ? 'Included with premium'
-    : egress.status === 'Requested'
+    : connectivity.status === 'Requested'
       ? 'Waiting for you'
-      : egress.status === 'Allowed'
+      : connectivity.status === 'Allowed'
         ? 'Allowed'
-        : egress.status === 'Declined'
+        : connectivity.status === 'Declined'
           ? 'Declined'
           : 'Not allowed';
 
   return (
-    <div className={`surface p-4 ${egress.status === 'Requested' && !egress.included ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
+    <div className={`surface p-4 ${connectivity.status === 'Requested' && !connectivity.included ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="flex flex-wrap items-center gap-2 text-sm font-medium">
             <IconGlobe className="h-4 w-4 text-slate-400" />
-            Egress
-            <EgressChip egress={egress} />
+            Connectivity
+            <ConnectivityChip connectivity={connectivity} />
           </h2>
 
           <p className="mt-1 text-[13px] text-slate-500">
             {demo
               ? 'A demo does not connect to other servers.'
-              : egress.included
+              : connectivity.included
                 ? 'Its code may connect to other servers - call an API, open a socket, send mail - because premium includes it.'
-                : egress.allowed
+                : connectivity.allowed
                   ? 'Its code may connect to other servers - call an API, open a socket, send mail.'
                   : 'Its code may not connect to other servers: code that calls an API, opens a socket or sends mail does not compile.'}
             {' '}
-            <span className={connects && !egress.allowed ? 'text-amber-600 dark:text-amber-400' : ''}>
+            <span className={connects && !connectivity.allowed ? 'text-amber-600 dark:text-amber-400' : ''}>
               {connects
-                ? egress.allowed ? 'Its code connects.' : 'Its code connects, and so does not compile.'
+                ? connectivity.allowed ? 'Its code connects.' : 'Its code connects, and so does not compile.'
                 : 'Its code does not connect.'}
             </span>
           </p>
@@ -78,40 +78,40 @@ export function EgressControl({ token, detail, onChanged, deny }: {
 
         {!demo && !blocked && (
           <div className="flex shrink-0 gap-1.5">
-            {egress.status !== 'Allowed' && (
+            {connectivity.status !== 'Allowed' && (
               <button type="button" onClick={() => setDeciding(true)} className="btn-primary !px-3 !py-1.5 text-[13px]">
                 Allow…
               </button>
             )}
-            {(egress.status === 'Requested' || egress.status === 'Allowed') && (
+            {(connectivity.status === 'Requested' || connectivity.status === 'Allowed') && (
               <button type="button" onClick={() => setDeciding(false)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-                {egress.status === 'Allowed' ? 'Take back…' : 'Decline…'}
+                {connectivity.status === 'Allowed' ? 'Take back…' : 'Decline…'}
               </button>
             )}
           </div>
         )}
       </div>
 
-      {(egress.purpose || egress.note) && (
+      {(connectivity.purpose || connectivity.note) && (
         <dl className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2">
-          {egress.purpose && (
-            <Said label={egress.status === 'Requested' ? <>Asked <Ago at={egress.changed!} /></> : 'What it was asked for'}>
-              {egress.purpose}
+          {connectivity.purpose && (
+            <Said label={connectivity.status === 'Requested' ? <>Asked <Ago at={connectivity.changed!} /></> : 'What it was asked for'}>
+              {connectivity.purpose}
             </Said>
           )}
-          {egress.note && (
-            <Said label={<>{status} <Ago at={egress.changed!} /> - the owner reads this</>}>{egress.note}</Said>
+          {connectivity.note && (
+            <Said label={<>{status} <Ago at={connectivity.changed!} /> - the owner reads this</>}>{connectivity.note}</Said>
           )}
         </dl>
       )}
 
       {blocked && !demo && <p className="mt-3 text-[12px] text-slate-500">Nothing about it changes while it is blocked.</p>}
 
-      <EgressDecisionDialog
+      <ConnectivityDecisionDialog
         token={token}
         publicKey={lambda.publicKey}
-        purpose={egress.purpose}
-        current={egress.status}
+        purpose={connectivity.purpose}
+        current={connectivity.status}
         allow={deciding}
         connects={connects}
         onClose={() => setDeciding(null)}
@@ -128,12 +128,12 @@ export function EgressControl({ token, detail, onChanged, deny }: {
  * - which takes back what was allowed as well. Shared by the lambda's page
  * and the list of requests.
  */
-export function EgressDecisionDialog({ token, publicKey, purpose, current, allow, connects, onClose, onDecided, deny, failed }: {
+export function ConnectivityDecisionDialog({ token, publicKey, purpose, current, allow, connects, onClose, onDecided, deny, failed }: {
   token: string;
   publicKey: string;
   purpose?: string | null;
   /** Where it stands now, which says whether declining takes back what was allowed. */
-  current?: EgressStatus | null;
+  current?: ConnectivityStatus | null;
   /** What is being decided, or nothing while the dialog is closed. */
   allow: boolean | null;
   connects: boolean;
@@ -153,7 +153,7 @@ export function EgressDecisionDialog({ token, publicKey, purpose, current, allow
     setBusy(true);
 
     try {
-      onDecided(await api.admin.decideEgress(token, publicKey, allow, note), allow);
+      onDecided(await api.admin.decideConnectivity(token, publicKey, allow, note), allow);
       setNote('');
     } catch (error) {
       // the platform's own refusals say what kind they are; the token's do not
@@ -201,11 +201,11 @@ export function EgressDecisionDialog({ token, publicKey, purpose, current, allow
             : 'From its next request on, its code may not connect to other servers. Its owner may ask again.'}
       </p>
 
-      <label className="mt-4 block text-[13px] font-medium" htmlFor="egress-note">
+      <label className="mt-4 block text-[13px] font-medium" htmlFor="connectivity-note">
         Note <span className="font-normal text-slate-500">- its owner reads this, optional</span>
       </label>
       <textarea
-        id="egress-note"
+        id="connectivity-note"
         value={note}
         onChange={(event) => setNote(event.target.value)}
         maxLength={500}
@@ -217,13 +217,13 @@ export function EgressDecisionDialog({ token, publicKey, purpose, current, allow
   );
 }
 
-/** Where a lambda's egress stands, as a chip beside its name. */
-export function EgressChip({ egress }: { egress: Egress }) {
-  if (egress.included) {
+/** Where a lambda's connectivity stands, as a chip beside its name. */
+export function ConnectivityChip({ connectivity }: { connectivity: Connectivity }) {
+  if (connectivity.included) {
     return <Chip tone="bg-logo-500/10 text-logo-700 dark:text-logo-400" title="Premium includes it">Included</Chip>;
   }
 
-  switch (egress.status) {
+  switch (connectivity.status) {
     case 'Requested':
       return <Chip tone="bg-amber-500/15 text-amber-700 dark:text-amber-400" title="Its owner asked, and waits for a decision">Requested</Chip>;
     case 'Allowed':
@@ -237,20 +237,20 @@ export function EgressChip({ egress }: { egress: Egress }) {
 
 /**
  * The same, beside the lambda in a list - only where there is something to
- * see: a request waiting, or egress allowed. Premium includes it, and its
+ * see: a request waiting, or connectivity allowed. Premium includes it, and its
  * badge says premium already.
  */
-export function EgressBadge({ egress }: { egress?: Egress | null }) {
-  if (!egress || egress.included) {
+export function ConnectivityBadge({ connectivity }: { connectivity?: Connectivity | null }) {
+  if (!connectivity || connectivity.included) {
     return null;
   }
 
-  if (egress.status === 'Requested') {
-    return <Chip tone="bg-amber-500/15 text-amber-700 dark:text-amber-400" title="Asks to connect to other servers">Asks for egress</Chip>;
+  if (connectivity.status === 'Requested') {
+    return <Chip tone="bg-amber-500/15 text-amber-700 dark:text-amber-400" title="Asks to connect to other servers">Asks for connectivity</Chip>;
   }
 
-  if (egress.status === 'Allowed') {
-    return <Chip tone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" title="May connect to other servers">Egress</Chip>;
+  if (connectivity.status === 'Allowed') {
+    return <Chip tone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" title="May connect to other servers">Connectivity</Chip>;
   }
 
   return null;

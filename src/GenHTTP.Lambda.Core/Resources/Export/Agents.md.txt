@@ -178,7 +178,7 @@ when a push is refused, the line says why.
 - Connecting to other servers - `HttpClient`, sockets, a WebSocket or mail
   client, DNS - compiles here, but on the platform only where the lambda may:
   a premium one may, any other once the operator allowed what its owner asked
-  for (`request_egress`, `PUT /api/v1/lambdas/{privateKey}/egress`, or Egress
+  for (`request_connectivity`, `PUT /api/v1/lambdas/{privateKey}/connectivity`, or Connectivity
   in the editor). Until then a push of such code to `main` is refused, and a
   branch's preview does not compile. Fetch a public API from the page where
   browsers may, and the server never connects.

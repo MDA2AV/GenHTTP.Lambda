@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// compiled into a lambda, so each of these takes the settings it has now -
 /// and a lambda compiled with other settings than the ones asked for is
 /// compiled again, which is how a change of tier, or the operator's decision
-/// about its egress, takes effect (see <see cref="BuildSettings"/>).
+/// about its connectivity, takes effect (see <see cref="BuildSettings"/>).
 ///
 /// Besides what a lambda has online, each of its features can have a preview
 /// online: built the same way from the feature's files, with the feature's

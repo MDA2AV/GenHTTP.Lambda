@@ -431,7 +431,7 @@ export const guide: KitMessages['guide'] = {
     'Tu código se ejecuta en un servidor compartido, así que parte de C# se rechaza antes de compilar: iniciar procesos, abrir tus propios sockets, cargar ensamblados, acceder al sistema de archivos fuera de tu workspace y usar reflexión para saltarte cualquiera de esas reglas. Lo mismo ocurre con esperar una tarea con .Result o .Wait() en lugar de usar await: las peticiones se ejecutan en un hilo por núcleo, y la tarea tendría que terminar en el mismo hilo que la está esperando.',
   limits2:
     'Todo lo demás está disponible, incluida toda la API de módulos de GenHTTP. Si algo se rechaza, te decimos en qué línea y por qué, no solo que falló.',
-  limitsEgress:
+  limitsConnectivity:
     'Conectarse a otros servidores (llamar a una API con HttpClient, abrir un socket, enviar correo) necesita permiso: una lambda premium lo tiene, cualquier otra lo pide en Conexiones salientes en el editor, indicando a qué se conecta y por qué, y decide quien gestiona el sitio. Hasta entonces, el código que se conecta se rechaza. Lo que tus páginas obtienen en el navegador no necesita nada de esto, así que llama a una API pública desde la página cuando lo permita.',
   limitsBlocked:
     'Una lambda que incumple las condiciones (phishing, malware, ataques a otros) puede ser bloqueada por quien gestiona el sitio. Se desconecta, y no se puede cambiar ni poner en línea nada de ella hasta que se levante el bloqueo; el centro de control lo indica arriba del todo, con el motivo indicado. Lo que tiene se puede seguir leyendo y descargando.',

@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Si el código puede conectarse a otros servidores: llamar a una API, abrir un socket, enviar correo. Las lambdas comparten un servidor, así que se permite lambda por lambda: una premium puede, cualquier otra cuando el operador de este sitio lo haya permitido.',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: 'El código se conecta a otros servidores',
   refusedText: 'Esta lambda aún no puede hacerlo. Pídelo y el operador de este sitio decide.',
-  openEgress: 'Pedirlo',
+  openConnectivity: 'Pedirlo',
 };

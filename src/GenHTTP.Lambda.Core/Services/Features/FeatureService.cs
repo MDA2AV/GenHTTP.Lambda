@@ -9,7 +9,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
@@ -382,7 +382,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
             // built as the lambda is, so a preview may connect where the lambda may
             settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id)),
-                                         EgressRule.Allows(lambda.Tier, lambda.Egress));
+                                         ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
 
             // handed out here, so one started meanwhile is given the next
             stamp = _stamps.AddOrUpdate(entity.Id, entity.Preview + 1, (_, last) => Math.Max(last, entity.Preview) + 1);

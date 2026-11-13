@@ -18,7 +18,7 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Stats',
     analytics: 'Audience',
     logs: 'Logs',
-    egress: 'Connexions sortantes',
+    connectivity: 'Connexions sortantes',
     code: 'Code',
   },
   sectionsLabel: 'Sections',

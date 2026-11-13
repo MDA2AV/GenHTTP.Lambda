@@ -7,7 +7,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Blocking;
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -44,7 +44,7 @@ namespace GenHTTP.Lambda.Api;
          request on.
          """)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
-                                   IAddressBlocks blocks, IEgressService egress, LambdaOptions options, ILogger<AdminResource> logger)
+                                   IAddressBlocks blocks, IConnectivityService connectivity, LambdaOptions options, ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -87,7 +87,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 l.Domain,
                 LambdaDescription.Serves(l.Tier, l.Domain),
                 l.Blocked,
-                EgressResponse.Of(l.Egress)
+                ConnectivityResponse.Of(l.Connectivity)
             );
         }).ToList();
 
@@ -323,9 +323,9 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
     #endregion
 
-    #region Egress
+    #region Connectivity
 
-    [ResourceMethod("egress")]
+    [ResourceMethod("connectivity")]
     [Summary("Lists the requests to connect to other servers")]
     [Remarks("""
              The lambdas whose owner asked for their code to connect to other servers and waits for a decision, the longest
@@ -333,19 +333,19 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
              be looked at again. A premium lambda may connect without asking, and is not listed unless it asked as well.
              """)]
     [return: Summary("What waits, and what was allowed")]
-    public AdminEgressListing GetEgress()
+    public AdminConnectivityListing GetConnectivity()
     {
-        var listed = egress.List();
+        var listed = connectivity.List();
 
-        return new AdminEgressListing([.. listed.Where(l => l.Egress.Status == EgressStatus.Requested).Select(Describe)],
-                                      [.. listed.Where(l => l.Egress.Status == EgressStatus.Allowed).Select(Describe)]);
+        return new AdminConnectivityListing([.. listed.Where(l => l.Connectivity.Status == ConnectivityStatus.Requested).Select(Describe)],
+                                      [.. listed.Where(l => l.Connectivity.Status == ConnectivityStatus.Allowed).Select(Describe)]);
     }
 
-    [ResourceMethod(Method.Put, "lambdas/:publicKey/egress")]
+    [ResourceMethod(Method.Put, "lambdas/:publicKey/connectivity")]
     [Summary("Decides whether a lambda may connect to other servers")]
     [Remarks("""
              Allows it - asked for or not - or declines what was asked, which takes back what was allowed as well. The note is
-             shown to the owner as it is written, in the editor and as `egress.note` of the lambda; the owner may ask again
+             shown to the owner as it is written, in the editor and as `connectivity.note` of the lambda; the owner may ask again
              after a decline.
 
              It takes effect from the next request, without a deploy: the lambda and the previews of its features are built
@@ -357,19 +357,19 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Conflict, "Declining, where nothing was asked for and nothing is allowed.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail DecideEgress([Summary("The public key of the lambda")] string publicKey, EgressDecision body, IRequest request)
+    public AdminLambdaDetail DecideConnectivity([Summary("The public key of the lambda")] string publicKey, ConnectivityDecision body, IRequest request)
     {
         var privateKey = meta.RequirePrivateKey(publicKey);
 
-        egress.Decide(privateKey, body.Allow, body.Note);
+        connectivity.Decide(privateKey, body.Allow, body.Note);
 
-        logger.LogInformation(body.Allow ? "Allowed egress for lambda {Lambda} by operator" : "Declined egress for lambda {Lambda} by operator", publicKey);
+        logger.LogInformation(body.Allow ? "Allowed connectivity for lambda {Lambda} by operator" : "Declined connectivity for lambda {Lambda} by operator", publicKey);
 
         return Detail(privateKey, request);
     }
 
-    private static AdminEgressEntry Describe(EgressListing listing)
-        => new(listing.PublicKey, listing.Tier, listing.ActiveVersion, listing.Blocked, EgressResponse.Of(listing.Egress), listing.Connects);
+    private static AdminConnectivityEntry Describe(ConnectivityListing listing)
+        => new(listing.PublicKey, listing.Tier, listing.ActiveVersion, listing.Blocked, ConnectivityResponse.Of(listing.Connectivity), listing.Connects);
 
     #endregion
 
@@ -483,7 +483,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
             [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
             You(request),
-            egress.Connects(id, lambda.ActiveVersion, lambda.LatestVersion)
+            connectivity.Connects(id, lambda.ActiveVersion, lambda.LatestVersion)
         );
     }
 

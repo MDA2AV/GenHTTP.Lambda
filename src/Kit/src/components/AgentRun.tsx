@@ -314,7 +314,7 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   data: IconDatabase,
   records: IconTable,
   secrets: IconKey,
-  egress: IconGlobe,
+  connectivity: IconGlobe,
   other: IconDots,
 };
 

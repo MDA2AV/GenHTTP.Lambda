@@ -17,7 +17,7 @@ namespace GenHTTP.Lambda.Tests.Api;
 /// includes it or the operator allowed what its owner asked for.
 /// </summary>
 [TestClass]
-public sealed class EgressTests
+public sealed class ConnectivityTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -54,8 +54,8 @@ public sealed class EgressTests
 
         var refusal = outcome.Diagnostics.FirstOrDefault(d => d.Id == "LAMBDA0003");
 
-        Assert.IsNotNull(refusal, $"{how}: refused for want of egress, not for a type that is not there - {string.Join("; ", outcome.Diagnostics.Select(d => $"{d.Id} {d.Message}"))}");
-        Assert.Contains("request_egress", refusal.Message, $"{how}: says how to ask for it");
+        Assert.IsNotNull(refusal, $"{how}: refused for want of connectivity, not for a type that is not there - {string.Join("; ", outcome.Diagnostics.Select(d => $"{d.Id} {d.Message}"))}");
+        Assert.Contains("request_connectivity", refusal.Message, $"{how}: says how to ask for it");
         Assert.Contains("from the lambda's page", refusal.Message, $"{how}: and what to do instead");
     }
 
@@ -95,7 +95,7 @@ public sealed class EgressTests
             var feed = System.Xml.Linq.XDocument.Load("https://example.com/feed.xml");
 
             return Content.From(Resource.FromString("networking is available"));
-            """, settings: new BuildSettings(WorkspaceLimits.Standard, Egress: true));
+            """, settings: new BuildSettings(WorkspaceLimits.Standard, Connectivity: true));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -111,8 +111,8 @@ public sealed class EgressTests
 
         var lambda = await fixture.CreateLambdaAsync("weather");
 
-        Assert.IsFalse(lambda.Egress!.Allowed, "a new lambda may not connect");
-        Assert.IsNull(lambda.Egress.Status);
+        Assert.IsFalse(lambda.Connectivity!.Allowed, "a new lambda may not connect");
+        Assert.IsNull(lambda.Connectivity.Status);
 
         // what connects is saved, and refused as it goes online
         var refused = await DeployAsync(fixture, lambda.PrivateKey, Connecting);
@@ -130,18 +130,18 @@ public sealed class EgressTests
 
         var listed = waiting.Requested.Single(e => e.PublicKey == "weather");
 
-        Assert.AreEqual("api.open-meteo.com, for the forecast on the front page", listed.Egress.Purpose, "the operator reads what it is for");
+        Assert.AreEqual("api.open-meteo.com, for the forecast on the front page", listed.Connectivity.Purpose, "the operator reads what it is for");
         Assert.IsTrue(listed.Connects, "and that its newest version connects");
 
-        var detail = await DecideAsync(fixture, "weather", new EgressDecision(true, "Fine for the forecast"));
+        var detail = await DecideAsync(fixture, "weather", new ConnectivityDecision(true, "Fine for the forecast"));
 
-        Assert.IsTrue(detail.Lambda.Egress!.Allowed);
-        Assert.AreEqual("Allowed", detail.Lambda.Egress.Status);
+        Assert.IsTrue(detail.Lambda.Connectivity!.Allowed);
+        Assert.AreEqual("Allowed", detail.Lambda.Connectivity.Status);
 
         var owner = await OwnerSeesAsync(fixture, lambda.PrivateKey);
 
-        Assert.IsTrue(owner.Egress!.Allowed);
-        Assert.AreEqual("Fine for the forecast", owner.Egress.Note, "the owner reads what the operator said");
+        Assert.IsTrue(owner.Connectivity!.Allowed);
+        Assert.AreEqual("Fine for the forecast", owner.Connectivity.Note, "the owner reads what the operator said");
 
         Assert.IsTrue((await DeployAsync(fixture, lambda.PrivateKey, null)).Success, "what was refused goes online now");
 
@@ -161,27 +161,27 @@ public sealed class EgressTests
         var lambda = await fixture.CreateLambdaAsync("relay");
 
         await AskAsync(fixture, lambda.PrivateKey, "api.example.com, for the prices");
-        await DecideAsync(fixture, "relay", new EgressDecision(true));
+        await DecideAsync(fixture, "relay", new ConnectivityDecision(true));
 
         await fixture.DeployAsync(lambda.PrivateKey, Connecting);
 
         Assert.AreEqual("connects 100", await ServedAsync(fixture, "http://relay.localhost/"));
 
-        await DecideAsync(fixture, "relay", new EgressDecision(false, "It fetches whatever address it is given"));
+        await DecideAsync(fixture, "relay", new ConnectivityDecision(false, "It fetches whatever address it is given"));
 
         using (var stopped = await fixture.GetAsync("http://relay.localhost/"))
         {
-            Assert.AreNotEqual(HttpStatusCode.OK, stopped.StatusCode, "built again without egress, it no longer compiles");
+            Assert.AreNotEqual(HttpStatusCode.OK, stopped.StatusCode, "built again without connectivity, it no longer compiles");
         }
 
         var owner = await OwnerSeesAsync(fixture, lambda.PrivateKey);
 
-        Assert.IsFalse(owner.Egress!.Allowed);
-        Assert.AreEqual("Declined", owner.Egress.Status);
-        Assert.AreEqual("It fetches whatever address it is given", owner.Egress.Note);
+        Assert.IsFalse(owner.Connectivity!.Allowed);
+        Assert.AreEqual("Declined", owner.Connectivity.Status);
+        Assert.AreEqual("It fetches whatever address it is given", owner.Connectivity.Note);
 
         // and allowed again, it is built again with it - still without a deploy
-        await DecideAsync(fixture, "relay", new EgressDecision(true));
+        await DecideAsync(fixture, "relay", new ConnectivityDecision(true));
 
         Assert.AreEqual("connects 100", await ServedAsync(fixture, "http://relay.localhost/"));
     }
@@ -197,8 +197,8 @@ public sealed class EgressTests
 
         var owner = await OwnerSeesAsync(fixture, lambda.PrivateKey);
 
-        Assert.IsTrue(owner.Egress!.Allowed);
-        Assert.IsTrue(owner.Egress.Included, "the tier includes it");
+        Assert.IsTrue(owner.Connectivity!.Allowed);
+        Assert.IsTrue(owner.Connectivity.Included, "the tier includes it");
 
         await fixture.DeployAsync(lambda.PrivateKey, Connecting);
 
@@ -242,7 +242,7 @@ public sealed class EgressTests
             Assert.AreEqual(HttpStatusCode.UnprocessableEntity, refused.StatusCode, "a preview may connect only where the lambda may");
         }
 
-        await DecideAsync(fixture, "drafts", new EgressDecision(true));
+        await DecideAsync(fixture, "drafts", new ConnectivityDecision(true));
 
         using var previewed = await fixture.SendAsync(HttpMethod.Post, $"{at}/preview/start");
 
@@ -256,10 +256,10 @@ public sealed class EgressTests
 
         var lambda = await fixture.CreateLambdaAsync("vague");
 
-        using var empty = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/egress", new EgressRequest("   "));
+        using var empty = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/connectivity", new ConnectivityRequest("   "));
 
         Assert.AreEqual(HttpStatusCode.BadRequest, empty.StatusCode);
-        Assert.IsNull((await OwnerSeesAsync(fixture, lambda.PrivateKey)).Egress!.Status, "nothing was asked");
+        Assert.IsNull((await OwnerSeesAsync(fixture, lambda.PrivateKey)).Connectivity!.Status, "nothing was asked");
     }
 
     [TestMethod]
@@ -278,22 +278,22 @@ public sealed class EgressTests
             Assert.AreEqual(HttpStatusCode.OK, block.StatusCode);
         }
 
-        using (var asked = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{demo.PrivateKey}/egress", new EgressRequest("anything")))
+        using (var asked = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{demo.PrivateKey}/connectivity", new ConnectivityRequest("anything")))
         {
             Assert.AreEqual(HttpStatusCode.Forbidden, asked.StatusCode, "a demo is changed by nobody");
         }
 
-        using (var asked = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{blocked.PrivateKey}/egress", new EgressRequest("anything")))
+        using (var asked = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{blocked.PrivateKey}/connectivity", new ConnectivityRequest("anything")))
         {
             Assert.AreEqual(HttpStatusCode.Forbidden, asked.StatusCode, "nor is a blocked lambda");
         }
 
-        using (var allowed = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/blocked/egress", new EgressDecision(true)))
+        using (var allowed = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/blocked/connectivity", new ConnectivityDecision(true)))
         {
             Assert.AreEqual(HttpStatusCode.Forbidden, allowed.StatusCode, "nothing about a blocked lambda changes but its block");
         }
 
-        using (var allowed = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/showroom/egress", new EgressDecision(true)))
+        using (var allowed = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/showroom/connectivity", new ConnectivityDecision(true)))
         {
             Assert.AreEqual(HttpStatusCode.Forbidden, allowed.StatusCode, "a demo never connects");
         }
@@ -308,17 +308,17 @@ public sealed class EgressTests
 
         await AskAsync(fixture, lambda.PrivateKey, "api.example.com");
 
-        using (var withdrawn = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/egress"))
+        using (var withdrawn = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/connectivity"))
         {
             Assert.AreEqual(HttpStatusCode.OK, withdrawn.StatusCode);
-            Assert.IsNull((await withdrawn.GetContentAsync<EgressResponse>()).Status);
+            Assert.IsNull((await withdrawn.GetContentAsync<ConnectivityResponse>()).Status);
         }
 
         Assert.IsFalse((await ListAsync(fixture)).Requested.Any(e => e.PublicKey == "again"), "the operator has nothing left to decide");
 
         await AskAsync(fixture, lambda.PrivateKey, "api.example.com");
 
-        await DecideAsync(fixture, "again", new EgressDecision(false, "Say which data, and what for"));
+        await DecideAsync(fixture, "again", new ConnectivityDecision(false, "Say which data, and what for"));
 
         var anew = await AskAsync(fixture, lambda.PrivateKey, "api.example.com/prices, to show today's prices of the shop");
 
@@ -333,7 +333,7 @@ public sealed class EgressTests
 
         await fixture.CreateLambdaAsync("nothing");
 
-        using var declined = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/nothing/egress", new EgressDecision(false));
+        using var declined = await AsOperatorAsync(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/nothing/connectivity", new ConnectivityDecision(false));
 
         Assert.AreEqual(HttpStatusCode.Conflict, declined.StatusCode);
     }
@@ -376,48 +376,48 @@ public sealed class EgressTests
             ["deploy"] = true
         }));
 
-        Assert.Contains("request_egress", written.ToJsonString(), "the refusal says how to ask");
+        Assert.Contains("request_connectivity", written.ToJsonString(), "the refusal says how to ask");
 
         var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
 
-        Assert.IsFalse(read["egress"]!["allowed"]!.GetValue<bool>());
-        Assert.Contains("request_egress", read["egressNote"]!.GetValue<string>(), "and so does the lambda whose code connects");
+        Assert.IsFalse(read["connectivity"]!["allowed"]!.GetValue<bool>());
+        Assert.Contains("request_connectivity", read["connectivityNote"]!.GetValue<string>(), "and so does the lambda whose code connects");
 
-        var asked = Structured(await CallToolAsync(fixture, "request_egress", new JsonObject
+        var asked = Structured(await CallToolAsync(fixture, "request_connectivity", new JsonObject
         {
             ["privateKey"] = lambda.PrivateKey,
             ["purpose"] = "api.open-meteo.com, for the forecast"
         }));
 
-        Assert.AreEqual("Requested", asked["egress"]!["status"]!.GetValue<string>());
+        Assert.AreEqual("Requested", asked["connectivity"]!["status"]!.GetValue<string>());
         Assert.Contains("tell the user", asked["next"]!.GetValue<string>(), "an agent tells its user rather than waits");
 
-        var where = Structured(await CallToolAsync(fixture, "request_egress", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
+        var where = Structured(await CallToolAsync(fixture, "request_connectivity", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
 
-        Assert.AreEqual("Requested", where["egress"]!["status"]!.GetValue<string>(), "with only the key, it reads where it stands");
+        Assert.AreEqual("Requested", where["connectivity"]!["status"]!.GetValue<string>(), "with only the key, it reads where it stands");
 
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        Assert.Contains("request_egress", guide["egress"]!["asking"]!.GetValue<string>());
-        Assert.Contains("fetch()", guide["egress"]!["browserFirst"]!.GetValue<string>(), "what a browser may fetch is fetched there");
+        Assert.Contains("request_connectivity", guide["connectivity"]!["asking"]!.GetValue<string>());
+        Assert.Contains("fetch()", guide["connectivity"]!["browserFirst"]!.GetValue<string>(), "what a browser may fetch is fetched there");
     }
 
     #endregion
 
     #region Helpers
 
-    private static async Task<EgressResponse> AskAsync(LambdaFixture fixture, string privateKey, string purpose)
+    private static async Task<ConnectivityResponse> AskAsync(LambdaFixture fixture, string privateKey, string purpose)
     {
-        using var response = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{privateKey}/egress", new EgressRequest(purpose));
+        using var response = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{privateKey}/connectivity", new ConnectivityRequest(purpose));
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
 
-        return await response.GetContentAsync<EgressResponse>();
+        return await response.GetContentAsync<ConnectivityResponse>();
     }
 
-    private static async Task<AdminLambdaDetail> DecideAsync(LambdaFixture fixture, string publicKey, EgressDecision decision)
+    private static async Task<AdminLambdaDetail> DecideAsync(LambdaFixture fixture, string publicKey, ConnectivityDecision decision)
     {
-        using var response = await AsOperatorAsync(fixture, HttpMethod.Put, $"/api/v1/admin/lambdas/{publicKey}/egress", decision);
+        using var response = await AsOperatorAsync(fixture, HttpMethod.Put, $"/api/v1/admin/lambdas/{publicKey}/connectivity", decision);
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
 
@@ -431,13 +431,13 @@ public sealed class EgressTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
     }
 
-    private static async Task<AdminEgressListing> ListAsync(LambdaFixture fixture)
+    private static async Task<AdminConnectivityListing> ListAsync(LambdaFixture fixture)
     {
-        using var response = await fixture.GetAsOperatorAsync("/api/v1/admin/egress");
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/admin/connectivity");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
-        return await response.GetContentAsync<AdminEgressListing>();
+        return await response.GetContentAsync<AdminConnectivityListing>();
     }
 
     private static async Task<LambdaResponse> OwnerSeesAsync(LambdaFixture fixture, string privateKey)

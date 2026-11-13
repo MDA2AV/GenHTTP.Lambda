@@ -7,7 +7,7 @@ import { IconAlert, IconCheck, IconCopy, IconExternal, IconGlobe, IconKey, IconM
 import { useInstallation } from '@genhttp-lambda/kit/installation';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
-import { AskForServices } from './EgressTab';
+import { AskForServices } from './ConnectivityTab';
 import { count, span } from '@genhttp-lambda/kit/ui/format';
 import { Names } from './SecretsPanel';
 import { AgentMark, Ago, Figure, Section, Sparkline } from '@genhttp-lambda/kit/ui/ui';
@@ -112,7 +112,7 @@ function Status({ control }: { control: Control }) {
   const pending = live && latest != null && latest !== lambda.activeVersion && !isActive(control.agent.state?.job) && !isDemo(lambda.tier) && !lambda.blocked
     // nor while what it saved uses other services it may not: putting it
     // online would only be refused, and the tile below says what it waits for
-    && !(summary?.connects && !lambda.egress.allowed);
+    && !(summary?.connects && !lambda.connectivity.allowed);
 
   const since = summary?.activation ? span(summary.activation.seconds, t.shared) : null;
 
@@ -260,15 +260,15 @@ function NeedsServices({ control }: { control: Control }) {
   const said = useEditorT().simple;
   const [asking, setAsking] = useState(false);
 
-  const egress = control.lambda.egress;
+  const connectivity = control.lambda.connectivity;
   const connects = control.summary?.connects ?? false;
 
-  if (egress.allowed || (!connects && egress.status !== 'Requested' && egress.status !== 'Declined')) {
+  if (connectivity.allowed || (!connects && connectivity.status !== 'Requested' && connectivity.status !== 'Declined')) {
     return null;
   }
 
-  const waiting = egress.status === 'Requested';
-  const declined = egress.status === 'Declined';
+  const waiting = connectivity.status === 'Requested';
+  const declined = connectivity.status === 'Declined';
 
   return (
     <section className={`flex flex-wrap items-start gap-x-4 gap-y-3 border px-5 py-4 ${
@@ -286,14 +286,14 @@ function NeedsServices({ control }: { control: Control }) {
         <p className="mt-0.5 text-[13px] text-slate-600 dark:text-slate-400">
           {waiting ? said.servicesWaitingText : declined ? said.servicesDeclinedText : said.servicesText}
         </p>
-        {waiting && egress.purpose && (
+        {waiting && connectivity.purpose && (
           <p className="mt-2 whitespace-pre-line break-words text-[13px]">
-            <span className="text-slate-500">{said.servicesYouSaid}: </span>{egress.purpose}
+            <span className="text-slate-500">{said.servicesYouSaid}: </span>{connectivity.purpose}
           </p>
         )}
-        {declined && egress.note && (
+        {declined && connectivity.note && (
           <p className="mt-2 whitespace-pre-line break-words text-[13px]">
-            <span className="text-slate-500">{said.servicesTheySaid}: </span>{egress.note}
+            <span className="text-slate-500">{said.servicesTheySaid}: </span>{connectivity.note}
           </p>
         )}
       </div>

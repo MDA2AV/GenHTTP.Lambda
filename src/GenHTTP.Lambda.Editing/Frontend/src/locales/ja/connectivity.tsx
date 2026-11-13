@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'コードが他のサーバーに接続できるかどうかです。APIの呼び出し、ソケットの接続、メール送信などが対象です。lambdaは1台のサーバーを共有しているため、lambdaごとに許可します。プレミアムのlambdaは接続でき、それ以外はこのサイトの運営者が許可した場合に接続できます。',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: 'コードが他のサーバーに接続しています',
   refusedText: 'このlambdaはまだ接続できません。許可を依頼すると、このサイトの運営者が判断します。',
-  openEgress: '許可を依頼する',
+  openConnectivity: '許可を依頼する',
 };

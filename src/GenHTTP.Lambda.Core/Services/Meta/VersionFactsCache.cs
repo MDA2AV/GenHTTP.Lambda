@@ -18,7 +18,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// <param name="CodeBytes">What those weigh</param>
 /// <param name="ResourceFiles">The files it reads and serves while it runs</param>
 /// <param name="ResourceBytes">What those weigh, decoded</param>
-/// <param name="UsesNetwork">Whether its code connects to other servers, which it may only with egress</param>
+/// <param name="UsesNetwork">Whether its code connects to other servers, which it may only with connectivity</param>
 public sealed record VersionFacts(int CodeFiles, long CodeBytes, int ResourceFiles, long ResourceBytes, bool ServesResources, bool ServesWorkspace,
                                   bool UsesWorkspace, bool UsesDatabase, bool UsesNetwork, DocumentationSummary Documentation);
 

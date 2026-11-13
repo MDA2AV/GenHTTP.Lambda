@@ -18,7 +18,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
@@ -76,7 +76,7 @@ namespace GenHTTP.Lambda.Mcp;
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
                               IDatabaseService databases, IShowcaseService showcases, ISourceService sources, IAnalyticsService analytics,
-                              IEgressService egress,
+                              IConnectivityService connectivity,
                               ITelemetryService telemetry, ILogBook book,
                               LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, ILogger<McpTools> logger)
 {
@@ -239,12 +239,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                              [Summary("Which kind."), AllowedValues(DataKinds.DatabaseId, DataKinds.SecretsId, DataKinds.WorkspaceId)] string kind)
         => Refusing(() => SwitchOn(privateKey, kind));
 
-    [Tool("request_egress", Title = "Ask to connect to other servers", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a premium lambda may anyway, and read_lambda says egress.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
-    public object RequestEgress([Summary(PrivateKey)] string privateKey,
-                                [Summary("What it connects to and why, for the operator who decides: the addresses or services and what the lambda does with them - 'api.stripe.com, to take payments for the shop', not 'HTTP calls'. Needed to ask; left out, it returns where it stands."), MaxLength(EgressRule.MaxPurpose)] string? purpose = null,
+    [Tool("request_connectivity", Title = "Ask to connect to other servers", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a premium lambda may anyway, and read_lambda says connectivity.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
+    public object RequestConnectivity([Summary(PrivateKey)] string privateKey,
+                                [Summary("What it connects to and why, for the operator who decides: the addresses or services and what the lambda does with them - 'api.stripe.com, to take payments for the shop', not 'HTTP calls'. Needed to ask; left out, it returns where it stands."), MaxLength(ConnectivityRule.MaxPurpose)] string? purpose = null,
                                 [Summary("Take the request back, or give up what was allowed - code that connects then no longer compiles. Only when the user asks.")] bool withdraw = false)
-        => Refusing(() => Egress(privateKey, purpose, withdraw));
+        => Refusing(() => Connectivity(privateKey, purpose, withdraw));
 
     [Tool("read_database", Title = "Read the lambda's database", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to 100 at a time. Read only: the lambda writes it, through Database.GetConnection(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.")]
@@ -982,48 +982,48 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     }
 
     /// <summary>
-    /// Asks for egress, takes the request back, or says where it stands.
+    /// Asks for connectivity, takes the request back, or says where it stands.
     /// </summary>
     /// <remarks>
     /// The next step is said for each answer, since the decision is somebody
     /// else's and takes a while: the agent is to tell its user and carry on,
     /// not to wait or ask again.
     /// </remarks>
-    private object Egress(string privateKey, string? purpose, bool withdraw)
+    private object Connectivity(string privateKey, string? purpose, bool withdraw)
     {
-        EgressInfo info;
+        ConnectivityInfo info;
 
         if (withdraw)
         {
-            info = egress.Withdraw(privateKey);
+            info = connectivity.Withdraw(privateKey);
 
-            logger.LogInformation("Withdrew egress of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Withdrew connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
         else if (purpose != null)
         {
-            info = egress.Request(privateKey, purpose);
+            info = connectivity.Request(privateKey, purpose);
 
-            logger.LogInformation("Requested egress for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey),
+            logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey),
                                   info.Status?.ToString() ?? (info.Included ? "Included" : "None"));
         }
         else
         {
-            info = egress.Get(privateKey);
+            info = connectivity.Get(privateKey);
 
-            logger.LogInformation("Read egress of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
 
         return new
         {
             ok = true,
-            egress = Describe(info),
+            connectivity = Describe(info),
             next = info switch
             {
                 { Included: true } => "Its tier includes it: the code may connect to other servers. Give every request a timeout - the lambda runs in the shared server process.",
                 { Allowed: true } => "The operator allowed it: code that connects compiles from now on - deploy what was refused before. Give every request a timeout.",
-                { Status: EgressStatus.Requested } => "Asked. The operator of the installation decides, which may take a while, and nothing tells you when: tell the user it waits for the operator, who reads what you said it is for. Meanwhile build what does not connect, or make the calls a browser may make from the page; once read_lambda says egress.allowed, deploy the code that connects.",
-                { Status: EgressStatus.Declined } => "The operator declined it" + (info.Note != null ? $": \"{info.Note}\"" : ".") + " Tell the user. Make the calls a browser may make from the page instead; ask again only if the user wants to, with what the operator would need to know.",
-                _ => "Nothing is asked for: code that connects to other servers does not compile. request_egress with purpose asks for it."
+                { Status: ConnectivityStatus.Requested } => "Asked. The operator of the installation decides, which may take a while, and nothing tells you when: tell the user it waits for the operator, who reads what you said it is for. Meanwhile build what does not connect, or make the calls a browser may make from the page; once read_lambda says connectivity.allowed, deploy the code that connects.",
+                { Status: ConnectivityStatus.Declined } => "The operator declined it" + (info.Note != null ? $": \"{info.Note}\"" : ".") + " Tell the user. Make the calls a browser may make from the page instead; ask again only if the user wants to, with what the operator would need to know.",
+                _ => "Nothing is asked for: code that connects to other servers does not compile. request_connectivity with purpose asks for it."
             }
         };
     }
@@ -1031,9 +1031,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// <summary>
     /// Whether a lambda may connect, as the tools say it.
     /// </summary>
-    private static object Describe(EgressInfo? info)
+    private static object Describe(ConnectivityInfo? info)
     {
-        var known = info ?? EgressInfo.None;
+        var known = info ?? ConnectivityInfo.None;
 
         return new { known.Allowed, known.Included, status = known.Status?.ToString(), known.Changed, known.Purpose, known.Note };
     }
@@ -1532,9 +1532,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             lambda.View,
             limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
             // whether its code may connect to other servers, which it does not compile without
-            egress = Describe(lambda.Egress),
-            egressNote = lambda.Egress?.Allowed != true && CodeGuard.Connects(files)
-                ? "The code connects to other servers, which this lambda may not do: it does not compile. Fetch what browsers may fetch from the page, or ask with request_egress - see platform_guide, egress."
+            connectivity = Describe(lambda.Connectivity),
+            connectivityNote = lambda.Connectivity?.Allowed != true && CodeGuard.Connects(files)
+                ? "The code connects to other servers, which this lambda may not do: it does not compile. Fetch what browsers may fetch from the page, or ask with request_connectivity - see platform_guide, connectivity."
                 : null,
             lambda.ActiveVersion,
             lambda.LatestVersion,
@@ -2156,7 +2156,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "Workspace.Root - where it is on disk"
             },
             reach = "Workspace can be used from every .cs file, including types in the other files.",
-            fromOutside = "upload_file puts a file there, list_files lists it, delete_file removes one - each with feature for a feature's copy. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path}/content with the file itself as the body (curl -T model.onnx ...), the slashes of the path encoded as %2F - streamed to the disk, however large. Or, where the lambda may connect to other servers (egress), let it fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
+            fromOutside = "upload_file puts a file there, list_files lists it, delete_file removes one - each with feature for a feature's copy. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path}/content with the file itself as the body (curl -T model.onnx ...), the slashes of the path encoded as %2F - streamed to the disk, however large. Or, where the lambda may connect to other servers (connectivity), let it fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
             serving = "Workspace.Files(\"uploads\") serves a folder of what users uploaded - data, served as data. The app's own pages are resources.",
             off = "If the owner switched the workspace off, every Workspace member throws an exception saying so. list_files says whether it is on.",
             limits = new
@@ -2305,12 +2305,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         },
         takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile, laid out as the lambda is: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their names and folders - resources/ copied beside the program when it is built - and Platform/ stands in for Workspace, Resources, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. A clone of its gitUrl is the same project with every version, without the data. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,
-        egress = new
+        connectivity = new
         {
-            what = "Whether the code may connect to other servers: HttpClient, sockets, a WebSocket or mail client, DNS, XML read from an address. Lambdas share one server, and were used as proxies, so it is allowed lambda by lambda: a premium one may, any other once the operator of the installation allowed it. read_lambda says egress.allowed.",
+            what = "Whether the code may connect to other servers: HttpClient, sockets, a WebSocket or mail client, DNS, XML read from an address. Lambdas share one server, and were used as proxies, so it is allowed lambda by lambda: a premium one may, any other once the operator of the installation allowed it. read_lambda says connectivity.allowed.",
             without = "Code that connects does not compile (LAMBDA0003): the assemblies that would are not there to name, and nothing reaches another server.",
             browserFirst = "Do it in the browser where you can: a public API that browsers may call - open data, weather, maps, most of what needs no key - is fetched with fetch() by the lambda's page, and the server never connects. That needs no asking, and works at once.",
-            asking = "Where the server has to make the call - a key that must not reach the browser, an API browsers may not call, a webhook to send - request_egress with what it connects to and why: the addresses or services, and what the lambda does with them. The operator decides, which takes a while: tell the user it was asked, build what does not connect meanwhile, and deploy the code that connects once egress.allowed is true.",
+            asking = "Where the server has to make the call - a key that must not reach the browser, an API browsers may not call, a webhook to send - request_connectivity with what it connects to and why: the addresses or services, and what the lambda does with them. The operator decides, which takes a while: tell the user it was asked, build what does not connect meanwhile, and deploy the code that connects once connectivity.allowed is true.",
             never = "A lambda that fetches whatever address it is handed - a proxy, a tunnel, a scraper of other people's sites - is what this keeps off the server: it is declined, and may have the lambda blocked.",
             imports = "System.Net.Http and System.Net.Sockets are not imported by default: write the full type name or add a using. The lambda runs in the shared server process, so give every request a timeout."
         },
@@ -2360,7 +2360,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         },
         refused = new
         {
-            what = "Reflection, dynamic, processes, the environment, the file system, and anything else that reaches the host - and other servers, unless the lambda may connect to them (egress).",
+            what = "Reflection, dynamic, processes, the environment, the file system, and anything else that reaches the host - and other servers, unless the lambda may connect to them (connectivity).",
             why = "All lambdas share one process."
         },
         waiting = new
@@ -2386,7 +2386,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "A page, a script or a picture outside resources/: the code is never served, so web/index.html at the top is not found. Put it in resources/web/.",
             "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
             "A page that fetches on a timer to stay up to date. Push the change instead - server-sent events, or a websocket - see liveUpdates.",
-            "HttpClient in a lambda that may not connect to other servers does not compile. Fetch a public API from the page, or ask with request_egress - see egress.",
+            "HttpClient in a lambda that may not connect to other servers does not compile. Fetch a public API from the page, or ask with request_connectivity - see connectivity.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore - taken with await semaphore.WaitAsync(), never Wait().",
             "Waiting for a task with .Result, .Wait() or .GetAwaiter().GetResult() is refused: it would hang the thread the task has to finish on. Await it - see waiting.",
             "A relative og:image: the shared link shows no picture. It takes the full address - see beingFound.",

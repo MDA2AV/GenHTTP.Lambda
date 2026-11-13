@@ -900,31 +900,33 @@ panel.
   (`theLambda.blocked`), the API's introduction, `/docs` (What it will not let
   you do), the terms and the privacy page - keep them the same.
 
-### Egress
+### Connectivity
 
 Whether a lambda's code may connect to other servers - call an API with
 `HttpClient`, open a socket, a WebSocket or mail client, look up a name.
 Lambdas were used as proxies and jump hosts - an API of their own that fetched
 whatever address it was handed - so **it is a flag beside the tier - decided
 by the owner**: a lambda may connect where its tier includes it or the
-operator allowed it (`EgressRule`).
+operator allowed it (`ConnectivityRule`). **It is called connectivity
+everywhere - decided by the owner** - not egress: the API, MCP, the code and
+the pages.
 
 - **Premium includes it - decided by the owner**; any other lambda asks. A
   demo never connects, and a blocked lambda cannot ask nor be decided about.
 - **Asked for by the owner, decided by the operator** - the asymmetric
   interface again: the agent, which knows what the code connects to, asks
-  with `request_egress` and a purpose (the servers and why), the owner reads
+  with `request_connectivity` and a purpose (the servers and why), the owner reads
   and can change or take back the request in the editor, and the operator,
   who answers for what the server does to others, allows or declines it in
   the panel with a note the owner reads. A purpose is required. Declining what
   was allowed takes it back; the owner may ask again after a decline.
-- **Refused as it compiles, not filtered as it runs.** Without egress the
+- **Refused as it compiles, not filtered as it runs.** Without connectivity the
   compiler is not handed the assemblies that connect (`ReferenceProvider`,
   `Network`), which is what holds; the code guard refuses their names and
   namespaces with `LAMBDA0003` and a message that says how to ask, and binds
   what other assemblies fetch on the code's behalf - XML or a `DataSet` read
   from an address, a bearer token's issuer, `Resource.FromWeb`, a mail client
-  (`CodeGuard.InspectEgress`). It stays governance, not a sandbox. Keep the
+  (`CodeGuard.InspectConnectivity`). It stays governance, not a sandbox. Keep the
   three together when touching any of them: a new way to connect is excluded
   or refused, and said in the message.
 - **Part of the build.** It is compiled in with the workspace limits
@@ -939,18 +941,18 @@ operator allowed it (`EgressRule`).
   which cannot wait for a decision - are steered to call a public API from the
   page wherever it allows that, and to ask only where the server must make
   the call (a key, an API that refuses browsers). This is said in the MCP
-  instructions (one line), `platform_guide` (`egress`), the tool descriptions,
+  instructions (one line), `platform_guide` (`connectivity`), the tool descriptions,
   the build agent's briefs (`SERVICES`) and `AGENTS.md`, a repository's
-  `AGENTS.md`, the README, `/docs` (`limitsEgress`), the API's introduction and
+  `AGENTS.md`, the README, `/docs` (`limitsConnectivity`), the API's introduction and
   the reference - keep them the same.
-- **The words.** The API, MCP, the full view and the panel say *egress*; the
+- **The words.** The API, MCP, the full view and the panel say *connectivity*; the
   simple view never does: there an app wants to **use other services**, and
-  the owner asks for **permission**. The full view has an **Egress** section
+  the owner asks for **permission**. The full view has a **Connectivity** section
   in the run group, marked while the code connects and may not; the simple
   view a tile on its overview only while there is something to ask, to wait
   for or to read - a lambda that never connects shows nothing new there. A
   deployment refused for it says so in either view, with the way to ask.
-- **The panel** has an **Egress** section with what waits - the longest
+- **The panel** has a **Connectivity** section with what waits - the longest
   waiting first, the purpose, whether the code connects - and what was
   allowed, the count of what waits beside its name; the lambda's page has the
   same card, and the list a badge.
@@ -963,7 +965,7 @@ chosen by the owner.
 - **Free** is for trying: taken offline when unused, removed when abandoned.
 - **Premium** is for running something in production, for example a website on a
   custom domain: kept online, larger limits, and it may connect to other
-  servers without asking (see Egress). The simple view's overview offers
+  servers without asking (see Connectivity). The simple view's overview offers
   it to every lambda that is not premium (or a demo), in a tile beside the
   latest change; its only action is a mail to the installation's contact
   (`LambdaOptions.Contact`) naming the app by its public address, never the
@@ -1048,7 +1050,7 @@ services. The rules that matter:
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; develop -
   change, drafts, code, tests; program and data - data, versions; run -
-  deployments, egress, stats, analytics, logs). A new
+  deployments, connectivity, stats, analytics, logs). A new
   section joins the group it belongs to rather
   than the end of the list.
 - **Wired through the container**, not by hand and not in statics. A concern

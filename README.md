@@ -211,7 +211,7 @@ docker compose --profile agent up -d
   the server's process - this is no sandbox. Run code you would run yourself.
 - **Apps ask before they call other servers.** An app's code may only connect
   to other servers - call an API, open a socket, send mail - once you allowed
-  it in the panel's *Egress* section, where its owner's request waits with
+  it in the panel's *Connectivity* section, where its owner's request waits with
   what it is for; *premium* apps may without asking. Without that, anybody
   could send their traffic through your server with an app that fetches
   whatever it is asked to. Pages that fetch from other sites in the browser

@@ -84,7 +84,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'データベースをオンにする', secrets: 'キーとパスワードをオンにする', workspace: 'アプリが保存したもの用の領域をオンにする' },
     records: 'データベースの確認',
     secrets: 'キーとパスワードの確認',
-    egress: '他のサーバーへの接続の依頼',
+    connectivity: '他のサーバーへの接続の依頼',
     other: (tool) => `${tool}の実行`,
   },
   marks: {

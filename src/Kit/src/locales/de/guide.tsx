@@ -439,7 +439,7 @@ export const guide: KitMessages['guide'] = {
     'Ihr Code läuft auf einem gemeinsam genutzten Server. Deshalb wird manches in C# schon vor dem Kompilieren abgelehnt: Prozesse starten, eigene Sockets öffnen, Assemblies laden, auf das Dateisystem außerhalb Ihres Workspace zugreifen – und Reflection, die all das umgehen soll. Ebenso das Warten auf einen Task mit .Result oder .Wait() statt await: Anfragen laufen auf einem Thread pro Kern, und der Task müsste genau auf dem Thread fertig werden, der auf ihn wartet.',
   limits2:
     'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
-  limitsEgress:
+  limitsConnectivity:
     'Verbindungen zu anderen Servern – eine API mit HttpClient aufrufen, einen Socket öffnen, E-Mails senden – brauchen eine Erlaubnis: Ein Premium-Lambda hat sie, jedes andere fragt sie im Editor unter „Ausgehende Verbindungen“ an und gibt an, womit es sich verbindet und warum; wer die Website betreibt, entscheidet. Bis dahin wird Code, der sich verbindet, abgelehnt. Was Ihre Seiten im Browser abrufen, braucht das alles nicht – rufen Sie daher eine öffentliche API von der Seite aus auf, wo sie das erlaubt.',
   limitsBlocked:
     'Ein Lambda, das gegen die Bedingungen verstößt – Phishing, Schadsoftware, Angriffe auf andere –, kann vom Betreiber der Seite gesperrt werden. Es geht offline, und bis die Sperre aufgehoben ist, lässt sich nichts daran ändern oder online stellen; das Kontrollzentrum weist oben darauf hin und nennt den angegebenen Grund. Was es enthält, lässt sich weiterhin lesen und herunterladen.',

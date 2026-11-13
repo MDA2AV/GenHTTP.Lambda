@@ -44,7 +44,7 @@ public static class ApiLayout
                             .Add(Resource<LambdaSourceResource>(mode))
                             .Add(Resource<LambdaAnalyticsResource>(mode))
                             .Add(Resource<LambdaDomainResource>(mode))
-                            .Add(Resource<LambdaEgressResource>(mode))
+                            .Add(Resource<LambdaConnectivityResource>(mode))
                             .Add(Resource<LambdaAgentResource>(mode))
                             .AddScalar(title: "GenHTTP Lambda API")
                             .Add(ApiDocumentation.Create())

@@ -6,7 +6,7 @@ import { ApiError, api, refusedToken } from '@genhttp-lambda/kit/api';
 import { IconLock, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { BlocksSection } from '../console/BlocksSection';
 import type { Access } from '../console/context';
-import { EgressSection } from '../console/EgressSection';
+import { ConnectivitySection } from '../console/ConnectivitySection';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LimitsSection } from '../console/LimitsSection';
@@ -16,12 +16,12 @@ import { SettingsSection } from '../console/SettingsSection';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'server' | 'lambdas' | 'egress' | 'blocks' | 'log' | 'settings' | 'limits';
+type SectionId = 'server' | 'lambdas' | 'connectivity' | 'blocks' | 'log' | 'settings' | 'limits';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
   { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
-  { id: 'egress', title: 'Egress', note: 'Lambdas asking to connect to other servers' },
+  { id: 'connectivity', title: 'Connectivity', note: 'Lambdas asking to connect to other servers' },
   { id: 'blocks', title: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
@@ -48,7 +48,7 @@ export function Admin({ theme }: { theme: Theme }) {
   const [refused, setRefused] = useState(false);
 
   /*
-   * How many requests for egress wait for a decision, beside the section
+   * How many requests for connectivity wait for a decision, beside the section
    * that has them - asked again whenever the operator goes elsewhere in the
    * panel or decides one, rather than on a timer: the operator is the one
    * who changes it, apart from owners asking, which the next look shows.
@@ -63,7 +63,7 @@ export function Admin({ theme }: { theme: Theme }) {
 
     let current = true;
 
-    api.admin.egress(token)
+    api.admin.connectivity(token)
       .then((listing) => current && setWaiting(listing.requested.length))
       .catch(() => undefined);
 
@@ -133,7 +133,7 @@ export function Admin({ theme }: { theme: Theme }) {
                   }`}
                 >
                   {item.title}
-                  {item.id === 'egress' && waiting > 0 && (
+                  {item.id === 'connectivity' && waiting > 0 && (
                     <span
                       className="ml-auto rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-400"
                       title={`${waiting} waiting for a decision`}
@@ -152,8 +152,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LambdaDetail key={detail} access={access} publicKey={decodeURIComponent(detail)} />
           ) : section === 'lambdas' ? (
             <LambdasSection access={access} />
-          ) : section === 'egress' ? (
-            <EgressSection access={access} />
+          ) : section === 'connectivity' ? (
+            <ConnectivitySection access={access} />
           ) : section === 'blocks' ? (
             <BlocksSection access={access} />
           ) : section === 'log' ? (

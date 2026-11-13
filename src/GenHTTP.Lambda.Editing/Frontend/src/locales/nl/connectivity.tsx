@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Of de code met andere servers mag verbinden: een API aanroepen, een socket openen, mail versturen. Lambdas delen één server, dus dat wordt per lambda toegestaan - een premium lambda mag het, elke andere zodra de operator van deze site het heeft toegestaan.',
 
@@ -59,8 +59,8 @@ export const egress: EditorMessages['egress'] = {
   notCovered:
     'Niet wat in de browser gebeurt: de pagina’s van de lambda mogen zelf bij andere sites ophalen, en bezoekers, webhooks en websockets bereiken de lambda zoals altijd. Een openbare API die browsers mogen aanroepen, roep je het best aan vanaf de pagina - daarvoor is geen toestemming nodig.',
 
-  /** In the dialog that says a deployment was refused, when the reason is the egress. */
+  /** In the dialog that says a deployment was refused, when the reason is the lambda's connectivity. */
   refused: 'De code verbindt met andere servers',
   refusedText: 'Deze lambda mag dat nog niet. Vraag het aan, dan beslist de operator van deze site.',
-  openEgress: 'Vraag het aan',
+  openConnectivity: 'Vraag het aan',
 };

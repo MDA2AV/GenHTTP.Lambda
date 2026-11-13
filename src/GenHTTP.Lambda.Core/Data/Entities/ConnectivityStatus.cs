@@ -5,10 +5,10 @@ namespace GenHTTP.Lambda.Data.Entities;
 /// </summary>
 /// <remarks>
 /// The request alone: whether the code may connect is this and the tier
-/// together (see <c>EgressRule</c>), since a premium lambda may whatever is
+/// together (see <c>ConnectivityRule</c>), since a premium lambda may whatever is
 /// written here. The name is what is stored, as with the tier.
 /// </remarks>
-public enum EgressStatus
+public enum ConnectivityStatus
 {
 
     /// <summary>

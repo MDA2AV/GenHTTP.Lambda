@@ -42,20 +42,20 @@ export interface Lambda {
   /** Why the operator blocked it, in their words; absent while it is not, and when they gave no reason. */
   blockReason?: string;
   /** Whether its code may connect to other servers, and where the request for that stands. */
-  egress: Egress;
+  connectivity: Connectivity;
 }
 
 /**
- * Whether a lambda's code may connect to other servers - its egress: its tier
+ * Whether a lambda's code may connect to other servers - its connectivity: its tier
  * includes it, or the operator allowed what its owner asked for. Without it,
  * code that connects does not compile.
  */
-export interface Egress {
+export interface Connectivity {
   allowed: boolean;
   /** Whether its tier includes it, whatever was asked: premium does. */
   included: boolean;
   /** Where the request stands; absent while nobody asked. */
-  status?: EgressStatus | null;
+  status?: ConnectivityStatus | null;
   /** Since when it stands so. */
   changed?: string | null;
   /** What the owner said it connects to, and why. */
@@ -64,27 +64,27 @@ export interface Egress {
   note?: string | null;
 }
 
-export type EgressStatus = 'Requested' | 'Allowed' | 'Declined';
+export type ConnectivityStatus = 'Requested' | 'Allowed' | 'Declined';
 
-/** The id of a refusal for want of egress, among what the compiler said. */
-export const EGRESS_REFUSED = 'LAMBDA0003';
+/** The id of a refusal for want of connectivity, among what the compiler said. */
+export const CONNECTIVITY_REFUSED = 'LAMBDA0003';
 
-/** A lambda whose egress the operator decides, as the panel lists it. */
-export interface EgressEntry {
+/** A lambda whose connectivity the operator decides, as the panel lists it. */
+export interface ConnectivityEntry {
   publicKey: string;
   tier: string;
   activeVersion?: number | null;
   blocked?: string | null;
-  egress: Egress;
+  connectivity: Connectivity;
   /** Whether the code online, or the newest, connects to other servers, as far as what is written tells. */
   connects: boolean;
 }
 
-export interface EgressListing {
+export interface ConnectivityListing {
   /** Waiting for a decision, the longest waiting first. */
-  requested: EgressEntry[];
+  requested: ConnectivityEntry[];
   /** Allowed by the operator, the most recently allowed first. */
-  allowed: EgressEntry[];
+  allowed: ConnectivityEntry[];
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -310,7 +310,7 @@ export interface LambdaSummary {
   };
   /** What the documentation of the version the storage is about says, and which of its pages it has. */
   documentation: DocumentationSummary;
-  /** Whether the code of the version online, or of the newest, connects to other servers - which compiles only where egress is allowed. */
+  /** Whether the code of the version online, or of the newest, connects to other servers - which compiles only where connectivity is allowed. */
   connects: boolean;
   /** What this lambda may use in its tier. Nothing counts files, only what they come to. */
   limits: {
@@ -424,11 +424,11 @@ export interface AgentStep {
    * What it did. feature is starting one, update changing its notes or its
    * base, merge making it a version, discard deleting it; data is switching a
    * kind of data on, records reading the database, secrets listing them;
-   * egress asking for the lambda to connect to other servers.
+   * connectivity asking for the lambda to connect to other servers.
    */
   kind:
     | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
-    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'egress' | 'other';
+    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'other';
   /** The kind of data switched on, for "data": database, secrets or workspace. */
   data?: string | null;
   /** What the agent said, for "say". */
@@ -874,7 +874,7 @@ export interface LambdaOverview {
   /** Since when it is blocked; absent while it is not. */
   blocked?: string;
   /** Whether it may connect to other servers, and where its request stands. */
-  egress?: Egress | null;
+  connectivity?: Connectivity | null;
 }
 
 /** One lambda in full, for the page the panel shows it on. */
@@ -1352,10 +1352,10 @@ export const api = {
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/block`,
         withToken(token, { method: 'DELETE' })),
 
-    egress: (token: string) => request<EgressListing>('/admin/egress', withToken(token)),
+    connectivity: (token: string) => request<ConnectivityListing>('/admin/connectivity', withToken(token)),
 
-    decideEgress: (token: string, publicKey: string, allow: boolean, note: string) =>
-      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/egress`,
+    decideConnectivity: (token: string, publicKey: string, allow: boolean, note: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/connectivity`,
         withToken(token, { method: 'PUT', body: JSON.stringify({ allow, note: note.trim() || null }) })),
 
     blocks: (token: string) => request<AddressBlockListing>('/admin/blocks', withToken(token)),
@@ -1421,11 +1421,11 @@ export const api = {
   removeShowcase: (privateKey: string) => request<void>(`/lambdas/${privateKey}/showcase`, { method: 'DELETE' }),
 
   /** Asks the operator to let the lambda connect to other servers, saying what for. */
-  requestEgress: (privateKey: string, purpose: string) =>
-    request<Egress>(`/lambdas/${privateKey}/egress`, { method: 'PUT', body: JSON.stringify({ purpose }) }),
+  requestConnectivity: (privateKey: string, purpose: string) =>
+    request<Connectivity>(`/lambdas/${privateKey}/connectivity`, { method: 'PUT', body: JSON.stringify({ purpose }) }),
 
   /** Takes a request back, or gives up what was allowed. */
-  withdrawEgress: (privateKey: string) => request<Egress>(`/lambdas/${privateKey}/egress`, { method: 'DELETE' }),
+  withdrawConnectivity: (privateKey: string) => request<Connectivity>(`/lambdas/${privateKey}/connectivity`, { method: 'DELETE' }),
 
   /** Whether the lambda's source is published, and under which license. */
   source: (privateKey: string) => request<OwnSource>(`/lambdas/${privateKey}/source`),

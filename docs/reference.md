@@ -193,7 +193,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /demos`                                          | the demos, and the keys to read them with |
 | `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
 | `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a premium lambda, whether it is served, and what it resolves to |
-| `GET / PUT / DELETE /lambdas/:privateKey/egress`      | whether its code may connect to other servers; asks the operator for it (`purpose`); takes the request back or gives it up, see [Egress](#egress) |
+| `GET / PUT / DELETE /lambdas/:privateKey/connectivity`      | whether its code may connect to other servers; asks the operator for it (`purpose`); takes the request back or gives it up, see [Connectivity](#connectivity) |
 | `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
 | `GET / PUT / DELETE /lambdas/:privateKey/analytics`   | who visits it, by day, over the last `days` (at most what its tier shows); switches counting on; switches it off and deletes what was counted, see [Analytics](#analytics) |
 | `GET / PUT / DELETE /lambdas/:privateKey/source`      | whether its code is published and under which license, the licenses on offer; publishes it or changes the license (`license`, `author`); takes it down |
@@ -752,7 +752,7 @@ stripe.DefaultRequestHeaders.Authorization = new("Bearer", Secret.Read("STRIPE_K
 ```
 
 (Calling Stripe from the server is connecting to another one, which a lambda
-may only do with egress - see [Egress](#egress).)
+may only do where it has connectivity - see [Connectivity](#connectivity).)
 
 `Secret.Read` throws, saying how to set it, when there is no such secret;
 `Secret.Exists` answers whether there is one, and false while secrets are
@@ -823,16 +823,16 @@ The demo `demo-registration` peppers its password hashes with a
 and a copy of it works without one (`Secret.Exists`). Its accounts remember
 whether they were peppered, so accounts made before still sign in.
 
-### Egress
+### Connectivity
 
 Whether a lambda's code may connect to other servers - call an API with
 `HttpClient`, open a socket, a WebSocket or mail client, look up a name. Every
 lambda shares the server, and lambdas were used as proxies - an API of their
 own that fetched whatever address it was handed - so it is allowed lambda by
 lambda: **a premium lambda may**, any other once its owner asked and the
-operator allowed it (`EgressRule`).
+operator allowed it (`ConnectivityRule`).
 
-- **Refused as it compiles.** Without egress a lambda is compiled without the
+- **Refused as it compiles.** Without connectivity a lambda is compiled without the
   assemblies that connect - HTTP, sockets, WebSocket and QUIC clients, the
   requests of old, DNS, ping, the host's network interfaces and pipes
   (`ReferenceProvider`) - so their types cannot be named, nor reached as the
@@ -841,7 +841,7 @@ operator allowed it (`EgressRule`).
   compiler to say a type is missing; and what other assemblies would fetch on
   the code's behalf - XML read from an address, a `DataSet` read from one, the
   keys of a bearer token's issuer, `Resource.FromWeb`, a mail client - is
-  asked of the compilation (`CodeGuard.InspectEgress`). What shares a name
+  asked of the compilation (`CodeGuard.InspectConnectivity`). What shares a name
   with them stays: an address family, a mail address, XML parsed from a string,
   a name of the lambda's own. It is governance like the rest of the guard, not
   a sandbox.
@@ -851,22 +851,22 @@ operator allowed it (`EgressRule`).
   previews of its features alike - without a deploy. Taken back, code that
   connects stops compiling and its requests are answered with an error until
   it changes.
-- **Asked by the owner, decided by the operator.** `PUT /lambdas/{privateKey}/egress`
-  with a `purpose` - what it connects to and why - or the `request_egress`
-  tool, or the editor's **Egress** section (the full view) and a tile on the
+- **Asked by the owner, decided by the operator.** `PUT /lambdas/{privateKey}/connectivity`
+  with a `purpose` - what it connects to and why - or the `request_connectivity`
+  tool, or the editor's **Connectivity** section (the full view) and a tile on the
   simple overview, which appears once the code connects, or a request waits
   or was declined. A purpose is required. Asked again while it waits, the
   purpose is replaced; after a decline, it waits anew. `DELETE` takes the
   request back, or gives up what was allowed. Demos and blocked lambdas cannot
-  ask. The answer, and `egress` of every lambda, say `allowed`, `included` (by
+  ask. The answer, and `connectivity` of every lambda, say `allowed`, `included` (by
   the tier), `status` (`Requested`, `Allowed`, `Declined`), since when, the
   purpose and the operator's `note`, which the owner reads in their editor.
-- **The panel** lists what waits in its **Egress** section, the longest
+- **The panel** lists what waits in its **Connectivity** section, the longest
   waiting first, with the purpose and whether the code connects at all, and
-  what was allowed below it (`GET /admin/egress`); the count of what waits is
+  what was allowed below it (`GET /admin/connectivity`); the count of what waits is
   beside the section's name. A lambda's page has the same card. Allowing or
   declining - which takes back what was allowed - is
-  `PUT /admin/lambdas/{publicKey}/egress` with `allow` and an optional `note`.
+  `PUT /admin/lambdas/{publicKey}/connectivity` with `allow` and an optional `note`.
 - **What the code does is said.** The summary's `connects` says whether the
   version online or the newest connects, read as the guard reads it; the
   editor marks the section, and the refusal of a deployment for it says so in
@@ -2194,13 +2194,13 @@ this endpoint.
 pages only, in English, which call the operator's routes of the REST API with
 the token. Its **Lambdas** section lists every lambda, when it was created,
 whether it is online, and what its code says - and takes them offline or
-removes them; its **Egress** section the lambdas that ask to connect to other
+removes them; its **Connectivity** section the lambdas that ask to connect to other
 servers, and those allowed to; its **Server** section is what the process is
 holding and what the engine is carrying. The token is entered on the panel's own page - no
 other page links there - and kept in the browser's local storage, so every
 tab of that browser is unlocked until **Lock again** is used or the server
 turns the token away. The panel no longer appears inside the editor: what
-only the operator decides about one lambda - its block, its tier, its egress -
+only the operator decides about one lambda - its block, its tier, its connectivity -
 is on its page in the panel.
 
 This is the one part that authenticates. Everywhere else the editor link is
@@ -2264,10 +2264,10 @@ malware, attacks on others. **Block** is on its page in the panel
   network therefore cannot block addresses - the connection is the proxy's,
   and a forwarded header is written by whoever sends it.
 
-### Egress requests
+### Connectivity requests
 
 Whether a lambda may connect to other servers is the operator's to decide, in
-the panel's **Egress** section or on the lambda's page - see [Egress](#egress).
+the panel's **Connectivity** section or on the lambda's page - see [Connectivity](#connectivity).
 
 ### Limits
 

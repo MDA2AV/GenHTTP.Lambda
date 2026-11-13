@@ -115,7 +115,7 @@ const ALLOW = [
   'mcp__genhttp__enable_data', 'mcp__genhttp__read_database', 'mcp__genhttp__list_secrets',
   // it asks for the lambda to connect to other servers where the server has
   // to make a call; the operator decides, so asking is all it can do
-  'mcp__genhttp__request_egress'
+  'mcp__genhttp__request_connectivity'
 ];
 
 /*
@@ -245,7 +245,7 @@ takes longer than you have. So call a public API from the page, with fetch
 in the browser, wherever it allows that: the server never connects, and it
 works at once. Only where the server has to make the call - a key the
 browser must not see, an API that refuses browsers - ask with
-request_egress, saying which service and what for; build the rest so it
+request_connectivity, saying which service and what for; build the rest so it
 works without it, and say in your closing note that it waits for permission
 to use that service. Never build something that fetches whatever address it
 is given.`;
@@ -1218,7 +1218,7 @@ function begin(tool, input) {
     case 'enable_data': return { kind: 'data', ...(input?.kind ? { data: clip(String(input.kind), 20) } : {}) };
     case 'read_database': return { kind: 'records', ...preview };
     case 'list_secrets': return { kind: 'secrets', ...preview };
-    case 'request_egress': return { kind: 'egress' };
+    case 'request_connectivity': return { kind: 'connectivity' };
     default: return { kind: 'other', tool };
   }
 }

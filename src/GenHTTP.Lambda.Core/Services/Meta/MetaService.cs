@@ -7,7 +7,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
@@ -335,7 +335,7 @@ public sealed class MetaService : IMetaService
         var workspace = DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace);
 
         return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace,
-                                  AnalyticsSince: lambda.AnalyticsSince, Egress: EgressRule.Allows(lambda.Tier, lambda.Egress));
+                                  AnalyticsSince: lambda.AnalyticsSince, Connectivity: ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
     }
 
     public IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey)
@@ -817,7 +817,7 @@ public sealed class MetaService : IMetaService
     /// </summary>
     private BuildSettings SettingsOf(LambdaDbContext database, LambdaEntity lambda)
         => new(Limits.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace)),
-               EgressRule.Allows(lambda.Tier, lambda.Egress));
+               ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
 
     /// <summary>
     /// The lambda of the key, read once it is its turn to change (see <see cref="_turns" />).

@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Czy kod może łączyć się z innymi serwerami: wywoływać API, otwierać gniazdo, wysyłać pocztę. Lambdy współdzielą jeden serwer, dlatego zgoda dotyczy każdej lambdy osobno – lambda premium ją ma, każda inna dopiero po zgodzie operatora tej strony.',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: 'Kod łączy się z innymi serwerami',
   refusedText: 'Ta lambda jeszcze nie ma na to zgody. Poproś o nią, a operator tej strony zdecyduje.',
-  openEgress: 'Poproś o zgodę',
+  openConnectivity: 'Poproś o zgodę',
 };

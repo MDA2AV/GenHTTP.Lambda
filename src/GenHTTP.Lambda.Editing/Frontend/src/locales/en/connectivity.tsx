@@ -3,11 +3,11 @@ import type { ReactNode } from 'react';
 type Node = ReactNode;
 
 /**
- * Whether the code may connect to other servers - its egress - in the full
- * view's section of that name: where it stands, what counts, and asking the
+ * Whether the code may connect to other servers - its connectivity - in the
+ * full view's section of that name: where it stands, what counts, and asking the
  * operator of the site for it.
  */
-export const egress = {
+export const connectivity = {
   hint:
     'Whether the code may connect to other servers: call an API, open a socket, send mail. Lambdas share one server, so that is allowed lambda by lambda - a premium one may, any other once the operator of this site allowed it.',
 
@@ -66,8 +66,8 @@ export const egress = {
   notCovered:
     'Not what happens in the browser: the pages of the lambda may fetch from other sites themselves, and visitors, webhooks and websockets reach the lambda as they always did. A public API that browsers may call is best called from the page - that needs no permission.',
 
-  /** In the dialog that says a deployment was refused, when the reason is the egress. */
+  /** In the dialog that says a deployment was refused, when the reason is the lambda's connectivity. */
   refused: 'The code connects to other servers',
   refusedText: 'This lambda may not do that yet. Ask for it, and the operator of this site decides.',
-  openEgress: 'Ask for it',
+  openConnectivity: 'Ask for it',
 };

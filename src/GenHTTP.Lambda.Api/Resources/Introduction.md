@@ -125,9 +125,9 @@ every visit and every edit.
 ## Connecting to other servers
 
 A lambda's code may only connect to other servers - call an API with
-`HttpClient`, open a socket, a WebSocket or mail client - where `egress.allowed`
+`HttpClient`, open a socket, a WebSocket or mail client - where `connectivity.allowed`
 says it may: a premium lambda may, any other once its owner asked
-(`PUT /lambdas/{privateKey}/egress`, saying what it connects to and why) and
+(`PUT /lambdas/{privateKey}/connectivity`, saying what it connects to and why) and
 the operator allowed it. Until then, code that connects is refused as it
 compiles, with `LAMBDA0003`. What the lambda's pages fetch in the visitor's
 browser needs none of this.

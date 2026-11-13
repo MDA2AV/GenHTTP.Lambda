@@ -13,14 +13,14 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// servers: HttpClient, sockets, WebSocket clients, mail.
 /// </summary>
 /// <remarks>
-/// Whether a lambda may connect to other servers is its egress, which its
+/// Whether a lambda may connect to other servers is its connectivity, which its
 /// tier includes or the operator allowed. Without it, the assemblies that
 /// connect are not handed to the compiler at all (see
 /// <see cref="ReferenceProvider"/>), which is what holds; the names and
 /// namespaces refused here are what makes the refusal say why and what to do,
 /// rather than that a type could not be found. What other assemblies do on
 /// the code's behalf - XML loaded from an address, the keys of a token's
-/// issuer - is asked of the compilation, see <see cref="InspectEgress"/>.
+/// issuer - is asked of the compilation, see <see cref="InspectConnectivity"/>.
 /// </remarks>
 /// <remarks>
 /// A database is a file, so it is held to the same rule: a lambda uses the
@@ -77,7 +77,7 @@ public static class CodeGuard
     /// Not System.Net.Sockets or System.Net.Mail as a whole: an address family
     /// and a mail address are in them, which have nothing to connect with.
     /// </remarks>
-    private static readonly HashSet<string> EgressNamespaces = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> ConnectivityNamespaces = new(StringComparer.Ordinal)
     {
         "System.Net.Http",
         "System.Net.Quic",
@@ -95,7 +95,7 @@ public static class CodeGuard
     /// calls it, and where it is one of these the compiler refuses it anyway,
     /// since the assembly behind it is not referenced.
     /// </remarks>
-    private static readonly HashSet<string> EgressNames = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> ConnectivityNames = new(StringComparer.Ordinal)
     {
         "HttpClient", "HttpClientHandler", "SocketsHttpHandler", "HttpMessageHandler", "HttpMessageInvoker", "DelegatingHandler",
         "HttpRequestMessage", "HttpResponseMessage", "IHttpClientFactory",
@@ -110,16 +110,16 @@ public static class CodeGuard
     /// What a lambda that may not connect to other servers is told, after
     /// what it reached for.
     /// </summary>
-    internal const string EgressMessage =
-        "which this lambda may not do. Its owner can ask for that - request_egress, PUT /api/v1/lambdas/{privateKey}/egress " +
-        "or Egress in the editor - saying what it connects to and why, and the operator of the installation decides; a premium lambda may. " +
-        "A public API that browsers may call can be called from the lambda's page instead (platform_guide, egress).";
+    internal const string ConnectivityMessage =
+        "which this lambda may not do. Its owner can ask for that - request_connectivity, PUT /api/v1/lambdas/{privateKey}/connectivity " +
+        "or Connectivity in the editor - saying what it connects to and why, and the operator of the installation decides; a premium lambda may. " +
+        "A public API that browsers may call can be called from the lambda's page instead (platform_guide, connectivity).";
 
     /// <summary>
-    /// The id of a refusal for want of egress, so the editor and an agent can
+    /// The id of a refusal for want of connectivity, so the editor and an agent can
     /// tell it from the rest.
     /// </summary>
-    public const string EgressId = "LAMBDA0003";
+    public const string ConnectivityId = "LAMBDA0003";
 
     #region Functionality
 
@@ -132,8 +132,8 @@ public static class CodeGuard
     /// <summary>
     /// Inspects the parsed snippet and returns a message for every rule it breaks.
     /// </summary>
-    /// <param name="egress">Whether the lambda may connect to other servers</param>
-    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null, bool egress = true)
+    /// <param name="connectivity">Whether the lambda may connect to other servers</param>
+    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null, bool connectivity = true)
     {
         var findings = new List<CompilationDiagnostic>();
 
@@ -144,24 +144,24 @@ public static class CodeGuard
             switch (node)
             {
                 case UsingDirectiveSyntax @using when @using.Name != null:
-                    CheckNamespace(@using.Name.ToString(), @using.GetLocation(), findings, egress);
+                    CheckNamespace(@using.Name.ToString(), @using.GetLocation(), findings, connectivity);
                     break;
 
                 case QualifiedNameSyntax qualified when qualified.Parent is not QualifiedNameSyntax:
-                    CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings, egress);
+                    CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings, connectivity);
                     break;
 
                 case MemberAccessExpressionSyntax access when access.Parent is not MemberAccessExpressionSyntax && Chain(access) is { } chain:
-                    CheckChain(chain, access.GetLocation(), findings, egress);
+                    CheckChain(chain, access.GetLocation(), findings, connectivity);
                     break;
 
                 case IdentifierNameSyntax identifier
                     when !IsHarmlessMember(identifier) && !declared.Contains(identifier.Identifier.ValueText):
                     CheckName(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
 
-                    if (!egress && !IsMember(identifier))
+                    if (!connectivity && !IsMember(identifier))
                     {
-                        CheckEgress(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
+                        CheckConnectivity(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
                     }
                     break;
 
@@ -246,7 +246,7 @@ public static class CodeGuard
         return nested;
     }
 
-    private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings, bool egress = true)
+    private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings, bool connectivity = true)
     {
         // global::System.Reflection is System.Reflection, and the arguments
         // of a generic type are names of their own, checked where they stand
@@ -266,9 +266,9 @@ public static class CodeGuard
             }
         }
 
-        if (!egress && EgressNamespace(name) is { } connecting && !NamesConnecting(name))
+        if (!connectivity && ConnectivityNamespace(name) is { } connecting && !NamesConnecting(name))
         {
-            findings.Add(Reject($"'{connecting}' connects to other servers, {EgressMessage}", location, EgressId));
+            findings.Add(Reject($"'{connecting}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
         }
     }
 
@@ -276,14 +276,14 @@ public static class CodeGuard
     /// Whether a name written out in full goes on to a type that is refused by
     /// its own name - <c>System.Net.Http.HttpClient</c> - which says it once.
     /// </summary>
-    private static bool NamesConnecting(string name) => name.Split('.').Any(EgressNames.Contains);
+    private static bool NamesConnecting(string name) => name.Split('.').Any(ConnectivityNames.Contains);
 
     /// <summary>
     /// The namespace that connects to other servers a name is in or starts
     /// with, if it is one.
     /// </summary>
-    private static string? EgressNamespace(string name)
-        => EgressNamespaces.FirstOrDefault(e => name.Equals(e, StringComparison.Ordinal) || name.StartsWith(e + ".", StringComparison.Ordinal));
+    private static string? ConnectivityNamespace(string name)
+        => ConnectivityNamespaces.FirstOrDefault(e => name.Equals(e, StringComparison.Ordinal) || name.StartsWith(e + ".", StringComparison.Ordinal));
 
     /// <summary>
     /// The namespace to name when refusing one: the banned one, or - below a
@@ -310,15 +310,15 @@ public static class CodeGuard
     /// goes on into an allowed one, the banned one itself or one inside it,
     /// and from there into one of its types rather than a namespace below it.
     /// </remarks>
-    private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings, bool egress = true)
+    private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings, bool connectivity = true)
     {
         var banned = BannedNamespaces.Where(b => chain.StartsWith(b + ".", StringComparison.Ordinal)).MaxBy(b => b.Length);
 
         if (banned == null)
         {
-            if (!egress && EgressNamespace(chain) is { } connecting && !NamesConnecting(chain))
+            if (!connectivity && ConnectivityNamespace(chain) is { } connecting && !NamesConnecting(chain))
             {
-                findings.Add(Reject($"'{connecting}' connects to other servers, {EgressMessage}", location, EgressId));
+                findings.Add(Reject($"'{connecting}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
             }
 
             return;
@@ -516,11 +516,11 @@ public static class CodeGuard
         return root is not IdentifierNameSyntax start || !BannedRoots.Contains(start.Identifier.ValueText);
     }
 
-    private static void CheckEgress(string name, Location location, List<CompilationDiagnostic> findings)
+    private static void CheckConnectivity(string name, Location location, List<CompilationDiagnostic> findings)
     {
-        if (EgressNames.Contains(name))
+        if (ConnectivityNames.Contains(name))
         {
-            findings.Add(Reject($"'{name}' connects to other servers, {EgressMessage}", location, EgressId));
+            findings.Add(Reject($"'{name}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
         }
     }
 
@@ -715,7 +715,7 @@ public static class CodeGuard
     /// target-typed <c>new()</c> names nothing. Only the names in question
     /// and the creations are bound.
     /// </remarks>
-    public static IReadOnlyList<CompilationDiagnostic> InspectEgress(Microsoft.CodeAnalysis.Compilation compilation)
+    public static IReadOnlyList<CompilationDiagnostic> InspectConnectivity(Microsoft.CodeAnalysis.Compilation compilation)
     {
         var findings = new List<CompilationDiagnostic>();
 
@@ -740,7 +740,7 @@ public static class CodeGuard
 
                 var span = at.GetLocation().GetMappedLineSpan();
 
-                findings.Add(new CompilationDiagnostic("Error", EgressId, $"{what}, {EgressMessage}",
+                findings.Add(new CompilationDiagnostic("Error", ConnectivityId, $"{what}, {ConnectivityMessage}",
                                                        span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1,
                                                        span.HasMappedPath ? span.Path : null));
             }
@@ -814,7 +814,7 @@ public static class CodeGuard
             declared.UnionWith(Declared(root));
         }
 
-        return all.Any(root => Inspect(root, declared, egress: false).Any(f => f.Id == EgressId));
+        return all.Any(root => Inspect(root, declared, connectivity: false).Any(f => f.Id == ConnectivityId));
     }
 
     /// <summary>

@@ -1,6 +1,6 @@
 using GenHTTP.Lambda.Data.Entities;
 
-namespace GenHTTP.Lambda.Services.Egress;
+namespace GenHTTP.Lambda.Services.Connectivity;
 
 /// <summary>
 /// Whether a lambda may connect to other servers: its tier includes it, or
@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Egress;
 /// different answers. Decided by the owner: premium includes it, since a
 /// premium lambda is one the operator knows; a free one asks.
 /// </remarks>
-public static class EgressRule
+public static class ConnectivityRule
 {
 
     /// <summary>
@@ -28,7 +28,7 @@ public static class EgressRule
     /// <summary>
     /// Whether a lambda of this tier, with its request standing so, may connect.
     /// </summary>
-    public static bool Allows(LambdaTier tier, EgressStatus? status) => Includes(tier) || status == EgressStatus.Allowed;
+    public static bool Allows(LambdaTier tier, ConnectivityStatus? status) => Includes(tier) || status == ConnectivityStatus.Allowed;
 
     /// <summary>
     /// Whether the tier includes it, whatever was asked.
@@ -36,9 +36,9 @@ public static class EgressRule
     public static bool Includes(LambdaTier tier) => tier == LambdaTier.Premium;
 
     /// <summary>
-    /// What may be said about a lambda's egress, to whoever may read the lambda.
+    /// What may be said about a lambda's connectivity, to whoever may read the lambda.
     /// </summary>
-    public static EgressInfo Describe(LambdaEntity lambda)
-        => new(Allows(lambda.Tier, lambda.Egress), Includes(lambda.Tier), lambda.Egress, lambda.EgressChanged, lambda.EgressPurpose, lambda.EgressNote);
+    public static ConnectivityInfo Describe(LambdaEntity lambda)
+        => new(Allows(lambda.Tier, lambda.Connectivity), Includes(lambda.Tier), lambda.Connectivity, lambda.ConnectivityChanged, lambda.ConnectivityPurpose, lambda.ConnectivityNote);
 
 }

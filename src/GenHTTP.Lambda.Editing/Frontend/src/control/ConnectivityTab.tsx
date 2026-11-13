@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { ApiError, api, type Egress } from '@genhttp-lambda/kit/api';
+import { ApiError, api, type Connectivity } from '@genhttp-lambda/kit/api';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconAlert, IconCheck, IconClose, IconGlobe, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
@@ -15,21 +15,21 @@ import type { Control } from './context';
  *
  * The decision is somebody else's, so this page is mostly about saying it
  * well: the owner names the servers and why, and reads the operator's answer
- * here. Their agent asks the same way with request_egress, and that request
+ * here. Their agent asks the same way with request_connectivity, and that request
  * is the one shown here - the owner can change what it says, or take it
  * back.
  */
-export function EgressTab({ control }: { control: Control }) {
+export function ConnectivityTab({ control }: { control: Control }) {
   const t = useEditorT();
-  const said = t.egress;
-  const title = t.frame.sections.egress;
+  const said = t.connectivity;
+  const title = t.frame.sections.connectivity;
 
   const toast = useToast();
 
   const { lambda, summary, privateKey } = control;
-  const egress = lambda.egress;
+  const connectivity = lambda.connectivity;
 
-  const [purpose, setPurpose] = useState(egress.purpose ?? '');
+  const [purpose, setPurpose] = useState(connectivity.purpose ?? '');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [givingUp, setGivingUp] = useState(false);
@@ -37,13 +37,13 @@ export function EgressTab({ control }: { control: Control }) {
   // what an agent asked for meanwhile is what the form starts from
   useEffect(() => {
     if (!editing) {
-      setPurpose(egress.status === 'Requested' ? egress.purpose ?? '' : '');
+      setPurpose(connectivity.status === 'Requested' ? connectivity.purpose ?? '' : '');
     }
-  }, [egress.status, egress.purpose, editing]);
+  }, [connectivity.status, connectivity.purpose, editing]);
 
   const connects = summary?.connects ?? false;
 
-  async function act(action: () => Promise<Egress>, done: string) {
+  async function act(action: () => Promise<Connectivity>, done: string) {
     setBusy(true);
 
     try {
@@ -61,17 +61,17 @@ export function EgressTab({ control }: { control: Control }) {
   const ask = (event: React.FormEvent) => {
     event.preventDefault();
 
-    act(() => api.requestEgress(privateKey, purpose.trim()), said.asked);
+    act(() => api.requestConnectivity(privateKey, purpose.trim()), said.asked);
   };
 
-  const state = egress.included
+  const state = connectivity.included
     ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.included, text: said.includedText }
-    : egress.status === 'Allowed'
-      ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.allowed, text: said.allowedText(<Ago at={egress.changed!} />) }
-      : egress.status === 'Requested'
-        ? { tone: 'wait', icon: <IconSpinner className="h-4 w-4 motion-reduce:animate-none" />, heading: said.requested, text: said.requestedText(<Ago at={egress.changed!} />) }
-        : egress.status === 'Declined'
-          ? { tone: 'bad', icon: <IconClose className="h-4 w-4" />, heading: said.declined, text: said.declinedText(<Ago at={egress.changed!} />) }
+    : connectivity.status === 'Allowed'
+      ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.allowed, text: said.allowedText(<Ago at={connectivity.changed!} />) }
+      : connectivity.status === 'Requested'
+        ? { tone: 'wait', icon: <IconSpinner className="h-4 w-4 motion-reduce:animate-none" />, heading: said.requested, text: said.requestedText(<Ago at={connectivity.changed!} />) }
+        : connectivity.status === 'Declined'
+          ? { tone: 'bad', icon: <IconClose className="h-4 w-4" />, heading: said.declined, text: said.declinedText(<Ago at={connectivity.changed!} />) }
           : { tone: 'none', icon: <IconGlobe className="h-4 w-4" />, heading: said.none, text: said.noneText };
 
   const tones: Record<string, string> = {
@@ -89,16 +89,16 @@ export function EgressTab({ control }: { control: Control }) {
   };
 
   // the form is there to ask, to ask again, and to change what a request says
-  const form = !egress.allowed && (egress.status !== 'Requested' || editing);
+  const form = !connectivity.allowed && (connectivity.status !== 'Requested' || editing);
 
   return (
     <Section title={title} hint={said.hint}>
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          {connects && !egress.allowed && (
+          {connects && !connectivity.allowed && (
             <p className="flex items-start gap-2 border-l-2 border-amber-500 pl-3 text-[13px] text-amber-700 dark:text-amber-400">
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-              {egress.status === 'Requested' ? said.connectsWaiting : said.connects}
+              {connectivity.status === 'Requested' ? said.connectsWaiting : said.connects}
             </p>
           )}
 
@@ -111,25 +111,25 @@ export function EgressTab({ control }: { control: Control }) {
               </div>
             </div>
 
-            {(egress.purpose || egress.note) && !form && (
+            {(connectivity.purpose || connectivity.note) && !form && (
               <dl className="mt-4 grid gap-4 pl-11 text-[13px] sm:grid-cols-2">
-                {egress.purpose && <Said label={said.purposeSaid}>{egress.purpose}</Said>}
-                {egress.note && <Said label={said.operatorSaid}>{egress.note}</Said>}
+                {connectivity.purpose && <Said label={said.purposeSaid}>{connectivity.purpose}</Said>}
+                {connectivity.note && <Said label={said.operatorSaid}>{connectivity.note}</Said>}
               </dl>
             )}
 
-            {egress.status === 'Declined' && egress.note && form && (
+            {connectivity.status === 'Declined' && connectivity.note && form && (
               <dl className="mt-4 pl-11 text-[13px]">
-                <Said label={said.operatorSaid}>{egress.note}</Said>
+                <Said label={said.operatorSaid}>{connectivity.note}</Said>
               </dl>
             )}
 
-            {egress.status === 'Requested' && !editing && (
+            {connectivity.status === 'Requested' && !editing && (
               <div className="mt-4 flex flex-wrap gap-2 pl-11">
                 <button type="button" onClick={() => setEditing(true)} disabled={busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
                   {said.edit}
                 </button>
-                <button type="button" onClick={() => act(() => api.withdrawEgress(privateKey), said.withdrawn)} disabled={busy}
+                <button type="button" onClick={() => act(() => api.withdrawConnectivity(privateKey), said.withdrawn)} disabled={busy}
                         className="btn-ghost !px-3 !py-1.5 text-[13px]">
                   {busy && <IconSpinner />}
                   {said.withdraw}
@@ -137,7 +137,7 @@ export function EgressTab({ control }: { control: Control }) {
               </div>
             )}
 
-            {egress.status === 'Allowed' && !egress.included && (
+            {connectivity.status === 'Allowed' && !connectivity.included && (
               <div className="mt-4 pl-11">
                 <button type="button" onClick={() => setGivingUp(true)} disabled={busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
                   {said.giveUp}
@@ -149,12 +149,12 @@ export function EgressTab({ control }: { control: Control }) {
           {form && (
             <form onSubmit={ask} className="surface p-5">
               <h2 className="text-sm font-medium">
-                {editing ? said.editTitle : egress.status === 'Declined' ? said.askAgainTitle : said.askTitle}
+                {editing ? said.editTitle : connectivity.status === 'Declined' ? said.askAgainTitle : said.askTitle}
               </h2>
-              <label htmlFor="egress-purpose" className="mt-3 block text-[13px] font-medium">{said.purpose}</label>
+              <label htmlFor="connectivity-purpose" className="mt-3 block text-[13px] font-medium">{said.purpose}</label>
               <p className="mt-0.5 text-[13px] text-slate-500">{said.purposeHint}</p>
               <textarea
-                id="egress-purpose"
+                id="connectivity-purpose"
                 value={purpose}
                 onChange={(event) => setPurpose(event.target.value)}
                 maxLength={1000}
@@ -202,7 +202,7 @@ export function EgressTab({ control }: { control: Control }) {
               type="button"
               onClick={() => {
                 setGivingUp(false);
-                act(() => api.withdrawEgress(privateKey), said.givenUp);
+                act(() => api.withdrawConnectivity(privateKey), said.givenUp);
               }}
               className="btn-danger"
             >
@@ -232,9 +232,9 @@ export function AskForServices({ control, open, onClose }: { control: Control; o
 
   useEffect(() => {
     if (open) {
-      setPurpose(control.lambda.egress.status === 'Requested' ? control.lambda.egress.purpose ?? '' : '');
+      setPurpose(control.lambda.connectivity.status === 'Requested' ? control.lambda.connectivity.purpose ?? '' : '');
     }
-  }, [open, control.lambda.egress]);
+  }, [open, control.lambda.connectivity]);
 
   async function send(event: React.FormEvent) {
     event.preventDefault();
@@ -242,7 +242,7 @@ export function AskForServices({ control, open, onClose }: { control: Control; o
     setBusy(true);
 
     try {
-      await api.requestEgress(control.privateKey, purpose.trim());
+      await api.requestConnectivity(control.privateKey, purpose.trim());
       await control.refresh();
       onClose();
       toast(said.servicesAsked, 'success');

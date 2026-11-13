@@ -3,11 +3,11 @@ import { analytics } from './analytics';
 import { change } from './change';
 import { clone } from './clone';
 import { code } from './code';
+import { connectivity } from './connectivity';
 import { context } from './context';
 import { data } from './data';
 import { deployments } from './deployments';
 import { domain } from './domain';
-import { egress } from './egress';
 import { features } from './features';
 import { files } from './files';
 import { frame } from './frame';
@@ -46,7 +46,7 @@ export const editor: EditorMessages = {
   showcase,
   openSource,
   domain,
-  egress,
+  connectivity,
   code,
   clone,
   tabs,

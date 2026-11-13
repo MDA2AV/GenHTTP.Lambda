@@ -67,8 +67,8 @@ public sealed record LambdaResponse(
     DateTime? Blocked = null,
     [Summary("Why the operator blocked it, in their words, as the editor shows it to the owner. Absent while it is not blocked, and when they gave no reason.")]
     string? BlockReason = null,
-    [Summary("Whether its code may connect to other servers, and where the request for that stands. Without it, code that does is refused as it compiles; see `PUT /lambdas/{privateKey}/egress`.")]
-    EgressResponse? Egress = null
+    [Summary("Whether its code may connect to other servers, and where the request for that stands. Without it, code that does is refused as it compiles; see `PUT /lambdas/{privateKey}/connectivity`.")]
+    ConnectivityResponse? Connectivity = null
 );
 
 /// <summary>
@@ -101,7 +101,7 @@ public static class LambdaDescription
         PlatformRoutes.RepositoryOf(lambda.PrivateKey, lambda.PublicKey),
         lambda.Blocked,
         lambda.BlockReason,
-        EgressResponse.Of(lambda.Egress)
+        ConnectivityResponse.Of(lambda.Connectivity)
     );
 
     /// <summary>

@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Kodun başka sunuculara bağlanıp bağlanamayacağı: bir API çağırmak, soket açmak, e-posta göndermek. Lambdalar tek bir sunucuyu paylaşır, bu yüzden izin lambda lambda verilir - premium bir lambda bağlanabilir, diğerleri ise bu sitenin operatörü izin verdikten sonra.',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: 'Kod başka sunuculara bağlanıyor',
   refusedText: 'Bu lambdanın buna henüz izni yok. İzin isteyin, bu sitenin operatörü karar verir.',
-  openEgress: 'İzin isteyin',
+  openConnectivity: 'İzin isteyin',
 };

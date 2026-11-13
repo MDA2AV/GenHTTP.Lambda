@@ -18,7 +18,7 @@ export const frame: EditorMessages['frame'] = {
     stats: '통계',
     analytics: '분석',
     logs: '로그',
-    egress: '외부 연결',
+    connectivity: '외부 연결',
     code: '코드',
   },
   sectionsLabel: '섹션',

@@ -85,7 +85,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Veritabanı açılıyor', secrets: 'Anahtarlar ve parolalar açılıyor', workspace: 'Çalışma alanı açılıyor' },
     records: 'Veritabanı okunuyor',
     secrets: 'Anahtarlara ve parolalara bakılıyor',
-    egress: 'Başka sunuculara bağlanma izni isteniyor',
+    connectivity: 'Başka sunuculara bağlanma izni isteniyor',
     other: (tool) => `${tool} aracı kullanılıyor`,
   },
   marks: {

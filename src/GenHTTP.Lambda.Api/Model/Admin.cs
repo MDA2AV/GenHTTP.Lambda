@@ -59,7 +59,7 @@ public sealed record AdminLambda(
     [Summary("Since when it is blocked; absent while it is not")]
     DateTime? Blocked = null,
     [Summary("Whether it may connect to other servers, and where its request for that stands")]
-    EgressResponse? Egress = null
+    ConnectivityResponse? Connectivity = null
 );
 
 [Summary("Everything about one lambda, for the operator.")]
@@ -80,7 +80,7 @@ public sealed record AdminLambdaDetail(
     IReadOnlyList<EditorAddressResponse>? EditorAddresses = null,
     [Summary("The address this request came from as a block would cover it, so the operator does not block themselves; absent where it is on one of the installation's own networks")]
     string? You = null,
-    [Summary("Whether the code of its version online, or of its newest, connects to other servers - as far as what is written tells - which it may only where `lambda.egress.allowed`")]
+    [Summary("Whether the code of its version online, or of its newest, connects to other servers - as far as what is written tells - which it may only where `lambda.connectivity.allowed`")]
     bool Connects = false
 );
 

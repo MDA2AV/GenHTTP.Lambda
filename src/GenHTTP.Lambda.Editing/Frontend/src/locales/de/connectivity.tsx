@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Ob der Code sich mit anderen Servern verbinden darf: eine API aufrufen, einen Socket öffnen, E-Mails senden. Lambdas teilen sich einen Server, daher wird das Lambda für Lambda erlaubt – ein Premium-Lambda darf es, jedes andere, sobald der Betreiber dieser Website es erlaubt hat.',
 
@@ -59,8 +59,8 @@ export const egress: EditorMessages['egress'] = {
   notCovered:
     'Nicht, was im Browser geschieht: Die Seiten des Lambdas dürfen selbst von anderen Websites laden, und Besucher, Webhooks und Websockets erreichen das Lambda wie bisher. Eine öffentliche API, die Browser aufrufen dürfen, rufen Sie am besten von der Seite aus auf – dafür ist keine Erlaubnis nötig.',
 
-  /** In the dialog that says a deployment was refused, when the reason is the egress. */
+  /** In the dialog that says a deployment was refused, when the reason is the lambda's connectivity. */
   refused: 'Der Code verbindet sich mit anderen Servern',
   refusedText: 'Das darf dieses Lambda noch nicht. Fragen Sie es an, und der Betreiber dieser Website entscheidet.',
-  openEgress: 'Anfragen',
+  openConnectivity: 'Anfragen',
 };

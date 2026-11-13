@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     'Apakah kode boleh terhubung ke server lain: memanggil API, membuka socket, mengirim email. Lambda berbagi satu server, jadi izin ini diberikan per lambda - lambda premium boleh, yang lain setelah operator situs ini mengizinkannya.',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: 'Kode terhubung ke server lain',
   refusedText: 'Lambda ini belum boleh melakukannya. Minta izin, dan operator situs ini yang memutuskan.',
-  openEgress: 'Minta izin',
+  openConnectivity: 'Minta izin',
 };

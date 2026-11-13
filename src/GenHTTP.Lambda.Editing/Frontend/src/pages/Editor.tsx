@@ -5,7 +5,7 @@ import { absoluteAddress, aroundKey, shownAddress } from '@genhttp-lambda/kit/ad
 import { useInstallation } from '@genhttp-lambda/kit/installation';
 import {
   ApiError,
-  EGRESS_REFUSED,
+  CONNECTIVITY_REFUSED,
   allowsDomain,
   api,
   isActive,
@@ -35,7 +35,7 @@ import { ContextTab } from '../control/ContextTab';
 import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
-import { AskForServices, EgressTab } from '../control/EgressTab';
+import { AskForServices, ConnectivityTab } from '../control/ConnectivityTab';
 import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDialog } from '../control/FeatureDialogs';
 import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
@@ -64,7 +64,7 @@ interface Props {
 
 type SectionId =
   | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats' | 'analytics'
-  | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'egress';
+  | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'connectivity';
 
 /*
  * Where the sections that went into Code used to be - its files, what it was
@@ -101,7 +101,7 @@ const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
   { id: 'program', sections: ['data', 'versions'] },
-  { id: 'run', sections: ['deployments', 'egress', 'stats', 'analytics', 'logs'] },
+  { id: 'run', sections: ['deployments', 'connectivity', 'stats', 'analytics', 'logs'] },
 ];
 
 const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
@@ -508,7 +508,7 @@ export function Editor({ theme }: Props) {
 
   // the code connects to other servers, which the lambda may not: it does
   // not compile until the operator allows it
-  const egressWanted = summary?.connects === true && lambda != null && !lambda.egress.allowed;
+  const connectivityWanted = summary?.connects === true && lambda != null && !lambda.connectivity.allowed;
 
   // sections that only change the lambda, which a demo does not have - and
   // the drafts, while there are none: they are met through a change the agent
@@ -520,7 +520,7 @@ export function Editor({ theme }: Props) {
     // nor what only changes a blocked one, or puts it before the public again
     || (blocked && (id === 'change' || id === 'showcase' || id === 'source'))
     // a demo connects to nothing, and of a blocked lambda nothing changes
-    || (id === 'egress' && (demo || blocked))
+    || (id === 'connectivity' && (demo || blocked))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
@@ -617,7 +617,7 @@ export function Editor({ theme }: Props) {
 
   // a deployment or a preview refused for connecting to other servers, which
   // the lambda may not do - said as such, with the way to ask for it
-  const egressRefused = rejection?.diagnostics.some((d) => d.id === EGRESS_REFUSED) === true && !lambda.egress.allowed;
+  const connectivityRefused = rejection?.diagnostics.some((d) => d.id === CONNECTIVITY_REFUSED) === true && !lambda.connectivity.allowed;
 
   const control: Control = {
     privateKey,
@@ -752,8 +752,8 @@ export function Editor({ theme }: Props) {
         {id === 'logs' && problems && (
           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
         )}
-        {id === 'egress' && egressWanted && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.egress.connects} />
+        {id === 'connectivity' && connectivityWanted && (
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.connectivity.connects} />
         )}
         {id === 'data' && (missingSecrets.length > 0 || databaseWanted) && !demo && (
           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={missingSecrets.length > 0 ? t.data.missingDot : t.data.offDot} />
@@ -862,7 +862,7 @@ export function Editor({ theme }: Props) {
 
           {/* not while the agent is at work: what it saved last may be a
               version it is still fixing, and it deploys what it finishes */}
-          {!featureKey && ahead && latest != null && !demo && !blocked && !changing && !(simple && egressWanted) && (
+          {!featureKey && ahead && latest != null && !demo && !blocked && !changing && !(simple && connectivityWanted) && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -1096,8 +1096,8 @@ export function Editor({ theme }: Props) {
           <SourceTab control={control} onChanged={() => refresh().catch(() => undefined)} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
-        ) : section === 'egress' && !demo && !blocked ? (
-          <EgressTab control={control} />
+        ) : section === 'connectivity' && !demo && !blocked ? (
+          <ConnectivityTab control={control} />
         ) : simple ? (
           <SimpleOverview control={control} />
         ) : (
@@ -1107,15 +1107,15 @@ export function Editor({ theme }: Props) {
     </div>
 
       <Dialog
-        title={egressRefused
-          ? (simple ? t.simple.servicesRefused : t.egress.refused)
+        title={connectivityRefused
+          ? (simple ? t.simple.servicesRefused : t.connectivity.refused)
           : rejection?.feature ? t.features.previewRejected : simple ? t.simple.refused : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
         open={rejection !== null}
         onClose={() => setRejection(null)}
         footer={
           <>
             {/* refused for connecting to other servers: asking is the way on, not the code */}
-            {egressRefused && lambda.egress.status !== 'Requested' && (
+            {connectivityRefused && lambda.connectivity.status !== 'Requested' && (
               <button
                 type="button"
                 className="btn-ghost"
@@ -1125,11 +1125,11 @@ export function Editor({ theme }: Props) {
                   if (simple) {
                     setAskingServices(true);
                   } else {
-                    go(`${base}/egress`);
+                    go(`${base}/connectivity`);
                   }
                 }}
               >
-                {simple ? t.simple.servicesAsk : t.egress.openEgress}
+                {simple ? t.simple.servicesAsk : t.connectivity.openConnectivity}
               </button>
             )}
             {/* in the simple view, what is wrong with the code is the agent's to fix, not the owner's to read */}
@@ -1173,8 +1173,8 @@ export function Editor({ theme }: Props) {
         }
       >
         <p className="text-slate-600 dark:text-slate-400">
-          {egressRefused
-            ? (simple ? t.simple.servicesRefusedText : t.egress.refusedText)
+          {connectivityRefused
+            ? (simple ? t.simple.servicesRefusedText : t.connectivity.refusedText)
             : simple ? t.simple.refusedText : rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}
         </p>
         {!simple && (

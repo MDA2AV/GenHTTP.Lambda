@@ -88,7 +88,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Włączanie bazy danych', secrets: 'Włączanie kluczy i haseł', workspace: 'Włączanie zapisu plików aplikacji' },
     records: 'Czytanie bazy danych',
     secrets: 'Przeglądanie kluczy i haseł',
-    egress: 'Prośba o połączenia z innymi serwerami',
+    connectivity: 'Prośba o połączenia z innymi serwerami',
     other: (tool) => `Korzystanie z narzędzia ${tool}`,
   },
   marks: {

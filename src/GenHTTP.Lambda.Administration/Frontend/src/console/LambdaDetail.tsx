@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError, allowsDomain, api, type AdminLambdaDetail, type LambdaFile } from '@genhttp-lambda/kit/api';
 import { BlockControl } from './BlockControl';
-import { EgressChip, EgressControl } from './EgressControl';
+import { ConnectivityChip, ConnectivityControl } from './ConnectivityControl';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconExternal, IconPlay, IconSpinner, IconTrash } from '@genhttp-lambda/kit/components/Icons';
@@ -179,7 +179,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           <StatusBadge version={lambda.activeVersion} />
           <TierBadge tier={lambda.tier} />
           {blocked && <BlockedBadge />}
-          {!lambda.egress.included && (lambda.egress.status === 'Requested' || lambda.egress.status === 'Allowed') && <EgressChip egress={lambda.egress} />}
+          {!lambda.connectivity.included && (lambda.connectivity.status === 'Requested' || lambda.connectivity.status === 'Allowed') && <ConnectivityChip connectivity={lambda.connectivity} />}
         </span>
       }
       hint="Everything about one lambda. The figures are counted in memory since the server came up."
@@ -257,7 +257,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
       </div>
 
       <div className="mt-4">
-        <EgressControl
+        <ConnectivityControl
           token={token}
           detail={detail}
           onChanged={(next) => {

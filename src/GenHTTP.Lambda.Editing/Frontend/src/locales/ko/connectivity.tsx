@@ -1,6 +1,6 @@
 import type { EditorMessages } from '../en';
 
-export const egress: EditorMessages['egress'] = {
+export const connectivity: EditorMessages['connectivity'] = {
   hint:
     '코드가 다른 서버에 연결할 수 있는지 정해요. API 호출, 소켓 열기, 메일 보내기 등이 해당돼요. 람다는 서버 하나를 함께 쓰기 때문에 람다마다 허용해요. 프리미엄 람다는 바로 쓸 수 있고, 그 외 람다는 이 사이트의 운영자가 허용한 뒤에 쓸 수 있어요.',
 
@@ -52,5 +52,5 @@ export const egress: EditorMessages['egress'] = {
 
   refused: '코드가 다른 서버에 연결해요',
   refusedText: '이 람다는 아직 그럴 수 없어요. 요청하면 이 사이트의 운영자가 결정해요.',
-  openEgress: '요청하기',
+  openConnectivity: '요청하기',
 };

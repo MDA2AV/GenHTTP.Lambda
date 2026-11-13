@@ -4,7 +4,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Infrastructure;
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// <see cref="AdminResource"/> - the owner can only ask, wait, take the
 /// request back or give up what was allowed.
 /// </remarks>
-[Tag(ApiDocumentation.Egress)]
+[Tag(ApiDocumentation.Connectivity)]
 [Summary("Whether a lambda's code may connect to other servers - asked for by its owner, decided by the operator.")]
 [Remarks("""
          A lambda shares the server with every other, so it may only connect to other servers - call an API with
@@ -30,20 +30,20 @@ namespace GenHTTP.Lambda.Api;
 
          A decision takes effect from the next request, without a deploy: the lambda and the previews of its features are
          built again with it. Code that connects and is online when what was allowed is taken back stops compiling, and its
-         requests are answered with an error until it changes or egress is allowed again. Whatever the page of a lambda
+         requests are answered with an error until it changes or connectivity is allowed again. Whatever the page of a lambda
          fetches in the visitor's browser is the browser's business, not the server's, and needs none of this.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class LambdaEgressResource(IEgressService egress, IMetaService meta, ILogger<LambdaEgressResource> logger)
+public sealed class LambdaConnectivityResource(IConnectivityService connectivity, IMetaService meta, ILogger<LambdaConnectivityResource> logger)
 {
 
-    [ResourceMethod("lambdas/:privateKey/egress")]
+    [ResourceMethod("lambdas/:privateKey/connectivity")]
     [Summary("Reads whether a lambda may connect to other servers")]
     [return: Summary("Whether it may, and where its request stands")]
-    public EgressResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => EgressResponse.Of(egress.Get(privateKey));
+    public ConnectivityResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => ConnectivityResponse.Of(connectivity.Get(privateKey));
 
-    [ResourceMethod(Method.Put, "lambdas/:privateKey/egress")]
+    [ResourceMethod(Method.Put, "lambdas/:privateKey/connectivity")]
     [Summary("Asks for a lambda to connect to other servers")]
     [Remarks("""
              The request waits for the operator of the installation, who reads what it is for and allows or declines it - the
@@ -57,17 +57,17 @@ public sealed class LambdaEgressResource(IEgressService egress, IMetaService met
     [Response(ResponseStatus.BadRequest, "No purpose was given.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public EgressResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, EgressRequest request)
+    public ConnectivityResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ConnectivityRequest request)
     {
-        var asked = egress.Request(privateKey, request.Purpose);
+        var asked = connectivity.Request(privateKey, request.Purpose);
 
-        logger.LogInformation("Requested egress for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey), Said(asked));
+        logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey), Said(asked));
 
-        return EgressResponse.Of(asked);
+        return ConnectivityResponse.Of(asked);
     }
 
-    [ResourceMethod(Method.Delete, "lambdas/:privateKey/egress")]
-    [Summary("Takes a request back, or gives up egress")]
+    [ResourceMethod(Method.Delete, "lambdas/:privateKey/connectivity")]
+    [Summary("Takes a request back, or gives up connectivity")]
     [Remarks("""
              Takes back a request that waits, or gives up what the operator allowed - from the next request on, code that connects
              is refused as it compiles, and a version online that does stops working. A premium lambda may connect whatever is
@@ -75,18 +75,18 @@ public sealed class LambdaEgressResource(IEgressService egress, IMetaService met
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public EgressResponse Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public ConnectivityResponse Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var withdrawn = egress.Withdraw(privateKey);
+        var withdrawn = connectivity.Withdraw(privateKey);
 
-        logger.LogInformation("Withdrew egress of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Withdrew connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
 
-        return EgressResponse.Of(withdrawn);
+        return ConnectivityResponse.Of(withdrawn);
     }
 
     /// <summary>
     /// Where a request stands, for a log line.
     /// </summary>
-    internal static string Said(EgressInfo egress) => egress.Status?.ToString() ?? (egress.Included ? "Included" : "None");
+    internal static string Said(ConnectivityInfo connectivity) => connectivity.Status?.ToString() ?? (connectivity.Included ? "Included" : "None");
 
 }

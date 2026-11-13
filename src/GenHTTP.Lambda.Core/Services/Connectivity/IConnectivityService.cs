@@ -1,4 +1,4 @@
-namespace GenHTTP.Lambda.Services.Egress;
+namespace GenHTTP.Lambda.Services.Connectivity;
 
 /// <summary>
 /// Whether a lambda may connect to other servers - asked for by its owner,
@@ -8,20 +8,20 @@ namespace GenHTTP.Lambda.Services.Egress;
 /// The asymmetry of the platform once more: an owner, or their agent, says
 /// what the lambda connects to and why, and the operator - who answers for
 /// what the server does to others - decides. A premium lambda may without
-/// asking (see <see cref="EgressRule"/>).
+/// asking (see <see cref="ConnectivityRule"/>).
 ///
 /// Nothing here deploys or compiles anything. What a lambda is compiled with
 /// includes whether it may connect, so the next request after a decision
 /// builds it again under the new one - and code that connects no longer
 /// compiles where it may not.
 /// </remarks>
-public interface IEgressService
+public interface IConnectivityService
 {
 
     /// <summary>
-    /// Where the egress of the lambda behind an editor key stands.
+    /// Where the connectivity of the lambda behind an editor key stands.
     /// </summary>
-    EgressInfo Get(string privateKey);
+    ConnectivityInfo Get(string privateKey);
 
     /// <summary>
     /// Asks the operator to let the lambda connect to other servers.
@@ -33,14 +33,14 @@ public interface IEgressService
     /// allowed. Refused for a demo and a blocked lambda, like every change.
     /// </remarks>
     /// <param name="purpose">What it connects to and why, in the owner's words - required</param>
-    EgressInfo Request(string privateKey, string? purpose);
+    ConnectivityInfo Request(string privateKey, string? purpose);
 
     /// <summary>
     /// Takes the request back while it waits, or gives up what was allowed -
     /// code that connects then no longer compiles. Nothing happens when
     /// nothing was asked or it was declined.
     /// </summary>
-    EgressInfo Withdraw(string privateKey);
+    ConnectivityInfo Withdraw(string privateKey);
 
     /// <summary>
     /// The operator's decision: allow the lambda to connect, asked for or not,
@@ -52,13 +52,13 @@ public interface IEgressService
     /// blocked lambda, of which nothing changes but its block.
     /// </remarks>
     /// <param name="note">What the operator says about it, which the owner reads</param>
-    EgressInfo Decide(string privateKey, bool allow, string? note);
+    ConnectivityInfo Decide(string privateKey, bool allow, string? note);
 
     /// <summary>
     /// The lambdas whose request waits for the operator, the longest waiting
     /// first, and then the ones allowed, the most recently allowed first.
     /// </summary>
-    IReadOnlyList<EgressListing> List();
+    IReadOnlyList<ConnectivityListing> List();
 
     /// <summary>
     /// Whether the code of the version online, or of the newest, connects to

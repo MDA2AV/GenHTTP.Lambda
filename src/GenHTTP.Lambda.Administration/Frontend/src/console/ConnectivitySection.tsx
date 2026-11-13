@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { api, refusedToken, type EgressEntry, type EgressListing } from '@genhttp-lambda/kit/api';
+import { api, refusedToken, type ConnectivityEntry, type ConnectivityListing } from '@genhttp-lambda/kit/api';
 import { IconGlobe, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago, Empty, Section, StatusBadge, TierBadge } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
-import { EgressDecisionDialog } from './EgressControl';
+import { ConnectivityDecisionDialog } from './ConnectivityControl';
 import { BlockedBadge } from './LambdaDetail';
 
 /**
@@ -19,18 +19,18 @@ import { BlockedBadge } from './LambdaDetail';
  * two answers. What was allowed stays listed below, to be looked at again
  * and taken back.
  */
-export function EgressSection({ access }: { access: Access }) {
+export function ConnectivitySection({ access }: { access: Access }) {
   const { token, deny, changed } = access;
 
   const toast = useToast();
 
-  const [listing, setListing] = useState<EgressListing | null>(null);
+  const [listing, setListing] = useState<ConnectivityListing | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [deciding, setDeciding] = useState<{ entry: EgressEntry; allow: boolean } | null>(null);
+  const [deciding, setDeciding] = useState<{ entry: ConnectivityEntry; allow: boolean } | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setListing(await api.admin.egress(token));
+      setListing(await api.admin.connectivity(token));
       setFailure(null);
     } catch (error) {
       if (refusedToken(error)) {
@@ -50,7 +50,7 @@ export function EgressSection({ access }: { access: Access }) {
 
   return (
     <Section
-      title="Egress"
+      title="Connectivity"
       hint="Whether a lambda's code may connect to other servers - call an API, open a socket, send mail. Premium lambdas may without asking; any other asks here, saying what for. A decision applies from the lambda's next request, without a deploy."
     >
       {listing === null ? (
@@ -66,7 +66,7 @@ export function EgressSection({ access }: { access: Access }) {
           </h2>
 
           {requested.length === 0 ? (
-            <Empty>Nothing waits for a decision. An owner asks in their editor, or their agent does with request_egress.</Empty>
+            <Empty>Nothing waits for a decision. An owner asks in their editor, or their agent does with request_connectivity.</Empty>
           ) : (
             <ul className="mt-3 space-y-3">
               {requested.map((entry) => (
@@ -83,11 +83,11 @@ export function EgressSection({ access }: { access: Access }) {
                       </p>
 
                       <blockquote className="mt-2 whitespace-pre-line break-words border-l-2 border-amber-500/40 pl-3 text-sm text-slate-700 dark:text-slate-300">
-                        {entry.egress.purpose}
+                        {entry.connectivity.purpose}
                       </blockquote>
 
                       <p className="mt-2 text-[12px] text-slate-500">
-                        Asked <Ago at={entry.egress.changed!} />
+                        Asked <Ago at={entry.connectivity.changed!} />
                       </p>
                     </div>
 
@@ -140,12 +140,12 @@ export function EgressSection({ access }: { access: Access }) {
                         </span>
                       </td>
                       <td className="max-w-md px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                        <span className="line-clamp-2 break-words" title={entry.egress.purpose ?? undefined}>
-                          {entry.egress.purpose ?? <span className="text-slate-400">Allowed without being asked</span>}
+                        <span className="line-clamp-2 break-words" title={entry.connectivity.purpose ?? undefined}>
+                          {entry.connectivity.purpose ?? <span className="text-slate-400">Allowed without being asked</span>}
                         </span>
-                        {entry.egress.note && <span className="mt-0.5 block text-[12px] text-slate-500">You: “{entry.egress.note}”</span>}
+                        {entry.connectivity.note && <span className="mt-0.5 block text-[12px] text-slate-500">You: “{entry.connectivity.note}”</span>}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-slate-500"><Ago at={entry.egress.changed!} /></td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-slate-500"><Ago at={entry.connectivity.changed!} /></td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
                         {!entry.blocked && (
                           <button type="button" onClick={() => setDeciding({ entry, allow: false })} className="btn-ghost !px-2 !py-1 text-xs">
@@ -162,11 +162,11 @@ export function EgressSection({ access }: { access: Access }) {
         </>
       )}
 
-      <EgressDecisionDialog
+      <ConnectivityDecisionDialog
         token={token}
         publicKey={deciding?.entry.publicKey ?? ''}
-        purpose={deciding?.entry.egress.purpose}
-        current={deciding?.entry.egress.status}
+        purpose={deciding?.entry.connectivity.purpose}
+        current={deciding?.entry.connectivity.status}
         allow={deciding?.allow ?? null}
         connects={deciding?.entry.connects ?? false}
         onClose={() => setDeciding(null)}

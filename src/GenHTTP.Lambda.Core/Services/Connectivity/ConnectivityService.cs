@@ -5,10 +5,10 @@ using GenHTTP.Lambda.Services.Meta;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace GenHTTP.Lambda.Services.Egress;
+namespace GenHTTP.Lambda.Services.Connectivity;
 
 /// <summary>
-/// Keeps where each lambda's egress stands, and changes it as its owner asks
+/// Keeps where each lambda's connectivity stands, and changes it as its owner asks
 /// and the operator decides.
 /// </summary>
 /// <remarks>
@@ -17,22 +17,22 @@ namespace GenHTTP.Lambda.Services.Egress;
 /// next carries the new answer, and the build compiled under the old one is
 /// replaced on that request.
 /// </remarks>
-public sealed class EgressService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, ILogger<EgressService> logger) : IEgressService
+public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, ILogger<ConnectivityService> logger) : IConnectivityService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
     #region Owner
 
-    public EgressInfo Get(string privateKey)
+    public ConnectivityInfo Get(string privateKey)
     {
         using var database = databases.CreateDbContext();
 
-        return EgressRule.Describe(LambdaGuard.Require(database, privateKey));
+        return ConnectivityRule.Describe(LambdaGuard.Require(database, privateKey));
     }
 
-    public EgressInfo Request(string privateKey, string? purpose)
+    public ConnectivityInfo Request(string privateKey, string? purpose)
     {
-        var said = VersionInput.Tidy(purpose?.Replace("\r\n", "\n"), EgressRule.MaxPurpose)
+        var said = VersionInput.Tidy(purpose?.Replace("\r\n", "\n"), ConnectivityRule.MaxPurpose)
                 ?? throw LambdaException.Invalid("Say what the lambda connects to and why - the addresses or services, and what for. The operator decides on that.");
 
         // refuses a demo and a blocked lambda, and notes where the change came from
@@ -42,31 +42,31 @@ public sealed class EgressService(IDbContextFactory<LambdaDbContext> databases, 
 
         var lambda = database.Lambdas.FirstOrDefault(l => l.Id == id) ?? throw LambdaException.NotFound(Missing);
 
-        if (EgressRule.Allows(lambda.Tier, lambda.Egress))
+        if (ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity))
         {
             // there is nothing to wait for: the answer says it may
-            return EgressRule.Describe(lambda);
+            return ConnectivityRule.Describe(lambda);
         }
 
-        if (lambda.Egress != EgressStatus.Requested)
+        if (lambda.Connectivity != ConnectivityStatus.Requested)
         {
             // asked anew: it waits from now, and what was said about the
             // last request does not answer this one
-            lambda.Egress = EgressStatus.Requested;
-            lambda.EgressChanged = DateTime.UtcNow;
-            lambda.EgressNote = null;
+            lambda.Connectivity = ConnectivityStatus.Requested;
+            lambda.ConnectivityChanged = DateTime.UtcNow;
+            lambda.ConnectivityNote = null;
         }
 
-        lambda.EgressPurpose = said;
+        lambda.ConnectivityPurpose = said;
 
         database.SaveChanges();
 
-        logger.LogInformation("Requested egress for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
+        logger.LogInformation("Requested connectivity for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
-        return EgressRule.Describe(lambda);
+        return ConnectivityRule.Describe(lambda);
     }
 
-    public EgressInfo Withdraw(string privateKey)
+    public ConnectivityInfo Withdraw(string privateKey)
     {
         var id = meta.RequireEditable(privateKey);
 
@@ -74,29 +74,29 @@ public sealed class EgressService(IDbContextFactory<LambdaDbContext> databases, 
 
         var lambda = database.Lambdas.FirstOrDefault(l => l.Id == id) ?? throw LambdaException.NotFound(Missing);
 
-        if (lambda.Egress is EgressStatus.Requested or EgressStatus.Allowed)
+        if (lambda.Connectivity is ConnectivityStatus.Requested or ConnectivityStatus.Allowed)
         {
-            var previous = lambda.Egress;
+            var previous = lambda.Connectivity;
 
-            lambda.Egress = null;
-            lambda.EgressChanged = null;
-            lambda.EgressPurpose = null;
-            lambda.EgressNote = null;
+            lambda.Connectivity = null;
+            lambda.ConnectivityChanged = null;
+            lambda.ConnectivityPurpose = null;
+            lambda.ConnectivityNote = null;
 
             database.SaveChanges();
 
-            logger.LogInformation(previous == EgressStatus.Allowed ? "Gave up egress of lambda {Lambda} #{LambdaId}" : "Withdrew egress request of lambda {Lambda} #{LambdaId}",
+            logger.LogInformation(previous == ConnectivityStatus.Allowed ? "Gave up connectivity of lambda {Lambda} #{LambdaId}" : "Withdrew connectivity request of lambda {Lambda} #{LambdaId}",
                                   lambda.PublicKey, lambda.Id);
         }
 
-        return EgressRule.Describe(lambda);
+        return ConnectivityRule.Describe(lambda);
     }
 
     #endregion
 
     #region Operator
 
-    public EgressInfo Decide(string privateKey, bool allow, string? note)
+    public ConnectivityInfo Decide(string privateKey, bool allow, string? note)
     {
         using var database = databases.CreateDbContext();
 
@@ -110,40 +110,40 @@ public sealed class EgressService(IDbContextFactory<LambdaDbContext> databases, 
         // nothing about a blocked lambda changes but its block
         LambdaGuard.EnsureUnblocked(lambda);
 
-        var wanted = allow ? EgressStatus.Allowed : EgressStatus.Declined;
+        var wanted = allow ? ConnectivityStatus.Allowed : ConnectivityStatus.Declined;
 
-        if (!allow && lambda.Egress is not (EgressStatus.Requested or EgressStatus.Allowed))
+        if (!allow && lambda.Connectivity is not (ConnectivityStatus.Requested or ConnectivityStatus.Allowed))
         {
             throw LambdaException.Conflict($"Nothing was asked for '{lambda.PublicKey}', and nothing is allowed: there is nothing to decline.");
         }
 
-        var said = VersionInput.Tidy(note?.Replace("\r\n", "\n"), EgressRule.MaxNote);
+        var said = VersionInput.Tidy(note?.Replace("\r\n", "\n"), ConnectivityRule.MaxNote);
 
-        if (lambda.Egress != wanted || lambda.EgressNote != said)
+        if (lambda.Connectivity != wanted || lambda.ConnectivityNote != said)
         {
-            if (lambda.Egress != wanted)
+            if (lambda.Connectivity != wanted)
             {
-                lambda.Egress = wanted;
-                lambda.EgressChanged = DateTime.UtcNow;
+                lambda.Connectivity = wanted;
+                lambda.ConnectivityChanged = DateTime.UtcNow;
             }
 
-            lambda.EgressNote = said;
+            lambda.ConnectivityNote = said;
 
             database.SaveChanges();
 
-            logger.LogInformation(allow ? "Allowed egress for lambda {Lambda} #{LambdaId}" : "Declined egress for lambda {Lambda} #{LambdaId}",
+            logger.LogInformation(allow ? "Allowed connectivity for lambda {Lambda} #{LambdaId}" : "Declined connectivity for lambda {Lambda} #{LambdaId}",
                                   lambda.PublicKey, lambda.Id);
         }
 
-        return EgressRule.Describe(lambda);
+        return ConnectivityRule.Describe(lambda);
     }
 
-    public IReadOnlyList<EgressListing> List()
+    public IReadOnlyList<ConnectivityListing> List()
     {
         using var database = databases.CreateDbContext();
 
         var lambdas = database.Lambdas.AsNoTracking()
-                              .Where(l => l.Egress == EgressStatus.Requested || l.Egress == EgressStatus.Allowed)
+                              .Where(l => l.Connectivity == ConnectivityStatus.Requested || l.Connectivity == ConnectivityStatus.Allowed)
                               .ToList();
 
         var ids = lambdas.Select(l => l.Id).ToList();
@@ -156,9 +156,9 @@ public sealed class EgressService(IDbContextFactory<LambdaDbContext> databases, 
 
         // the ones waiting first, the longest waiting at the top; then what
         // was allowed, the newest first, to be looked at again
-        return [.. lambdas.Where(l => l.Egress == EgressStatus.Requested).OrderBy(l => l.EgressChanged)
-                          .Concat(lambdas.Where(l => l.Egress == EgressStatus.Allowed).OrderByDescending(l => l.EgressChanged))
-                          .Select(l => new EgressListing(l.PublicKey, l.Tier.ToString(), l.ActiveVersion, l.Blocked, EgressRule.Describe(l),
+        return [.. lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).OrderBy(l => l.ConnectivityChanged)
+                          .Concat(lambdas.Where(l => l.Connectivity == ConnectivityStatus.Allowed).OrderByDescending(l => l.ConnectivityChanged))
+                          .Select(l => new ConnectivityListing(l.PublicKey, l.Tier.ToString(), l.ActiveVersion, l.Blocked, ConnectivityRule.Describe(l),
                                                          Connects(l.Id, l.ActiveVersion, latest.GetValueOrDefault(l.Id))))];
     }
 

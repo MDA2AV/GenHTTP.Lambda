@@ -1,11 +1,11 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Egress;
+using GenHTTP.Lambda.Services.Connectivity;
 
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("Whether a lambda's code may connect to other servers, and where its owner's request for that stands.")]
-public sealed record EgressResponse(
+public sealed record ConnectivityResponse(
     [Summary("Whether its code may connect to other servers now - HttpClient, sockets, a WebSocket client, mail, DNS: its tier includes it, or the operator allowed it. Where it may not, code that does is refused as it compiles, with `LAMBDA0003`.")]
     bool Allowed,
     [Summary("Whether its tier includes it, whatever was asked: the premium tier does")]
@@ -21,9 +21,9 @@ public sealed record EgressResponse(
 )
 {
 
-    public static EgressResponse Of(EgressInfo? egress)
+    public static ConnectivityResponse Of(ConnectivityInfo? connectivity)
     {
-        var known = egress ?? EgressInfo.None;
+        var known = connectivity ?? ConnectivityInfo.None;
 
         return new(known.Allowed, known.Included, known.Status?.ToString(), known.Changed, known.Purpose, known.Note);
     }
@@ -31,13 +31,13 @@ public sealed record EgressResponse(
 }
 
 [Summary("Asks for a lambda to connect to other servers.")]
-public sealed record EgressRequest(
+public sealed record ConnectivityRequest(
     [Summary("What it connects to and why, for the operator who decides: the addresses or services, and what the lambda does with them - `api.open-meteo.com, for the forecast on the front page`. Required, up to 1000 characters.")]
     string? Purpose
 );
 
 [Summary("The operator's decision about a lambda connecting to other servers.")]
-public sealed record EgressDecision(
+public sealed record ConnectivityDecision(
     [Summary("`true` allows it, asked for or not; `false` declines the request, or takes back what was allowed")]
     bool Allow,
     [Summary("What to tell the owner about it, up to 500 characters - they read it in their editor as it is written")]
@@ -45,15 +45,15 @@ public sealed record EgressDecision(
 );
 
 [Summary("The lambdas that asked to connect to other servers, and those that may.")]
-public sealed record AdminEgressListing(
+public sealed record AdminConnectivityListing(
     [Summary("Those whose request waits for a decision, the longest waiting first")]
-    IReadOnlyList<AdminEgressEntry> Requested,
+    IReadOnlyList<AdminConnectivityEntry> Requested,
     [Summary("Those the operator allowed, the most recently allowed first. Premium lambdas may connect without being listed here.")]
-    IReadOnlyList<AdminEgressEntry> Allowed
+    IReadOnlyList<AdminConnectivityEntry> Allowed
 );
 
-[Summary("A lambda whose egress is the operator's to decide.")]
-public sealed record AdminEgressEntry(
+[Summary("A lambda whose connectivity is the operator's to decide.")]
+public sealed record AdminConnectivityEntry(
     [Summary("Its public key")]
     string PublicKey,
     [Summary("`Free`, `Premium` or `Demo`")]
@@ -62,8 +62,8 @@ public sealed record AdminEgressEntry(
     int? ActiveVersion,
     [Summary("Since when it is blocked; absent while it is not")]
     DateTime? Blocked,
-    [Summary("Where its egress stands, and what its owner said it is for")]
-    EgressResponse Egress,
+    [Summary("Where its connectivity stands, and what its owner said it is for")]
+    ConnectivityResponse Connectivity,
     [Summary("Whether the code of its version online, or of its newest, connects to other servers - as far as what is written tells")]
     bool Connects
 );

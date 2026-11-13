@@ -71,8 +71,8 @@ public static class ReferenceProvider
     /// <remarks>
     /// The same references either way, filtered - nothing is read twice.
     /// </remarks>
-    /// <param name="egress">Whether the lambda may connect to other servers</param>
-    public static MetadataReference[] Resolve(bool egress) => egress ? References.Value : Offline.Value;
+    /// <param name="connectivity">Whether the lambda may connect to other servers</param>
+    public static MetadataReference[] Resolve(bool connectivity) => connectivity ? References.Value : Offline.Value;
 
     private static MetadataReference[] Collect()
     {

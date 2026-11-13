@@ -44,8 +44,8 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimi
         var lambda = request.RequireLambda();
 
         // what it is built with, read on every request: a lambda whose tier,
-        // workspace or egress changed is built again on this one
-        var settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled), lambda.Egress);
+        // workspace or connectivity changed is built again on this one
+        var settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled), lambda.Connectivity);
 
         if (lambda.Feature is not { } feature)
         {

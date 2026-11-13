@@ -100,7 +100,7 @@ internal static class LambdaCompiler
         // only looked at the snippet would be avoided by moving the code
         foreach (var node in roots)
         {
-            rejections.AddRange(CodeGuard.Inspect(node, declared, request.Settings.Egress));
+            rejections.AddRange(CodeGuard.Inspect(node, declared, request.Settings.Connectivity));
         }
 
         if (rejections.Count > 0)
@@ -128,7 +128,7 @@ internal static class LambdaCompiler
         var compilation = CSharpCompilation.Create(
             scope,
             trees,
-            ReferenceProvider.Resolve(request.Settings.Egress),
+            ReferenceProvider.Resolve(request.Settings.Connectivity),
             CompilationOptions
         );
 
@@ -139,7 +139,7 @@ internal static class LambdaCompiler
         // its behalf
         List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation),
                                                    .. CodeGuard.InspectEntityFramework(compilation),
-                                                   .. (request.Settings.Egress ? [] : CodeGuard.InspectEgress(compilation))];
+                                                   .. (request.Settings.Connectivity ? [] : CodeGuard.InspectConnectivity(compilation))];
 
         if (constructed.Count > 0)
         {
@@ -244,7 +244,7 @@ internal static class LambdaCompiler
     /// <remarks>
     /// The directories and the settings are part of it because they are compiled
     /// in: the same code in another tier, with its workspace switched off, with
-    /// or without egress, or as the preview of a feature, is another assembly. Beyond those it is the
+    /// or without connectivity, or as the preview of a feature, is another assembly. Beyond those it is the
     /// C# files and nothing else. The resources are read from their directory
     /// while the lambda runs - only where that directory is gets compiled in -
     /// and the rest of the code is never built, so a version that only
@@ -261,7 +261,7 @@ internal static class LambdaCompiler
 
         Append(hash, request.Workspace);
         Append(hash, $"\n{request.Resources}");
-        Append(hash, $"\n{request.Settings.Workspace.Quota}\n{request.Settings.Workspace.Enabled}\n{request.Settings.Egress}");
+        Append(hash, $"\n{request.Settings.Workspace.Quota}\n{request.Settings.Workspace.Enabled}\n{request.Settings.Connectivity}");
 
         foreach (var file in request.Files.Where(f => f.IsCompiled))
         {
