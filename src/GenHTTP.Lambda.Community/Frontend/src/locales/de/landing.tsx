@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community Edition',
   headline: 'Die Plattform, auf der Ihre Agents Apps bauen.',
-  headlineAccent: 'Auf Ihrem eigenen Server.',
+  headlineAccent: 'Open Source, auf einem eigenen Server.',
   intro:
     'Beschreiben Sie eine App, und der Build-Agent schreibt sie – oder lassen Sie Claude Code, Codex oder Cursor sie über MCP bauen. Jede App ist ein C#-GenHTTP-Handler, wird auf diesem Server kompiliert und ist in Sekunden online, mit Datenbank, Schlüsseln und Passwörtern, Versionen und Git.',
   describe: 'App beschreiben',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Was jede App bekommt',
   features: [
-    { title: 'Eine Adresse', text: 'Online unter /lambda/ auf diesem Server, sobald sie kompiliert – oder unter einer eigenen Domain.' },
+    { title: 'Eine Adresse', text: 'Eine eigene Adresse auf diesem Server, benannt nach ihrem Schlüssel – und eine eigene Domain, sobald sie Premium ist.' },
     { title: 'Einträge', text: 'Eine eigene SQLite-Datenbank, ihre Tabellen durch Migrationen angelegt, gelesen und geschrieben mit Entity Framework Core.' },
     { title: 'Dateien', text: 'Ein Ordner für alles, was die App speichert: Uploads, Exporte, alles, was kein Eintrag ist.' },
     { title: 'Schlüssel und Passwörter', text: 'Verschlüsselt auf dem Server abgelegt. Der Agent nennt, was er braucht, Sie geben sie ein, und niemand liest sie wieder aus.' },
-    { title: 'Entwürfe und Versionen', text: 'Eine Änderung wird in einem Entwurf mit einer Kopie der Daten ausprobiert und dann online gestellt. Jede Version bleibt erhalten, ein Klick führt zu ihr zurück.' },
-    { title: 'Git', text: 'Jede App ist ein Repository: Klonen Sie es, pushen Sie einen Commit, um sie online zu stellen, oder einen Branch, um einen Entwurf zu starten.' },
+    { title: 'Entwürfe und Versionen', text: 'Eine Änderung wird in einem Entwurf mit einer Kopie der Daten ausprobiert und dann online gestellt. Frühere Versionen bleiben erhalten, ein Klick führt zu ihnen zurück.' },
+    { title: 'Git', text: 'Jede App ist ein Repository: Klonen Sie es, pushen Sie einen Commit, um eine Version zu speichern – mit -o deploy stellen Sie sie online –, oder einen Branch, um einen Entwurf zu starten.' },
     { title: 'Besucher', text: 'Seitenaufrufe, Herkunft der Besucher und ihre Länder – auf dem Server gezählt, ohne Cookies, sobald Sie es einschalten.' },
     { title: 'Ihr Code', text: 'Laden Sie jede App als einfaches .NET-Projekt herunter und betreiben Sie sie, wo Sie möchten, oder veröffentlichen Sie ihren Quellcode zum Lesen für andere.' },
   ],
 
   runsTitle: 'Wie es läuft',
   runs: [
-    { title: 'Ein Container', text: 'Der Server, der Editor, die API und alle Apps in einem Prozess, und alles, was sie speichern, in einem Ordner.' },
+    { title: 'Ein Prozess', text: 'Der Server, der Editor, die API und alle Apps laufen in einem Prozess und speichern alles in einem Ordner. Der Build-Agent läuft, wo es einen gibt, daneben.' },
     {
       title: 'Nach Pfad oder nach Host',
-      text: 'Apps antworten unter /lambda/ auf dieser Adresse. Geben Sie der Installation eine Domain für sie, und jede erhält stattdessen eine eigene Subdomain.',
+      text: 'Apps antworten unter /lambda/ auf der Adresse der Installation – oder, wenn Sie ihr eine Domain für sie geben, jede unter einer eigenen Subdomain.',
     },
     {
       title: 'Code, dem Sie vertrauen',

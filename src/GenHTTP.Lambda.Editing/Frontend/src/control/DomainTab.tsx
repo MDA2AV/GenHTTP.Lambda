@@ -11,21 +11,6 @@ import type { Control } from './context';
 import { Section } from '@genhttp-lambda/kit/ui/ui';
 
 /**
- * Where a domain has to point to reach this server.
- *
- * Written down here rather than asked for: they are the addresses genhttp.dev
- * resolves to, and an installation cannot reliably tell its own public
- * addresses from inside a container.
- */
-const ADDRESSES = {
-  v4: '152.53.120.139',
-  v6: '2a0a:4cc0:c0:4fc0:54d0:b1ff:fe46:c896',
-};
-
-/** What a CNAME points at, for the owners who prefer one. */
-const CANONICAL = 'genhttp.dev';
-
-/**
  * A domain of the lambda's own.
  *
  * Part of the premium tier, which only the operator assigns - the editor
@@ -209,9 +194,14 @@ function Records({ domain, configured, state, checking, onCheck }: {
 }) {
   const said = useEditorT().domain;
   const resolved = state.dns?.addresses ?? [];
-  const ours = new Set([ADDRESSES.v4, ADDRESSES.v6]);
+  // where this installation's own address points, as the server sees it -
+  // which is where the domain has to point too
+  const target = state.target?.addresses ?? [];
+  const ours = new Set(target);
   const pointsHere = resolved.some((address) => ours.has(address));
   const elsewhere = resolved.filter((address) => !ours.has(address));
+  const records = [...target].sort((a, b) => Number(a.includes(':')) - Number(b.includes(':')));
+  const canonical = state.target?.name ?? null;
   // typed with www by some, and sent on to the domain by the server - unless
   // the owner chose the name with www, which is then the domain itself
   const www = domain.startsWith('www.') ? null : `www.${domain}`;
@@ -228,29 +218,32 @@ function Records({ domain, configured, state, checking, onCheck }: {
         )}
       </div>
 
-      <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">{said.records}</p>
+      {records.length === 0 ? (
+        <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">{said.noTarget}</p>
+      ) : (
+        <>
+          <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">{said.records}</p>
 
-      <div className="surface mt-3 overflow-x-auto">
-        <table className="w-full text-left text-[13px]">
-          <thead className="text-slate-500">
-            <tr className="border-b border-slate-200 dark:border-ink-800">
-              <th className="px-4 py-2 font-normal">{said.type}</th>
-              <th className="px-4 py-2 font-normal">{said.name}</th>
-              <th className="px-4 py-2 font-normal">{said.value}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-ink-850">
-            <Record type="A" name={domain} value={ADDRESSES.v4} />
-            <Record type="AAAA" name={domain} value={ADDRESSES.v6} />
-            {www && (
-              <>
-                <Record type="A" name={www} value={ADDRESSES.v4} />
-                <Record type="AAAA" name={www} value={ADDRESSES.v6} />
-              </>
-            )}
-          </tbody>
-        </table>
-      </div>
+          <div className="surface mt-3 overflow-x-auto">
+            <table className="w-full text-left text-[13px]">
+              <thead className="text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-ink-800">
+                  <th className="px-4 py-2 font-normal">{said.type}</th>
+                  <th className="px-4 py-2 font-normal">{said.name}</th>
+                  <th className="px-4 py-2 font-normal">{said.value}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-ink-850">
+                {[domain, ...(www ? [www] : [])].flatMap((name) =>
+                  records.map((address) => (
+                    <Record key={`${name} ${address}`} type={address.includes(':') ? 'AAAA' : 'A'} name={name} value={address} />
+                  )),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {www && (
         <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-400">
@@ -279,19 +272,21 @@ function Records({ domain, configured, state, checking, onCheck }: {
         </p>
       )}
 
-      <details className="mt-5 text-[13px]">
-        <summary className="cursor-pointer select-none text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
-          {said.cname}
-        </summary>
-        <div className="mt-2 space-y-2 text-slate-600 dark:text-slate-400">
-          <p>{said.cnameText(<span className="font-mono">{CANONICAL}</span>)}</p>
-          <ul className="list-disc space-y-1 pl-5">
-            <li>{said.cnameRoot(<span className="font-mono">example.com</span>)}</li>
-            <li>{said.cnameAlone}</li>
-            <li>{said.cnameLookup}</li>
-          </ul>
-        </div>
-      </details>
+      {canonical && records.length > 0 && (
+        <details className="mt-5 text-[13px]">
+          <summary className="cursor-pointer select-none text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
+            {said.cname}
+          </summary>
+          <div className="mt-2 space-y-2 text-slate-600 dark:text-slate-400">
+            <p>{said.cnameText(<span className="font-mono">{canonical}</span>)}</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>{said.cnameRoot(<span className="font-mono">example.com</span>)}</li>
+              <li>{said.cnameAlone}</li>
+              <li>{said.cnameLookup}</li>
+            </ul>
+          </div>
+        </details>
+      )}
     </section>
   );
 }

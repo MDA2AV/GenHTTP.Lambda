@@ -87,9 +87,12 @@ public sealed class LambdaAddresses : ILambdaAddresses
         var variable = ByPath ? "LAMBDA_PUBLIC_URL" : "LAMBDA_HOSTING_URL";
 
         // a name with subdomains: an address has none, and a single label
-        // other than localhost resolves nowhere
+        // other than localhost resolves nowhere - while below a path, the
+        // host is only where the platform is reached, and an installation on
+        // a network of its own may well be reached by its IPv4 address
         if (!Uri.TryCreate(configured, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https") || url.AbsolutePath != "/"
-            || url.HostNameType != UriHostNameType.Dns || DomainNames.Normalize(url.IdnHost) is not { } domain
+            || !(url.HostNameType == UriHostNameType.Dns || (ByPath && url.HostNameType == UriHostNameType.IPv4))
+            || DomainNames.Normalize(url.IdnHost) is not { } domain
             || (!ByPath && !domain.Contains('.') && domain != "localhost"))
         {
             throw new InvalidOperationException($"{variable} is '{configured}', which is no address lambdas can answer below. "

@@ -32,7 +32,8 @@ public sealed class AddressBlockConcern(IHandler content, IAddressBlocks blocks,
     /// What the panel is made of, on the platform's own host: its bundle, below
     /// its own path (see PlatformRoutes), and what of the API it calls.
     /// </summary>
-    private static readonly string[] Panel = ["/" + PlatformRoutes.Admin, "/api/v1/admin", "/api/v1/telemetry", "/api/v1/logs", "/api/v1/system"];
+    private static readonly string[] Panel = ["/" + PlatformRoutes.Admin, PlatformRoutes.ApiBase + "/admin", PlatformRoutes.ApiBase + "/telemetry",
+                                              PlatformRoutes.ApiBase + "/logs", PlatformRoutes.ApiBase + "/system"];
 
     #region Get-/Setters
 

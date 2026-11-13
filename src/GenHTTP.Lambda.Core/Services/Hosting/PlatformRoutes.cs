@@ -41,6 +41,16 @@ public static class PlatformRoutes
     public const string Lambdas = "lambda";
 
     /// <summary>
+    /// The base of the REST API, the version included: <c>/api/v1</c>.
+    /// </summary>
+    public const string ApiBase = "/" + Api + "/v1";
+
+    /// <summary>
+    /// Where the lambdas answer by path, both slashes included: <c>/lambda/</c>.
+    /// </summary>
+    public const string LambdaBase = "/" + Lambdas + "/";
+
+    /// <summary>
     /// The editor of a lambda, for whoever holds its editor key.
     /// </summary>
     public static string EditorOf(string privateKey) => $"/{Editor}/{privateKey}";

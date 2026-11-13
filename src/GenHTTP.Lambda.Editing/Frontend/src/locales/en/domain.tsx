@@ -37,6 +37,9 @@ export const domain = {
       Visitors who type {www} are sent on to {domain}, so search engines keep one address. Its records are optional.
     </>
   ),
+  /** Instead of the DNS records, where the server has no public address a domain could point to - one run on localhost. */
+  noTarget:
+    'This server has no public address a domain could point to yet. Ask whoever runs it where the domain should point.',
   type: 'Type',
   name: 'Name',
   value: 'Value',

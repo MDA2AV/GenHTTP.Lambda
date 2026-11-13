@@ -3,7 +3,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: 'Cara kerjanya',
   intro:
-    'Anda menulis snippet C#. Apa pun yang dikembalikannya di-host di alamat publik, lewat HTTPS, dalam hitungan detik. Inilah semuanya, sesuai urutan yang akan Anda temui.',
+    'Anda menulis snippet C#. Apa pun yang dikembalikannya di-host di alamat tersendiri dalam hitungan detik. Inilah semuanya, sesuai urutan yang akan Anda temui.',
   contents: 'Daftar isi',
 
   parts: {
@@ -42,7 +42,7 @@ export const guide: KitMessages['guide'] = {
       <>
         Itu sudah lambda yang lengkap. Setelah di-deploy, lambda ini menjawab di alamatnya sendiri yang dinamai sesuai
         kuncinya, misalnya{' '}
-        {k.code('your-key.genhttp.run')}, dan setiap request di sana mendapat kata hello.
+        {k.code(k.example)}, dan setiap request di sana mendapat kata hello.
       </>
     ),
   ],

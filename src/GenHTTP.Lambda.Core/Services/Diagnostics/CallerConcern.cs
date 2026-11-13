@@ -70,7 +70,7 @@ public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, G
     private static bool Watching(CallerInfo caller)
         => caller.Domain == null
         && caller.Method == "GET"
-        && caller.Path.StartsWith("/api/v1/lambdas/", StringComparison.Ordinal)
+        && caller.Path.StartsWith(PlatformRoutes.ApiBase + "/lambdas/", StringComparison.Ordinal)
         && (caller.Path.EndsWith("/logs", StringComparison.Ordinal)
          || caller.Path.EndsWith("/traffic", StringComparison.Ordinal)
          || caller.Path.EndsWith("/summary", StringComparison.Ordinal));
@@ -87,7 +87,7 @@ public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, G
          * when these lines came from the engine and the suppression was lost
          * when they started coming from here.
          */
-        if ((caller.Domain == null && caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal)) || Watching(caller))
+        if ((caller.Domain == null && caller.Path.StartsWith(PlatformRoutes.ApiBase + "/logs", StringComparison.Ordinal)) || Watching(caller))
         {
             return;
         }

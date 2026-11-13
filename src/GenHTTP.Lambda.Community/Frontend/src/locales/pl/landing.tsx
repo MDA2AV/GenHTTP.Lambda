@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community edition',
   headline: 'Platforma, na której twoje agenty budują aplikacje.',
-  headlineAccent: 'Działa na twoim własnym serwerze.',
+  headlineAccent: 'Open source, na własnym serwerze.',
   intro:
     'Opisz aplikację, a agent budujący ją napisze - albo zleć to Claude Code, Codex lub Cursor przez MCP. Każda aplikacja to handler GenHTTP w C#, kompilowany na tym serwerze i online w kilka sekund, z bazą danych, kluczami i hasłami, wersjami i gitem.',
   describe: 'Opisz aplikację',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Co dostaje każda aplikacja',
   features: [
-    { title: 'Adres', text: 'Online pod /lambda/ na tym serwerze, gdy tylko się skompiluje - albo pod własną domeną.' },
+    { title: 'Adres', text: 'Własny adres na tym serwerze, nazwany od klucza aplikacji – a po przejściu na premium także własna domena.' },
     { title: 'Wpisy', text: 'Własna baza SQLite, tabele tworzone przez migracje, odczyt i zapis przez Entity Framework Core.' },
     { title: 'Pliki', text: 'Folder na to, co aplikacja zapisuje: przesłane pliki, eksporty, wszystko, co nie jest wpisem.' },
     { title: 'Klucze i hasła', text: 'Przechowywane na serwerze w zaszyfrowanej postaci. Agent mówi, których potrzebuje, ty je wpisujesz i nikt ich nie odczyta z powrotem.' },
-    { title: 'Szkice i wersje', text: 'Zmianę wypróbowujesz w szkicu z kopią danych, a potem ją udostępniasz. Każda wersja jest zachowana, powrót jest o jedno kliknięcie.' },
-    { title: 'Git', text: 'Każda aplikacja to repozytorium: sklonuj je, wypchnij commit, by ją udostępnić, wypchnij gałąź, by zacząć szkic.' },
+    { title: 'Szkice i wersje', text: 'Zmianę wypróbowujesz w szkicu z kopią danych, a potem ją udostępniasz. Wcześniejsze wersje są zachowane, powrót jest o jedno kliknięcie.' },
+    { title: 'Git', text: 'Każda aplikacja to repozytorium: sklonuj je, wypchnij commit, by zapisać wersję – z -o deploy od razu ją udostępnisz – albo gałąź, by zacząć szkic.' },
     { title: 'Odwiedzający', text: 'Wyświetlenia stron, skąd przyszli odwiedzający i z jakich krajów - liczone na serwerze, bez ciasteczek, po włączeniu.' },
     { title: 'Twój kod', text: 'Pobierz każdą aplikację jako zwykły projekt .NET i uruchom ją gdziekolwiek albo opublikuj jej źródła do wglądu dla innych.' },
   ],
 
   runsTitle: 'Jak to działa',
   runs: [
-    { title: 'Jeden kontener', text: 'Serwer, edytor, API i każda aplikacja w jednym procesie, a wszystko, co zapisują, w jednym folderze.' },
+    { title: 'Jeden proces', text: 'Serwer, edytor, API i każda aplikacja działają w jednym procesie i trzymają wszystko w jednym folderze. Agent budujący, jeśli jest, działa obok.' },
     {
       title: 'Po ścieżce lub po hoście',
-      text: 'Aplikacje odpowiadają pod /lambda/ na tym adresie. Nadaj instalacji domenę dla nich, a każda dostanie własną subdomenę.',
+      text: 'Aplikacje odpowiadają pod /lambda/ na adresie instalacji – albo, gdy nadasz domenę dla nich, każda pod własną subdomeną.',
     },
     {
       title: 'Kod, któremu ufasz',

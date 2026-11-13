@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Os visitantes que digitarem {www} são redirecionados para {domain}, para que os buscadores mantenham um único endereço. Os registros dele são opcionais.
     </>
   ),
+  noTarget:
+    'Este servidor ainda não tem um endereço público para o qual um domínio possa apontar. Pergunte a quem o administra para onde o domínio deve apontar.',
   type: 'Tipo',
   name: 'Nome',
   value: 'Valor',

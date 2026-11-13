@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Edisi Community',
   headline: 'Platform tempat agen Anda membangun aplikasi.',
-  headlineAccent: 'Berjalan di server Anda sendiri.',
+  headlineAccent: 'Open source, di server sendiri.',
   intro:
     'Jelaskan sebuah aplikasi dan agen pembangun akan menulisnya - atau biarkan Claude Code, Codex atau Cursor mengerjakannya lewat MCP. Setiap aplikasi adalah handler GenHTTP berbasis C#, dikompilasi di server ini dan online dalam hitungan detik, lengkap dengan database, kunci dan kata sandi, versi, dan git.',
   describe: 'Jelaskan sebuah aplikasi',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Yang didapat setiap aplikasi',
   features: [
-    { title: 'Sebuah alamat', text: 'Online di bawah /lambda/ pada server ini begitu berhasil dikompilasi - atau di domain sendiri.' },
+    { title: 'Sebuah alamat', text: 'Alamat sendiri di server ini, dinamai sesuai kuncinya - dan domain sendiri setelah dijadikan premium.' },
     { title: 'Catatan', text: 'Database SQLite tersendiri, tabelnya dibuat lewat migrasi, dibaca dan ditulis dengan Entity Framework Core.' },
     { title: 'File', text: 'Sebuah folder untuk apa yang disimpan aplikasi: unggahan, ekspor, apa pun yang bukan catatan.' },
     { title: 'Kunci dan kata sandi', text: 'Disimpan tersegel di server. Agen menyebutkan mana yang dibutuhkan, Anda memasukkannya, dan tidak ada yang bisa membacanya kembali.' },
-    { title: 'Draf dan versi', text: 'Perubahan dicoba di draf dengan salinan data, lalu dijadikan online. Setiap versi disimpan, cukup satu klik untuk kembali.' },
-    { title: 'Git', text: 'Setiap aplikasi adalah repositori: kloning, push commit untuk menjadikannya online, push branch untuk memulai draf.' },
+    { title: 'Draf dan versi', text: 'Perubahan dicoba di draf dengan salinan data, lalu dijadikan online. Versi sebelumnya disimpan, cukup satu klik untuk kembali.' },
+    { title: 'Git', text: 'Setiap aplikasi adalah repositori: kloning, push commit untuk menyimpan versi - dengan -o deploy untuk menjadikannya online - atau push branch untuk memulai draf.' },
     { title: 'Pengunjung', text: 'Tayangan halaman, asal pengunjung, dan negaranya - dihitung di server, tanpa cookie, setelah Anda mengaktifkannya.' },
     { title: 'Kode Anda', text: 'Unduh aplikasi apa pun sebagai proyek .NET biasa dan jalankan di mana saja, atau publikasikan kodenya agar dibaca orang lain.' },
   ],
 
   runsTitle: 'Cara kerjanya',
   runs: [
-    { title: 'Satu container', text: 'Server, editor, API, dan semua aplikasi dalam satu proses, dan semua yang mereka simpan dalam satu folder.' },
+    { title: 'Satu proses', text: 'Server, editor, API, dan setiap aplikasi berjalan dalam satu proses, dan menyimpan semuanya dalam satu folder. Agen build, jika ada, berjalan di sampingnya.' },
     {
       title: 'Lewat path atau host',
-      text: 'Aplikasi menjawab di bawah /lambda/ pada alamat ini. Beri instalasi sebuah domain untuk mereka, dan setiap aplikasi mendapat subdomain sendiri.',
+      text: 'Aplikasi menjawab di bawah /lambda/ pada alamat instalasi - atau, jika diberi domain untuk mereka, masing-masing di subdomain sendiri.',
     },
     {
       title: 'Kode yang Anda percaya',

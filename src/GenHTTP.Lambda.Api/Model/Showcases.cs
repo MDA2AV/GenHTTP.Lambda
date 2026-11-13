@@ -13,7 +13,7 @@ public sealed record ShowcaseResponse(
     string Title,
     [Summary("What its owner says it is, and what a visitor can do with it")]
     string Description,
-    [Summary("Where it answers - its own domain while it has one, its address below the hosting domain otherwise")]
+    [Summary("Where it answers - its own domain while it has one, its public address otherwise")]
     string Address,
     [Summary("Where its picture is on this site; it changes with the picture, so it may be cached for good")]
     string ImagePath,

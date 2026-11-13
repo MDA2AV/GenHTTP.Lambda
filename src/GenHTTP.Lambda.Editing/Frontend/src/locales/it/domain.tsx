@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Chi digita {www} viene reindirizzato a {domain}, così i motori di ricerca mantengono un solo indirizzo. I record per questo nome sono facoltativi.
     </>
   ),
+  noTarget:
+    'Questo server non ha ancora un indirizzo pubblico a cui un dominio possa puntare. Chiedi a chi lo gestisce dove deve puntare il dominio.',
   type: 'Tipo',
   name: 'Nome',
   value: 'Valore',

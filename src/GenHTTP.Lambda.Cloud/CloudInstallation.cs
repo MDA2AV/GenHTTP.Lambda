@@ -4,7 +4,8 @@ namespace GenHTTP.Lambda.Cloud;
 
 /// <summary>
 /// What genhttp.dev is as an installation, beside what its environment says:
-/// its terms, whom to write to and where its legal pages are.
+/// its terms, whom to write to, where its legal pages are and where a visitor
+/// has an app built.
 /// </summary>
 /// <remarks>
 /// The installation's own, rather than the platform's: they describe how this
@@ -16,14 +17,16 @@ public static class CloudInstallation
 {
 
     /// <summary>
-    /// The options the environment gave, with what is genhttp.dev's own.
+    /// The options the environment gave, with what is genhttp.dev's own -
+    /// the mailboxes unless the environment names others.
     /// </summary>
     public static LambdaOptions Of(LambdaOptions options) => options with
     {
         Terms = Terms,
-        Contact = "solutions@genhttp.dev",
-        AbuseContact = "abuse@genhttp.dev",
-        LegalPages = true
+        Contact = options.Contact ?? "solutions@genhttp.dev",
+        AbuseContact = options.AbuseContact ?? "abuse@genhttp.dev",
+        LegalPages = true,
+        StartPage = "/build"
     };
 
     /// <summary>

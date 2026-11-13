@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Les visiteurs qui saisissent {www} sont redirigés vers {domain}, afin que les moteurs de recherche ne retiennent qu’une seule adresse. Ses enregistrements sont facultatifs.
     </>
   ),
+  noTarget:
+    'Ce serveur n’a pas encore d’adresse publique vers laquelle un domaine pourrait pointer. Demandez à la personne qui l’exploite vers où le domaine doit pointer.',
   type: 'Type',
   name: 'Nom',
   value: 'Valeur',

@@ -20,4 +20,4 @@ definePages(pages);
 claim(isSitePath);
 
 // known when the site is built, so its rendered pages say it as well
-defineInstallation({ contact: CONTACT_MAIL, abuse: ABUSE_MAILBOX, legal: true });
+defineInstallation({ contact: CONTACT_MAIL, abuse: ABUSE_MAILBOX, legal: true, start: '/build' });

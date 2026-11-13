@@ -1,9 +1,12 @@
 /*
- * Writes the icons and the link previews into public/, from logo.svg and
- * cards.html next to this file - a preview for every page in every language
- * of cards.text.js. Run it after changing any of them:
+ * Writes the icons and the link previews from logo.svg and cards.html next to
+ * this file - a preview for every page in every language of cards.text.js:
+ * the icons and the previews every site shares (the front page, the guide,
+ * the showcase) into the kit's public/, which every bundle that wants them
+ * copies (see vite.ts), and those of the cloud's own pages into its public/.
+ * Run it after changing any of them:
  *
- *   node brand/render.mjs
+ *   node src/Kit/brand/render.mjs
  *
  * It drives a headless Chrome over its debugging protocol, so nothing needs
  * to be installed beyond Chrome itself - set CHROME if it is somewhere other
@@ -17,6 +20,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'public');
+
+/** Where the previews of the pages only the cloud has go. */
+const cloud = join(here, '..', '..', 'GenHTTP.Lambda.Cloud', 'Frontend', 'public');
+
+const CLOUD_PAGES = ['/build', '/ship'];
 
 const CHROMES = [
   process.env.CHROME,
@@ -87,16 +95,15 @@ try {
   for (const language of languages) {
     const english = language === 'en';
 
-    if (!english) {
-      mkdirSync(join(out, 'social', language), { recursive: true });
-    }
-
     for (const path of paths) {
       const name = path === '/' ? 'default' : path.slice(1);
       const file = english ? `social/${name}.png` : `social/${language}/${name}.jpg`;
       const url = `${cards}?page=${path}&lang=${language}`;
+      const target = CLOUD_PAGES.includes(path) ? cloud : out;
 
-      writeFileSync(join(out, file), await page.shoot(url, 1200, 630, english ? 'png' : 'jpeg'));
+      mkdirSync(dirname(join(target, file)), { recursive: true });
+
+      writeFileSync(join(target, file), await page.shoot(url, 1200, 630, english ? 'png' : 'jpeg'));
       console.log(file);
     }
   }

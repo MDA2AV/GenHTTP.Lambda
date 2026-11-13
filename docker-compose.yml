@@ -14,7 +14,7 @@ services:
     environment:
       LAMBDA_PORT: 80
       # HTTP/1.1 only, on both ports. HTTP/2 misbehaves again, and this is the
-      # switch LambdaOptions names for falling back without a release -
+      # switch ServerSettings names for falling back without a release -
       # Http1AndHttp2 turns it back on once the engine is fixed.
       LAMBDA_HTTP_PROTOCOLS: ${LAMBDA_HTTP_PROTOCOLS:-Http1}
       # TLS, terminated by the server itself - the certificate is published
@@ -53,7 +53,7 @@ services:
       LAMBDA_PREMIUM_MAX_ASSET_BYTES: ${LAMBDA_PREMIUM_MAX_ASSET_BYTES:-}
       LAMBDA_WORKSPACE_BYTES: ${LAMBDA_WORKSPACE_BYTES:-}
       LAMBDA_PREMIUM_WORKSPACE_BYTES: ${LAMBDA_PREMIUM_WORKSPACE_BYTES:-}
-      # The tail of the run, readable in the panel at /logs.
+      # The tail of the run, readable in the panel at /admin/log.
       #
       # In memory and lost on a restart; docker still has the whole of it on
       # stdout, which is what to read when the question is about a process

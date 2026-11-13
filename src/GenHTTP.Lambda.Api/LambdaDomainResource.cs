@@ -6,6 +6,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -23,10 +24,10 @@ namespace GenHTTP.Lambda.Api;
 /// only change the domain itself.
 /// </remarks>
 [Tag(ApiDocumentation.Domain)]
-[Summary("A domain of a lambda's own, which it answers at instead of its subdomain of the hosting domain.")]
+[Summary("A domain of a lambda's own, which it answers at instead of its own address on the platform.")]
 [Remarks("""
-         Part of the premium tier, which only the operator assigns. While a lambda answers at its domain, its subdomain of the
-         hosting domain sends its visitors on to the domain with a permanent redirect, and `address` names the domain.
+         Part of the premium tier, which only the operator assigns. While a lambda answers at its domain, its own address on
+         the platform sends its visitors on to the domain with a permanent redirect, and `address` names the domain.
 
          The domain is entered as it should answer. `www.` in front of a domain is sent on to the domain itself, unless the
          domain was entered with `www.` - then that is where it answers, and the name without is not sent there. The domain has
@@ -34,7 +35,7 @@ namespace GenHTTP.Lambda.Api;
          care of; the answer says what the domain resolves to, as the server sees it, to check the first.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomainResource> logger)
+public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions options, ILogger<LambdaDomainResource> logger)
 {
 
     /// <summary>
@@ -54,7 +55,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     [Summary("Sets the domain a lambda answers at")]
     [Remarks("""
              Takes effect at once: the next request addressed to the domain reaches the lambda, one addressed to its previous
-             domain no longer does, and its subdomain of the hosting domain sends its visitors on to the domain from then on -
+             domain no longer does, and its own address on the platform sends its visitors on to the domain from then on -
              so the domain should point here, with a certificate, first.
 
              The domain is lower cased, an international one written as it is in the DNS, and a pasted address is forgiven its
@@ -76,7 +77,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
 
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/domain")]
     [Summary("Removes the domain of a lambda")]
-    [Remarks("From the next request on it no longer answers at the domain, and its subdomain of the hosting domain answers again instead of sending visitors there. Any tier may remove a domain.")]
+    [Remarks("From the next request on it no longer answers at the domain, and its own address on the platform answers again instead of sending visitors there. Any tier may remove a domain.")]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda, without a domain")]
     public async ValueTask<DomainResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
@@ -88,13 +89,62 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
         return await DescribeAsync(lambda);
     }
 
-    internal static async ValueTask<DomainResponse> DescribeAsync(LambdaInfo lambda)
+    private async ValueTask<DomainResponse> DescribeAsync(LambdaInfo lambda)
     {
         var allowed = LambdaDescription.AllowsDomain(lambda.Tier);
 
-        var dns = lambda.Domain != null ? await ResolveAsync(lambda.Domain) : null;
+        if (lambda.Domain == null)
+        {
+            return new DomainResponse(null, lambda.Tier, allowed, LambdaDescription.Serves(lambda.Tier, null), null, null);
+        }
 
-        return new DomainResponse(lambda.Domain, lambda.Tier, allowed, LambdaDescription.Serves(lambda.Tier, lambda.Domain), dns);
+        var dns = ResolveAsync(lambda.Domain);
+        var target = TargetAsync();
+
+        return new DomainResponse(lambda.Domain, lambda.Tier, allowed, LambdaDescription.Serves(lambda.Tier, lambda.Domain), await dns, await target);
+    }
+
+    /// <summary>
+    /// Where a domain has to point: the name of the installation's public
+    /// address, and what the name servers say that name is.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the name servers rather than of the machine: inside a
+    /// container the server cannot tell its public addresses, but its public
+    /// name points to them. A name that resolves to this machine only - an
+    /// installation on localhost - has nothing a domain could point to.
+    /// </remarks>
+    private async Task<DomainTargetResponse> TargetAsync()
+    {
+        // without a public address the installation does not know the name
+        // it is reached by - and a request's own host is not to be read here,
+        // after a body was bound
+        if (options.PublicUrl is not { } publicUrl)
+        {
+            return new DomainTargetResponse(null, []);
+        }
+
+        var host = new Uri(publicUrl).IdnHost;
+
+        if (IPAddress.TryParse(host.Trim('[', ']'), out var literal))
+        {
+            return new DomainTargetResponse(null, IPAddress.IsLoopback(literal) ? [] : [Format(literal)]);
+        }
+
+        using var timeout = new CancellationTokenSource(Patience);
+
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(host, timeout.Token);
+
+            var reachable = addresses.Where(a => !IPAddress.IsLoopback(a)).Select(Format).Distinct().Order(StringComparer.Ordinal).ToList();
+
+            return new DomainTargetResponse(reachable.Count > 0 ? host : null, reachable);
+        }
+        catch (Exception e) when (e is SocketException or OperationCanceledException)
+        {
+            return new DomainTargetResponse(host, []);
+        }
     }
 
     /// <summary>

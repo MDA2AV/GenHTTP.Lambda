@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community edition',
   headline: 'La piattaforma su cui i tuoi agenti creano app.',
-  headlineAccent: 'Sul tuo server.',
+  headlineAccent: 'Open source, su un server tutto suo.',
   intro:
     'Descrivi un’app e l’agente di creazione la scrive, oppure lascia che lo facciano Claude Code, Codex o Cursor tramite MCP. Ogni app è un handler GenHTTP in C#, compilato su questo server e online in pochi secondi, con database, chiavi e password, versioni e git.',
   describe: 'Descrivi un’app',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Cosa ottiene ogni app',
   features: [
-    { title: 'Un indirizzo', text: 'Online sotto /lambda/ su questo server appena compila, oppure su un dominio tutto suo.' },
+    { title: 'Un indirizzo', text: 'Un indirizzo tutto suo su questo server, con il nome della sua chiave, e un dominio tutto suo quando diventa premium.' },
     { title: 'Voci', text: 'Un database SQLite tutto suo, con le tabelle create da migrazioni, letto e scritto con Entity Framework Core.' },
     { title: 'File', text: 'Una cartella per ciò che l’app salva: upload, esportazioni, tutto ciò che non è una voce.' },
     { title: 'Chiavi e password', text: 'Conservate cifrate sul server. L’agente dice quali servono, tu le inserisci e nessuno può rileggerle.' },
-    { title: 'Bozze e versioni', text: 'Una modifica si prova in una bozza con una copia dei dati, poi si mette online. Ogni versione viene conservata, a un clic dal tornare indietro.' },
-    { title: 'Git', text: 'Ogni app è un repository: clonalo, fai push di un commit per metterla online, fai push di un branch per avviare una bozza.' },
+    { title: 'Bozze e versioni', text: 'Una modifica si prova in una bozza con una copia dei dati, poi si mette online. Le versioni precedenti vengono conservate, a un clic dal tornare indietro.' },
+    { title: 'Git', text: 'Ogni app è un repository: clonalo, fai push di un commit per salvare una versione (con -o deploy la metti online) oppure di un branch per avviare una bozza.' },
     { title: 'Visitatori', text: 'Visualizzazioni di pagina, provenienza dei visitatori e loro paesi: contati sul server, senza cookie, quando lo attivi.' },
     { title: 'Il tuo codice', text: 'Scarica qualsiasi app come semplice progetto .NET ed eseguila ovunque, oppure pubblica il suo sorgente perché gli altri possano leggerlo.' },
   ],
 
   runsTitle: 'Come funziona',
   runs: [
-    { title: 'Un container', text: 'Il server, l’editor, l’API e tutte le app in un unico processo, e tutto ciò che conservano in una sola cartella.' },
+    { title: 'Un processo', text: 'Il server, l’editor, l’API e tutte le app girano in un unico processo e conservano tutto in una sola cartella. L’agente di build, dove c’è, gira accanto.' },
     {
       title: 'Per percorso o per host',
-      text: 'Le app rispondono sotto /lambda/ a questo indirizzo. Assegna un dominio all’installazione e ognuna avrà invece un sottodominio tutto suo.',
+      text: 'Le app rispondono sotto /lambda/ all’indirizzo dell’installazione oppure, se le assegni un dominio, ognuna a un sottodominio tutto suo.',
     },
     {
       title: 'Codice di cui ti fidi',

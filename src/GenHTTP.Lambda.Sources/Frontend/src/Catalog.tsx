@@ -10,6 +10,7 @@ import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { usePublicPage } from '@genhttp-lambda/kit/meta';
 import { useFormat } from './format';
 import { LambdaNotice, LicenseChip } from './parts';
+import { useStartPage } from '@genhttp-lambda/kit/installation';
 
 const PAGE = 24;
 
@@ -296,6 +297,7 @@ function Placeholder() {
 
 /** Nothing published at all: an invitation rather than an error. */
 function Nothing() {
+  const start = useStartPage();
   const said = useSourceT().catalog;
 
   return (
@@ -304,7 +306,7 @@ function Nothing() {
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">
         {said.nothing((text) => <b>{text}</b>)}
       </p>
-      <Link to="/build" className="btn-primary mt-6">
+      <Link to={start} className="btn-primary mt-6">
         {said.build}
       </Link>
     </div>
@@ -327,6 +329,7 @@ function NoMatch({ query, onClear }: { query: string; onClear: () => void }) {
 
 /** How to be on this page, for whoever has just scrolled through it. */
 function Yours() {
+  const start = useStartPage();
   const said = useSourceT().catalog;
 
   return (
@@ -337,7 +340,7 @@ function Yours() {
           {said.yours((text) => <b>{text}</b>)}
         </p>
       </div>
-      <Link to="/build" className="btn-primary justify-self-start">
+      <Link to={start} className="btn-primary justify-self-start">
         {said.build}
       </Link>
     </aside>

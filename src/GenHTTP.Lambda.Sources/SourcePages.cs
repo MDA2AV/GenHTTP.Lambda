@@ -128,18 +128,26 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
                 return null;
             }
 
+            // a file of the bundle that is not there is not a page either: a
+            // stale asset learns it is gone rather than being sent on to a
+            // source named "assets"
+            if (target.Current?.Decode() == "assets")
+            {
+                return await files.HandleAsync(request) ?? request.Respond().Status(ResponseStatus.NotFound).Build();
+            }
+
             if (target.Current != null && await files.HandleAsync(request) is { } file)
             {
                 return file;
             }
 
-            return ToLanguage(request);
+            return Revalidated(ToLanguage(request));
         }
 
         // a page of the sources in a language
         if (first != null && SiteLanguages.IsLanguage(first) && target.Next(1)?.Decode() == PlatformRoutes.Source && IsRead(request))
         {
-            return Page(request, first);
+            return Revalidated(Page(request, first));
         }
 
         return null;
@@ -209,6 +217,16 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
                       .Header("Location", SiteLanguages.In(preferred, path) + RequestOrigin.Query(request))
                       .Header("Vary", "Accept-Language, Cookie")
                       .Build();
+    }
+
+    /// <summary>
+    /// A page names the files of the bundle it was built with, which change
+    /// their names with every build - so it is asked for again each time.
+    /// </summary>
+    private static IResponse Revalidated(IResponse response)
+    {
+        response.Rebuild().Header("Cache-Control", "no-cache");
+        return response;
     }
 
     private static IResponse Answer(IRequest request, string markup)

@@ -6,7 +6,7 @@
 export const landing = {
   eyebrow: 'GenHTTP Lambda · Community edition',
   headline: 'The platform your agents build apps on.',
-  headlineAccent: 'Running on your own server.',
+  headlineAccent: 'Open source, on a server of its own.',
   intro:
     'Describe an app and the build agent writes it - or let Claude Code, Codex or Cursor do it over MCP. Every app is a C# GenHTTP handler, compiled on this server and online in seconds, with a database, keys and passwords, versions and git.',
   describe: 'Describe an app',
@@ -24,22 +24,22 @@ export const landing = {
 
   featuresTitle: 'What every app gets',
   features: [
-    { title: 'An address', text: 'Online below /lambda/ on this server as soon as it compiles - or at a domain of its own.' },
+    { title: 'An address', text: 'An address of its own on this server, named after its key - and a domain of its own once it is made premium.' },
     { title: 'Records', text: 'A SQLite database of its own, its tables made by migrations, read and written with Entity Framework Core.' },
     { title: 'Files', text: 'A folder for what the app saves: uploads, exports, anything that is not a record.' },
     { title: 'Keys and passwords', text: 'Kept sealed on the server. The agent says which it needs, you enter them, and nobody reads them back.' },
-    { title: 'Drafts and versions', text: 'A change is tried in a draft with a copy of the data, then put online. Every version is kept, one click away from going back.' },
-    { title: 'Git', text: 'Every app is a repository: clone it, push a commit to put it online, push a branch to start a draft.' },
+    { title: 'Drafts and versions', text: 'A change is tried in a draft with a copy of the data, then put online. Earlier versions are kept, one click away from going back.' },
+    { title: 'Git', text: 'Every app is a repository: clone it, push a commit to save a version - with -o deploy to put it online - or a branch to start a draft.' },
     { title: 'Visitors', text: 'Page views, where visitors came from and their countries - counted on the server, without cookies, once you switch it on.' },
     { title: 'Your code', text: 'Download any app as a plain .NET project and run it anywhere, or publish its source for others to read.' },
   ],
 
   runsTitle: 'How it runs',
   runs: [
-    { title: 'One container', text: 'The server, the editor, the API and every app in one process, and everything they keep in one folder.' },
+    { title: 'One process', text: 'The server, the editor, the API and every app run in one process, and keep everything in one folder. The build agent, where there is one, runs beside it.' },
     {
       title: 'By path or by host',
-      text: 'Apps answer below /lambda/ on this address. Give the installation a domain for them, and each gets a subdomain of its own instead.',
+      text: 'Apps answer below /lambda/ on the installation\'s address - or, given a domain for them, each at a subdomain of its own.',
     },
     {
       title: 'Code you trust',

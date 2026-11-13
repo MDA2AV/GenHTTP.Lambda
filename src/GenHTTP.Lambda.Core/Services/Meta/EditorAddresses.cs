@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Hosting;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -131,7 +132,7 @@ public sealed class EditorAddresses(IDbContextFactory<LambdaDbContext> databases
     /// The panel's API is behind the token, so a request there is theirs.
     /// </remarks>
     private static bool ByTheOperator(CallerInfo caller)
-        => caller.Domain == null && caller.Path.StartsWith("/api/v1/admin/", StringComparison.Ordinal);
+        => caller.Domain == null && caller.Path.StartsWith(PlatformRoutes.ApiBase + "/admin/", StringComparison.Ordinal);
 
     /// <summary>
     /// Whether this lambda and address are to be written now - which only

@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community edition',
   headline: 'A plataforma onde seus agentes criam apps.',
-  headlineAccent: 'Rodando no seu próprio servidor.',
+  headlineAccent: 'Código aberto, em um servidor próprio.',
   intro:
     'Descreva um app e o agente de criação o escreve - ou deixe o Claude Code, o Codex ou o Cursor fazer isso via MCP. Cada app é um handler GenHTTP em C#, compilado neste servidor e no ar em segundos, com banco de dados, chaves e senhas, versões e git.',
   describe: 'Descrever um app',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'O que todo app recebe',
   features: [
-    { title: 'Um endereço', text: 'No ar abaixo de /lambda/ neste servidor assim que compila - ou em um domínio próprio.' },
+    { title: 'Um endereço', text: 'Um endereço próprio neste servidor, com o nome da chave - e um domínio próprio quando virar premium.' },
     { title: 'Registros', text: 'Um banco de dados SQLite próprio, com tabelas criadas por migrações, lido e gravado com o Entity Framework Core.' },
     { title: 'Arquivos', text: 'Uma pasta para o que o app salva: uploads, exportações, tudo o que não é um registro.' },
     { title: 'Chaves e senhas', text: 'Guardadas com segurança no servidor. O agente diz quais precisa, você as informa, e ninguém as lê de volta.' },
-    { title: 'Rascunhos e versões', text: 'Uma mudança é testada em um rascunho com uma cópia dos dados e depois colocada no ar. Cada versão é guardada, a um clique de voltar.' },
-    { title: 'Git', text: 'Cada app é um repositório: clone-o, faça push de um commit para colocá-lo no ar, faça push de um branch para começar um rascunho.' },
+    { title: 'Rascunhos e versões', text: 'Uma mudança é testada em um rascunho com uma cópia dos dados e depois colocada no ar. As versões anteriores são guardadas, a um clique de voltar.' },
+    { title: 'Git', text: 'Cada app é um repositório: clone-o, faça push de um commit para salvar uma versão - com -o deploy para colocá-la no ar - ou de um branch para começar um rascunho.' },
     { title: 'Visitantes', text: 'Visualizações de página, de onde os visitantes vieram e seus países - contados no servidor, sem cookies, assim que você ativar.' },
     { title: 'Seu código', text: 'Baixe qualquer app como um projeto .NET simples e execute onde quiser, ou publique o código-fonte para outros lerem.' },
   ],
 
   runsTitle: 'Como funciona',
   runs: [
-    { title: 'Um contêiner', text: 'O servidor, o editor, a API e todos os apps em um único processo, e tudo o que eles guardam em uma única pasta.' },
+    { title: 'Um processo', text: 'O servidor, o editor, a API e todos os apps rodam em um único processo e guardam tudo em uma única pasta. O agente de criação, quando há um, roda ao lado.' },
     {
       title: 'Por caminho ou por host',
-      text: 'Os apps respondem abaixo de /lambda/ neste endereço. Dê um domínio à instalação para eles, e cada um recebe um subdomínio próprio.',
+      text: 'Os apps respondem abaixo de /lambda/ no endereço da instalação - ou, se ela tiver um domínio para eles, cada um em um subdomínio próprio.',
     },
     {
       title: 'Código em que você confia',

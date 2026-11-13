@@ -6,14 +6,20 @@ using GenHTTP.Api.Infrastructure;
 namespace GenHTTP.Lambda.Configuration;
 
 /// <summary>
-/// All knobs of the system, read once from the environment on startup.
+/// All knobs of the platform, which every component reads - given to its
+/// builder by the host, which usually reads them from the environment
+/// (<c>LambdaSettings</c> in GenHTTP.Lambda.Server).
 /// </summary>
 /// <remarks>
+/// Nothing here reads the environment: a component is told what it needs.
+/// What only the server needs - the engine, the ports, the certificates - is
+/// the server's own (<c>ServerSettings</c>).
+///
 /// The limits of the tiers are here only as the defaults of what the operator
 /// sets in the administration panel (see <see cref="GenHTTP.Lambda.Services.Settings.LimitsService"/>):
 /// they are the product's promises, not the server's configuration. Their
 /// environment variables still set those defaults for one release, with a
-/// warning on startup (<see cref="MovedToPanel"/>), and are removed after.
+/// warning on startup (<c>LambdaSettings.MovedToPanel</c>), and are removed after.
 /// </remarks>
 public sealed record LambdaOptions
 {
@@ -250,6 +256,13 @@ public sealed record LambdaOptions
     public bool LegalPages { get; init; }
 
     /// <summary>
+    /// The page of the installation's site where a visitor has an app built
+    /// - the one with the build box - which the pages every installation
+    /// shares lead to: <c>/build</c> on genhttp.dev, the front page elsewhere.
+    /// </summary>
+    public string StartPage { get; init; } = "/";
+
+    /// <summary>
     /// How often a telemetry reading is taken.
     /// </summary>
     public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);
@@ -456,7 +469,7 @@ public sealed record LambdaOptions
     /// another lambda keeps there, and it has the root of its host to itself.
     /// Needs a wildcard record in the DNS and a wildcard certificate, which is
     /// presented to every name no other certificate is listed for (see
-    /// <see cref="GenHTTP.Lambda.Infrastructure.CertificateLoader"/>).
+    /// <c>CertificateLoader</c> in GenHTTP.Lambda.Server).
     ///
     /// Left empty, it is this server on localhost - <c>http://quiz.localhost:8080/</c> -
     /// which browsers resolve without a record, so a server run on a laptop

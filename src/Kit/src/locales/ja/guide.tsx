@@ -8,7 +8,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: '仕組み',
   intro:
-    'C#のスニペットを書くと、それが返すものが数秒で公開URLにHTTPSでホストされます。ここでは、実際に使う順に全体を説明します。',
+    'C#のスニペットを書くと、それが返すものが数秒で専用のアドレスにホストされます。ここでは、実際に使う順に全体を説明します。',
   contents: '目次',
 
   parts: {
@@ -45,7 +45,7 @@ export const guide: KitMessages['guide'] = {
     ),
     (k) => (
       <>
-        これで完全なlambdaです。デプロイすると、キーにちなんだ専用のアドレス（例：{k.code('your-key.genhttp.run')}
+        これで完全なlambdaです。デプロイすると、キーにちなんだ専用のアドレス（例：{k.code(k.example)}
         ）で応答し、そこへのどのリクエストにも「hello」と返します。
       </>
     ),

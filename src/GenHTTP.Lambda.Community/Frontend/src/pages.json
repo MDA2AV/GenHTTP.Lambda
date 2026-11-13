@@ -130,66 +130,66 @@
     "text": {
       "id": {
         "title": "Cara Kerja dan Dokumentasi",
-        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat HTTPS publik dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya.",
+        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat tersendiri dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya.",
         "image": "/social/id/docs.jpg"
       },
       "de": {
         "title": "So funktioniert es",
-        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt.",
+        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer eigenen Adresse online. Die ganze Plattform, Schritt für Schritt.",
         "image": "/social/de/docs.jpg"
       },
       "en": {
         "title": "How It Works",
-        "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+        "description": "Write a snippet of C# and whatever it returns is hosted at an address of its own in seconds. The whole platform, in the order you will meet it."
       },
       "es": {
         "title": "Cómo funciona",
-        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la vas a usar.",
+        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección propia en segundos. Toda la plataforma, en el orden en que la vas a usar.",
         "image": "/social/es/docs.jpg"
       },
       "fr": {
         "title": "Documentation : comment ça marche",
-        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé en HTTPS, à une adresse publique, en quelques secondes. Toute la plateforme, étape par étape.",
+        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé à une adresse à lui en quelques secondes. Toute la plateforme, étape par étape.",
         "image": "/social/fr/docs.jpg"
       },
       "it": {
         "title": "Guida: come funziona",
-        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo.",
+        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo tutto suo. Tutta la piattaforma, passo per passo.",
         "image": "/social/it/docs.jpg"
       },
       "nl": {
         "title": "Zo werkt het",
-        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een openbaar HTTPS-adres. Het hele platform, in de volgorde waarin je het tegenkomt.",
+        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een eigen adres. Het hele platform, in de volgorde waarin je het tegenkomt.",
         "image": "/social/nl/docs.jpg"
       },
       "pl": {
         "title": "Dokumentacja: jak to działa",
-        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod publiczny adres HTTPS. Cała platforma w kolejności, w jakiej ją poznasz.",
+        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod własny adres. Cała platforma w kolejności, w jakiej ją poznasz.",
         "image": "/social/pl/docs.jpg"
       },
       "pt": {
         "title": "Documentação: como funciona",
-        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar.",
+        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço próprio em segundos. A plataforma inteira, na ordem em que você vai usar.",
         "image": "/social/pt/docs.jpg"
       },
       "pt-pt": {
         "title": "Documentação: como funciona",
-        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço HTTPS público em segundos. A plataforma toda, pela ordem em que a vais usar.",
+        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço próprio em segundos. A plataforma toda, pela ordem em que a vais usar.",
         "image": "/social/pt-pt/docs.jpg"
       },
       "tr": {
         "title": "Nasıl çalışır",
-        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde herkese açık bir HTTPS adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla.",
+        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde kendi adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla.",
         "image": "/social/tr/docs.jpg"
       },
       "ja": {
         "title": "仕組みとドキュメント",
-        "description": "C#のスニペットを書くと、返したものが数秒でHTTPSの公開URLにホストされます。プラットフォームの全体を、実際に使う順に説明します。",
+        "description": "C#のスニペットを書くと、返したものが数秒で専用のアドレスにホストされます。プラットフォームの全体を、実際に使う順に説明します。",
         "image": "/social/ja/docs.jpg"
       },
       "ko": {
         "title": "작동 방식과 개발 문서",
-        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 공개 HTTPS 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요.",
+        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 자체 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요.",
         "image": "/social/ko/docs.jpg"
       }
     }

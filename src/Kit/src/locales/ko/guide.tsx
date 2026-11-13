@@ -3,7 +3,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: '작동 방식',
   intro:
-    'C# 스니펫 하나를 작성하세요. 스니펫이 반환하는 것은 몇 초 만에 HTTPS 공개 주소에 호스팅돼요. 필요한 내용을 모두, 실제로 만나게 될 순서대로 정리했어요.',
+    'C# 스니펫 하나를 작성하세요. 스니펫이 반환하는 것은 몇 초 만에 자체 주소에 호스팅돼요. 필요한 내용을 모두, 실제로 만나게 될 순서대로 정리했어요.',
   contents: '목차',
 
   parts: {
@@ -40,7 +40,7 @@ export const guide: KitMessages['guide'] = {
     ),
     (k) => (
       <>
-        이게 완전한 람다예요. 배포하면 키 이름을 딴 전용 주소, 예를 들어 {k.code('your-key.genhttp.run')}에서 응답하고, 그곳으로
+        이게 완전한 람다예요. 배포하면 키 이름을 딴 전용 주소, 예를 들어 {k.code(k.example)}에서 응답하고, 그곳으로
         오는 모든 요청에 hello라고 답해요.
       </>
     ),

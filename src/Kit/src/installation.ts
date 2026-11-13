@@ -23,6 +23,8 @@ export interface Installation {
   abuse: string | null;
   /** Whether it has its terms, privacy policy and imprint at /terms, /privacy and /imprint. */
   legal: boolean;
+  /** The page of its site where a visitor has an app built - the one with the build box. */
+  start: string;
 }
 
 let known: Installation | null = null;
@@ -47,4 +49,13 @@ export function useInstallation(): Installation | null {
   }, []);
 
   return known ?? asked;
+}
+
+/**
+ * Where a visitor has an app built on this installation's site: /build on
+ * genhttp.dev, the front page elsewhere - and the front page until the
+ * server has said, which is never wrong for long.
+ */
+export function useStartPage(): string {
+  return useInstallation()?.start ?? '/';
 }

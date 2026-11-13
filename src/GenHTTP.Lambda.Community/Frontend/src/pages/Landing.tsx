@@ -46,7 +46,15 @@ export function Landing() {
       .catch(() => setAvailable(false));
   }, []);
 
-  const to = (target: React.RefObject<HTMLDivElement | null>) => () => target.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // anchors, so they lead somewhere without a script and for whoever reads
+  // the page with a keyboard or aloud - and scroll smoothly where one runs
+  const to = (target: React.RefObject<HTMLDivElement | null>) => (event: React.MouseEvent) => {
+    if (target.current) {
+      event.preventDefault();
+      target.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', `#${target.current.id}`);
+    }
+  };
 
   return (
     <div className="relative w-full">
@@ -76,14 +84,14 @@ export function Landing() {
 
           <div className="rise mt-9 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: '200ms' }}>
             {available !== false && (
-              <button type="button" onClick={to(build)} className="btn-primary px-6 py-3 text-base">
+              <a href="#build" onClick={to(build)} className="btn-primary px-6 py-3 text-base">
                 {said.describe}
-              </button>
+              </a>
             )}
 
-            <button type="button" onClick={to(agents)} className={`${available !== false ? 'btn-ghost' : 'btn-primary'} px-5 py-3 text-base`}>
+            <a href="#agents" onClick={to(agents)} className={`${available !== false ? 'btn-ghost' : 'btn-primary'} px-5 py-3 text-base`}>
               {said.connect}
-            </button>
+            </a>
 
             <Link to="/editor/create" className="btn-ghost px-5 py-3 text-base">
               <IconCode className="h-4 w-4" />
@@ -104,15 +112,15 @@ export function Landing() {
       </section>
 
       {/* ------------------------------------------------------- the box */}
-      <section ref={build} className="relative z-10 scroll-mt-20 px-5 py-14">
+      <section ref={build} id="build" className="relative z-10 scroll-mt-20 px-5 py-14">
         <div className="mx-auto w-full max-w-2xl">
           <Heading icon={<IconSpark className="h-5 w-5" />}>{said.buildTitle}</Heading>
 
           {available === false ? (
-            <p className="mt-3 text-sm text-slate-500">{said.noAgent}</p>
+            <p className="mt-3 text-sm text-grey-700 dark:text-grey-300">{said.noAgent}</p>
           ) : (
             <>
-              <p className="mt-3 max-w-xl text-sm text-slate-500">{said.buildText}</p>
+              <p className="mt-3 max-w-xl text-sm text-grey-700 dark:text-grey-300">{said.buildText}</p>
 
               {/* the page says how to connect an agent itself, right below */}
               <BuildBox own={false} />
@@ -122,15 +130,15 @@ export function Landing() {
       </section>
 
       {/* ------------------------------------------------------- an agent of one's own */}
-      <section ref={agents} className="relative z-10 scroll-mt-20 px-5 py-14">
+      <section ref={agents} id="agents" className="relative z-10 scroll-mt-20 px-5 py-14">
         <div className="mx-auto w-full max-w-2xl">
           <Heading icon={<IconLayers className="h-5 w-5" />}>{said.connectTitle}</Heading>
 
-          <p className="mb-5 mt-3 max-w-xl text-sm text-slate-500">{said.connectText}</p>
+          <p className="mb-5 mt-3 max-w-xl text-sm text-grey-700 dark:text-grey-300">{said.connectText}</p>
 
           <ConnectAgent origin={origin} />
 
-          <p className="mt-5 text-sm text-slate-500">{said.connectThen}</p>
+          <p className="mt-5 text-sm text-grey-700 dark:text-grey-300">{said.connectThen}</p>
         </div>
       </section>
 
@@ -147,7 +155,7 @@ export function Landing() {
                 <li key={feature.title} className="surface h-full p-4">
                   <Icon className="h-5 w-5 text-accent-600 dark:text-accent-400" />
                   <h3 className="mt-3 text-sm font-medium">{feature.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{feature.text}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{feature.text}</p>
                 </li>
               );
             })}
@@ -164,7 +172,7 @@ export function Landing() {
             {said.runs.map((fact) => (
               <div key={fact.title} className="border-l-2 border-accent-500/50 pl-4">
                 <dt className="text-sm font-medium">{fact.title}</dt>
-                <dd className="mt-1 text-sm leading-relaxed text-slate-500">{fact.text}</dd>
+                <dd className="mt-1 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{fact.text}</dd>
               </div>
             ))}
           </dl>
@@ -211,7 +219,7 @@ function Card({ to, icon, title, text }: { to: string; icon: ReactNode; title: s
         {icon}
         <span className="text-sm font-medium text-grey-900 group-hover:underline dark:text-grey-100">{title}</span>
       </span>
-      <span className="mt-2 text-sm leading-relaxed text-slate-500">{text}</span>
+      <span className="mt-2 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{text}</span>
     </Link>
   );
 }

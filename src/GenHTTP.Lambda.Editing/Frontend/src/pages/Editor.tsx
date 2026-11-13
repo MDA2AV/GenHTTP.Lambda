@@ -49,7 +49,8 @@ import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '@genhttp-lambd
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '@genhttp-lambda/kit/ui/words';
 import { useEditorT } from '../i18n';
-import { Link as SiteLink } from '@genhttp-lambda/kit/i18n/links';
+import { useLanguage } from '@genhttp-lambda/kit/i18n';
+import { Link as SiteLink, localize } from '@genhttp-lambda/kit/i18n/links';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
@@ -158,6 +159,7 @@ const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
 export function Editor({ theme }: Props) {
   const t = useEditorT();
   const said = t.frame;
+  const language = useLanguage();
 
   const installation = useInstallation();
 
@@ -1216,7 +1218,8 @@ export function Editor({ theme }: Props) {
               onClick={async () => {
                 try {
                   await api.remove(privateKey);
-                  navigate('/', { replace: true });
+                  // the front page belongs to the site, not to the editor
+                  window.location.replace(localize(language, '/'));
                 } catch (error) {
                   toast(error instanceof ApiError ? error.message : said.deleteFailed, 'error');
                 }

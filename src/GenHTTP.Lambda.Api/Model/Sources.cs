@@ -42,7 +42,7 @@ public sealed record SourceEntryResponse(
     int Stars,
     [Summary("Whether the app answers right now")]
     bool Online,
-    [Summary("Where the app answers - its own domain while it has one, its address below the hosting domain otherwise")]
+    [Summary("Where the app answers - its own domain while it has one, its public address otherwise")]
     string Address,
     [Summary("Where its source is read on this site: `/source/{publicKey}`")]
     string Path,
@@ -66,7 +66,7 @@ public sealed record SourceEntryResponse(
         entry.Stars,
         entry.Online,
         addresses.Of(entry.PublicKey, entry.Tier, entry.Domain),
-        $"/source/{entry.PublicKey}",
+        PlatformRoutes.SourceOf(entry.PublicKey),
         entry.Picture is { } picture ? $"/api/v1/showcases/{entry.PublicKey}/image?v={picture.Ticks}" : null,
         entry.LatestVersion,
         entry.Updated,
@@ -216,7 +216,7 @@ public sealed record SourceSettingsResponse(
         settings.Stars,
         settings.PublishedAt,
         settings.Updated,
-        $"/source/{settings.PublicKey}"
+        PlatformRoutes.SourceOf(settings.PublicKey)
     );
 
 }

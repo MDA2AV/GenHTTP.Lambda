@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       {www} yazan ziyaretçiler {domain} adresine yönlendirilir, böylece arama motorları tek bir adres görür. Bunun kayıtları isteğe bağlıdır.
     </>
   ),
+  noTarget:
+    'Bu sunucunun henüz bir alan adının işaret edebileceği herkese açık bir adresi yok. Alan adının nereyi göstermesi gerektiğini sunucuyu çalıştıran kişiye sorun.',
   type: 'Tür',
   name: 'Ad',
   value: 'Değer',

@@ -1,7 +1,9 @@
 GenHTTP Lambda hosts small C# web applications. A **lambda** is a snippet of C#
 that returns a [GenHTTP](https://genhttp.org/) handler - a page, an API, a
 website, a websocket - plus whatever other files it needs. The platform compiles
-it and serves it at an address of its own, `https://{publicKey}.{hosting domain}/`.
+it and serves it at an address of its own, named after its public key: a
+subdomain, `https://{publicKey}.{hosting domain}/`, or a path,
+`https://{installation}/lambda/{publicKey}/` - `lambdaUrl` of `GET /system` says which.
 This API is everything the editor does: create a lambda, save its versions, put
 one online, look at its data, its traffic and its logs.
 
@@ -31,7 +33,7 @@ curl -X POST \
 #    names (deployment.lambda.address)
 ```
 
-The terms that step 1 accepts are in `GET /system`, along with this
+The terms that step 1 accepts, where the installation has any, are in `GET /system`, along with this
 installation's limits and the address template (`lambdaUrl`). The demos
 (`GET /demos`) are finished lambdas to read, and to start from: pass a demo's
 `id` as the `template` when creating a lambda.

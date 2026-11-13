@@ -35,7 +35,9 @@ public sealed record OperatorResponse(
     [Summary("Where a lambda that does harm is reported; absent where there is nowhere")]
     string? Abuse,
     [Summary("Whether the site has its terms, privacy policy and imprint at `/terms`, `/privacy` and `/imprint`")]
-    bool Legal
+    bool Legal,
+    [Summary("The page of the site where a visitor has an app built, with the build box - `/build`, or `/` where the front page has it")]
+    string Start
 );
 
 [Summary("Something a new lambda can be started from.")]

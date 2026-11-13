@@ -65,8 +65,18 @@ together the GenHTTP way, and there are two hosts - two editions:
   subdomains; `LAMBDA_ADDRESSING` decides over both. **The trade-off is said,
   not hidden**: by path, a lambda shares the platform's origin and can read
   what the editor and the panel keep in that browser. So the editor's pages
-  send no referrer (its key is in their address) and are not indexed, and the
-  README says who should switch to subdomains.
+  send no referrer (its key is in their address) and are not indexed, the
+  panel keeps its token for the tab only (session storage) wherever the
+  lambdas answer on its origin - local storage only once `/system` says they
+  do not - and the README says who should switch to subdomains.
+- **Nothing in the pages names the cloud.** What differs per installation -
+  where a lambda answers, the git address, where a domain has to point (the
+  server resolves its own public name, `DomainResponse.Target`), the page
+  with the build box (`LambdaOptions.StartPage`: `/build` on the cloud, `/`
+  elsewhere) - is asked of the installation, never written into a bundle.
+- **By path, the "Made with" line is a plain link** - a link within the same
+  site, as it was before the subdomains - and nofollow at subdomains; the
+  guide says whichever holds (`platform_guide`, `backlink`).
 
 The components, each a project with a builder in front (`X.Create(...)`, the
 GenHTTP style), and what they need given to the builder rather than read from
@@ -93,7 +103,9 @@ the environment:
   components share) and the server's (`ServerSettings`: engine, ports,
   certificates, ACME); a host adds what is its own (`CloudInstallation.Of`).
   The variables are the same as before the split, so an installation's
-  configuration did not change.
+  configuration did not change - but for `LAMBDA_WEB_ROOT`, which went with
+  the one folder of pages it named, and three that were added
+  (`LAMBDA_ADDRESSING`, `LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`).
 - **The mount paths are fixed** (`PlatformRoutes`): the components link to
   one another - the API hands out the editor's address, a clone keeps its
   git address - so a host mounts each at its name and nowhere else.
@@ -262,6 +274,13 @@ hosting URL. What follows is about subdomains unless it says otherwise.
   the panel. So do the previews of features at `/features/{key}/` - for now
   the one place a lambda's code still runs on the site's host; moving them is
   a decision of its own.
+- **A lambda on the site's host may not widen a service worker's scope**
+  (`LambdaExecutionHandler`): a preview always, a lambda by path too. A
+  response with `Service-Worker-Allowed` is refused there with a 500 that
+  says why, and a line in the log - a worker for `/` would see the editor
+  and the panel in that browser afterwards. Refused rather than stripped:
+  GenHTTP adds headers to a response and takes none away. At a host of its
+  own, its scope is its own business.
 - **`/lambda/{key}/…` redirects permanently** to where the lambda answers
   now - its domain while it has one - with the path and the query, before
   anything else the server does: no request line, no telemetry, no other
@@ -1084,7 +1103,7 @@ change; the helpers are in `OperationLog`.
 - API reads are not logged (the editor polls), apart from exports and
   downloads; an agent's reads through MCP are.
 - A refused request is not logged here - its request line has the status.
-- **The MCP module's own lines are filtered below warnings** (`Program`): it
+- **The MCP module's own lines are filtered below warnings** (`PlatformLogging`): it
   writes one per tool call beside the tool's own, and one per refusal. A tool
   that fails is an error, and is written down.
 
@@ -1294,7 +1313,7 @@ GenHTTP's documentation attributes beside the code they describe.
 - **Tags are concepts, not classes**, in the order and groups of
   `ApiDocumentation` (`x-tagGroups`); a tag shared by several resources is
   described on one of them. The introduction everybody reads first is
-  `Resources/Api/Introduction.md`. The wording every route shares (the editor
+  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`. The wording every route shares (the editor
   key, a demo's refusal) is a constant of `ApiDocumentation`.
 - **Limits the operator sets are never written as numbers**: say where to
   read them (`GET /system`, the summary's `limits`). Fixed ones (100 secrets,

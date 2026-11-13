@@ -13,4 +13,6 @@ export interface Kit {
   em: (text: string) => ReactNode;
   /** A link within the site, around the words the language has for it. */
   link: (to: string, text: string) => ReactNode;
+  /** Where a lambda named your-key answers on this installation, as an address is shown. */
+  example: string;
 }

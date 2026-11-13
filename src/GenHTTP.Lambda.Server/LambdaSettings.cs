@@ -142,6 +142,13 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
         {
             logger.LogWarning("LAMBDA_PUBLIC_URL is set and LAMBDA_HOSTING_URL is not, so the lambdas answer below localhost: set it to the address their subdomains are below, such as https://genhttp.run");
         }
+
+        // fine on a laptop, and what a container is started with first - but
+        // the addresses handed out elsewhere would lead nowhere
+        if (Platform.Addressing == LambdaAddressing.Paths && Platform.PublicUrl == null)
+        {
+            logger.LogInformation("LAMBDA_PUBLIC_URL is not set, so the addresses of the lambdas read http://localhost:{Port}/lambda/: set it to where the installation is reached, such as https://lambda.example.com", Platform.Port);
+        }
     }
 
     /// <summary>

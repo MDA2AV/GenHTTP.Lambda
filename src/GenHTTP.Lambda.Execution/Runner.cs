@@ -91,7 +91,7 @@ public sealed class RunnerBuilder(LambdaPlatform platform) : IHandlerBuilder<Run
         {
             var lambdas = LambdaRoute.Create(services, new PathLocator(meta, pages));
 
-            own.Add(PlatformRoutes.Lambdas, Concerns.Chain([new TrailingSlashConcernBuilder()], lambdas));
+            own.Add(PlatformRoutes.Lambdas, Concerns.Chain([new TrailingSlashConcernBuilder(services.GetRequiredService<IDomainRegistry>())], lambdas));
         }
 
         own.Add(site);

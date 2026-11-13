@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Settings;
 
@@ -23,7 +24,8 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// few minutes rather than once per request.
 /// </remarks>
 public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> databases, AnalyticsStore store, AnalyticsQueue queue, DailyVisitors visitors,
-                                     VisitorClassifier classifier, CrawlerRanges ranges, ILimitsService limits, LambdaOptions options, ILogger<AnalyticsService> logger) : IAnalyticsService
+                                     VisitorClassifier classifier, CrawlerRanges ranges, ILimitsService limits, LambdaOptions options, ILambdaAddresses addresses,
+                                     ILogger<AnalyticsService> logger) : IAnalyticsService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -119,7 +121,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
             if (visits.Count > 0)
             {
-                var tally = new VisitTally(visitors, classifier);
+                var tally = new VisitTally(visitors, classifier, addresses);
 
                 var since = Counting(visits.Select(v => v.Lambda.Id).Distinct().ToList());
 

@@ -21,8 +21,9 @@ namespace GenHTTP.Lambda.Web;
 /// own but their site's.
 ///
 /// Read from disk as it is asked for, and the index page again whenever the
-/// file is newer: a frontend rebuilt against a running server is served
-/// without a restart.
+/// file is newer: a bundle written again where a running server reads it is
+/// served without a restart - the host's output once a build copied it
+/// there, or the folder a host named with a builder's <c>Bundle(directory)</c>.
 /// </remarks>
 public sealed class Bundle
 {

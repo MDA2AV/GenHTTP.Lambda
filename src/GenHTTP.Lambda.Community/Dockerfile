@@ -76,11 +76,15 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0
 # io_uring in their default seccomp profile, and a platform that runs code
 # written by strangers is the last place to hand out a weaker one. Set
 # LAMBDA_ENGINE=ioxide where io_uring is available and allowed.
+#
+# No LAMBDA_PUBLIC_URL: an installation that names its address answers at that
+# name only, so one reached by its IP address before it was set would answer
+# nothing. Without it every name is the platform's, and the addresses it hands
+# out read localhost until the operator says where it is reached.
 ENV HOME=/home/lambda \
     LAMBDA_PORT=8080 \
     LAMBDA_DATA_DIRECTORY=/data \
     LAMBDA_ENGINE=kestrel \
-    LAMBDA_PUBLIC_URL=http://localhost:8080 \
     DOTNET_gcServer=1
 
 WORKDIR /app

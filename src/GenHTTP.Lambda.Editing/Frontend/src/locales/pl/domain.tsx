@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Osoby, które wpiszą {www}, są przekierowywane na {domain}, dzięki czemu wyszukiwarki widzą jeden adres. Rekordy dla {www} są opcjonalne.
     </>
   ),
+  noTarget:
+    'Ten serwer nie ma jeszcze publicznego adresu, na który mogłaby wskazywać domena. Zapytaj osobę, która go prowadzi, dokąd ma wskazywać domena.',
   type: 'Typ',
   name: 'Nazwa',
   value: 'Wartość',

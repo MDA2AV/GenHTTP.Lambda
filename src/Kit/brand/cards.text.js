@@ -55,26 +55,6 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/enterprise": {
-      "title": [
-        "Free to try.",
-        "Yours to run."
-      ],
-      "sub": "An installation of your own, with your own sign-in, in the cloud or on premises.",
-      "facts": [
-        "Your own SSO",
-        "On premises too",
-        "Priority support"
-      ],
-      "free": "Free",
-      "freeNote": "No account, no card",
-      "freePrice": "$0",
-      "enterprise": "Enterprise",
-      "perUser": "per user / month",
-      "price": "$5",
-      "domain": "apps.yourcompany.com",
-      "yours": "Yours"
-    },
     "/docs": {
       "title": [
         "A snippet of C#.",
@@ -140,26 +120,6 @@ window.CARD_TEXT = {
         "Buku tamu klub buku"
       ],
       "count": "online"
-    },
-    "/enterprise": {
-      "title": [
-        "Coba gratis.",
-        "Jalankan sendiri."
-      ],
-      "sub": "Instalasi milik Anda sendiri, dengan login Anda, di cloud atau on-premise.",
-      "facts": [
-        "SSO sendiri",
-        "Bisa on-premise",
-        "Dukungan prioritas"
-      ],
-      "free": "Gratis",
-      "freeNote": "Tanpa akun, tanpa kartu kredit",
-      "freePrice": "$0",
-      "enterprise": "Enterprise",
-      "perUser": "per pengguna / bulan",
-      "price": "$5",
-      "domain": "apps.perusahaan.co.id",
-      "yours": "Milik Anda"
     },
     "/docs": {
       "title": [
@@ -227,26 +187,6 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/enterprise": {
-      "title": [
-        "Kostenlos testen.",
-        "Selbst betreiben."
-      ],
-      "sub": "Eine eigene Installation mit eigenem Login – in der Cloud oder On-Premises.",
-      "facts": [
-        "Eigenes SSO",
-        "Auch On-Premises",
-        "Priorisierter Support"
-      ],
-      "free": "Free",
-      "freeNote": "Kein Konto, keine Karte",
-      "freePrice": "0 $",
-      "enterprise": "Enterprise",
-      "perUser": "pro Nutzer / Monat",
-      "price": "5 $",
-      "domain": "apps.ihre-firma.de",
-      "yours": "Ihre"
-    },
     "/docs": {
       "title": [
         "Ein C#-Snippet.",
@@ -312,26 +252,6 @@ window.CARD_TEXT = {
         "Libro de visitas del club"
       ],
       "count": "conectados"
-    },
-    "/enterprise": {
-      "title": [
-        "Gratis para probar.",
-        "Tuyo para gestionar."
-      ],
-      "sub": "Una instalación propia, con tu propio inicio de sesión, en la nube o en tus servidores.",
-      "facts": [
-        "Tu propio SSO",
-        "En tus servidores",
-        "Soporte prioritario"
-      ],
-      "free": "Gratis",
-      "freeNote": "Sin cuenta ni tarjeta",
-      "freePrice": "0 USD",
-      "enterprise": "Enterprise",
-      "perUser": "por usuario al mes",
-      "price": "5 USD",
-      "domain": "apps.tuempresa.com",
-      "yours": "Tuyo"
     },
     "/docs": {
       "title": [
@@ -399,26 +319,6 @@ window.CARD_TEXT = {
       ],
       "count": "connectés"
     },
-    "/enterprise": {
-      "title": [
-        "Gratuit pour essayer.",
-        "À vous pour de bon."
-      ],
-      "sub": "Votre propre installation, avec votre propre connexion, dans le cloud ou sur site.",
-      "facts": [
-        "Votre propre SSO",
-        "Sur site possible",
-        "Support prioritaire"
-      ],
-      "free": "Gratuit",
-      "freeNote": "Sans compte ni carte",
-      "freePrice": "0 $",
-      "enterprise": "Entreprise",
-      "perUser": "par utilisateur / mois",
-      "price": "5 $",
-      "domain": "apps.votre-entreprise.fr",
-      "yours": "À vous"
-    },
     "/docs": {
       "title": [
         "Un snippet C#.",
@@ -484,26 +384,6 @@ window.CARD_TEXT = {
         "Guestbook del club del libro"
       ],
       "count": "online"
-    },
-    "/enterprise": {
-      "title": [
-        "Provalo gratis.",
-        "Gestiscilo tu."
-      ],
-      "sub": "Un’installazione tutta tua, con il login aziendale, nel cloud o on-premise.",
-      "facts": [
-        "Il tuo SSO",
-        "Anche on-premise",
-        "Supporto prioritario"
-      ],
-      "free": "Gratis",
-      "freeNote": "Niente account, niente carta",
-      "freePrice": "0 $",
-      "enterprise": "Enterprise",
-      "perUser": "per utente / mese",
-      "price": "5 $",
-      "domain": "app.latuaazienda.it",
-      "yours": "Tuo"
     },
     "/docs": {
       "title": [
@@ -571,26 +451,6 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/enterprise": {
-      "title": [
-        "Gratis proberen.",
-        "Zelf draaien."
-      ],
-      "sub": "Een eigen installatie met je eigen login, in de cloud of op je eigen servers.",
-      "facts": [
-        "Eigen SSO",
-        "Ook op eigen servers",
-        "Support met voorrang"
-      ],
-      "free": "Gratis",
-      "freeNote": "Geen account, geen creditcard",
-      "freePrice": "$ 0",
-      "enterprise": "Enterprise",
-      "perUser": "per gebruiker / maand",
-      "price": "$ 5",
-      "domain": "apps.jouwbedrijf.nl",
-      "yours": "Van jou"
-    },
     "/docs": {
       "title": [
         "Een stukje C#.",
@@ -656,26 +516,6 @@ window.CARD_TEXT = {
         "Księga gości klubu książki"
       ],
       "count": "online"
-    },
-    "/enterprise": {
-      "title": [
-        "Wypróbuj za darmo.",
-        "Uruchom u siebie."
-      ],
-      "sub": "Własna instalacja z logowaniem przez wasze SSO – w chmurze albo na własnych serwerach.",
-      "facts": [
-        "Własne SSO",
-        "Także on-premise",
-        "Priorytetowe wsparcie"
-      ],
-      "free": "Darmowy",
-      "freeNote": "Bez konta, bez karty",
-      "freePrice": "0 $",
-      "enterprise": "Enterprise",
-      "perUser": "za użytkownika / mies.",
-      "price": "5 $",
-      "domain": "apps.twoja-firma.pl",
-      "yours": "Twoja"
     },
     "/docs": {
       "title": [
@@ -743,26 +583,6 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/enterprise": {
-      "title": [
-        "Teste grátis.",
-        "Rode onde quiser."
-      ],
-      "sub": "Uma instalação própria, com o seu login, na nuvem ou nos seus servidores.",
-      "facts": [
-        "Seu próprio SSO",
-        "Nos seus servidores",
-        "Suporte prioritário"
-      ],
-      "free": "Grátis",
-      "freeNote": "Sem conta, sem cartão",
-      "freePrice": "US$ 0",
-      "enterprise": "Enterprise",
-      "perUser": "por usuário / mês",
-      "price": "US$ 5",
-      "domain": "apps.suaempresa.com.br",
-      "yours": "Seu"
-    },
     "/docs": {
       "title": [
         "Um trecho de C#.",
@@ -828,26 +648,6 @@ window.CARD_TEXT = {
         "Recados do clube do livro"
       ],
       "count": "online"
-    },
-    "/enterprise": {
-      "title": [
-        "Grátis para experimentar.",
-        "Depois, é todo vosso."
-      ],
-      "sub": "Uma instalação só vossa, com início de sessão próprio, na cloud ou nos vossos servidores.",
-      "facts": [
-        "O vosso SSO",
-        "Servidores próprios",
-        "Suporte prioritário"
-      ],
-      "free": "Grátis",
-      "freeNote": "Sem conta, sem cartão",
-      "freePrice": "0 $",
-      "enterprise": "Enterprise",
-      "perUser": "por utilizador / mês",
-      "price": "5 $",
-      "domain": "apps.aminhaempresa.pt",
-      "yours": "Vosso"
     },
     "/docs": {
       "title": [
@@ -915,26 +715,6 @@ window.CARD_TEXT = {
       ],
       "count": "kişi çevrimiçi"
     },
-    "/enterprise": {
-      "title": [
-        "Ücretsiz deneyin.",
-        "Kendiniz çalıştırın."
-      ],
-      "sub": "Kendi girişinizle çalışan, size özel bir kurulum. Bulutta ya da kendi sunucularınızda.",
-      "facts": [
-        "Kendi SSO’nuz",
-        "Kendi sunucunuzda da",
-        "Öncelikli destek"
-      ],
-      "free": "Ücretsiz",
-      "freeNote": "Hesap yok, kart yok",
-      "freePrice": "$0",
-      "enterprise": "Kurumsal",
-      "perUser": "kullanıcı başına / ay",
-      "price": "$5",
-      "domain": "apps.sirketiniz.com.tr",
-      "yours": "Sizin"
-    },
     "/docs": {
       "title": [
         "Bir parça C# kodu.",
@@ -1001,26 +781,6 @@ window.CARD_TEXT = {
       ],
       "count": "{n}人が閲覧中"
     },
-    "/enterprise": {
-      "title": [
-        "無料で試して、",
-        "自社で運用。"
-      ],
-      "sub": "自社のサインインで使える専用環境を、クラウドでもオンプレミスでも。",
-      "facts": [
-        "自社のSSO",
-        "オンプレミスも可",
-        "優先サポート"
-      ],
-      "free": "無料",
-      "freeNote": "アカウントもカードも不要",
-      "freePrice": "$0",
-      "enterprise": "エンタープライズ",
-      "perUser": "1ユーザー／月",
-      "price": "$5",
-      "domain": "apps.your-company.co.jp",
-      "yours": "自社"
-    },
     "/docs": {
       "title": [
         "C#のスニペットが、",
@@ -1086,26 +846,6 @@ window.CARD_TEXT = {
         "독서 모임 방명록"
       ],
       "count": "{n}명 접속 중"
-    },
-    "/enterprise": {
-      "title": [
-        "무료로 써 보고,",
-        "직접 운영하세요."
-      ],
-      "sub": "사내 로그인을 갖춘 전용 인스턴스를 클라우드나 온프레미스에서 운영하세요.",
-      "facts": [
-        "사내 SSO",
-        "온프레미스 가능",
-        "우선 지원"
-      ],
-      "free": "무료",
-      "freeNote": "가입·카드 필요 없음",
-      "freePrice": "$0",
-      "enterprise": "엔터프라이즈",
-      "perUser": "사용자당 / 월",
-      "price": "$5",
-      "domain": "apps.mycompany.co.kr",
-      "yours": "전용"
     },
     "/docs": {
       "title": [

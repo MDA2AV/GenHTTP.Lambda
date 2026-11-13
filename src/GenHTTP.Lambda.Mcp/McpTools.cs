@@ -101,7 +101,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     [Tool("create_lambda", Title = "Create a lambda", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Summary("Create a lambda. Returns its public address and a private editor key, the only way back in. It starts with version 1 - an empty starter, or a copy of a demo. Nothing is online until deploy.")]
     public object CreateLambda(IRequest request,
-                               [Summary("Must be true where the installation has terms (platform_guide, terms): the user accepts them.")] bool acceptTerms,
+                               [Summary("Must be true where the installation has terms - on a free shared machine, say, that deployments may be removed and nothing malicious is run (platform_guide, terms): the user accepts them. Ignored where it has none.")] bool acceptTerms,
                                [Summary("Requested address: lower case letters, digits and dashes. Generated if omitted.")] string? publicKey = null,
                                [Summary("Left out, the lambda starts empty. The id of a demo from list_demos starts it as a copy of that demo, which is yours to change.")] string? template = null,
                                [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView? view = null)
@@ -827,7 +827,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private static bool LinksTo(string code, string publicKey, string host)
         => code.Contains(host, StringComparison.OrdinalIgnoreCase)
-        || code.Contains($"/lambda/{publicKey}/", StringComparison.Ordinal) || code.Contains($"/lambda/{publicKey}\"", StringComparison.Ordinal);
+        || code.Contains($"{PlatformRoutes.LambdaBase}{publicKey}/", StringComparison.Ordinal)
+        || code.Contains($"{PlatformRoutes.LambdaBase}{publicKey}\"", StringComparison.Ordinal);
 
     /// <summary>
     /// Where a page names an address rather than linking to it: its meta tags
@@ -1507,7 +1508,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 : new
                 {
                     license = published.License,
-                    url = $"{origin}/source/{lambda.PublicKey}",
+                    url = origin + PlatformRoutes.SourceOf(lambda.PublicKey),
                     note = "The owner published this lambda's source: every version is public, and so is what you save next - code, resources, documentation, tests and each version's change line. Keep keys, passwords and personal data out of the files; they belong in secrets and the database, which are never published."
                 },
             feature = working,
@@ -1874,7 +1875,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             source.Author,
             holder = SourceLicenses.Holder(source.Author, source.PublicKey),
             source.Stars,
-            url = $"{origin}/source/{source.PublicKey}",
+            url = origin + PlatformRoutes.SourceOf(source.PublicKey),
             note = "Everything in every version is public now, older versions included - code, resources, documentation, tests and the one line each version says it changed. Never write keys, passwords or personal data into files: secrets and the database stay private."
         };
     }
@@ -1981,7 +1982,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 lifetime = $"A free lambda goes offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
                 deleting = "Deleting a lambda deletes its versions, its features and its data together. Nothing else deletes versions one by one.",
-                blocked = "Whoever runs the installation can block a lambda that breaks its terms. It goes offline with its features' previews, and every change - every tool that writes, deploys or deletes - is refused with a message saying it is blocked, until they lift the block. Reading it still works. Do not try again or work around it: tell the user, whose editor shows the reason they gave."
+                blocked = "Whoever runs the installation can block a lambda that breaks its rules or does harm. It goes offline with its features' previews, and every change - every tool that writes, deploys or deletes - is refused with a message saying it is blocked, until they lift the block. Reading it still works. Do not try again or work around it: tell the user, whose editor shows the reason they gave."
             }
         },
         documentationAndTests = new
@@ -2009,9 +2010,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         paths = new
         {
             rule = "Use relative paths for every link, script, stylesheet, image, fetch, form action, websocket and redirect: \"api/items\", \"app.css\", \"./\". No leading slash, and never the full address.",
-            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own in the premium tier; as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview for the platform's own pages, where nothing of the lambda is, and the full address is the live lambda - so a feature's page that used it would read and write the real data instead of its copy.",
+            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own in the premium tier; as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview for the platform's own pages, where nothing of the lambda is" + (addresses.ByPath ? " - and the lambda itself, which answers below /lambda/ here -" : "") + $", and the full address is the live lambda - so a feature's page that used it would read and write the real data instead of its copy.",
             pages = "A page at the root of the lambda resolves \"api/items\" against the lambda. A page one level deeper needs \"../api/items\" - or keep the pages at the root.",
             websockets = "Build the address from the page: new URL(\"play\", location.href) with the scheme swapped to ws: or wss:.",
+            serviceWorkers = "A service worker's scope is the folder of its script: register it relatively (\"sw.js\") and it covers the lambda. Do not send Service-Worker-Allowed to widen it - where the lambda answers on the platform's own address, as a feature's preview does, that answer is refused.",
             inCSharp = "Redirect.To(\"other\") and Location headers take relative paths too. Never build an absolute URL from the request's host.",
             exception = "og:image, og:url and a canonical link are full addresses: they name the page for whoever reads it elsewhere, and the page never follows them - see beingFound."
         },
@@ -2204,7 +2206,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             when = "For a page meant to be found or shared - a website, a landing page, a shop, a portfolio, an event: anything the user wants people to come across in a search engine, in an AI agent's answer, or as a link in a chat. A tool for a few people, a page behind a login or an admin page needs a title and nothing more.",
             title = "<title>: what the page is, then whose - 'Menu and opening hours - Café Lindner' - in about 60 characters, one for each page. It is the line a search engine shows and the tab is named after.",
             description = "<meta name=\"description\" content=\"...\">: one or two sentences, up to about 155 characters, saying what a visitor finds there in the words they would search for. Not a list of keywords. Both in the language of the page, with <html lang> set to it.",
-            icon = "A favicon as a resource, linked relatively: <link rel=\"icon\" href=\"icon.svg\" type=\"image/svg+xml\"> - an SVG is text, written with the code. Without the link a browser asks the lambda for /favicon.ico, and shows none when it has none. It shows in the tab, in bookmarks and in search results - search engines show one icon per host, and every lambda has a host of its own.",
+            icon = "A favicon as a resource, linked relatively: <link rel=\"icon\" href=\"icon.svg\" type=\"image/svg+xml\"> - an SVG is text, written with the code. Without the link a browser asks the lambda for /favicon.ico, and shows none when it has none. It shows in the tab, in bookmarks and in search results" + (addresses.ByPath ? " - which show one icon per host, and the lambdas here share theirs with this platform until they have a domain of its own." : " - search engines show one icon per host, and every lambda has a host of its own."),
             socialPreview = "What a chat or a social network shows for a shared link: og:title, og:description, og:type (website) and og:image as <meta property=\"...\" content=\"...\">, and <meta name=\"twitter:card\" content=\"summary_large_image\">. The picture is a PNG or JPEG of 1200 by 630 pixels, shipped as a resource - none of them shows an SVG. Without a picture, leave og:image out and make the card summary: the title and the description still make one.",
             fullAddress = "og:image takes a full address - social networks do not resolve a relative one: the lambda's domainUrl if it has one, its publicUrl otherwise (read_lambda), followed by the resource's path below resources/. Change it when the address does. It, og:url and the canonical link are the only full addresses in a page, and a feature's deploy does not warn about them: the page never follows them.",
             canonical = "A lambda with a domain of its own answers there, and its publicUrl sends visitors on to the domain. Give each page <link rel=\"canonical\"> and og:url with its address on the domain, so what search engines list and what is shared names the domain.",
@@ -2215,9 +2217,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         backlink = new
         {
             ask = "We ask you to put a small line at the foot of the pages a lambda shows its visitors: \"Made with GenHTTP Lambda\", in the language of the page. It is how the people who use an app find where it was made. It is a request, not a rule.",
-            how = $"On a lambda without a domain of its own - read_lambda gives no domainUrl - the line links back to this platform: <a href=\"{Home(origin)}\" rel=\"nofollow\">Made with GenHTTP Lambda</a>. One line in the footer, in small, muted type that fits the design. The name is the whole of the link - no keywords, no badge, no script, nothing hidden. It is a full address, since it leaves the lambda, and nofollow, since every lambda is a site of its own: the same link in the footers of many sites is what search engines count as link spam, unless it says it is no recommendation.",
+            how = addresses.ByPath
+                ? $"On a lambda without a domain of its own - read_lambda gives no domainUrl - the line links back to this platform: <a href=\"{Home(origin)}\">Made with GenHTTP Lambda</a>. One line in the footer, in small, muted type that fits the design. The name is the whole of the link - no keywords, no badge, no script, nothing hidden. It is a full address, since it leaves the lambda; it needs no rel=\"nofollow\", since the lambdas here answer below this platform's own address, and a link within a site is no recommendation of another."
+                : $"On a lambda without a domain of its own - read_lambda gives no domainUrl - the line links back to this platform: <a href=\"{Home(origin)}\" rel=\"nofollow\">Made with GenHTTP Lambda</a>. One line in the footer, in small, muted type that fits the design. The name is the whole of the link - no keywords, no badge, no script, nothing hidden. It is a full address, since it leaves the lambda, and nofollow, since every lambda is a site of its own: the same link in the footers of many sites is what search engines count as link spam, unless it says it is no recommendation.",
             onADomain = "On a lambda with a domain of its own - read_lambda gives a domainUrl - the line is plain text, without a link: there it would be a link from its owner's site, and the same link in the footers of many sites is what search engines count as link spam. When a lambda whose line links gets a domain, make the line plain text with your next change to it.",
-            fromBefore = "A line that links without rel=\"nofollow\" was written when the lambdas answered below this platform's own site. Add it with your next change to the page.",
+            fromBefore = addresses.ByPath
+                ? "A line written with rel=\"nofollow\" does no harm here: leave it as it is."
+                : "A line that links without rel=\"nofollow\" was written when the lambdas answered below this platform's own site. Add it with your next change to the page.",
             when = "With a new lambda that has pages people visit. Not on a lambda that only answers as an API, nor where a link has no place - a widget embedded in another site, a page shown full screen. Changing a lambda, keep the link it has, and do not add one it lacks unless the user asks.",
             theUserDecides = "Say in a line that you added it, so the user can say no. Leave it out when they do not want it, and take it out when they ask - then note in docs/decisions.md that they did not want it, so the next agent does not put it back."
         },

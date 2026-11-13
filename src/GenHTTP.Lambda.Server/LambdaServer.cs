@@ -96,17 +96,17 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
     /// <returns>The exit code of the process</returns>
     public async Task<int> RunAsync()
     {
-        var root = Build();
-
         var logger = platform.Loggers.CreateLogger("GenHTTP.Lambda");
 
         var runs = platform.Services.GetRequiredService<IRunLog>();
 
+        // before anything that can fail: what escapes from here on ends the
+        // process, and is written down by the handlers on its way out
         Watch(runs, logger);
 
-        runs.Report(logger);
-
         _environment?.Report(logger);
+
+        var root = Build();
 
         var settings = _settings;
 

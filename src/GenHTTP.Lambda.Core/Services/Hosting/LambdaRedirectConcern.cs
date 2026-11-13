@@ -39,9 +39,9 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// </remarks>
 public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry registry, ILambdaAddresses addresses) : IConcern
 {
-    private const string Prefix = "/lambda/";
+    private const string Prefix = PlatformRoutes.LambdaBase;
 
-    private static ReadOnlySpan<byte> PrefixBytes => "/lambda/"u8;
+    private static readonly byte[] PrefixBytes = System.Text.Encoding.ASCII.GetBytes(Prefix);
 
     #region Get-/Setters
 

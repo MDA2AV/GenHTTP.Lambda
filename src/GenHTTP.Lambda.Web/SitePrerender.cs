@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Web;
 /// <remarks>
 /// The pages are rendered when the frontend is built, once for every language,
 /// into <c>prerender.json</c> next to the index page (see
-/// <c>src/Frontend/prerender.mjs</c>). What the build
+/// <c>src/Kit/scripts/prerender.mjs</c>). What the build
 /// cannot know - the address the page is answered from, how long this
 /// installation keeps a lambda, what is in the showcase right now - it renders
 /// as placeholders, which are filled in here. The same values go along with

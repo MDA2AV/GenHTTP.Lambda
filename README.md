@@ -82,7 +82,7 @@ docker compose up -d
 
 | Variable | What it does |
 |---|---|
-| `LAMBDA_PUBLIC_URL` | Where people and agents reach the installation. The addresses of the apps are made from it. Default `http://localhost:8080`. |
+| `LAMBDA_PUBLIC_URL` | Where people and agents reach the installation, such as `https://lambda.example.com` - a name or an IPv4 address. The addresses of the apps are made from it, and once it is set the server answers at that name only (and `localhost`). Unset, it answers at any name, and the addresses read `http://localhost:8080`. |
 | `LAMBDA_ADMIN_TOKEN` | The password of the panel at `/admin`. Without one, the panel is off. |
 | `LAMBDA_HOSTING_URL` | A domain for the apps, such as `https://apps.example.com`: each app then answers at a subdomain of its own (`https://my-app.apps.example.com/`) instead of below `/lambda/`. Needs a wildcard DNS record and certificate. |
 | `LAMBDA_CONTACT` | A mail address the pages offer for questions - asking for premium, for one. |
@@ -155,8 +155,9 @@ docker compose --profile agent up -d
 
 - **Apps share the address of the platform.** Below `/lambda/`, an app runs
   on the same address as the editor and the panel, so a page of an app could
-  read what those keep in your browser - the admin token, for one. That is fine
-  for apps you and your team build. To host apps of people you do not know,
+  read what those keep in your browser. The editor names its link to no app
+  and the panel keeps its password for the tab only, but that is fine for apps
+  you and your team build, not more. To host apps of people you do not know,
   give the installation a domain for them (`LAMBDA_HOSTING_URL`): each app is
   then a site of its own.
 - **Apps run inside the server.** Their code is checked for what it must not
@@ -176,10 +177,10 @@ applications are put together:
 
 ```csharp
 var site = Layout.Create()
-                 .Add("api", RestApi.Create(platform))
-                 .Add("mcp", McpServer.Create(platform))
-                 .Add("editor", Editor.Create(platform))
-                 .Add("admin", AdminPanel.Create())
+                 .Add(PlatformRoutes.Api, RestApi.Create(platform))
+                 .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
+                 .Add(PlatformRoutes.Editor, Editor.Create(platform))
+                 .Add(PlatformRoutes.Admin, AdminPanel.Create())
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 

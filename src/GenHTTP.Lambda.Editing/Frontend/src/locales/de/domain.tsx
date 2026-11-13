@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Besucher, die {www} eingeben, werden zu {domain} weitergeleitet, damit Suchmaschinen eine einzige Adresse behalten. Die zugehörigen Einträge sind optional.
     </>
   ),
+  noTarget:
+    'Dieser Server hat noch keine öffentliche Adresse, auf die eine Domain zeigen könnte. Fragen Sie den Betreiber, worauf die Domain zeigen soll.',
   type: 'Typ',
   name: 'Name',
   value: 'Wert',

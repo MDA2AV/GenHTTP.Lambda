@@ -156,6 +156,39 @@ public sealed class PathHostingTests
         Assert.AreEqual($"https://{Domain}/start?ref=old", response.Headers.Location?.ToString());
     }
 
+    [TestMethod]
+    public async Task HoweverItsPathIsSpelledItIsSentToItsDomain()
+    {
+        await using var fixture = await CreateAsync();
+
+        await ServeWithDomainAsync(fixture, "shop");
+
+        foreach (var spelled in new[] { "/Lambda/shop/start", "//lambda/shop/start", "/lambda//shop/start" })
+        {
+            using var response = await fixture.GetAsync(spelled);
+
+            Assert.AreEqual(HttpStatusCode.MovedPermanently, response.StatusCode, spelled);
+            Assert.AreEqual($"https://{Domain}/start", response.Headers.Location?.ToString(), spelled);
+        }
+
+        using var bare = await fixture.GetAsync("/lambda/shop");
+
+        Assert.AreEqual($"https://{Domain}/", bare.Headers.Location?.ToString());
+    }
+
+    [TestMethod]
+    public async Task AnAddressWithAnEmptySegmentIsSentToTheOneWithout()
+    {
+        await using var fixture = await CreateAsync();
+
+        await ServeAsync(fixture, "quiz");
+
+        using var response = await fixture.GetAsync("//lambda/quiz");
+
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.AreEqual("/lambda/quiz/", response.Headers.Location?.ToString(), "never a protocol relative address");
+    }
+
     #endregion
 
     #region Helpers

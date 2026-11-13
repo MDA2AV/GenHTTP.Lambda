@@ -55,7 +55,15 @@ public static class McpEndpoint
     internal static IEnumerable<string> Origins(LambdaOptions options) => options.McpOrigins.Select(McpOrigins.Of).OfType<string>();
 
     /// <summary>
-    /// What an agent is told before it calls anything.
+    /// The instructions as this installation gives them: with its own address
+    /// where it has one, and the path below it where it does not.
+    /// </summary>
+    internal static string InstructionsFor(LambdaOptions options)
+        => Instructions.Replace("{home}", options.PublicUrl is { } url ? url + "/" : "/", StringComparison.Ordinal);
+
+    /// <summary>
+    /// What an agent is told before it calls anything, with <c>{home}</c>
+    /// where the installation's address goes (see <see cref="InstructionsFor"/>).
     /// </summary>
     /// <remarks>
     /// Short: how to get from nothing to something online, how a lambda that
@@ -63,13 +71,6 @@ public static class McpEndpoint
     /// it reads the guide. The rest is in <c>platform_guide</c> and the tools'
     /// descriptions.
     /// </remarks>
-    /// <summary>
-    /// The instructions as this installation gives them: with its own address
-    /// where it has one, and the path below it where it does not.
-    /// </summary>
-    internal static string InstructionsFor(LambdaOptions options)
-        => Instructions.Replace("{home}", options.PublicUrl is { } url ? url + "/" : "/", StringComparison.Ordinal);
-
     internal static readonly string Instructions = string.Join('\n',
     [
         "Hosts small C# web services: a snippet returns a GenHTTP handler, served at a public address.",

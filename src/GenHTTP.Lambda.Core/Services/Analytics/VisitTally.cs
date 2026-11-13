@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Visits;
 
 namespace GenHTTP.Lambda.Services.Analytics;
@@ -13,7 +14,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// referred from, the device it came on - is worked out here, once, off the
 /// requests.
 /// </remarks>
-public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classifier)
+public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classifier, ILambdaAddresses addresses)
 {
     private readonly Dictionary<(long Lambda, DateOnly Day), Totals> _days = [];
 
@@ -108,7 +109,12 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
 
         Count(lambda, day, AnalyticsDimension.Countries, visit.Country ?? string.Empty, view, botView);
 
-        if (ReferrerOf(visit.Referrer, visit.Domain) is { } referrer)
+        // below a path every lambda shares the platform's host, so a page of
+        // its own is told by its address rather than by the host
+        var within = visit.Domain == null && visit.Referrer != null
+                  && visit.Referrer.StartsWith(addresses.Of(visit.Lambda.PublicKey), StringComparison.OrdinalIgnoreCase);
+
+        if (!within && ReferrerOf(visit.Referrer, visit.Domain) is { } referrer)
         {
             Count(lambda, day, AnalyticsDimension.Referrers, referrer, view, botView);
         }

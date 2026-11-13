@@ -7,7 +7,7 @@ type Text = (k: Kit) => ReactNode;
 export const guide = {
   title: 'How this works',
   intro:
-    'You write a snippet of C#. Whatever it returns is hosted at a public address, over HTTPS, in a few seconds. This is the whole of it, in the order you will meet it.',
+    'You write a snippet of C#. Whatever it returns is hosted at an address of its own in a few seconds. This is the whole of it, in the order you will meet it.',
   contents: 'Contents',
 
   parts: {
@@ -45,7 +45,7 @@ export const guide = {
     (k) => (
       <>
         That is a complete lambda. Deployed, it answers at an address of its own named after its key, such as{' '}
-        {k.code('your-key.genhttp.run')}, and every request there gets the word hello.
+        {k.code(k.example)}, and every request there gets the word hello.
       </>
     ),
   ] as Text[],

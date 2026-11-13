@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Editing;
 using GenHTTP.Lambda.Execution;
 using GenHTTP.Lambda.Mcp;
 using GenHTTP.Lambda.Server;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Sources;
 
 using GenHTTP.Modules.Layouting;
@@ -20,10 +21,10 @@ await using var platform = LambdaPlatform.Create()
                                          .Build();
 
 var site = Layout.Create()
-                 .Add("api", RestApi.Create(platform))
-                 .Add("mcp", McpServer.Create(platform))
-                 .Add("editor", Editor.Create(platform))
-                 .Add("admin", AdminPanel.Create())
+                 .Add(PlatformRoutes.Api, RestApi.Create(platform))
+                 .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
+                 .Add(PlatformRoutes.Editor, Editor.Create(platform))
+                 .Add(PlatformRoutes.Admin, AdminPanel.Create())
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 

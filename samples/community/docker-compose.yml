@@ -17,10 +17,15 @@ services:
       - "8080:8080"
     environment:
       # where people and agents reach the installation - the addresses of the
-      # apps are made from it: http://localhost:8080/lambda/{key}/
-      LAMBDA_PUBLIC_URL: ${LAMBDA_PUBLIC_URL:-http://localhost:8080}
+      # apps are made from it: https://lambda.example.com/lambda/{key}/; until
+      # it is set, they read http://localhost:8080
+      LAMBDA_PUBLIC_URL: ${LAMBDA_PUBLIC_URL:-}
       # the password of the panel at /admin; without one the panel is off
       LAMBDA_ADMIN_TOKEN: ${LAMBDA_ADMIN_TOKEN:-}
+      # the build agent reaches the server by this name, which is then one of
+      # the platform's own - an installation with a public address answers at
+      # its names only
+      LAMBDA_MCP_ORIGINS: lambda
       # the build agent, where it runs (see the agent profile below)
       LAMBDA_AGENT_URL: ${LAMBDA_AGENT_URL:-}
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}

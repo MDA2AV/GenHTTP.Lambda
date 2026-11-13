@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Édition Community',
   headline: 'La plateforme sur laquelle vos agents créent des applications.',
-  headlineAccent: 'Sur votre propre serveur.',
+  headlineAccent: 'Open source, sur un serveur à vous.',
   intro:
     'Décrivez une application et l’agent de création l’écrit – ou laissez Claude Code, Codex ou Cursor le faire via MCP. Chaque application est un handler GenHTTP en C#, compilé sur ce serveur et en ligne en quelques secondes, avec une base de données, des clés et mots de passe, des versions et git.',
   describe: 'Décrire une application',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Ce que reçoit chaque application',
   features: [
-    { title: 'Une adresse', text: 'En ligne sous /lambda/ sur ce serveur dès qu’elle compile – ou sur un domaine à elle.' },
+    { title: 'Une adresse', text: 'Une adresse à elle sur ce serveur, nommée d’après sa clé – et un domaine à elle une fois passée en premium.' },
     { title: 'Entrées', text: 'Une base de données SQLite à elle, ses tables créées par des migrations, lues et écrites avec Entity Framework Core.' },
     { title: 'Fichiers', text: 'Un dossier pour ce que l’application enregistre : téléversements, exports, tout ce qui n’est pas une entrée.' },
     { title: 'Clés et mots de passe', text: 'Conservés sous scellés sur le serveur. L’agent indique ceux dont il a besoin, vous les saisissez, et personne ne peut les relire.' },
-    { title: 'Brouillons et versions', text: 'Une modification est essayée dans un brouillon avec une copie des données, puis mise en ligne. Chaque version est conservée, à un clic pour revenir en arrière.' },
-    { title: 'Git', text: 'Chaque application est un dépôt : clonez-le, poussez un commit pour la mettre en ligne, poussez une branche pour commencer un brouillon.' },
+    { title: 'Brouillons et versions', text: 'Une modification est essayée dans un brouillon avec une copie des données, puis mise en ligne. Les versions précédentes sont conservées, à un clic pour revenir en arrière.' },
+    { title: 'Git', text: 'Chaque application est un dépôt : clonez-le, poussez un commit pour enregistrer une version – avec -o deploy pour la mettre en ligne – ou une branche pour commencer un brouillon.' },
     { title: 'Visiteurs', text: 'Pages vues, provenance des visiteurs et leurs pays – comptés sur le serveur, sans cookies, dès que vous l’activez.' },
     { title: 'Votre code', text: 'Téléchargez n’importe quelle application comme un simple projet .NET et exécutez-la où vous voulez, ou publiez son code source pour que d’autres le lisent.' },
   ],
 
   runsTitle: 'Comment elle fonctionne',
   runs: [
-    { title: 'Un seul conteneur', text: 'Le serveur, l’éditeur, l’API et toutes les applications dans un seul processus, et tout ce qu’ils conservent dans un seul dossier.' },
+    { title: 'Un seul processus', text: 'Le serveur, l’éditeur, l’API et toutes les applications tournent dans un seul processus et conservent tout dans un seul dossier. L’agent de création, s’il y en a un, tourne à côté.' },
     {
       title: 'Par chemin ou par hôte',
-      text: 'Les applications répondent sous /lambda/ à cette adresse. Donnez un domaine à l’installation pour elles, et chacune reçoit à la place un sous-domaine à elle.',
+      text: 'Les applications répondent sous /lambda/ à l’adresse de l’installation – ou, si on lui donne un domaine pour elles, chacune à un sous-domaine à elle.',
     },
     {
       title: 'Du code de confiance',

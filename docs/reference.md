@@ -1,4 +1,15 @@
-# GenHTTP Lambda
+# GenHTTP Lambda reference
+
+The technical reference of GenHTTP Lambda: its routes, the API, the
+configuration, how it is operated and how it is put together. It covers both
+editions - the cloud edition that runs genhttp.dev (`src/GenHTTP.Lambda.Cloud`)
+and the community edition anybody runs on a server of their own
+(`src/GenHTTP.Lambda.Community`, the image `genhttp/lambda`). Both are the same
+platform, put together by two hosts, and where they differ it says so. How to
+run the community edition is in the [README](../README.md); the decisions
+behind all of it are in [CLAUDE.md](../CLAUDE.md). Paths of the platform's
+code - `Services/`, `Data/`, `Resources/`, `Infrastructure/` - are below
+`src/GenHTTP.Lambda.Core/`.
 
 Write a C# snippet that returns a GenHTTP `IHandler`, press deploy, and get a
 public URL that serves it. The snippet is compiled with Roslyn at runtime and
@@ -12,43 +23,63 @@ return Inline.Create()
 
 ## Quick start
 
+The community edition, as the [README](../README.md) runs it:
+
 ```bash
-docker compose up --build
+docker run -d --name lambda -p 8080:8080 -v lambda-data:/data genhttp/lambda
 ```
 
 The application is then available at <http://localhost:8080/>. Its data - the
 SQLite database, the stored code, and the workspaces and databases of the
-lambdas - lives in a named volume mounted at `/data`. The lambdas answer at
-subdomains of `LAMBDA_HOSTING_URL`, one each (see
-[Where the lambdas answer](#where-the-lambdas-answer)).
+lambdas - lives in a named volume mounted at `/data`. The lambdas answer
+below it, at `/lambda/{key}/` (see
+[Where the lambdas answer](#where-the-lambdas-answer)). `samples/community`
+does the same with Docker Compose, the build agent beside it as a profile.
+The image is built from `src/GenHTTP.Lambda.Community/Dockerfile` and
+published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
+`.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
+hand.
+
+genhttp.dev is the cloud edition: `docker-compose.yml` at the root builds it
+from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the overlays `deploy.sh`
+knows (see [Redeploying](#redeploying)), and its lambdas answer at
+subdomains of `LAMBDA_HOSTING_URL`, one each.
 
 ## Developing locally
 
-Two processes: the .NET server, and Vite serving the frontend with hot reload.
+The frontends are an npm workspace at the root of the repository, and every
+component with pages builds its bundle into its project, which a host copies
+into its output when it is built - so the frontends are built first:
 
 ```bash
-# the server, on http://localhost:8080/
-dotnet run --project src/GenHTTP.Lambda
+npm install && npm run build                      # every bundle, into <project>/bundle/
 
-# the frontend, on http://localhost:5173/ (proxies /api, /lambda and /features to the server)
-cd src/Frontend && npm install && npm run dev
+# the server, on http://localhost:8080/ - the community edition or the cloud one
+dotnet run --project src/GenHTTP.Lambda.Community
+dotnet run --project src/GenHTTP.Lambda.Cloud
 ```
 
-Work against <http://localhost:5173/> while developing. The lambdas answer at
-subdomains of localhost named after their keys - <http://quiz.localhost:8080/> -
-which browsers resolve without a record. The server on its own answers with a
-placeholder page until a frontend has been built into its web root, which is
-what `npm run build` does:
+A host serves the bundles it was built with: build it again after building a
+frontend anew, and a component whose bundle was never built answers with a
+page that says how to build it. To work on one bundle with hot reload, run its
+dev server beside the server - on <http://localhost:5173/>, below the path the
+component is mounted at (`/editor/`, `/admin/`, `/source/`, or `/` for a site),
+passing everything else to `LAMBDA_API` (`http://localhost:8080` unless set):
 
 ```bash
-cd src/Frontend && npm run build   # writes src/GenHTTP.Lambda/wwwroot
+npm run dev --workspace @genhttp-lambda/editor    # or admin, sources, cloud, community
 ```
+
+The community edition's lambdas answer below the server -
+<http://localhost:8080/lambda/quiz/> - and the cloud's at subdomains of
+localhost named after their keys - <http://quiz.localhost:8080/> - which
+browsers resolve without a record.
 
 English is the source of every page; the other languages are translated by
-script and agent, so that only what changed is read and written:
+script and agent, so that only what changed is read and written. The commands
+run at the root:
 
 ```bash
-cd src/Frontend
 npm run translations -- extract   # a request per language in .translations/
 # one `translator` agent per request (.claude/agents/translator.md, on Sonnet)
 npm run translations -- apply     # the answers into the catalogs, checked
@@ -60,6 +91,7 @@ CLAUDE.md ("How a change is translated") has the rules.
 Build and test everything the way CI does:
 
 ```bash
+npm run build
 dotnet build GenHTTP.Lambda.slnx -c Release
 dotnet test GenHTTP.Lambda.slnx -c Release
 ```
@@ -69,28 +101,35 @@ port, each against its own temporary data directory.
 
 ## Routes
 
+Each component is mounted at a path of its own, the same in both editions
+(`PlatformRoutes`): the components link to one another, so a host mounts each
+at its name and nowhere else. The runner around them takes the lambdas and
+the previews, and the host's site the rest (see
+[How it is put together](#how-it-is-put-together)).
+
 | Route                | Serves                                                    |
 |----------------------|-----------------------------------------------------------|
-| `/`                  | the landing page                                          |
-| `/build`             | the text box for somebody who wants an app built, no code |
-| `/ship`              | for developers: connect an agent and publish what it built |
+| `/`                  | the front page: genhttp.dev's (`Website`), or a community installation's (`LandingPage`), which has the text box of `/build` on it |
+| `/build`             | genhttp.dev: the text box for somebody who wants an app built, no code |
+| `/ship`              | genhttp.dev: for developers - connect an agent and publish what it built |
 | `/docs`              | the guide for owners                                      |
 | `/showcase`          | the lambdas their owners chose to show                    |
-| `/source`            | the lambdas whose owners published their code             |
+| `/source`            | the lambdas whose owners published their code (`SourcePages`) |
 | `/source/:publicKey` | the published code of one: its files, documentation, tests and changes, per version |
 | `/source/:publicKey.git` | the published code as a git repository, read only     |
-| `/enterprise`, `/terms`, `/privacy`, `/imprint` | the company pages              |
-| `/editor/create`     | the creation assistant                                    |
+| `/terms`, `/privacy`, `/imprint` | genhttp.dev: the legal pages                  |
+| `/robots.txt`, `/sitemap.xml`, `/llms.txt` | what the site says about its host (`SitePages`); genhttp.dev also describes its MCP server and API at `/.well-known/ai-catalog.json` |
+| `/editor/create`     | the creation assistant (`Editor`)                         |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/editor/:privateKey/:name.git` | the lambda as a git repository, to clone and push to (any name; the editor offers the public key) |
-| `/lambda/:publicKey/…` | where a lambda answered once: a permanent redirect to where it answers now, with the rest of the path and the query |
+| `/lambda/:publicKey/…` | where the lambdas answer by path, the deployed handler - or, while it answers at a domain of its own, a permanent redirect there; `/lambda/:publicKey` without the slash is sent on to the address with it. Where they answer at subdomains, the address a lambda answered at once: a permanent redirect to where it answers now, with the rest of the path and the query |
 | `/features/:feature` | the preview of a feature, while it is online              |
-| any path, at `{publicKey}.{hosting domain}` | the deployed handler - or, while the lambda answers at a domain of its own, a permanent redirect there |
+| any path, at `{publicKey}.{hosting domain}` | where the lambdas answer at subdomains, the deployed handler - or, while the lambda answers at a domain of its own, a permanent redirect there |
 | any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
-| the hosting domain itself | a page saying what is hosted there, leading to the site |
-| `/api/v1/`           | everything the editor calls, see below                    |
-| `/mcp`               | the same, for agents                                      |
-| `/admin`             | every lambda on the server, for whoever runs it            |
+| the hosting domain itself | where the lambdas answer at subdomains, a page saying what is hosted there, leading to the site |
+| `/api/v1/`           | everything the editor and the panel call, see below (`RestApi`) |
+| `/mcp`               | the same, for agents (`McpServer`)                        |
+| `/admin`             | the operator's panel: every lambda on the server, for whoever runs it (`AdminPanel`) |
 
 ### API
 
@@ -110,7 +149,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 
 | Endpoint                                              | Does                                      |
 |-------------------------------------------------------|-------------------------------------------|
-| `POST /lambdas`                                       | creates a lambda (optionally with `view`: `Full` or `Simple`) |
+| `POST /lambdas`                                       | creates a lambda (`acceptedTerms` where the installation has terms; optionally with `view`: `Full` or `Simple`) |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
 | `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), with its database, see below |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
@@ -164,7 +203,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
-| `GET /system`                                         | terms, limits, starters, build agent, where a lambda answers (`lambdaUrl`) |
+| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent, where a lambda answers (`lambdaUrl`), and who runs it (`operator`: `contact`, `abuse`, `legal`) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
 
 Creating a lambda asks what somebody would like to build and offers the demos
@@ -173,10 +212,12 @@ lambda. Picking a demo starts the new lambda as a copy of it, which is theirs to
 change. The files are in `Resources/Templates` and listed in `TemplateCatalog`.
 
 A lambda has two keys. The public one names its address - `quiz` answers at
-`https://quiz.genhttp.run/` - and may be changed; the private one is the
+`https://quiz.genhttp.run/`, or at `/lambda/quiz/` where lambdas answer by
+path - and may be changed; the private one is the
 editor link and is shown only to whoever created the lambda - anyone holding
 it can edit, deploy and delete. What the API answers about a lambda carries
-both its address below the hosting domain, `publicUrl`, and where to link to
+both its address - at its subdomain of the hosting domain or below
+`/lambda/` - `publicUrl`, and where to link to
 it, `address` - its own domain while it answers at one, `publicUrl` otherwise
 (see [Where the lambdas answer](#where-the-lambdas-answer)).
 
@@ -202,11 +243,20 @@ opens an explanation of how each one is extended.
 
 ### Where the lambdas answer
 
-Every lambda answers at a subdomain of one domain, the hosting domain, named
-after its public key: `https://quiz.genhttp.run/`, the whole of the host its
-own. `LAMBDA_HOSTING_URL` names that domain with its scheme and port; left
-empty it is this server on localhost - `http://quiz.localhost:8080/` - which
-browsers resolve without a record in the DNS.
+A lambda answers at an address of its own, made in one of two ways
+(`LambdaOptions.Addressing`): at a subdomain of the hosting domain, as on
+genhttp.dev, or below `/lambda/` on the platform's own host, as in the
+community edition unless it is given a hosting domain. `LAMBDA_ADDRESSING`
+(`subdomains` or `paths`) decides over both. Either way a lambda answers at
+the root of its address - below a path the runner steps past its key - so
+the same code runs at both, and a domain of its own is served the same.
+
+**At subdomains**, every lambda answers at a subdomain of one domain, the
+hosting domain, named after its public key: `https://quiz.genhttp.run/`, the
+whole of the host its own. `LAMBDA_HOSTING_URL` names that domain with its
+scheme and port; left empty it is this server on localhost -
+`http://quiz.localhost:8080/` - which browsers resolve without a record in
+the DNS.
 
 A host of its own rather than a path below the platform's, so that what
 somebody built is a site of its own: a page of it cannot read what the
@@ -215,9 +265,35 @@ lambda keeps there, and its paths start at the root of its host, so a
 browser asking for `/favicon.ico` asks the lambda. The editor, the API, the
 agents' endpoint and git stay where they are, on the platform.
 
-- **Its old address.** `/lambda/{key}/…` on the platform is answered with a
-  permanent redirect to where the lambda answers now, with the rest of the
-  path and the query as they were sent, byte for byte - a signature over
+**Below a path**, a lambda answers at `/lambda/{key}/` of `LAMBDA_PUBLIC_URL`,
+or of this server on localhost without it:
+`http://localhost:8080/lambda/quiz/`. That takes nothing but the one name - no
+wildcard record, no wildcard certificate. `/lambda/{key}` without the slash is
+sent on to the address with
+it, since a page answered there would resolve its relative links against
+`/lambda/` and load none of its scripts. No subdomain is a lambda's, and there
+is no page of a hosting domain.
+
+The price is the origin. Below a path every lambda shares the platform's: a
+page of one can read what the editor and the panel keep in that browser - the
+admin token, for one - and what every other lambda keeps there. The editor's
+pages are sent with `Referrer-Policy: no-referrer`, so the editor key in their
+address is never named to a lambda they link to or load, and with
+`X-Robots-Tag: noindex, nofollow`. The panel keeps its token for the tab only
+(session storage) where the lambdas share its origin. And a lambda answering on
+the platform's host - by path, and every feature's preview - may not widen a
+service worker's scope: an answer with `Service-Worker-Allowed` is refused with
+a 500 that says why, since a worker for `/` would see every page of the
+platform that browser opens afterwards. A lambda with a domain of its own is
+sent there from its path however the path is spelled. That suits an
+installation whose lambdas are trusted - one run for oneself or a team. One that lets strangers build
+gives the lambdas hosts of their own with `LAMBDA_HOSTING_URL`, which switches
+the community edition to subdomains.
+
+- **Its old address.** Where the lambdas answer at subdomains,
+  `/lambda/{key}/…` on the platform - where every lambda answered once - is
+  answered with a permanent redirect to where the lambda answers now, with
+  the rest of the path and the query as they were sent, byte for byte - a signature over
   them still matches - Moved Permanently for a read, Permanent Redirect for
   anything else, which a client sends again with the same method and body.
   It is answered before anything else the server does: no request line, no
@@ -228,22 +304,26 @@ agents' endpoint and git stay where they are, on the platform.
   there - while a path below `/lambda/` that could never have been a key is
   not found.
 - **A domain of its own.** A premium lambda with a domain answers there and
-  only there: its subdomain sends visitors on to the domain the same way, so
-  there is one address for search engines to keep and for visitors to pass
-  on. Removing the domain, or the tier that serves it, has the subdomain
-  answer again. For the same reason `www.` in front of the domain sends its
+  only there: its subdomain - or below a path, `/lambda/{key}/…` - sends
+  visitors on to the domain the same way, so there is one address for search
+  engines to keep and for visitors to pass on. Removing the domain, or the
+  tier that serves it, has the subdomain or the path answer again. For the
+  same reason `www.` in front of the domain sends its
   visitors on to it - `www.shop.example.com` to `shop.example.com` - unless
   the owner entered the domain with `www.`, which is then where it answers,
   and nothing is sent there from the name without; or unless that `www.` is
   the domain of another lambda, or one of the platform's own names.
 - **Nothing there.** A subdomain nothing is online at - a key nobody has, a
-  lambda that is offline, a name no key can be - is told so in a plain page
-  that leads to the site, or in a line of JSON for anything but a browser.
+  lambda that is offline, a name no key can be - or below a path,
+  `/lambda/{key}/`, is told so in a plain page that leads to the site, or in
+  a line of JSON for anything but a browser.
   The hosting domain itself, and `www.` in front of it, has a page of its own
   that says what is hosted there and leads to the site, in the language the
-  browser prefers; its words are in `pages.json` (`hosting:/` and
-  `hosting:/:key`) and translated with the rest. Both link the site's legal
-  notice and privacy policy, named as the site names them. Neither is one of
+  browser prefers. Their words are the runner's own, in
+  `src/GenHTTP.Lambda.Execution/Resources/hosting.json` (`hosting:/` and
+  `hosting:/:key`), and translated with the rest. Both link the site's legal
+  notice and privacy policy, named as the site names them, where it has them
+  (`LambdaOptions.LegalPages`, which genhttp.dev sets). Neither is one of
   the site's pages: none of the site's scripts is ever served at the hosting
   domain.
 - **A host nobody has.** Where `LAMBDA_PUBLIC_URL` is set, the platform
@@ -256,7 +336,8 @@ agents' endpoint and git stay where they are, on the platform.
   kept and kept asking for once the domain was a lambda's. The challenges of
   an ACME client are answered there all the same. An installation without
   `LAMBDA_PUBLIC_URL` cannot tell its own names from anybody else's, and the
-  platform answers at every host.
+  platform answers at every host. Below a path no subdomain is a lambda's, so
+  one is a host nobody has like any other.
 - **Keys are host names.** A key is a label of the hosting domain, so the
   names mail clients and servers look for below a domain (`mail`,
   `autoconfig`, `autodiscover`, `mta-sts`) cannot be claimed, nor can a key
@@ -265,16 +346,18 @@ agents' endpoint and git stay where they are, on the platform.
   claiming one say today, so a rule made later takes nothing offline.
 - **Previews stay on the platform.** The preview of a feature answers at
   `/features/{feature}/`, as it did, which is why a lambda links relatively.
-  It is the one place a lambda's code still runs on the platform's host -
-  with what the platform keeps in that browser in reach of its scripts -
-  until previews get hosts of their own as well.
+  At subdomains it is the one place a lambda's code still runs on the
+  platform's host - with what the platform keeps in that browser in reach of
+  its scripts - until previews get hosts of their own as well; below a path,
+  every lambda does.
 
 The request log names the host in front of the path - `GET
 quiz.genhttp.run/api/items` - as it does for a domain of its own, and the
 traffic of a lambda counts its visitors by the host they came to.
 
-What it takes is a wildcard record in the DNS - `*.genhttp.run`, and
-`genhttp.run` for the page at its root, pointing at the server - and a
+At subdomains, what it takes is a wildcard record in the DNS -
+`*.genhttp.run`, and `genhttp.run` for the page at its root, pointing at the
+server - and a
 certificate for both names (see [The hosting domain](#the-hosting-domain)).
 The hosting domain belongs on the [Public Suffix List](https://publicsuffix.org/):
 until it is there, a lambda can set a cookie for the whole domain, which the
@@ -760,7 +843,7 @@ ends wherever the owner is; and it is kept by the agent under the lambda, so a
 reload, a second tab or a redeploy of the server finds it where it got to.
 
 `/build` shows a build the way the simple view of this section shows a change,
-drawn by the same parts (`components/AgentRun.tsx`): what was asked, the step
+drawn by the same parts (`src/Kit/src/components/AgentRun.tsx`): what was asked, the step
 it is on and the time it has used of its limit, what the agent says between
 its tools - the build agent too is told that somebody reads along, and asked
 for one short line at a time in the language of the request - and how it
@@ -813,9 +896,8 @@ that hold something, in its own words: its records, table by table, to read
 and never to edit; what the app saved, as a plain list to download from; and
 its keys and passwords, which the owner can enter and replace - the ones the
 app is waiting for first, and the overview asks for them too. Entering one there switches secrets on if the agent left them off.
-The **full** view is every section, as before. In both, a browser that holds
-the admin token has one more section after all the others, **Admin**, which
-nobody else sees: it blocks the lambda and lifts the block (see
+The **full** view is every section, as before. Neither has a section for the
+operator: a lambda is blocked on its page in the panel (see
 [Blocking](#blocking)).
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
@@ -996,8 +1078,9 @@ view to the next. Any version downloads as a zip. There are no issues, pull
 requests or wikis, and no way to act on the lambda from there; somebody who
 wants to build on it downloads it, and `platform_guide` tells an agent how a
 download becomes a lambda again. A small notice says what a lambda is and
-leads to `/build`. The pages are a part of the frontend of their own
-(`src/Frontend/src/source`), in a frame of their own without the site's menu,
+leads to `/build`. The pages are a component of their own (`SourcePages`, its
+bundle in `src/GenHTTP.Lambda.Sources/Frontend`), in a frame of their own
+without the site's menu,
 fetched with their words and highlighter only by whoever opens them, in every
 language under the same addresses as every other public page. They are not
 prerendered: the server names each after its lambda, describes it with the
@@ -1167,19 +1250,113 @@ written on the pool into a pipe the reactor copies to the connection
 
 ## How it is put together
 
-A single .NET 11 project hosted by `GenHTTP.Full.Ioxide`, wired up in
-[`Application.cs`](src/GenHTTP.Lambda/Application.cs) and divided into
-services, a folder each below `Services/`. From outside its folder a service
-is taken only by its interfaces - by the API resources, the MCP tools and the
-other services alike - and the classes a service is made of stay in its
-folder; `ServiceBoundaryTests` fails on a constructor or method elsewhere that
-takes one of them. Where other services work through a lower layer of a
+A set of .NET 11 projects below `src/`, hosted by `GenHTTP.Full.Ioxide`: the
+platform, the components over it - each with a builder in front, the way
+GenHTTP's modules are made (`X.Create(...)`) - and two hosts that put them
+together.
+
+| Project | What it is |
+|---|---|
+| `GenHTTP.Lambda.Core` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
+| `GenHTTP.Lambda.Web` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages` |
+| `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
+| `GenHTTP.Lambda.Api` | `RestApi.Create(platform)`, mounted at `/api` |
+| `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)`, mounted at `/mcp` |
+| `GenHTTP.Lambda.Editing` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
+| `GenHTTP.Lambda.Administration` | `AdminPanel.Create()`, mounted at `/admin`: the operator's panel, pages only, over the REST API |
+| `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
+| `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
+| `GenHTTP.Lambda.Cloud` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
+| `GenHTTP.Lambda.Community` | the host of the community edition: `Program.cs`, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
+
+A host's `Program.cs` is the whole composition. The community edition's:
+
+```csharp
+// the LAMBDA_* variables, with the lambdas below /lambda/ on this address
+// unless LAMBDA_HOSTING_URL names a domain for them
+var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths);
+
+await using var platform = LambdaPlatform.Create()
+                                         .Options(settings.Platform)
+                                         .Build();
+
+var site = Layout.Create()
+                 .Add("api", RestApi.Create(platform))
+                 .Add("mcp", McpServer.Create(platform))
+                 .Add("editor", Editor.Create(platform))
+                 .Add("admin", AdminPanel.Create())
+                 .Add(SourcePages.Create(platform))
+                 .Add(LandingPage.Create(platform));
+
+return await LambdaServer.Create(platform)
+                         .Settings(settings)
+                         .Handler(Runner.Create(platform).Site(site))
+                         .RunAsync();
+```
+
+The cloud's reads the environment with the lambdas at subdomains
+(`LambdaSettings.FromEnvironment()`), adds what is its own to the options
+(`CloudInstallation.Of(settings.Platform)`) and has `Website` where this has
+`LandingPage`.
+
+`LambdaPlatform.Create().Options(...).Build()` migrates the database and
+builds the services into one container, once per process; every component's
+builder is handed the platform and takes what it needs from it, and makes its
+own singletons - the MCP tools, the pages of a bundle - from those services,
+so the container registers nothing of the components. `LambdaServer` starts
+the platform's background jobs once it is listening, and seeds the demos
+after that. Disposing of the platform stops the jobs and the services, and
+gives the console back. Since nothing below the hosts reads the environment, a
+component runs the same in a test (`LambdaFixture`, which puts them together
+the way the cloud does, or the community edition) as in a host.
+
+Every request passes the platform's concerns in front of the runner, added by
+`PlatformHosting` - from the outside in:
+
+1. `AddressBlockConcern` - a blocked address is refused, the panel excepted
+   (see [Blocking](#blocking));
+2. `LambdaRedirectConcern` - an address a lambda no longer answers at is sent
+   on to where it does;
+3. the scope of the request, which every dependent concern is resolved from;
+4. `CallerConcern` - the request line, with who asked;
+5. GenHTTP's defaults - compression, the upgrade to HTTPS and the rest;
+6. `TelemetryConcern`;
+
+then the answers to ACME challenges, where `LAMBDA_ACME_DIRECTORY` is set, and
+the runner. Its `DomainRouter` decides once whose host a request is for: a
+lambda's own domain or its subdomain go to that lambda, the hosting domain to
+its page, a host nobody has to the page that says nothing is there, and the
+platform's names to the previews, the lambdas below `/lambda/` where they
+answer by path, and the site.
+
+The frontends are an npm workspace at the root (`package.json`,
+`tsconfig.base.json`). What they share is source, not a build: `src/Kit`
+(`@genhttp-lambda/kit`) has the shell and the components, the i18n machinery
+and the words several bundles use, the API client, the build box, the guide,
+the showcase, the Tailwind preset, the Vite configuration every bundle is
+built with (`vite.ts`) and the scripts that translate and prerender
+(`scripts/translations.mjs`, `scripts/prerender.mjs`). Every component with
+pages has a `Frontend/` folder of its own - Editing, Administration, Sources,
+Cloud and Community - which `npm run build` at the root builds into `bundle/`
+beside its project; the project copies that into the output of every host
+below `bundles/<name>/` (`editor`, `admin`, `sources`, `cloud`, `community`),
+where `Bundle.Beside` finds it, and a builder's `.Bundle(directory)` points
+elsewhere. No component serves another's bundle. The sites' public pages are
+prerendered per language as they are built.
+
+The platform is divided into services, a folder each below `Services/` of
+`GenHTTP.Lambda.Core`. From outside its folder a service is taken only by its
+interfaces - by the API resources, the MCP tools, the other components and
+the other services alike - and the classes a service is made of stay in its
+folder; `ServiceBoundaryTests` fails on a constructor or method elsewhere, in
+the assembly of any component, that takes one of them. Where other services
+work through a lower layer of a
 folder rather than the service the API calls, that layer has an interface of
 its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
 `IRunLog`).
 
-- **Meta** (`Services/Meta`) - lambdas and their versions, the only component
-  that speaks to the database. Its public surface is DTOs, mapped by hand.
+- **Meta** (`Services/Meta`) - lambdas and their versions, the only part of
+  the platform that speaks to the database. Its public surface is DTOs, mapped by hand.
   `MetaService` is what the API, MCP and the other services call. It finds
   the lambda, checks it may be changed, takes the lambda's turn for a change,
   and leaves the rest to units: `LambdaHosting` changes the key, the domain
@@ -1238,7 +1415,8 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   are, `GitPushes` makes versions and features of what is pushed, `GitStore`
   keeps the commits and their files below `/data/git/{lambda}`, and
   `ProjectTree` says what a lambda is as a tree and back. The door is
-  `Api/Git/GitRoutes.cs`, beside the pages below `/editor/` and `/source/`.
+  `GitRoutes.cs`, which the editor mounts below `/editor/` and the published
+  sources below `/source/`.
 - **Analytics** (`Services/Analytics`) - the visits counted for an owner who
   switched analytics on (see [Analytics](#analytics)). `AnalyticsService` is
   what the API and MCP call and what writes a batch down, `AnalyticsQueue`
@@ -1265,16 +1443,22 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   loaded rather than being compiled
   again. Lambdas are compiled against the metadata of the platform's
   assemblies, read once and kept - the metadata alone, not the whole files.
-- **Execution** (`Services/Execution`) - an `IHandler`, not a web service: it
-  looks up the handler for a request and runs it.
+- **Execution** (the runner, `GenHTTP.Lambda.Execution`) - not a service but
+  the component that serves the lambdas: `LambdaRoute` puts the concerns in
+  front of every lambda around `LambdaExecutionHandler`, an `IHandler` that
+  looks up the handler for a request and runs it, once per way a lambda is
+  found - its domain, its subdomain, its path, a feature's preview.
 - **Hosting** (`Services/Hosting`) - where the lambdas answer (see
   [Where the lambdas answer](#where-the-lambdas-answer)). `LambdaAddresses`
-  (`ILambdaAddresses`) builds the address of a lambda below the hosting
-  domain and reads the lambda off a host, `DomainRegistry` holds the domains
-  of their own and decides once per request whose host it is, `DomainRouter`
-  hands it to a lambda, to the page of the hosting domain, to the platform or
-  - for a host nobody has - to the page that says nothing is there, and `LambdaRedirectConcern`, in front of everything the server does, sends
-  an old address on to where its lambda answers now.
+  (`ILambdaAddresses`) builds the address of a lambda - at its subdomain or
+  below `/lambda/` - and reads the lambda off a host, `DomainRegistry` holds
+  the domains of their own and decides once per request whose host it is,
+  `PlatformRoutes` names where each component is mounted, and
+  `LambdaRedirectConcern`, in front of everything the server does but the
+  address block, sends an address a lambda no longer answers at on to where
+  it does. The runner's `DomainRouter` hands a request to a lambda, to the
+  page of the hosting domain, to the platform or - for a host nobody has - to
+  the page that says nothing is there.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
   resolve the lambda, rate limit per client and cap concurrency. A lambda is
   resolved from memory (`Services/Meta/ResolutionCache.cs`), which every write
@@ -1283,8 +1467,8 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
 
 A concern that needs nothing but services is a dependent concern of GenHTTP
 (`IDependentConcern`, added with `Dependent.Concern<T>()`): a singleton in the
-container, resolved per request from the scope that the outermost concern of
-the host opens. That is the line each request is logged with, the server's
+container, resolved per request from the scope that `PlatformHosting` opens
+around every request. That is the line each request is logged with, the server's
 telemetry, and in front of every lambda the throttle, the mark on what it
 prints, its activity and the rate limit. The lookup of the lambda is built by
 hand, once per route, because its locator is what tells the routes apart.
@@ -1295,9 +1479,9 @@ request reads `IRequest.Server`.
 
 What is printed to the console - what a lambda prints, and what the engine
 says about its reactors - is kept by `Services/Diagnostics/ConsoleCapture.cs`,
-which the application owns: it puts a tee over the console, once per process,
+which the platform owns: it puts a tee over the console, once per process,
 and files what is printed outside any lambda into the book of every
-application running, until that application is disposed of. The logger
+platform running, until that platform is disposed of. The logger
 writes its lines to the console it was given before the tee existed, and takes
 the lock of `Console.Out` first - the console takes that lock itself under
 every write, and in the other order a print and a log line waited for each
@@ -1335,8 +1519,9 @@ resources and MCP tools are synchronous: plain methods, synchronous EF calls,
 plain locks. What takes long - compiling and binding with Roslyn, packing,
 copying a workspace or a database - is handed to the thread pool in one hop
 (`Infrastructure/Offload.cs`) and the request resumes on its reactor
-afterwards. `src/GenHTTP.Lambda/BannedSymbols.txt` refuses the asynchronous EF
-calls, waiting for a task and `Task.Run` when the server is compiled, so every
+afterwards. `src/BannedSymbols.txt` refuses the asynchronous EF
+calls, waiting for a task and `Task.Run` when any project below `src/` is
+compiled - every component runs on the same reactors - so every
 hop to the pool goes through `Offload`; the two pieces of work started in the
 background rather than awaited - the scheduler's jobs and seeding the demos -
 say so where they start. CLAUDE.md has the rules.
@@ -1347,19 +1532,29 @@ and the seccomp profile is left alone.
 
 ## Configuration
 
-Everything is read from the environment on startup, see
-[`LambdaOptions`](src/GenHTTP.Lambda/Configuration/LambdaOptions.cs) - apart
-from the limits of the tiers, which are the product's promises rather than the
-server's configuration and are set in the administration panel while it runs
-(see [Limits](#limits)).
+Everything is read from the environment on startup, by
+[`LambdaSettings.FromEnvironment()`](../src/GenHTTP.Lambda.Server/LambdaSettings.cs) -
+the only place below the hosts that reads it - apart from the limits of the
+tiers, which are the product's promises rather than the server's
+configuration and are set in the administration panel while it runs (see
+[Limits](#limits)). The variables are read into two: the platform's options
+([`LambdaOptions`](../src/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
+which every component is built with, and the host's (`ServerSettings`), which
+only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
+`LAMBDA_RECEIVE_QUEUE_ENTRIES`, `LAMBDA_TLS_PORT`, the `LAMBDA_CERTIFICATE`
+variables and `LAMBDA_ACME_DIRECTORY`. `LAMBDA_PORT` goes into both, since the
+platform makes addresses on localhost with it. A host adds what is its own:
+genhttp.dev's terms and legal pages, which no variable sets, and its contact
+and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
+(`CloudInstallation`).
 
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
 | `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide` or `kestrel` (see below)           |
+| `LAMBDA_HTTP_PROTOCOLS`             | `Http1`          | the HTTP versions both ports answer on; `Http1AndHttp2` tries HTTP/2 again |
 | `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `4096`           | reads of 32 KB a connection may have waiting on io_uring |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
-| `LAMBDA_WEB_ROOT`                   | `./wwwroot`      | the built frontend                          |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
 | `LAMBDA_SOURCE_CACHE_BYTES`         | `2147483648`     | what the published sources may take on disk, packed; the least recently read go first |
@@ -1384,8 +1579,14 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts (or origins) a browser may use `/mcp` from |
 | `LAMBDA_SECRETS_KEY`                | `secrets.key`    | the installation's half of the key secrets are sealed with, see [Secrets](#secrets) |
-| `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap; set, the platform answers only at its own names, see [Where the lambdas answer](#where-the-lambdas-answer) |
-| `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run` |
+| `LAMBDA_PUBLIC_URL`                 | - (the community image: `http://localhost:8080`) | canonical address, enables the sitemap; set, the platform answers only at its own names; below a path, the lambdas' addresses are made from it, see [Where the lambdas answer](#where-the-lambdas-answer) |
+| `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run`; set, the community edition answers at subdomains as well |
+| `LAMBDA_ADDRESSING`                 | the host's       | `subdomains` or `paths`, over what the host and `LAMBDA_HOSTING_URL` say: genhttp.dev answers at subdomains, the community edition by path unless `LAMBDA_HOSTING_URL` is set |
+| `LAMBDA_CONTACT`                    | -                | where to write to whoever runs the installation, which the pages offer - about premium, for one; without, they offer nobody |
+| `LAMBDA_ABUSE_CONTACT`              | -                | where a lambda that does harm is reported; without, the pages offer no way to report one |
+| `LAMBDA_AGENT_URL`                  | -                | where the build agent listens; without, nothing is built from a request and its text boxes are not offered |
+| `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask |
+| `LAMBDA_AGENT_FABLE_PASSWORD`       | -                | the password for the second model the build page offers; without, it is not offered |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -1394,9 +1595,9 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
 The io_uring engine is the default and the faster one, but container runtimes
-block the syscall in their default seccomp profile - so the image defaults to
+block the syscall in their default seccomp profile - so both images default to
 `LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
-and allowed.
+and allowed; genhttp.dev does with an overlay of its compose file:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.ioxide.yml up -d
@@ -1431,9 +1632,11 @@ reads, the partial file had been kept as if it were the whole.
 
 ### Redeploying
 
-An installation that also runs the build agent is spread over three compose
-files, and leaving one out does not fail loudly - it produces a server that
-looks healthy while some part of it is switched off. Drop the agent overlay and
+genhttp.dev, which also runs the build agent, is spread over three compose
+files at the root of the repository (the community edition's sample has one,
+the agent a profile in it), and leaving one out does not fail loudly - it
+produces a server that looks healthy while some part of it is switched off.
+Drop the agent overlay and
 `/build` reports "no build agent"; drop the ioxide overlay and the engine
 quietly falls back to Kestrel. So there is a script that knows the list and
 checks the result:
@@ -1467,8 +1670,8 @@ sudo ln -sf "$PWD/deploy.sh" /usr/local/bin/genhttp-deploy
 
 ## Telemetry
 
-`/stats` shows what the process is doing, and `/api/v1/telemetry` is where it
-comes from. A reading is taken every `LAMBDA_TELEMETRY_INTERVAL_SECONDS` and
+The panel's **Server** section shows what the process is doing, and
+`/api/v1/telemetry` is where it comes from. A reading is taken every `LAMBDA_TELEMETRY_INTERVAL_SECONDS` and
 `LAMBDA_TELEMETRY_SAMPLES` of them are kept, which is a day at the defaults.
 
 The readings live in memory and go with the process. That suits what they are
@@ -1625,7 +1828,8 @@ upgrade to HTTPS lets through rather than redirecting.
 
 ### The hosting domain
 
-Every lambda answers at a subdomain of the hosting domain (see
+Where the lambdas answer at subdomains, every lambda answers at a subdomain
+of the hosting domain (see
 [Where the lambdas answer](#where-the-lambdas-answer)), named after a key
 that may be claimed at any moment, so its certificate is a wildcard - one
 certificate for `*.genhttp.run`, and for `genhttp.run` as well, which a
@@ -1671,7 +1875,7 @@ it says when no certificate names the hosting domain itself.
 ### Custom domains
 
 A lambda in the premium tier can answer at a domain of its own instead of its
-subdomain of the hosting domain, which its owner sets in the editor after
+subdomain of the hosting domain or its path, which its owner sets in the editor after
 pointing the domain's A and AAAA records at the server. Plain requests to it are redirected to HTTPS on the same domain like
 every other request, so it needs a certificate - issued by hand for now, with
 the web root above, into a folder of its own:
@@ -1910,8 +2114,9 @@ of the same name in `Resources/Templates`, redeployed when their template
 changes, and retired when they leave `DemoCatalog`. Nobody can move a lambda
 into the tier or out of it, the operator included.
 
-Nothing is created until `acceptTerms` is true, and the editor key that comes
-back is the only way into what was made. There is no session and nothing is
+Where the installation has terms - genhttp.dev has, a community installation
+none - nothing is created until `acceptTerms` is true, and the editor key that
+comes back is the only way into what was made. There is no session and nothing is
 remembered between calls: everything a call needs is in its arguments.
 
 `LAMBDA_MCP_ORIGINS` lists the hosts a browser may drive the endpoint from: a
@@ -1925,13 +2130,17 @@ this endpoint.
 
 ## Administration
 
-`/admin` lists every lambda, when it was created, whether it is online, and
-what its code says - and takes them offline or removes them. `/stats` is what
-the process is holding and what the engine is carrying. Both are reached
-through the **Admin** menu in the header, which is where the token is entered:
-it is kept in the browser's local storage, so every tab of that browser is
-unlocked - the editor's **Admin** section included, see below - until **Lock
-again** is used or the server turns the token away.
+`/admin` is the operator's panel, a component of its own (`AdminPanel`):
+pages only, in English, which call the operator's routes of the REST API with
+the token. Its **Lambdas** section lists every lambda, when it was created,
+whether it is online, and what its code says - and takes them offline or
+removes them; its **Server** section is what the process is holding and what
+the engine is carrying. The token is entered on the panel's own page - no
+other page links there - and kept in the browser's local storage, so every
+tab of that browser is unlocked until **Lock again** is used or the server
+turns the token away. The panel no longer appears inside the editor: what
+only the operator decides about one lambda - its block, its tier - is on its
+page in the panel.
 
 This is the one part that authenticates. Everywhere else the editor link is
 the credential and it only ever reaches one lambda; this reads code that belongs
@@ -1940,8 +2149,9 @@ in an `X-Admin-Token` header (GenHTTP's API key authentication). A request
 without the header is answered with 401, one with the wrong token with 403.
 The concern says so in the API description itself: every operation behind it
 requires the `adminToken` security scheme, which Scalar asks for once.
-Until that variable is set there is no panel at all: `/admin`, `/telemetry`
-and `/logs` are not there, and answer 404.
+Until that variable is set there is no administration at all: the operator's
+routes - `/api/v1/admin`, `/api/v1/telemetry` and `/api/v1/logs` - are not
+there and answer 404, and the panel says the installation has none.
 
 The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
@@ -1950,9 +2160,9 @@ operator everybody's.
 ### Blocking
 
 What the operator does about a lambda that breaks the terms - phishing,
-malware, attacks on others. **Block** is on its page in the panel and in the
-**Admin** section of its editor (`POST /admin/lambdas/{publicKey}/block`), and
-**Lift the block** beside it (`DELETE …/block`).
+malware, attacks on others. **Block** is on its page in the panel
+(`POST /admin/lambdas/{publicKey}/block`), and **Lift the block** beside it
+(`DELETE …/block`).
 
 - **A blocked lambda is offline and frozen.** Blocking takes it offline, and
   the previews of its features, and from then on every change is refused -
@@ -1982,8 +2192,8 @@ malware, attacks on others. **Block** is on its page in the panel and in the
   runs hourly; the panel's **Blocked addresses** section (`GET /admin/blocks`,
   `DELETE /admin/blocks/{id}`) lists them with why, which lambda, until when and
   how many requests each refused, and lifts them.
-- **The panel stays reachable from a blocked address** - its page, its assets,
-  `/api/v1/system` and the API behind the token - so an operator who blocked
+- **The panel stays reachable from a blocked address** - its bundle below
+  `/admin`, `/api/v1/system` and the API behind the token - so an operator who blocked
   themselves lifts it there; the panel says when their own address is blocked.
   Nothing else is let through, and the token is asked for as always.
 - **The installation's own networks are never recorded nor blocked**
@@ -2205,17 +2415,15 @@ and reading it in the editor is also how it gets emptied or corrected rather
 than only deleted. It is one more reason the token belongs to a person and not
 in a browser somebody else uses.
 
-In a browser that holds the token, the editor of every lambda has one more
-section, **Admin**, after all of the owner's in both views; nobody else sees
-it. It is where what only the operator decides about a lambda goes, and holds
-nothing yet but the way to its page in the panel. It is in English, like the
-panel. The sitemap names no lambda: every lambda answers at a host of its own,
-and a sitemap names pages of the host it is served from.
+The sitemap names no lambda: at subdomains every lambda answers at a host of
+its own, and a sitemap names pages of the host it is served from; below a
+path it lists none either.
 
 ## Database
 
-SQLite through EF Core, migrated on startup by [Evolve][evolve] from the SQL
-files in `Data/Migrations`. To change the schema, add the next
+SQLite through EF Core, migrated by [Evolve][evolve] as the platform is built
+(`LambdaPlatform`), from the SQL files in `Data/Migrations` of
+`GenHTTP.Lambda.Core`. To change the schema, add the next
 `V<n>__<name>.sql` next to them - they are embedded resources, and the
 existing ones are never edited.
 

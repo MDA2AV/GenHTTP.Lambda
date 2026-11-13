@@ -13,6 +13,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Source;
+using GenHTTP.Lambda.Services.Hosting;
 
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
@@ -37,7 +38,7 @@ namespace GenHTTP.Lambda.Api;
          A lambda is addressed by its **editor key** (`privateKey`), which is also what authorizes every call below
          `/lambdas/{privateKey}`. Its versions, deployment, data and everything else about it are below the same path.
 
-         Where a lambda answers: `publicUrl` is its address below the hosting domain, named after its public key.
+         Where a lambda answers: `publicUrl` is its public address, named after its public key - a subdomain of the hosting domain, or a path below `/lambda/`.
          `address` is where to link to it - its own domain while it answers at one (premium only), `publicUrl` otherwise.
          """)]
 public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, IDatabaseService databases, LambdaOptions options,
@@ -61,7 +62,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
              before trying. Left out, a random key of eight characters is chosen.
              """)]
     [Response(ResponseStatus.Created, "The lambda was created. Keep `privateKey`: it is not handed out again.")]
-    [Response(ResponseStatus.BadRequest, "The terms were not accepted, or the key, the template or the view cannot be used. The message says which.",
+    [Response(ResponseStatus.BadRequest, "The terms were not accepted where the installation has terms, or the key, the template or the view cannot be used. The message says which.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "Another lambda has the public key that was asked for.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public Result<LambdaResponse> Create(CreateLambdaRequest request)
@@ -195,7 +196,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var license = published != null && SourceLicenses.Find(published.License) is { } found
             ? new ExportedLicense(found, SourceLicenses.Holder(published.Author, lambda.PublicKey),
-                                  options.PublicUrl is { } root ? $"{root}/source/{lambda.PublicKey}" : null)
+                                  options.PublicUrl is { } root ? root + PlatformRoutes.SourceOf(lambda.PublicKey) : null)
             : null;
 
         var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names, license);

@@ -22,6 +22,7 @@ using GenHTTP.Lambda.Editing;
 using GenHTTP.Lambda.Execution;
 using GenHTTP.Lambda.Mcp;
 using GenHTTP.Lambda.Server;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Sources;
@@ -183,10 +184,10 @@ internal sealed class LambdaFixture : IAsyncDisposable
                                      .Build();
 
         var site = Layout.Create()
-                         .Add("api", RestApi.Create(platform).Compiled(compiled))
-                         .Add("mcp", McpServer.Create(platform))
-                         .Add("editor", Editor.Create(platform).Bundle(BundleOf(options, "editor")))
-                         .Add("admin", AdminPanel.Create().Bundle(BundleOf(options, "admin")))
+                         .Add(PlatformRoutes.Api, RestApi.Create(platform).Compiled(compiled))
+                         .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
+                         .Add(PlatformRoutes.Editor, Editor.Create(platform).Bundle(BundleOf(options, "editor")))
+                         .Add(PlatformRoutes.Admin, AdminPanel.Create().Bundle(BundleOf(options, "admin")))
                          .Add(SourcePages.Create(platform).Bundle(BundleOf(options, "sources")))
                          .Add(edition == Edition.Cloud
                                   ? Website.Create(platform).Bundle(BundleOf(options, "site"))

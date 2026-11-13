@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Hosting;
 
 namespace GenHTTP.Lambda.Services.Features;
 
@@ -46,7 +47,7 @@ public sealed record FeatureInfo(
     /// <summary>
     /// Where its preview answers, on the platform.
     /// </summary>
-    public string Path => $"/features/{Key}/";
+    public string Path => PlatformRoutes.PreviewOf(Key);
 
 }
 

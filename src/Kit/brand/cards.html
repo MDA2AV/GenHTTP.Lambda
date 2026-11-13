@@ -112,12 +112,6 @@
   .arrow { display: flex; justify-content: center; color: #c99bff; }
   .arrow svg { width: 26px; height: 26px; }
 
-  .tiers { display: grid; gap: 14px; }
-  .tier { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 20px; border: 1px solid var(--ink-800); background: var(--ink-900); border-top: 4px solid var(--blue-solid); }
-  .tier.ent { border-top-color: #12b5cb; }
-  .tier b { font-size: 22px; }
-  .tier span { font-size: 17px; color: var(--muted); }
-  .tier strong { font-size: 34px; }
 </style>
 </head>
 <body>
@@ -183,10 +177,6 @@
     '/showcase': (w) => `<div class="card"><div class="body">
         ${w.apps.map((app) => bar(app, 'live', words.live)).join('')}
         ${people(6, w.count)}</div></div>`,
-    '/enterprise': (w) => `<div class="tiers">
-        <div class="tier"><div><b>${w.free}</b><br><span>${w.freeNote}</span></div><strong>${w.freePrice}</strong></div>
-        <div class="tier ent"><div><b>${w.enterprise}</b><br><span>${w.perUser}</span></div><strong>${w.price}</strong></div>
-        ${bar(w.domain, 'own', w.yours)}</div>`,
     '/docs': (w) => `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
     .Get(() =&gt; <span class="s">"Hello, world"</span>);</div>
         <div class="body">${bar(`h3ll0w.${HOSTING}`)}<div class="it" style="font-size:19px">${check}${w.deployed}</div></div></div>`,

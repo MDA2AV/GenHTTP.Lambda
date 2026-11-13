@@ -3,7 +3,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: 'Zo werkt het',
   intro:
-    'Je schrijft een stukje C#. Wat dat teruggeeft, staat binnen een paar seconden online op een openbaar adres, via HTTPS. Hier staat alles, in de volgorde waarin je het tegenkomt.',
+    'Je schrijft een stukje C#. Wat dat teruggeeft, staat binnen een paar seconden online op een eigen adres. Hier staat alles, in de volgorde waarin je het tegenkomt.',
   contents: 'Inhoud',
 
   parts: {
@@ -41,7 +41,7 @@ export const guide: KitMessages['guide'] = {
     (k) => (
       <>
         Dat is een complete lambda. Gedeployd beantwoordt hij op een eigen adres, vernoemd naar zijn sleutel, zoals{' '}
-        {k.code('your-key.genhttp.run')}, elk request met het woord hello.
+        {k.code(k.example)}, elk request met het woord hello.
       </>
     ),
   ],

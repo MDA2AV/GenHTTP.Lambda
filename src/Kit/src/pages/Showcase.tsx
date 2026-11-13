@@ -7,6 +7,7 @@ import { useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { usePublicPage } from '../meta';
 import { forgetShowcase, sentShowcase } from '../site';
+import { useStartPage } from '../installation';
 
 const PAGE = 12;
 
@@ -190,6 +191,7 @@ function Placeholder() {
 
 /** An empty showcase, which is an invitation rather than an error. */
 function Nothing() {
+  const start = useStartPage();
   const said = useT().showcase;
 
   return (
@@ -199,7 +201,7 @@ function Nothing() {
         {said.nothing((text) => <b>{text}</b>)}
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
-        <Link to="/build" className="btn-primary">
+        <Link to={start} className="btn-primary">
           {said.buildOne}
         </Link>
       </div>
@@ -209,6 +211,7 @@ function Nothing() {
 
 /** How to be on this page, for whoever has just scrolled through it. */
 function Yours() {
+  const start = useStartPage();
   const said = useT().showcase;
 
   return (
@@ -219,7 +222,7 @@ function Yours() {
           {said.yours((text) => <b>{text}</b>)}
         </p>
       </div>
-      <Link to="/build" className="btn-primary justify-self-start">
+      <Link to={start} className="btn-primary justify-self-start">
         {said.buildSomething}
       </Link>
     </aside>

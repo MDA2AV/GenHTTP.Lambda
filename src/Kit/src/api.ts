@@ -62,6 +62,12 @@ export interface DomainState {
   served: boolean;
   /** What the domain resolves to, as the server sees it. Absent without a domain. */
   dns?: { addresses: string[]; problem?: string };
+  /**
+   * Where the domain has to point: the name of the installation's address,
+   * for a CNAME, and what it resolves to. Absent without a domain; no
+   * addresses where the installation has none a domain could point to.
+   */
+  target?: { name?: string | null; addresses: string[] };
 }
 
 /** Which door something came through. */
@@ -528,7 +534,7 @@ export interface Platform {
   /** The terms of use creating a lambda accepts; none where the installation has none. */
   terms: string | null;
   /** Who runs the installation, as far as a page has to say so (see installation.ts). */
-  operator: { contact: string | null; abuse: string | null; legal: boolean };
+  operator: { contact: string | null; abuse: string | null; legal: boolean; start: string };
   starters: Starter[];
   /** How large a version of a free lambda may be, its code and its resources together. */
   buildBytes: number;

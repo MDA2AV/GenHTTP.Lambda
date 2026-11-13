@@ -73,8 +73,7 @@ public sealed class ServiceBoundaryTests
     #region Helpers
 
     /// <summary>
-    /// The assemblies of the platform and of every component, and of the
-    /// host whose pages are its own.
+    /// The assemblies of the platform, of every component and of both hosts.
     /// </summary>
     private static readonly Assembly[] Components =
     [
@@ -84,7 +83,11 @@ public sealed class ServiceBoundaryTests
         typeof(GenHTTP.Lambda.Api.RestApi).Assembly,
         typeof(GenHTTP.Lambda.Mcp.McpServer).Assembly,
         typeof(GenHTTP.Lambda.Server.LambdaServer).Assembly,
-        typeof(GenHTTP.Lambda.Cloud.Website).Assembly
+        typeof(GenHTTP.Lambda.Editing.Editor).Assembly,
+        typeof(GenHTTP.Lambda.Administration.AdminPanel).Assembly,
+        typeof(GenHTTP.Lambda.Sources.SourcePages).Assembly,
+        typeof(GenHTTP.Lambda.Cloud.Website).Assembly,
+        typeof(GenHTTP.Lambda.Community.LandingPage).Assembly
     ];
 
     private static IEnumerable<string> Crossings(IServiceProviderIsService container)

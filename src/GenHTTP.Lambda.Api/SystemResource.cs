@@ -23,9 +23,10 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
     [ResourceMethod]
     [Summary("Describes this installation")]
     [Remarks("""
-             Its terms, which creating a lambda accepts; the limits of a free lambda; what a new lambda can start from; whether
-             the build agent is on offer; where a lambda answers (`lambdaUrl`); and what the editor suggests while code is
-             written - the namespaces a lambda has imported and the types and snippets it may use.
+             Its terms, which creating a lambda accepts where it has any; the limits of a free lambda; what a new lambda can
+             start from; whether the build agent is on offer; where a lambda answers (`lambdaUrl`); who runs it, as far as its
+             pages have to say so (`operator`); and what the editor suggests while code is written - the namespaces a lambda
+             has imported and the types and snippets it may use.
              """)]
     [return: Summary("The terms, limits, starters and vocabulary of this installation")]
     public PlatformResponse Get()
@@ -42,7 +43,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             CompletionCatalog.Items,
             new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
             addresses.Template,
-            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages)
+            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage)
         );
     }
 

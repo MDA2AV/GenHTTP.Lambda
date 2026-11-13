@@ -310,7 +310,8 @@ public sealed class LambdaPlatformBuilder
 
     /// <summary>
     /// The note on disk about how this run is going, if the host keeps one
-    /// already (it reports the previous run before the platform is built).
+    /// already - and has reported the previous run itself. Without, the
+    /// platform makes it and reports the previous run as it is built.
     /// </summary>
     public LambdaPlatformBuilder RunLog(RunLog runs)
     {
@@ -321,15 +322,52 @@ public sealed class LambdaPlatformBuilder
     /// <summary>
     /// Migrates the database and builds the platform.
     /// </summary>
+    /// <remarks>
+    /// The note about this run is begun first, so that a start which never
+    /// finishes - a migration that fails, an option that cannot be read - is
+    /// written down as this run's fault, and the next one says so rather
+    /// than report the run before it.
+    /// </remarks>
     public LambdaPlatform Build()
     {
         var book = _book ?? PlatformLogging.CreateBook(_options);
 
         var loggers = _loggers ?? PlatformLogging.CreateLoggers(_options, book);
 
-        Migrator.Migrate(_options, loggers.CreateLogger<LambdaPlatform>());
+        var logger = loggers.CreateLogger("GenHTTP.Lambda");
 
-        return new LambdaPlatform(_options, loggers, _loggers == null, book, _runs ?? new RunLog(_options.DataDirectory));
+        Directory.CreateDirectory(_options.DataDirectory);
+
+        var runs = _runs;
+
+        if (runs == null)
+        {
+            runs = new RunLog(_options.DataDirectory);
+
+            runs.Report(logger);
+        }
+
+        try
+        {
+            Migrator.Migrate(_options, loggers.CreateLogger<LambdaPlatform>());
+
+            return new LambdaPlatform(_options, loggers, _loggers == null, book, runs);
+        }
+        catch (Exception e)
+        {
+            // nothing watches the process for what ends it yet - the server
+            // does that once there is a platform to serve
+            runs.Faulted(e);
+
+            logger.LogCritical(e, "The platform could not be started");
+
+            if (_loggers == null)
+            {
+                loggers.Dispose();
+            }
+
+            throw;
+        }
     }
 
     #endregion

@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community sürümü',
   headline: 'Ajanlarınızın uygulama geliştirdiği platform.',
-  headlineAccent: 'Kendi sunucunuzda çalışır.',
+  headlineAccent: 'Açık kaynak, kendi sunucunuzda.',
   intro:
     'Bir uygulamayı tarif edin, geliştirme ajanı yazsın - ya da Claude Code, Codex veya Cursor bunu MCP üzerinden yapsın. Her uygulama bir C# GenHTTP handler’ıdır; bu sunucuda derlenir, saniyeler içinde yayına girer ve veritabanı, anahtarlar ve parolalar, sürümler ve git ile gelir.',
   describe: 'Uygulamayı tarif edin',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Her uygulamanın sahip olduğu her şey',
   features: [
-    { title: 'Bir adres', text: 'Derlenir derlenmez bu sunucuda /lambda/ altında yayında - ya da kendi alan adında.' },
+    { title: 'Bir adres', text: 'Bu sunucuda, anahtarına göre adlandırılmış kendi adresi var - premium yapıldığında ise kendi alan adı da.' },
     { title: 'Kayıtlar', text: 'Kendine ait bir SQLite veritabanı; tabloları migrasyonlarla oluşturulur, Entity Framework Core ile okunur ve yazılır.' },
     { title: 'Dosyalar', text: 'Uygulamanın kaydettikleri için bir klasör: yüklemeler, dışa aktarımlar, kayıt olmayan her şey.' },
     { title: 'Anahtarlar ve parolalar', text: 'Sunucuda mühürlü saklanır. Ajan hangilerine ihtiyaç duyduğunu söyler, siz girersiniz ve kimse bunları geri okuyamaz.' },
-    { title: 'Taslaklar ve sürümler', text: 'Bir değişiklik, verilerin kopyasıyla bir taslakta denenir, sonra yayına alınır. Her sürüm saklanır; geri dönmek bir tık uzakta.' },
-    { title: 'Git', text: 'Her uygulama bir depodur: klonlayın, yayına almak için bir commit push edin, taslak başlatmak için bir dal push edin.' },
+    { title: 'Taslaklar ve sürümler', text: 'Bir değişiklik, verilerin kopyasıyla bir taslakta denenir, sonra yayına alınır. Önceki sürümler saklanır; geri dönmek bir tık uzakta.' },
+    { title: 'Git', text: 'Her uygulama bir depodur: klonlayın, bir sürümü kaydetmek için bir commit push edin - yayına almak için -o deploy ile - ya da taslak başlatmak için bir dal push edin.' },
     { title: 'Ziyaretçiler', text: 'Sayfa görüntülemeleri, ziyaretçilerin nereden geldiği ve ülkeleri - siz açtıktan sonra sunucuda, çerez olmadan sayılır.' },
     { title: 'Kodunuz', text: 'Herhangi bir uygulamayı sade bir .NET projesi olarak indirip her yerde çalıştırın ya da kaynağını başkaları okusun diye yayımlayın.' },
   ],
 
   runsTitle: 'Nasıl çalışır',
   runs: [
-    { title: 'Tek bir container', text: 'Sunucu, editör, API ve tüm uygulamalar tek bir süreçte; hepsinin sakladığı her şey tek bir klasörde.' },
+    { title: 'Tek bir süreç', text: 'Sunucu, editör, API ve tüm uygulamalar tek bir süreçte çalışır ve her şeyi tek bir klasörde saklar. Varsa derleme ajanı yanında çalışır.' },
     {
       title: 'Yola ya da ana makineye göre',
-      text: 'Uygulamalar bu adreste /lambda/ altında yanıt verir. Kuruluma onlar için bir alan adı verirseniz, her biri bunun yerine kendi alt alan adını alır.',
+      text: 'Uygulamalar kurulumun adresinde /lambda/ altında yanıt verir - ya da onlar için bir alan adı verilirse, her biri kendi alt alan adında.',
     },
     {
       title: 'Güvendiğiniz kod',

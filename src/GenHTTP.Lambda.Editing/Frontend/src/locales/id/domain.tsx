@@ -33,6 +33,8 @@ export const domain: EditorMessages['domain'] = {
       Pengunjung yang mengetik {www} akan diarahkan ke {domain}, sehingga mesin pencari hanya mengenal satu alamat. Record-nya bersifat opsional.
     </>
   ),
+  noTarget:
+    'Server ini belum memiliki alamat publik yang dapat dituju oleh domain. Tanyakan kepada pihak yang menjalankannya ke mana domain harus diarahkan.',
   type: 'Tipe',
   name: 'Nama',
   value: 'Nilai',

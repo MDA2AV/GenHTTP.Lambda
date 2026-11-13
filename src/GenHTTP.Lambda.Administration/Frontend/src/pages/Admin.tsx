@@ -190,8 +190,8 @@ function Unlock({ refused, onUnlocked }: { refused: boolean; onUnlocked: (token:
 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           The server figures, the log and the lambdas of other people are behind this. It is the token the host
-          was started with, and this browser keeps it - the editor of every lambda shows its Admin section with
-          it - until it is locked again.
+          was started with, and this browser keeps it until it is locked again - for this tab only, where the
+          lambdas answer on this address.
         </p>
 
         <input

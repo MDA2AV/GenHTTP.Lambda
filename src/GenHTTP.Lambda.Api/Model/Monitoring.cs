@@ -151,7 +151,7 @@ public sealed record OwnerLogEntry(
     string? Agent,
     [Summary("How many identical lines in a row this one stands for; one is itself alone")]
     int Repeats,
-    [Summary("The host the request was addressed to: the lambda's subdomain of the hosting domain, or its own domain")]
+    [Summary("The host the request was addressed to: the lambda's own address on the platform, or its own domain")]
     string? Domain
 );
 

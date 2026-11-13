@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const landing: Messages['landing'] = {
   eyebrow: 'GenHTTP Lambda · Community edition',
   headline: 'A plataforma onde os teus agentes criam apps.',
-  headlineAccent: 'A funcionar no teu próprio servidor.',
+  headlineAccent: 'Código aberto, num servidor próprio.',
   intro:
     'Descreve uma app e o agente de criação escreve-a - ou deixa o Claude Code, o Codex ou o Cursor fazê-lo por MCP. Cada app é um handler GenHTTP em C#, compilado neste servidor e online em segundos, com base de dados, chaves e palavras-passe, versões e git.',
   describe: 'Descrever uma app',
@@ -21,22 +21,22 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'O que cada app recebe',
   features: [
-    { title: 'Um endereço', text: 'Online sob /lambda/ neste servidor assim que compila - ou num domínio próprio.' },
+    { title: 'Um endereço', text: 'Um endereço próprio neste servidor, com o nome da respetiva chave - e um domínio próprio quando passar a premium.' },
     { title: 'Registos', text: 'Uma base de dados SQLite própria, com as tabelas criadas por migrações, lida e escrita com o Entity Framework Core.' },
     { title: 'Ficheiros', text: 'Uma pasta para o que a app guarda: uploads, exportações, tudo o que não é um registo.' },
     { title: 'Chaves e palavras-passe', text: 'Guardadas cifradas no servidor. O agente diz quais precisa, tu introduzi-las, e ninguém as volta a ler.' },
-    { title: 'Rascunhos e versões', text: 'Uma alteração é experimentada num rascunho com uma cópia dos dados e depois posta online. Cada versão fica guardada, a um clique de voltar atrás.' },
-    { title: 'Git', text: 'Cada app é um repositório: clona-o, faz push de um commit para a pôr online, faz push de um ramo para começar um rascunho.' },
+    { title: 'Rascunhos e versões', text: 'Uma alteração é experimentada num rascunho com uma cópia dos dados e depois posta online. As versões anteriores ficam guardadas, a um clique de voltar atrás.' },
+    { title: 'Git', text: 'Cada app é um repositório: clona-o, faz push de um commit para guardar uma versão - com -o deploy para a pôr online - ou de um ramo para começar um rascunho.' },
     { title: 'Visitantes', text: 'Visualizações de páginas, de onde vieram os visitantes e os seus países - contados no servidor, sem cookies, depois de o ativares.' },
     { title: 'O teu código', text: 'Descarrega qualquer app como um projeto .NET simples e executa-a onde quiseres, ou publica o seu código-fonte para outros lerem.' },
   ],
 
   runsTitle: 'Como funciona',
   runs: [
-    { title: 'Um só contentor', text: 'O servidor, o editor, a API e todas as apps num só processo, e tudo o que guardam numa só pasta.' },
+    { title: 'Um só processo', text: 'O servidor, o editor, a API e todas as apps correm num só processo e guardam tudo numa só pasta. O agente de criação, quando existe, corre ao lado.' },
     {
       title: 'Por caminho ou por host',
-      text: 'As apps respondem sob /lambda/ neste endereço. Dá um domínio à instalação e cada uma passa a ter, em vez disso, um subdomínio próprio.',
+      text: 'As apps respondem sob /lambda/ no endereço da instalação - ou, se lhes for dado um domínio, cada uma num subdomínio próprio.',
     },
     {
       title: 'Código em que confias',

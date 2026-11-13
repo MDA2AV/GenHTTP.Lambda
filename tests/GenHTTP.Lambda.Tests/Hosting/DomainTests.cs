@@ -538,6 +538,42 @@ public sealed class DomainTests
         Assert.IsTrue(described.Dns.Addresses.Count > 0 || described.Dns.Problem != null);
     }
 
+    [TestMethod]
+    public async Task TheOwnerIsToldWhereTheDomainHasToPoint()
+    {
+        // an address the server need not ask the name servers about
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = "https://203.0.113.7" });
+
+        var lambda = await fixture.CreateLambdaAsync("pointed");
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        using var set = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("pointed.example"));
+
+        var described = await DescribeAsync(fixture, lambda.PrivateKey);
+
+        Assert.IsNotNull(described.Target);
+        Assert.IsNull(described.Target.Name, "there is no name to point a CNAME at");
+        CollectionAssert.AreEqual(new[] { "203.0.113.7" }, described.Target.Addresses.ToArray());
+    }
+
+    [TestMethod]
+    public async Task AnInstallationOnThisMachineHasNothingToPointAt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = "http://127.0.0.1:8080" });
+
+        var lambda = await fixture.CreateLambdaAsync("nowhere");
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        using var set = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("nowhere.example"));
+
+        var described = await DescribeAsync(fixture, lambda.PrivateKey);
+
+        Assert.IsNotNull(described.Target);
+        Assert.IsEmpty(described.Target.Addresses);
+    }
+
     #endregion
 
     #region The layers around it

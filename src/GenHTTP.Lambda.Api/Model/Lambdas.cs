@@ -29,7 +29,7 @@ public sealed record UpdateLambdaRequest(
 
 [Summary("A lambda, as whoever holds its editor key sees it.")]
 public sealed record LambdaResponse(
-    [Summary("Names its address below the hosting domain. Not a secret; its owner may change it.")]
+    [Summary("Names its public address. Not a secret; its owner may change it.")]
     string PublicKey,
     [Summary("The editor key, which authorizes every call about the lambda. Treat it like a password.")]
     string PrivateKey,
@@ -43,7 +43,7 @@ public sealed record LambdaResponse(
     int? ActiveVersion,
     [Summary("The newest version saved, which may be ahead of the one online")]
     int? LatestVersion,
-    [Summary("Its address below the hosting domain, named after its public key: `https://quiz.genhttp.run/`. While it answers at a domain of its own, this address sends its visitors on to the domain.")]
+    [Summary("Its public address, named after its public key: `https://quiz.genhttp.run/`, or `https://lambda.example.com/lambda/quiz/` where the lambdas answer by path. While it answers at a domain of its own, this address sends its visitors on to the domain.")]
     string PublicUrl,
     [Summary("Where its editor is on this site: `/editor/{privateKey}`. Holds the editor key.")]
     string EditorPath,

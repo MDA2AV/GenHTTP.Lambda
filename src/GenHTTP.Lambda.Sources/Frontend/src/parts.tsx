@@ -8,6 +8,7 @@ import { useT } from '@genhttp-lambda/kit/i18n';
 import { useSourceT } from './i18n';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { useFormat } from './format';
+import { useStartPage } from '@genhttp-lambda/kit/installation';
 
 /**
  * What a lambda is, said once where somebody meets one's code: in a line,
@@ -16,6 +17,7 @@ import { useFormat } from './format';
  * code.
  */
 export function LambdaNotice({ className = '', slim = false }: { className?: string; slim?: boolean }) {
+  const start = useStartPage();
   const said = useSourceT().lambda;
 
   // above the code of one lambda: a line, so the code stays where the eye lands
@@ -26,7 +28,7 @@ export function LambdaNotice({ className = '', slim = false }: { className?: str
           <span aria-hidden="true" className="mr-1.5 font-semibold text-logo-500">λ</span>
           <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text}
         </p>
-        <Link to="/build" className="shrink-0 whitespace-nowrap font-medium text-accent-600 hover:underline dark:text-accent-400">
+        <Link to={start} className="shrink-0 whitespace-nowrap font-medium text-accent-600 hover:underline dark:text-accent-400">
           {said.build} →
         </Link>
       </aside>
@@ -41,7 +43,7 @@ export function LambdaNotice({ className = '', slim = false }: { className?: str
       <p className="min-w-0 flex-1 basis-64 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
         <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text}
       </p>
-      <Link to="/build" className="btn-ghost shrink-0 !px-3 !py-1.5 text-[13px]">
+      <Link to={start} className="btn-ghost shrink-0 !px-3 !py-1.5 text-[13px]">
         {said.build} →
       </Link>
     </aside>

@@ -34,6 +34,8 @@ export const domain: EditorMessages['domain'] = {
       Bezoekers die {www} intypen, worden doorgestuurd naar {domain}, zodat zoekmachines één adres houden. De bijbehorende records zijn optioneel.
     </>
   ),
+  noTarget:
+    'Deze server heeft nog geen openbaar adres waar een domein naartoe kan wijzen. Vraag aan wie de server beheert, waar het domein naartoe moet wijzen.',
   type: 'Type',
   name: 'Naam',
   value: 'Waarde',

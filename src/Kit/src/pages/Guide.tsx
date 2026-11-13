@@ -5,6 +5,7 @@ import { useT } from '../i18n';
 import { Link } from '../i18n/links';
 import type { Kit } from '../locales/kit';
 import { usePublicPage } from '../meta';
+import { useExampleAddress, useOrigin } from '../site';
 
 /**
  * How to use the thing, in the order somebody meets it.
@@ -39,7 +40,7 @@ const PARTS = [
 ] as const;
 
 /** How the guide marks up the words in its sentences, in every language. */
-const KIT: Kit = {
+const KIT: Omit<Kit, 'example'> = {
   code: (text) => <Code>{text}</Code>,
   b: (text) => <b>{text}</b>,
   em: (text) => <em>{text}</em>,
@@ -92,7 +93,12 @@ export function Guide() {
     return () => spotter.disconnect();
   }, []);
 
-  const k = KIT;
+  // the address of this installation's lambdas, not the cloud's: the guide is
+  // the same on every installation, and an example nobody could open is wrong
+  const example = useExampleAddress('your-key') ?? 'your-key';
+  const { origin } = useOrigin();
+
+  const k: Kit = { ...KIT, example };
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-10 sm:px-6">
@@ -427,7 +433,7 @@ return Layout.Create().Add("chat", socket);`} />
 
           <Section id="git" title={said.parts.git}>
             <p>{said.git(k)}</p>
-            <Commands text={'git clone https://genhttp.dev/editor/<editor key>/my-app.git\ncd my-app\n# change, commit\ngit push -o deploy'} />
+            <Commands text={`git clone ${origin}/editor/<editor key>/my-app.git\ncd my-app\n# change, commit\ngit push -o deploy`} />
             <p>{said.git2(k)}</p>
             <Aside>{said.gitAside}</Aside>
           </Section>

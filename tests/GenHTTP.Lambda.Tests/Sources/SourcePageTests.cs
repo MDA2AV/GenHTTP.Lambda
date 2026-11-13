@@ -82,6 +82,19 @@ public sealed class SourcePageTests
         StringAssert.Contains(body, "https://spdx.org/licenses/MIT.html");
 
         Assert.DoesNotContain(lambda.PrivateKey, body);
+
+        // it names the files of the build it came with, so it is asked for again
+        Assert.AreEqual("no-cache", response.Headers.CacheControl?.ToString());
+    }
+
+    [TestMethod]
+    public async Task AFileOfThePagesThatIsGoneIsNotFound()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/source/assets/index-gone.js");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "a stale asset is not sent on to a page of a source named assets");
     }
 
     [TestMethod]

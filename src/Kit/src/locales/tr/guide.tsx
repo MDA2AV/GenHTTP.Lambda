@@ -3,7 +3,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: 'Nasıl çalışır',
   intro:
-    'Bir parça C# kodu yazarsınız. Döndürdüğü şey birkaç saniye içinde HTTPS üzerinden, herkese açık bir adreste yayına girer. Aşağıda her şey, karşılaşacağınız sırayla anlatılıyor.',
+    'Bir parça C# kodu yazarsınız. Döndürdüğü şey birkaç saniye içinde kendi adresinde yayına girer. Aşağıda her şey, karşılaşacağınız sırayla anlatılıyor.',
   contents: 'İçindekiler',
 
   parts: {
@@ -41,7 +41,7 @@ export const guide: KitMessages['guide'] = {
     (k) => (
       <>
         Bu, eksiksiz bir lambda. Yayına alındığında, anahtarından türetilen kendi adresinde, örneğin{' '}
-        {k.code('your-key.genhttp.run')} adresinde yanıt verir ve oradaki her istek “hello” kelimesini alır.
+        {k.code(k.example)} adresinde yanıt verir ve oradaki her istek “hello” kelimesini alır.
       </>
     ),
   ],

@@ -166,6 +166,27 @@ public sealed class AnalyticsTests
     }
 
     [TestMethod]
+    public async Task BelowAPathItsOwnPagesAreNoSiteItCameFrom()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { PublicUrl = "http://localhost" });
+
+        var lambda = await OnlineAsync(fixture, "shop");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        // every lambda shares the platform's host here, so the host alone
+        // cannot tell a page of the lambda from one of the platform
+        await VisitAsync(fixture, "/lambda/shop/menu", Chrome, referrer: "http://localhost/lambda/shop/", destination: "document");
+        await VisitAsync(fixture, "/lambda/shop/", Chrome, referrer: "http://localhost/en/showcase", destination: "document");
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(1, Views(shown.Referrers, "localhost"), "the showcase sent a visitor, the lambda's own page did not");
+    }
+
+    [TestMethod]
     public async Task ACrawlerIsCountedAsGooglesWhereItCameFromGoogle()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

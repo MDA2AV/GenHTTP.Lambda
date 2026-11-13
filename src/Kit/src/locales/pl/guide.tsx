@@ -3,7 +3,7 @@ import type { KitMessages } from '../en';
 export const guide: KitMessages['guide'] = {
   title: 'Jak to działa',
   intro:
-    'Piszesz snippet w C#. To, co zwraca, w kilka sekund trafia pod publiczny adres HTTPS. Poniżej wszystko po kolei – w takiej kolejności, w jakiej na to trafisz.',
+    'Piszesz snippet w C#. To, co zwraca, w kilka sekund trafia pod własny adres. Poniżej wszystko po kolei – w takiej kolejności, w jakiej na to trafisz.',
   contents: 'Spis treści',
 
   parts: {
@@ -41,7 +41,7 @@ export const guide: KitMessages['guide'] = {
     (k) => (
       <>
         To kompletna lambda. Po wdrożeniu odpowiada pod własnym adresem utworzonym od jej klucza, takim jak{' '}
-        {k.code('your-key.genhttp.run')}, a na każde żądanie tam odpowiada słowem hello.
+        {k.code(k.example)}, a na każde żądanie tam odpowiada słowem hello.
       </>
     ),
   ],

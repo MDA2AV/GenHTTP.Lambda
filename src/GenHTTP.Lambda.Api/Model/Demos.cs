@@ -18,7 +18,7 @@ public sealed record DemoResponse(
     string PublicKey,
     [Summary("Its editor key: public, and read only - every change is refused")]
     string PrivateKey,
-    [Summary("Where it answers, below the hosting domain")]
+    [Summary("Where it answers: its public address")]
     string Address,
     [Summary("The files it is made of, the snippet first")]
     IReadOnlyList<string> Files,
