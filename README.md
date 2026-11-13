@@ -10,7 +10,7 @@ every app it builds is online at an address of its own seconds later, with a
 database, versions and a way back. You look after one container.
 
 ```bash
-docker run -d -p 8080:8080 -v lambda-data:/data genhttp/lambda
+docker run -d -p 8080:8080 -v lambda-data:/data -e LAMBDA_ADMIN_TOKEN=secure-password genhttp/lambda
 ```
 
 That is the whole setup. Open <http://localhost:8080>.
