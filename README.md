@@ -1,66 +1,99 @@
 # GenHTTP Lambda
 
-Describe an app - a guestbook, a poll, a booking page, a small API - and get it
-online at an address you can share. The build agent writes it from a sentence,
-or your own coding agent (Claude Code, Codex, Cursor, …) builds it for you over
-MCP. Every change is kept as a version you can go back to, and every app can be
-downloaded as an ordinary .NET project.
+**Self-hosted hosting for the apps your coding agent builds.**
 
-This is the **community edition**: the whole platform, to run on your own
-server with Docker. It is the same code that runs [genhttp.dev](https://genhttp.dev).
+Claude Code, Codex or Cursor write a small app in minutes. Getting it online is
+what takes the evening: a container, a port, an entry in the reverse proxy, a
+database, a backup - and all of it again for the next one. GenHTTP Lambda is
+the place on your server where those apps live. Connect your agent once, and
+every app it builds is online at an address of its own seconds later, with a
+database, versions and a way back. You look after one container.
 
-![The front page of a community installation](docs/images/community.png)
+```bash
+docker run -d -p 8080:8080 -v lambda-data:/data genhttp/lambda
+```
 
-## What you can do
+That is the whole setup. Open <http://localhost:8080>.
 
-- **Have an app built from a sentence.** Type what you want into the box on
-  the front page; the build agent writes the app, puts it online and gives you
-  the link to change it later.
-- **Build with your own agent.** Connect Claude Code, Codex, Cursor or any
-  other agent that speaks MCP. It gets the platform as tools: create an app,
-  write and check its code, try a change, put it online, read its logs.
-- **Change it without breaking it.** A change is tried in a *draft* with a
-  copy of the app's data and a link of its own to try it. Once it works, it is
-  put online. Every version is kept - one click goes back to an earlier one.
-- **Keep data.** Every app can have a database for its records, a folder for
-  the files it saves, and keys and passwords for the services it talks to.
-  You enter those in the editor; the agent only learns their names.
-- **Give an app its own domain.** Make the app *premium* in the panel, point
-  a domain at the server and enter it in the editor.
-- **See who visits.** Page views, where visitors came from and their
-  countries - counted on the server, without cookies, once you switch it on.
-- **Work with git.** Every app is a repository: clone it, push a commit to put
-  it online, push a branch to start a draft.
-- **Share it.** Show an app on the showcase, or publish its code for others
-  to read, star and download.
-- **Take it with you.** Download any app as a .NET project and run it
-  anywhere - nothing ties it to this platform.
-- **Run the installation.** The panel at `/admin` lists every app, sets the
-  limits, shows what the server is doing and its log, and blocks what does
-  harm.
+![The front page of a GenHTTP Lambda server](docs/images/community.png)
 
-Every app is a small C# program - a [GenHTTP][genhttp] handler - which the
-server compiles and runs in seconds:
+## Why you might want it
+
+- **One container, nothing else.** No database server, no Redis, no message
+  queue, no Kubernetes: the server, every app and everything they keep run in
+  one container and live in one volume. Backing up is copying a folder.
+- **Hundreds of apps, not one.** Every app runs inside that one process, at an
+  address of its own - no container, no port, no proxy entry and no database
+  server per app. [genhttp.dev](https://genhttp.dev), which runs this same
+  code, serves more than a hundred apps that way.
+- **Your agent does the deploying.** Connect any agent that speaks MCP. It
+  creates an app, writes and checks its code, tries a change on a copy, puts
+  it online and reads its logs - without you opening a terminal.
+- **You stay in control.** Every app has an editor for you: what changed and
+  why, any earlier version one click away, its records, its visitors, its code.
+
+## What people build with it
+
+The small apps that never get hosted because hosting them is more work than
+writing them:
+
+- a chore list for the family, a booking page for the club, a sign-up sheet
+  for the team;
+- a dashboard over an API you use, a webhook receiver for your automations, a
+  small API your scripts call;
+- a page for an event, a guestbook, a poll, a multiplayer game for friends.
+
+Ask your agent - *"Build a shared task list for the team"* - and it is online.
+Ask for a change - *"Give every task the day it is due"* - and it is tried in a
+draft first.
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/agents.png" alt="Connecting an agent"><br><sub><b>Connect your agent</b> - one line for Claude Code, the address for any other MCP client.</sub></td>
+    <td width="50%" valign="top"><img src="docs/images/app.png" alt="A task list built by an agent"><br><sub><b>An app it built</b> - online at its own address, here <code>/lambda/tasks/</code>.</sub></td>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/images/draft.png" alt="A draft of a change"><br><sub><b>Drafts</b> - a change is tried with a copy of the data and a link of its own, then put online.</sub></td>
+    <td valign="top"><img src="docs/images/versions.png" alt="The versions of an app"><br><sub><b>Versions</b> - what every change did and why, and a way back to any of them.</sub></td>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/images/records.png" alt="The records of an app"><br><sub><b>Records</b> - every app can have a database of its own, readable in the editor.</sub></td>
+    <td valign="top"><img src="docs/images/analytics.png" alt="The visitors of an app"><br><sub><b>Visitors</b> - page views and where people came from, counted on the server, without cookies.</sub></td>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/images/code.png" alt="The code of an app"><br><sub><b>The code</b> - there when you want it: read it, change it, clone it with git.</sub></td>
+    <td valign="top"><img src="docs/images/panel.png" alt="The administration panel"><br><sub><b>The panel</b> - every app on the server, its traffic and errors, the limits and the log.</sub></td>
+  </tr>
+</table>
+
+## What every app gets
+
+- **An address** below `/lambda/` on your server - or a subdomain of its own,
+  and a domain of its own once you make it *premium* in the panel.
+- **Data that outlives its versions**: a SQLite database for its records, a
+  folder for the files it saves, and keys and passwords for the services it
+  talks to. You enter those in the editor; the agent only learns their names.
+- **Drafts and versions**: a change is tried in a draft with a copy of the
+  data, then put online, and the versions before stay one click away.
+- **Git**: every app is a repository - clone it, push a commit to save a
+  version, push a branch to start a draft.
+- **Visitors and logs**: page views, referrers and countries once you switch
+  them on; what the app printed, request by request.
+- **A way out**: download any app as an ordinary .NET project and run it
+  anywhere. Nothing ties it to this server.
+
+Under the hood every app is a small C# program - a [GenHTTP][genhttp] handler
+- which the server compiles and runs in seconds. You never have to write one,
+but you can:
 
 ```csharp
 return Inline.Create()
              .Get(() => "Hello from my app!");
 ```
 
-You never have to write one yourself, but you can: the editor has the code,
-and so does every version.
-
-## Run it with Docker
-
-```bash
-docker run -d --name lambda -p 8080:8080 -v lambda-data:/data genhttp/lambda
-```
-
-Open <http://localhost:8080>. Your apps answer below it, each at an address
-of its own: `http://localhost:8080/lambda/my-app/`.
-
-To reach it from other machines, tell it where it is reached - the addresses
-of the apps are made from that:
+## Run it
 
 ```bash
 docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
@@ -69,8 +102,17 @@ docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
   genhttp/lambda
 ```
 
+- **One container, one port, one volume.** There is nothing else to run: the
+  platform's own data and every app's database are SQLite files in `/data`.
+- **`LAMBDA_PUBLIC_URL`** is where you and your agents reach the server - the
+  addresses of the apps are made from it. Left out, the server answers at any
+  name, and the addresses read `http://localhost:8080`.
+- **`LAMBDA_ADMIN_TOKEN`** is the password of the panel at `/admin`. Left out,
+  the panel is off.
+- Images are built for **amd64 and arm64**.
+
 The [sample in samples/community](samples/community) does the same with
-Docker Compose, and adds the build agent:
+Docker Compose, and can add the build agent:
 
 ```bash
 cd samples/community
@@ -95,8 +137,9 @@ There are more - limits, logging, TLS, analytics. They are all in
 ### HTTPS
 
 The image answers plain HTTP on port 8080. Put it behind the reverse proxy you
-already use - Caddy, nginx, Traefik - and set `LAMBDA_PUBLIC_URL` to the
-`https://` address. It can also serve TLS itself; the reference says how.
+already use - Caddy, nginx, Traefik - with one entry for the whole server, and
+set `LAMBDA_PUBLIC_URL` to the `https://` address. It can also serve TLS
+itself; the reference says how.
 
 ### Your data
 
@@ -135,9 +178,12 @@ cannot be recovered.
 Agents that can run HTTP requests or git can use those instead: the REST API
 is described at `/api/v1/scalar/`, and every app's git address is in its editor.
 
-## The build agent
+## Apps from a sentence: the build agent (optional)
 
-The box on the front page has an agent behind it once you run one. It needs:
+With the build agent, the front page gets a box: type what you want, and an
+agent on your server writes the app, puts it online and gives you the link to
+change it. Nobody needs a coding agent of their own. It is optional, and the
+only part that is more than the one container. It needs:
 
 - a Claude subscription - make a token for it with `claude setup-token`;
 - Docker on the same machine: the agent starts a short-lived container for
@@ -160,9 +206,9 @@ docker compose --profile agent up -d
   you and your team build, not more. To host apps of people you do not know,
   give the installation a domain for them (`LAMBDA_HOSTING_URL`): each app is
   then a site of its own.
-- **Apps run inside the server.** Their code is checked for what it must not
-  do before it runs, but it shares the server's process - this is no sandbox.
-  Run code you would run yourself.
+- **Apps run inside the server.** That is what makes hundreds of them cheap.
+  Their code is checked for what it must not do before it runs, but it shares
+  the server's process - this is no sandbox. Run code you would run yourself.
 - **Unused apps are taken offline.** A new app is *free*: one that nobody
   visits or changes for 30 days is taken offline, and removed 90 days after
   that. In the panel, make an app *premium* to keep it for good, or change how

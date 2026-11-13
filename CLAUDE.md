@@ -1268,8 +1268,13 @@ touches all that apply:
 
 1. `docs/reference.md` - routes, API, configuration, operations, how it fits
    together. Where the other documents say "the reference", they mean it.
-2. `README.md` - the community edition for whoever runs it: what it does, in
-   plain words and as features rather than routes, how to run it with Docker,
+2. `README.md` - the community edition for whoever might run it, written from
+   their use case - **decided by the owner**: what it *is* before what it
+   does (self-hosted hosting for the apps coding agents build), that hosting
+   it is one container and nothing else (no database server, one volume),
+   and that it hosts hundreds of apps, not one. Then what people build with
+   it, small screenshots of the features that matter (`docs/images/`, taken
+   from a real app on a local server, never mock-ups), how to run it,
    connect an agent and the build agent, and what to know before letting
    strangers build there. Not a reference: it links to one.
 3. `/docs` (`src/Kit/src/locales/*/guide.tsx`) - for owners, in the
