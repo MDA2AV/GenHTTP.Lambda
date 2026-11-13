@@ -3,6 +3,7 @@ using System.Net;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Server;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -114,7 +115,7 @@ public sealed class AcmeChallengeTests
 
         root = directory;
 
-        return LambdaFixture.CreateAsync(o => (configure?.Invoke(o) ?? o) with { AcmeDirectory = directory });
+        return LambdaFixture.CreateAsync(configure, new ServerSettings { AcmeDirectory = directory });
     }
 
     private static void Write(string root, string token, string answer)

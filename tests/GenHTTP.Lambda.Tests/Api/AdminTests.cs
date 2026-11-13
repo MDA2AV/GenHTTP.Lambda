@@ -55,7 +55,7 @@ public sealed class AdminTests
         // the tests run the API by reflection to save time, but an
         // installation compiles it, and the code generated for a method can
         // fail where reflection does not
-        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { CompileApi = true });
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel, compiled: true);
 
         foreach (var path in new[] { "/api/v1/admin/lambdas?page=1", "/api/v1/telemetry?minutes=5", "/api/v1/telemetry/lambdas", "/api/v1/logs?level=info" })
         {

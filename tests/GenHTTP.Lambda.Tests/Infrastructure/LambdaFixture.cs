@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
 
+using GenHTTP.Lambda.Api;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Cloud;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
@@ -14,8 +16,13 @@ using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Testing;
 
+using GenHTTP.Lambda.Execution;
+using GenHTTP.Lambda.Mcp;
+using GenHTTP.Lambda.Server;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
+
+using GenHTTP.Modules.Layouting;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,6 +33,10 @@ namespace GenHTTP.Lambda.Tests.Infrastructure;
 /// Runs the entire application against a temporary directory, so tests can talk
 /// to it the way the single page application does.
 /// </summary>
+/// <remarks>
+/// Put together from the components the way the cloud host puts them
+/// together (see its <c>Program</c>), on a test host instead of an engine.
+/// </remarks>
 internal sealed class LambdaFixture : IAsyncDisposable
 {
 
@@ -39,9 +50,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
     #region Get-/Setters
 
     /// <summary>
-    /// The application under test.
+    /// The platform under test.
     /// </summary>
-    public Application Application { get; }
+    public LambdaPlatform Platform { get; }
 
     /// <summary>
     /// The server hosting it.
@@ -56,32 +67,32 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// What the server logged, as the panel reads it back.
     /// </summary>
-    public LogBook Book => Application.Services.GetRequiredService<LogBook>();
+    public LogBook Book => Platform.Services.GetRequiredService<LogBook>();
 
     private ILoggerFactory Loggers { get; }
 
-    public IMetaService Meta => Application.Services.GetRequiredService<IMetaService>();
+    public IMetaService Meta => Platform.Services.GetRequiredService<IMetaService>();
 
-    public IDeploymentService Deployments => Application.Services.GetRequiredService<IDeploymentService>();
+    public IDeploymentService Deployments => Platform.Services.GetRequiredService<IDeploymentService>();
 
     /// <summary>
     /// What a lambda may have in its tier, as the operator set it.
     /// </summary>
-    public ILimitsService Limits => Application.Services.GetRequiredService<ILimitsService>();
+    public ILimitsService Limits => Platform.Services.GetRequiredService<ILimitsService>();
 
     /// <summary>
     /// Brings the demos into existence, which the application does in the
     /// background at startup and a test has to ask for so it can wait for it.
     /// </summary>
     public ValueTask SeedDemosAsync()
-        => Application.Services.GetRequiredService<DemoSeeder>().SeedAsync();
+        => Platform.Services.GetRequiredService<DemoSeeder>().SeedAsync();
 
     /// <summary>
     /// Puts a lambda into the demo tier, the way only the seeder would.
     /// </summary>
     public async ValueTask MakeDemoAsync(string publicKey)
     {
-        var databases = Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using var database = await databases.CreateDbContextAsync();
 
@@ -98,11 +109,11 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
     #region Initialization
 
-    private LambdaFixture(string root, LambdaOptions options, Application application, TestHost host, ILoggerFactory loggers)
+    private LambdaFixture(string root, LambdaOptions options, LambdaPlatform platform, TestHost host, ILoggerFactory loggers)
     {
         Root = root;
         Options = options;
-        Application = application;
+        Platform = platform;
         Host = host;
         Loggers = loggers;
     }
@@ -111,7 +122,14 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// Creates and starts an application with its own database, storage and web root.
     /// </summary>
     /// <param name="configure">Adjusts the options before the application is built</param>
-    public static async Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null)
+    /// <param name="server">How it is served, where a test needs that - the answers to ACME challenges, for one</param>
+    /// <param name="compiled">
+    /// Whether the API is compiled into delegates as the server starts. Off
+    /// by default: calling it through reflection is what makes a fixture take
+    /// milliseconds rather than a second.
+    /// </param>
+    public static async Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
+                                                        bool compiled = false)
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
@@ -121,13 +139,11 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), SpaMarkup);
 
-        // not compiling the API is what makes a fixture take milliseconds
-        // rather than a second, see LambdaOptions.CompileApi
         var options = new LambdaOptions
         {
             DataDirectory = root,
             WebRoot = webRoot,
-            CompileApi = false
+            Terms = CloudTerms.Text
         };
 
         if (configure != null)
@@ -142,15 +158,28 @@ internal sealed class LambdaFixture : IAsyncDisposable
         // and a console provider here would print every line of every fixture
         var loggers = LoggerFactory.Create(builder => builder.AddProvider(new LogBookProvider(book)));
 
-        var application = Application.Create(options, loggers, book);
+        var platform = LambdaPlatform.Create()
+                                     .Options(options)
+                                     .Logging(loggers, book)
+                                     .Build();
 
-        var host = new TestHost(application.Handler, false, false);
+        var site = Layout.Create()
+                         .Add("api", RestApi.Create(platform).Compiled(compiled))
+                         .Add("mcp", McpServer.Create(platform))
+                         .Add(Website.Create(platform));
 
-        application.Configure(host.Host);
+        var handler = LambdaServer.Create(platform)
+                                  .Settings(server ?? new ServerSettings())
+                                  .Handler(Runner.Create(platform).Site(site))
+                                  .Build();
+
+        var host = new TestHost(handler, false, false);
+
+        host.Host.Platform(platform);
 
         await host.StartAsync();
 
-        return new LambdaFixture(root, options, application, host, loggers);
+        return new LambdaFixture(root, options, platform, host, loggers);
     }
 
     #endregion
@@ -306,7 +335,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     {
         await Host.DisposeAsync();
 
-        await Application.DisposeAsync();
+        await Platform.DisposeAsync();
 
         Loggers.Dispose();
 

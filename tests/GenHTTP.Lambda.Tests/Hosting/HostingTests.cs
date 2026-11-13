@@ -187,7 +187,7 @@ public sealed class HostingTests
 
         await ServeAsync(fixture, "quiz");
 
-        var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
+        var telemetry = fixture.Platform.Services.GetRequiredService<ITelemetryService>();
 
         var requests = telemetry.TotalRequests;
 
@@ -229,7 +229,7 @@ public sealed class HostingTests
         var lambda = await ServeAsync(fixture, "mailroom");
 
         // the key it had before the name was kept for something else
-        await using (var database = fixture.Application.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
+        await using (var database = fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
                                            .CreateDbContext())
         {
             database.Lambdas.Single(l => l.PublicKey == "mailroom").PublicKey = "mail";

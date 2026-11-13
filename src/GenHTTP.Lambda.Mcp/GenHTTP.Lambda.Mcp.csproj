@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- the tools an agent changes lambdas with, over the Model Context Protocol -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Mcp</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Mcp</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -130,7 +130,7 @@ public sealed class InactivityTests
     }
 
     private static IDbContextFactory<LambdaDbContext> Databases(LambdaFixture fixture)
-        => fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        => fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
     private static async Task Touch(LambdaFixture fixture, string key, DateTime deployed, DateTime modified,
                                     DateTime? lastSeen, bool demo = false)

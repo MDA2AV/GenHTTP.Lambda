@@ -488,7 +488,7 @@ public sealed class DomainTests
 
         using (await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}")) { }
 
-        Assert.IsNotInstanceOfType<CustomDomain>(fixture.Application.Services.GetRequiredService<DomainRegistry>().Find(Domain));
+        Assert.IsNotInstanceOfType<CustomDomain>(fixture.Platform.Services.GetRequiredService<DomainRegistry>().Find(Domain));
 
         await ServeAsync(fixture, "successor");
     }
@@ -525,7 +525,7 @@ public sealed class DomainTests
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         // the one name that resolves the same everywhere, without a network
-        await using var database = fixture.Application.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
+        await using var database = fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
                                           .CreateDbContext();
 
         var row = database.Lambdas.Single(l => l.PublicKey == "local");

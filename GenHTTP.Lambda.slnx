@@ -1,6 +1,14 @@
 <Solution>
     <Folder Name="/src/">
-        <Project Path="src/GenHTTP.Lambda/GenHTTP.Lambda.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+    </Folder>
+    <Folder Name="/hosts/">
+        <Project Path="src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/GenHTTP.Lambda.Tests/GenHTTP.Lambda.Tests.csproj" />

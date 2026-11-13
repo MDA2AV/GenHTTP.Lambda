@@ -168,7 +168,7 @@ public sealed class WorkspaceTests
 
         var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
 
-        var workspace = fixture.Application.Services.GetRequiredService<IWorkspaceService>();
+        var workspace = fixture.Platform.Services.GetRequiredService<IWorkspaceService>();
 
         // what an engine that dropped the connection hands on: a body that
         // simply ends, a thousand bytes into the five thousand announced

@@ -72,7 +72,7 @@ public sealed class LifetimeTests
         // a day of lifetime, and a version written well before it was deployed
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { DeploymentLifetime = TimeSpan.FromDays(1) });
 
-        var meta = fixture.Application.Services.GetRequiredService<IMetaService>();
+        var meta = fixture.Platform.Services.GetRequiredService<IMetaService>();
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -94,7 +94,7 @@ public sealed class LifetimeTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { DeploymentLifetime = TimeSpan.FromDays(1) });
 
-        var meta = fixture.Application.Services.GetRequiredService<IMetaService>();
+        var meta = fixture.Platform.Services.GetRequiredService<IMetaService>();
 
         var lambda = await fixture.CreateLambdaAsync();
 

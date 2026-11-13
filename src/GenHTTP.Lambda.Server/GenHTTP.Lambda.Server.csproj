@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        What a host needs to run the platform: the engine, its ports and
+        certificates, the concerns every request passes, and reading the
+        environment into the settings the components are built with. The
+        only project below the hosts that knows there is an environment.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Server</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Server</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+
+        <!-- LAMBDA_ENGINE=Kestrel, for Windows and containers where io_uring
+             does not run; GenHTTP.Full.Ioxide does not carry it -->
+        <PackageReference Include="GenHTTP.Engine.Kestrel" />
+
+    </ItemGroup>
+
+</Project>

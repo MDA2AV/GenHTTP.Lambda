@@ -19,7 +19,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../src/GenHTTP.Lambda/GenHTTP.Lambda.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
     </ItemGroup>
 
 </Project>

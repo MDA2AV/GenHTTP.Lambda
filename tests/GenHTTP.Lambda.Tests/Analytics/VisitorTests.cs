@@ -27,7 +27,7 @@ public sealed class VisitorTests
 
         var classifier = Classifier(fixture);
 
-        using var stream = typeof(Application).Assembly.GetManifestResourceStream("GenHTTP.Lambda.Resources.Crawlers.crawler-user-agents.json")!;
+        using var stream = typeof(LambdaPlatform).Assembly.GetManifestResourceStream("GenHTTP.Lambda.Resources.Crawlers.crawler-user-agents.json")!;
 
         using var list = JsonDocument.Parse(stream);
 
@@ -199,7 +199,7 @@ public sealed class VisitorTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var list = fixture.Application.Services.GetRequiredService<CrawlerList>();
+        var list = fixture.Platform.Services.GetRequiredService<CrawlerList>();
 
         var known = list.Count;
 
@@ -250,9 +250,9 @@ public sealed class VisitorTests
 
     #region Helpers
 
-    private static VisitorClassifier Classifier(LambdaFixture fixture) => fixture.Application.Services.GetRequiredService<VisitorClassifier>();
+    private static VisitorClassifier Classifier(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<VisitorClassifier>();
 
-    private static CrawlerRanges Ranges(LambdaFixture fixture) => fixture.Application.Services.GetRequiredService<CrawlerRanges>();
+    private static CrawlerRanges Ranges(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<CrawlerRanges>();
 
     /// <summary>
     /// A list of addresses in the shape the operators publish them.

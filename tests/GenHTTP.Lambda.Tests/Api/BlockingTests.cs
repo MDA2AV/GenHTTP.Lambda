@@ -474,7 +474,7 @@ public sealed class BlockingTests
 
     #region Helpers
 
-    private static IAddressBlocks Blocks(LambdaFixture fixture) => fixture.Application.Services.GetRequiredService<IAddressBlocks>();
+    private static IAddressBlocks Blocks(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IAddressBlocks>();
 
     private static async Task<AdminLambdaDetail> BlockAsync(LambdaFixture fixture, string publicKey, BlockRequest body)
     {

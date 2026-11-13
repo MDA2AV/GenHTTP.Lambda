@@ -764,7 +764,7 @@ public sealed class FeatureTests
 
         await StartAsync(fixture, lambda.PrivateKey, feature.Key);
 
-        var features = fixture.Application.Services.GetRequiredService<IFeatureService>();
+        var features = fixture.Platform.Services.GetRequiredService<IFeatureService>();
 
         Assert.AreEqual(0, features.RunMaintenance(DateTime.UtcNow), "not while it is being worked on");
 
@@ -796,7 +796,7 @@ public sealed class FeatureTests
         Directory.CreateDirectory(orphan);
         await File.WriteAllTextAsync(Path.Combine(orphan, "late.txt"), "written after the feature went");
 
-        var features = fixture.Application.Services.GetRequiredService<IFeatureService>();
+        var features = fixture.Platform.Services.GetRequiredService<IFeatureService>();
 
         Assert.AreEqual(1, features.Sweep());
         Assert.IsFalse(Directory.Exists(Path.GetDirectoryName(orphan)));

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- genhttp.dev: the components, and the pages of the site that are this host's own -->
+    <PropertyGroup>
+
+        <OutputType>Exe</OutputType>
+
+        <RootNamespace>GenHTTP.Lambda.Cloud</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Cloud</AssemblyName>
+
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the frontend is built into wwwroot by "npm run build" in src/Frontend -->
+        <None Remove="wwwroot/**" />
+        <Content Include="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+</Project>

@@ -200,7 +200,7 @@ public sealed class ShowcaseTests
             await PutAsync(fixture, lambda.PrivateKey, new ShowcaseRequest(lambda.PublicKey, "Description.", Convert.ToBase64String(Png)));
         }
 
-        var telemetry = fixture.Application.Services.GetRequiredService<LambdaTelemetry>();
+        var telemetry = fixture.Platform.Services.GetRequiredService<LambdaTelemetry>();
 
         var id = fixture.Meta.GetId(busy.PrivateKey);
 

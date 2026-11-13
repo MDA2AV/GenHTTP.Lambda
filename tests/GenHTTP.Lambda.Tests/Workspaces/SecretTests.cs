@@ -170,7 +170,7 @@ public sealed class SecretTests
 
         await SetAsync(fixture, lambda.PrivateKey, "GREETING", Value);
 
-        var databases = fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using (var database = await databases.CreateDbContextAsync())
         {
@@ -322,7 +322,7 @@ public sealed class SecretTests
             Assert.IsTrue(removed.IsSuccessStatusCode);
         }
 
-        var databases = fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using var database = await databases.CreateDbContextAsync();
 
