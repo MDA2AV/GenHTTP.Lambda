@@ -200,7 +200,7 @@ public sealed class ApiTests
 
         var platform = await response.GetContentAsync<PlatformResponse>();
 
-        Assert.IsNotEmpty(platform.Terms);
+        Assert.IsNotEmpty(platform.Terms ?? "");
         Assert.IsNotEmpty(platform.Starters);
         Assert.IsNotEmpty(platform.Imports);
         Assert.IsNotEmpty(platform.Completions);
@@ -421,7 +421,7 @@ public sealed class ApiTests
         // every other test calls the API through reflection to start faster;
         // an installation compiles it, and a method that cannot be compiled
         // would only show up here
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { CompileApi = true });
+        await using var fixture = await LambdaFixture.CreateAsync(compiled: true);
 
         var lambda = await fixture.CreateLambdaAsync("compiled");
 

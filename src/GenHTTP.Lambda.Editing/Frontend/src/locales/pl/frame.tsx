@@ -1,0 +1,91 @@
+import type { EditorMessages } from '../en';
+
+export const frame: EditorMessages['frame'] = {
+  title: 'Edytor',
+  sections: {
+    overview: 'Przegląd',
+    docs: 'Dokumentacja',
+    tests: 'Testy',
+    change: 'Zmień',
+    features: 'Szkice',
+    showcase: 'Galeria',
+    source: 'Open source',
+    domain: 'Domena',
+    data: 'Dane',
+    versions: 'Wersje',
+    history: 'Historia',
+    deployments: 'Wdrożenia',
+    stats: 'Statystyki',
+    analytics: 'Analityka',
+    logs: 'Logi',
+    code: 'Kod',
+  },
+  sectionsLabel: 'Sekcje',
+  groups: {
+    develop: 'Tworzenie',
+    program: 'Program i dane',
+    run: 'Działanie',
+    sharing: 'Udostępnianie',
+  },
+  loadFailed: 'Nie udało się załadować tej lambdy.',
+  online: (version) => `Wersja ${version} jest online.`,
+  deployFailed: 'Nie udało się wdrożyć lambdy.',
+  offline: 'Wyłączona. Kod nadal tu jest.',
+  offlineFailed: 'Nie udało się wyłączyć lambdy.',
+  leave: 'Niezapisane zmiany przepadną. Wyjść mimo to?',
+  nothingTitle: 'Ten link niczego nie otwiera',
+  createNew: 'Utwórz nową lambdę',
+  loading: 'Ładowanie lambdy…',
+  moreActions: 'Więcej opcji',
+  redeploy: (version) => `Wdróż ponownie wersję ${version}`,
+  takeOffline: 'Wyłącz',
+  copyLink: 'Kopiuj link',
+  copyPrivate: 'Kopiuj prywatny link',
+  privateLink: 'Każdy, kto ma ten link, może zmienić lambdę. Nie udostępniaj go.',
+  rename: 'Zmień adres',
+  download: 'Pobierz jako projekt .NET',
+  delete: 'Usuń tę lambdę',
+  deploy: (version) => `Wdróż wersję ${version}`,
+  problems: 'Ostatnio coś poszło nie tak',
+  demoTitle: 'Demo utrzymywane online przez tę instalację, tylko do odczytu.',
+  demo: (start) => (
+    <>
+      Przeglądaj kod, historię, zapisane dane i logi – po to tu jest. Żeby coś zmienić,{' '}
+      {start('utwórz na jego podstawie własną lambdę')}.
+    </>
+  ),
+  blockedTitle: 'Zablokowane przez administratora tego serwisu.',
+  blockedReason: (reason) => `Podany powód: „${reason}”`,
+  blocked: (write) => (
+    <>
+      Lambda jest wyłączona i nie można jej już zmieniać ani udostępniać. Wszystko, co zawiera, nadal można przeczytać i
+      pobrać. Jeśli uważasz, że to pomyłka, {write('napisz do nas')}.
+    </>
+  ),
+  keep: 'Zachowaj ten link. To jedyna droga powrotu do tej lambdy.',
+  gotIt: 'Rozumiem',
+  rejected: (version) => `Wersja ${version} nie trafiła online`,
+  refused: 'Wdrożenie zostało odrzucone',
+  openCode: 'Otwórz kod',
+  close: 'Zamknij',
+  notCompiling: 'Kod się nie kompiluje. To, co było online wcześniej, nadal działa.',
+  moved: (path) => `Nowy adres: ${path}.`,
+  deleteTitle: 'Usunąć tę lambdę?',
+  cancel: 'Anuluj',
+  deleteForGood: 'Usuń na zawsze',
+  deleteFailed: 'Nie udało się usunąć lambdy.',
+  deleteText: (key) => (
+    <>Znikną wszystkie wersje, wszystkie dane, historia i adres {key}. Tego nie da się cofnąć.</>
+  ),
+  openInTab: 'Otwórz w nowej karcie',
+  open: (address) => `Otwórz ${address} w nowej karcie`,
+  copyAddress: 'Kopiuj adres',
+  renameFailed: 'Nie udało się zmienić adresu.',
+  moveIt: 'Przenieś',
+  renameText: 'Stary adres od razu przestanie działać, więc zaktualizuj wszystko, co do niego prowadzi.',
+  changing: 'Agent zmienia tę lambdę',
+  waiting: 'Zmiana czeka na agenta',
+  follow: 'Zobacz',
+  changeRunning: 'Trwa zmiana',
+  changeEnded: 'Zmiana się zakończyła',
+};

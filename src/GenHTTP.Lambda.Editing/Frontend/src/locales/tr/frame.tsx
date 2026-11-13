@@ -1,0 +1,91 @@
+import type { EditorMessages } from '../en';
+
+export const frame: EditorMessages['frame'] = {
+  title: 'Editör',
+  sections: {
+    overview: 'Genel bakış',
+    docs: 'Dokümantasyon',
+    tests: 'Testler',
+    change: 'Değiştir',
+    features: 'Taslaklar',
+    showcase: 'Vitrin',
+    source: 'Açık kaynak',
+    domain: 'Alan adı',
+    data: 'Veriler',
+    versions: 'Sürümler',
+    history: 'Geçmiş',
+    deployments: 'Yayın geçmişi',
+    stats: 'İstatistikler',
+    analytics: 'Analitik',
+    logs: 'Loglar',
+    code: 'Kod',
+  },
+  sectionsLabel: 'Bölümler',
+  groups: {
+    develop: 'Geliştir',
+    program: 'Program ve veriler',
+    run: 'Çalıştırma',
+    sharing: 'Paylaşım',
+  },
+  loadFailed: 'Bu lambda yüklenemedi.',
+  online: (version) => `Sürüm ${version} yayında.`,
+  deployFailed: 'Lambda yayına alınamadı.',
+  offline: 'Yayından kaldırıldı. Kod hâlâ burada.',
+  offlineFailed: 'Lambda yayından kaldırılamadı.',
+  leave: 'Kaydedilmemiş değişiklikleriniz kaybolacak. Yine de çıkılsın mı?',
+  nothingTitle: 'Bu link hiçbir şey açmıyor',
+  createNew: 'Yeni bir lambda oluştur',
+  loading: 'Lambdanız yükleniyor…',
+  moreActions: 'Diğer işlemler',
+  redeploy: (version) => `${version}. sürümü yeniden yayına al`,
+  takeOffline: 'Yayından kaldır',
+  copyLink: 'Linki kopyala',
+  copyPrivate: 'Özel linki kopyala',
+  privateLink: 'Bu linke sahip olan herkes lambdayı değiştirebilir. Kimseyle paylaşmayın.',
+  rename: 'Adresi değiştir',
+  download: '.NET projesi olarak indir',
+  delete: 'Bu lambdayı sil',
+  deploy: (version) => `${version}. sürümü yayına al`,
+  problems: 'Son zamanlarda bir şeyler ters gitti',
+  demoTitle: 'Bir demo: bu kurulum tarafından yayında tutulur ve salt okunurdur.',
+  demo: (start) => (
+    <>
+      Kodunu, geçmişini, sakladıklarını ve loglarını okuyun; demo zaten bunun için var. Değiştirmek isterseniz{' '}
+      {start('bundan kendi lambdanızı oluşturun')}.
+    </>
+  ),
+  blockedTitle: 'Bu sitenin işletmecisi tarafından engellendi.',
+  blockedReason: (reason) => `Belirtilen gerekçe: “${reason}”`,
+  blocked: (write) => (
+    <>
+      Yayından kaldırıldı; artık değiştirilemez ya da yayına alınamaz. Sahip olduğu her şey okunabilir ve indirilebilir.
+      Bunun bir hata olduğunu düşünüyorsanız {write('bize yazın')}.
+    </>
+  ),
+  keep: 'Bu linki saklayın. Bu lambdaya geri dönmenin tek yolu bu.',
+  gotIt: 'Anladım',
+  rejected: (version) => `Sürüm ${version} yayına alınamadı`,
+  refused: 'Yayına alma reddedildi',
+  openCode: 'Kodu aç',
+  close: 'Kapat',
+  notCompiling: 'Kod derlenmiyor. Daha önce yayında olan ne varsa hâlâ yayında.',
+  moved: (path) => `Yeni adres: ${path}.`,
+  deleteTitle: 'Bu lambda silinsin mi?',
+  cancel: 'İptal',
+  deleteForGood: 'Kalıcı olarak sil',
+  deleteFailed: 'Lambda silinemedi.',
+  deleteText: (key) => (
+    <>Tüm sürümleri, tüm verileri, geçmişi ve {key} adresi onunla birlikte silinir. Bu işlem geri alınamaz.</>
+  ),
+  openInTab: 'Yeni sekmede aç',
+  open: (address) => `${address} adresini yeni sekmede aç`,
+  copyAddress: 'Adresi kopyala',
+  renameFailed: 'Adres değiştirilemedi.',
+  moveIt: 'Taşı',
+  renameText: 'Eski adres hemen çalışmayı bırakır. Ona link veren her yeri güncelleyin.',
+  changing: 'Ajan bu lambdayı değiştiriyor',
+  waiting: 'Bir değişiklik sırada bekliyor',
+  follow: 'Takip et',
+  changeRunning: 'Bir değişiklik sürüyor',
+  changeEnded: 'Bir değişiklik sona erdi',
+};

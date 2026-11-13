@@ -134,7 +134,7 @@ public sealed class ActivityTests
 
         using var _ = await fixture.GetAsync("http://counted.localhost/");
 
-        var telemetry = fixture.Application.Services.GetRequiredService<LambdaTelemetry>();
+        var telemetry = fixture.Platform.Services.GetRequiredService<LambdaTelemetry>();
 
         Assert.ContainsSingle(telemetry.Describe().Where(l => l.PublicKey == "counted"));
     }

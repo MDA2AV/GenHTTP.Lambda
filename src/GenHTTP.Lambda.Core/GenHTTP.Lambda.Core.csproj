@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The platform: its services, its database and the lambdas it compiles
+        and runs. Everything else - the API, MCP, the pages, the hosts - is a
+        component over this.
+
+        The root namespace stays GenHTTP.Lambda: the names of the embedded
+        resources are made from it, and the database's migrations are found
+        and recorded by those names (see Migrator). A different one would
+        read as a new set of migrations to a database that has them all.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Core</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <!-- the whole framework, not only what the platform calls itself: a
+             lambda is compiled against what is loaded, and may use any of it -->
+        <PackageReference Include="GenHTTP.Full.Ioxide" />
+
+        <PackageReference Include="GenHTTP.Modules.Git" />
+
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+
+        <PackageReference Include="Evolve" />
+        <PackageReference Include="MaxMind.Db" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Data/Migrations/*.sql" />
+        <EmbeddedResource Include="Services/Analytics/Migrations/*.sql" />
+        <!-- the crawlers analytics tell apart from people, as of the release - refreshed at runtime, see CrawlerJob -->
+        <EmbeddedResource Include="Resources/Crawlers/crawler-user-agents.json" WithCulture="false" />
+        <!-- WithCulture is required: MSBuild would read the "cs" in "Template.cs.txt" as Czech -->
+        <EmbeddedResource Include="Resources/Templates/*.cs.txt" WithCulture="false" />
+        <!-- an example may ship a page as well as the code that serves it -->
+        <EmbeddedResource Include="Resources/Templates/*.html.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.js.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.css.txt" WithCulture="false" />
+        <!-- and what is written about it: its documentation, its tests and their data -->
+        <EmbeddedResource Include="Resources/Templates/*.md.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.mjs.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.json.txt" WithCulture="false" />
+        <!-- and the migrations of its database, which ship as assets like a page does -->
+        <EmbeddedResource Include="Resources/Templates/*.sql.txt" WithCulture="false" />
+        <!-- the files every exported project gets, see ProjectPacker -->
+        <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
+        <!-- the texts of the licenses a lambda's source can be published under, see SourceLicenses -->
+        <EmbeddedResource Include="Resources/Licenses/*.txt" WithCulture="false" />
+    </ItemGroup>
+
+</Project>

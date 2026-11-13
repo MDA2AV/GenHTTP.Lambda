@@ -1,0 +1,19 @@
+{
+  "name": "@genhttp-lambda/editor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The editor of a lambda, and the page that creates one.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@genhttp-lambda/kit": "*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0",
+    "monaco-editor": "^0.52.2"
+  }
+}

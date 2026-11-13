@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- the REST API, described by its OpenAPI document and browsable with Scalar -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Api</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Api</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- what the API's OpenAPI document opens with, see ApiDocumentation -->
+        <EmbeddedResource Include="Resources/Introduction.md" WithCulture="false" />
+    </ItemGroup>
+
+</Project>

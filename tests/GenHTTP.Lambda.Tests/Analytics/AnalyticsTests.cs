@@ -166,6 +166,27 @@ public sealed class AnalyticsTests
     }
 
     [TestMethod]
+    public async Task BelowAPathItsOwnPagesAreNoSiteItCameFrom()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { PublicUrl = "http://localhost" });
+
+        var lambda = await OnlineAsync(fixture, "shop");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        // every lambda shares the platform's host here, so the host alone
+        // cannot tell a page of the lambda from one of the platform
+        await VisitAsync(fixture, "/lambda/shop/menu", Chrome, referrer: "http://localhost/lambda/shop/", destination: "document");
+        await VisitAsync(fixture, "/lambda/shop/", Chrome, referrer: "http://localhost/en/showcase", destination: "document");
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(1, Views(shown.Referrers, "localhost"), "the showcase sent a visitor, the lambda's own page did not");
+    }
+
+    [TestMethod]
     public async Task ACrawlerIsCountedAsGooglesWhereItCameFromGoogle()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -175,7 +196,7 @@ public sealed class AnalyticsTests
         await EnableAsync(fixture, lambda.PrivateKey);
 
         // the test host's own address, both families, as Google's
-        fixture.Application.Services.GetRequiredService<CrawlerRanges>().Load("Google", [
+        fixture.Platform.Services.GetRequiredService<CrawlerRanges>().Load("Google", [
             new MemoryStream("""{"prefixes": [{"ipv4Prefix": "127.0.0.0/8"}, {"ipv6Prefix": "::1/128"}]}"""u8.ToArray())
         ]);
 
@@ -337,7 +358,7 @@ public sealed class AnalyticsTests
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/analytics");
 
-        var store = fixture.Application.Services.GetRequiredService<AnalyticsStore>();
+        var store = fixture.Platform.Services.GetRequiredService<AnalyticsStore>();
 
         var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
 
@@ -391,7 +412,7 @@ public sealed class AnalyticsTests
 
         Flush(fixture);
 
-        var analytics = fixture.Application.Services.GetRequiredService<IAnalyticsService>();
+        var analytics = fixture.Platform.Services.GetRequiredService<IAnalyticsService>();
 
         var later = DateTime.UtcNow.AddDays(30);
 
@@ -424,7 +445,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://aging.localhost/");
 
-        var analytics = fixture.Application.Services.GetRequiredService<IAnalyticsService>();
+        var analytics = fixture.Platform.Services.GetRequiredService<IAnalyticsService>();
 
         analytics.Flush();
 
@@ -450,7 +471,7 @@ public sealed class AnalyticsTests
 
         var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
 
-        var store = fixture.Application.Services.GetRequiredService<AnalyticsStore>();
+        var store = fixture.Platform.Services.GetRequiredService<AnalyticsStore>();
 
         Assert.IsNotNull(store.Earliest(id));
 
@@ -544,14 +565,14 @@ public sealed class AnalyticsTests
     /// <summary>
     /// What the job does every few minutes.
     /// </summary>
-    private static void Flush(LambdaFixture fixture) => fixture.Application.Services.GetRequiredService<IAnalyticsService>().Flush();
+    private static void Flush(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IAnalyticsService>().Flush();
 
     /// <summary>
     /// Has every address of the test host - loopback, both families -
     /// allocated to a country.
     /// </summary>
     private static void Place(LambdaFixture fixture, string country)
-        => fixture.Application.Services.GetRequiredService<GeoTable>().Load([
+        => fixture.Platform.Services.GetRequiredService<GeoTable>().Load([
             $"test|{country}|ipv4|127.0.0.0|16777216|20000101|allocated",
             $"test|{country}|ipv6|::1|128|20000101|allocated"
         ]);

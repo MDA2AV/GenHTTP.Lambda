@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The community edition: every component, with lambdas below /lambda/ on
+        the one address an installation is run at, and a front page of its own.
+    -->
+    <PropertyGroup>
+
+        <OutputType>Exe</OutputType>
+
+        <RootNamespace>GenHTTP.Lambda.Community</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Community</AssemblyName>
+
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the sources of the site's frontend and what npm builds them into are no part of the assembly -->
+        <None Remove="Frontend/**;bundle/**" />
+
+        <!-- the site's bundle, which "npm run build" puts into bundle/ (see LandingPage) -->
+        <Content Include="bundle/**" Link="bundles/community/%(RecursiveDir)%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+</Project>

@@ -180,7 +180,7 @@ public sealed class ControlCenterTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        var databases = fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using (var database = await databases.CreateDbContextAsync())
         {
@@ -215,7 +215,7 @@ public sealed class ControlCenterTests
 
         using var removed = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}");
 
-        var databases = fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using var database = await databases.CreateDbContextAsync();
 
@@ -512,7 +512,7 @@ public sealed class ControlCenterTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"old\"));");
 
-        var databases = fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
         await using (var database = await databases.CreateDbContextAsync())
         {

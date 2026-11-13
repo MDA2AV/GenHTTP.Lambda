@@ -1,0 +1,98 @@
+# GenHTTP Lambda, community edition: the server on http://localhost:8080, with
+# everything it keeps in the volume lambda-data.
+#
+#   docker compose up -d
+#
+# With the build agent, which turns a sentence into an app (see README.md):
+#
+#   docker compose --profile agent up -d
+
+name: genhttp-lambda
+
+services:
+
+  lambda:
+    image: genhttp/lambda:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # where people and agents reach the installation - the addresses of the
+      # apps are made from it: https://lambda.example.com/lambda/{key}/; until
+      # it is set, they read http://localhost:8080
+      LAMBDA_PUBLIC_URL: ${LAMBDA_PUBLIC_URL:-}
+      # the password of the panel at /admin; without one the panel is off
+      LAMBDA_ADMIN_TOKEN: ${LAMBDA_ADMIN_TOKEN:-}
+      # the build agent reaches the server by this name, which is then one of
+      # the platform's own - an installation with a public address answers at
+      # its names only
+      LAMBDA_MCP_ORIGINS: lambda
+      # the build agent, where it runs (see the agent profile below)
+      LAMBDA_AGENT_URL: ${LAMBDA_AGENT_URL:-}
+      LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+    volumes:
+      - lambda-data:/data
+    networks:
+      - default
+      - agent-net
+      - build-net
+    restart: unless-stopped
+
+  # Runs a build: starts a container for it, which talks to the server over
+  # MCP and to Anthropic through the proxy below, and nothing else. It holds
+  # the docker socket for that, and runs nothing a model wrote itself.
+  agent:
+    profiles: ["agent"]
+    image: genhttp/lambda-agent:latest
+    environment:
+      AGENT_PORT: 8401
+      AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      AGENT_BUILD_IMAGE: genhttp/lambda-agent:latest
+      AGENT_BUILD_NETWORK: genhttp-build-net
+      AGENT_MCP_URL: http://lambda:8080/mcp
+      AGENT_PUBLIC_ORIGIN: ${LAMBDA_PUBLIC_URL:-http://localhost:8080}
+      # a token of your Claude subscription: claude setup-token
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      HTTPS_PROXY: http://egress-proxy:3128
+      HTTP_PROXY: http://egress-proxy:3128
+      NO_PROXY: lambda,localhost,127.0.0.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # the group that owns the docker socket on this machine:
+    # getent group docker | cut -d: -f3
+    group_add:
+      - "${DOCKER_GID:-999}"
+    networks:
+      - agent-net
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    restart: unless-stopped
+
+  # The only way out for a build: to Anthropic, and nowhere else.
+  egress-proxy:
+    profiles: ["agent"]
+    image: genhttp/lambda-agent:latest
+    command: ["node", "/app/proxy.mjs"]
+    environment:
+      PROXY_PORT: 3128
+      PROXY_ALLOW: api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai
+    networks:
+      - build-net
+      - default
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    restart: unless-stopped
+
+networks:
+  # the server and the agent, and nothing else
+  agent-net:
+    internal: true
+  # the builds, the server and the proxy; named, because the agent names it
+  # when it starts a build
+  build-net:
+    name: genhttp-build-net
+    internal: true
+
+volumes:
+  lambda-data:

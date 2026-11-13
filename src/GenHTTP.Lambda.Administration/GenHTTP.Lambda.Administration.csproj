@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- the operator’s panel, over the REST API -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Administration</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Administration</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the sources of the frontend and what npm builds them into are no part of the assembly -->
+        <None Remove="Frontend/**;bundle/**" />
+
+        <!--
+            The bundle "npm run build" puts into bundle/, carried into the
+            output of every host below bundles/admin/, where the component
+            looks for it (see Bundle.Beside).
+        -->
+        <Content Include="bundle/**" Link="bundles/admin/%(RecursiveDir)%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,58 @@
+using GenHTTP.Api.Content.Documentation;
+
+using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Deployment.Compilation;
+using GenHTTP.Lambda.Services.Hosting;
+using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Settings;
+
+using GenHTTP.Modules.Webservices;
+
+namespace GenHTTP.Lambda.Api;
+
+[Tag(ApiDocumentation.Platform)]
+[Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
+[Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
+public sealed class SystemResource(ILimitsService limits, IBuildService builds, ILambdaAddresses addresses,
+                                    LambdaOptions options)
+{
+
+    [ResourceMethod]
+    [Summary("Describes this installation")]
+    [Remarks("""
+             Its terms, which creating a lambda accepts where it has any; the limits of a free lambda; what a new lambda can
+             start from; whether the build agent is on offer; where a lambda answers (`lambdaUrl`); who runs it, as far as its
+             pages have to say so (`operator`); and what the editor suggests while code is written - the namespaces a lambda
+             has imported and the types and snippets it may use.
+             """)]
+    [return: Summary("The terms, limits, starters and vocabulary of this installation")]
+    public PlatformResponse Get()
+    {
+        var current = limits.Get();
+
+        return new(
+            options.Terms,
+            Describe(),
+            current.Free.BuildBytes,
+            (int)current.OfflineAfter.TotalHours,
+            (int)current.RemovedAfter.TotalDays,
+            ModuleCatalog.Imports,
+            CompletionCatalog.Items,
+            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
+            addresses.Template,
+            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage)
+        );
+    }
+
+    /// <summary>
+    /// What a new lambda can be started from: nothing much, or a copy of a
+    /// demo - described by what somebody would want to build with it.
+    /// </summary>
+    private IReadOnlyList<StarterResponse> Describe()
+        => [.. DemoCatalog.All.Select(d => new StarterResponse(d.Id, d.Goal, d.Pitch, addresses.Of(d.Key))),
+            new StarterResponse(TemplateCatalog.EmptyId, "Something else", "Start from an empty lambda and build whatever you have in mind.", null)];
+
+}

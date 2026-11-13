@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- the pages of the published sources, and their public git repositories -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Sources</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Sources</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the sources of the frontend and what npm builds them into are no part of the assembly -->
+        <None Remove="Frontend/**;bundle/**" />
+
+        <!--
+            The bundle "npm run build" puts into bundle/, carried into the
+            output of every host below bundles/sources/, where the component
+            looks for it (see Bundle.Beside).
+        -->
+        <Content Include="bundle/**" Link="bundles/sources/%(RecursiveDir)%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+</Project>

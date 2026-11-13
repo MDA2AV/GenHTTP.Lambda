@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Serves the lambdas: at their own domains, at their subdomains of the
+        hosting domain or below a path of the platform's host, and the
+        previews of their features - and hands everything else to the site.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Execution</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Execution</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- the words of the pages the runner draws on its own, see HostingPages -->
+        <EmbeddedResource Include="Resources/hosting.json" WithCulture="false" />
+    </ItemGroup>
+
+</Project>

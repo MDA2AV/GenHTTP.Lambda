@@ -15,7 +15,9 @@ namespace GenHTTP.Lambda.Tests.Architecture;
 /// those hold its rules only while everything goes through the service: a
 /// version appended without the lambda's turn, or a build started without the
 /// allowance, is a bug nothing else would catch. The compiler cannot keep them
-/// apart, since the application is one assembly, so this test does.
+/// apart, since the services share one assembly (GenHTTP.Lambda.Core), so this
+/// test does - for every component's assembly, since a component is outside
+/// every folder of the services.
 ///
 /// What it reads is what can be handed over: the parameters of constructors,
 /// which is how the container hands out a service, and of methods. A class
@@ -35,7 +37,9 @@ public sealed class ServiceBoundaryTests
     /// </summary>
     private static readonly Dictionary<Type, string> Exempt = new()
     {
-        [typeof(Application)] = "It builds the container: it registers the classes, and makes the log book and the run log before there is a container to take them from."
+        [typeof(LambdaPlatform)] = "It builds the container: it registers the classes, and makes the log book and the run log before there is a container to take them from.",
+        [typeof(LambdaPlatformBuilder)] = "It is handed the log book and the run log a host made before there is a container, to register them.",
+        [typeof(PlatformLogging)] = "It makes the log book and the loggers writing into it before there is a container to take them from."
     };
 
     [TestMethod]
@@ -43,7 +47,7 @@ public sealed class ServiceBoundaryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var container = fixture.Application.Services.GetRequiredService<IServiceProviderIsService>();
+        var container = fixture.Platform.Services.GetRequiredService<IServiceProviderIsService>();
 
         var crossings = Crossings(container).ToList();
 
@@ -57,7 +61,7 @@ public sealed class ServiceBoundaryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var container = fixture.Application.Services.GetRequiredService<IServiceProviderIsService>();
+        var container = fixture.Platform.Services.GetRequiredService<IServiceProviderIsService>();
 
         // the units of the meta service are classes the container answers for,
         // so a resource taking one would be caught
@@ -68,11 +72,29 @@ public sealed class ServiceBoundaryTests
 
     #region Helpers
 
+    /// <summary>
+    /// The assemblies of the platform, of every component and of both hosts.
+    /// </summary>
+    private static readonly Assembly[] Components =
+    [
+        typeof(LambdaPlatform).Assembly,
+        typeof(GenHTTP.Lambda.Web.SiteMeta).Assembly,
+        typeof(GenHTTP.Lambda.Execution.Runner).Assembly,
+        typeof(GenHTTP.Lambda.Api.RestApi).Assembly,
+        typeof(GenHTTP.Lambda.Mcp.McpServer).Assembly,
+        typeof(GenHTTP.Lambda.Server.LambdaServer).Assembly,
+        typeof(GenHTTP.Lambda.Editing.Editor).Assembly,
+        typeof(GenHTTP.Lambda.Administration.AdminPanel).Assembly,
+        typeof(GenHTTP.Lambda.Sources.SourcePages).Assembly,
+        typeof(GenHTTP.Lambda.Cloud.Website).Assembly,
+        typeof(GenHTTP.Lambda.Community.LandingPage).Assembly
+    ];
+
     private static IEnumerable<string> Crossings(IServiceProviderIsService container)
     {
         const BindingFlags declared = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
 
-        foreach (var consumer in typeof(Application).Assembly.GetTypes())
+        foreach (var consumer in Components.SelectMany(a => a.GetTypes()))
         {
             if (Exempt.ContainsKey(consumer))
             {

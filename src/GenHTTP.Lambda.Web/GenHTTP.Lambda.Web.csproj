@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        What the components with pages share to serve them: a bundle of a
+        single page application, its table of pages, the prerendered bodies
+        and the languages they are in.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Web</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Web</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+    </ItemGroup>
+
+</Project>

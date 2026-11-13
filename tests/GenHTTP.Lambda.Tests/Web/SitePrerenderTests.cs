@@ -83,12 +83,15 @@ public sealed class SitePrerenderTests
 
     private static Func<LambdaOptions, LambdaOptions> Site(string? publicUrl = "https://genhttp.dev", bool prerendered = true) => options =>
     {
-        File.WriteAllText(Path.Combine(options.WebRoot, "index.html"), Index);
-        File.WriteAllText(Path.Combine(options.WebRoot, "pages.json"), Pages);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "index.html"), Index);
+
+        // the editor is a bundle of its own, whose index is left as it is
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "editor"), "index.html"), Index);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "pages.json"), Pages);
 
         if (prerendered)
         {
-            File.WriteAllText(Path.Combine(options.WebRoot, "prerender.json"), Prerendered);
+            File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "prerender.json"), Prerendered);
         }
 
         return options with

@@ -3,8 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 
 using GenHTTP.Engine.Ioxide;
 
-using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Server;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -21,13 +20,13 @@ public sealed class CertificateTests
     [TestMethod]
     public void NoCertificateMeansNoSecureEndpoint()
     {
-        Assert.IsFalse(new LambdaOptions().Secure);
+        Assert.IsFalse(new ServerSettings().Secure);
 
-        Assert.IsFalse(new LambdaOptions { SecurePort = 8443 }.Secure, "a port alone is not enough");
+        Assert.IsFalse(new ServerSettings { SecurePort = 8443 }.Secure, "a port alone is not enough");
 
-        Assert.IsFalse(new LambdaOptions { CertificatePath = "/certs/full.pem" }.Secure, "a certificate alone is not enough");
+        Assert.IsFalse(new ServerSettings { CertificatePath = "/certs/full.pem" }.Secure, "a certificate alone is not enough");
 
-        Assert.IsTrue(new LambdaOptions { SecurePort = 8443, CertificatePath = "/certs/full.pem" }.Secure);
+        Assert.IsTrue(new ServerSettings { SecurePort = 8443, CertificatePath = "/certs/full.pem" }.Secure);
     }
 
     [TestMethod]
@@ -37,7 +36,7 @@ public sealed class CertificateTests
 
         var options = Write(workspace, "first.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         Assert.AreEqual("CN=first.example", loader.Provide("first.example")?.Subject);
     }
@@ -45,9 +44,9 @@ public sealed class CertificateTests
     [TestMethod]
     public void MissingCertificatesAreReportedOnStartup()
     {
-        var options = new LambdaOptions { SecurePort = 8443, CertificatePath = "/does/not/exist.pem" };
+        var options = new ServerSettings { SecurePort = 8443, CertificatePath = "/does/not/exist.pem" };
 
-        Assert.ThrowsExactly<FileNotFoundException>(() => new CertificateLoader(options, NullLogger<CertificateLoader>.Instance));
+        Assert.ThrowsExactly<FileNotFoundException>(() => new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance));
     }
 
     [TestMethod]
@@ -57,7 +56,7 @@ public sealed class CertificateTests
 
         var options = Write(workspace, "before.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         Assert.AreEqual("CN=before.example", loader.Provide(null)?.Subject);
 
@@ -73,7 +72,7 @@ public sealed class CertificateTests
 
         var options = Write(workspace, "intact.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         Touch(options.CertificatePath!, "-----BEGIN CERTIFICATE-----\nnot a certificate\n-----END CERTIFICATE-----");
 
@@ -87,7 +86,7 @@ public sealed class CertificateTests
 
         var options = WriteChain(workspace, "leaf.example", "issuer.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         var served = loader.Provide(null);
 
@@ -102,7 +101,7 @@ public sealed class CertificateTests
 
         var options = Write(workspace, "first.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         // through the interface, since that is the only way the io_uring engine asks
         IFileCertificateProvider files = loader;
@@ -120,7 +119,7 @@ public sealed class CertificateTests
 
         var second = Write(Path.Combine(workspace.Path, "hosts", "second.example"), "second.example");
 
-        using var loader = new CertificateLoader(options with { CertificateDirectory = Path.Combine(workspace.Path, "hosts") }, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options with { CertificateDirectory = Path.Combine(workspace.Path, "hosts") }, null, NullLogger<CertificateLoader>.Instance);
 
         Assert.AreEqual(second.CertificatePath, loader.ProvideFiles("second.example")?.Certificate);
         Assert.AreEqual(options.CertificatePath, loader.ProvideFiles("unknown.example")?.Certificate, "a name nothing covers gets the default");
@@ -137,7 +136,7 @@ public sealed class CertificateTests
 
         var wildcard = Write(Path.Combine(hosts, "genhttp.run"), "*.genhttp.run", "genhttp.run");
 
-        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts, HostingUrl = "https://genhttp.run" }, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts }, "https://genhttp.run", NullLogger<CertificateLoader>.Instance);
 
         // the io_uring engine asks once, without a name, for what it presents
         // to a name it was not told about - and the lambdas are named after
@@ -166,7 +165,7 @@ public sealed class CertificateTests
 
         Write(Path.Combine(hosts, "other.example"), "*.other.example");
 
-        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts, HostingUrl = "https://genhttp.run" }, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts }, "https://genhttp.run", NullLogger<CertificateLoader>.Instance);
 
         Assert.AreEqual(site.CertificatePath, loader.ProvideFiles(null)?.Certificate, "a wildcard of another domain is not the hosting domain's");
         Assert.AreEqual(site.CertificatePath, loader.ProvideFiles("quiz.genhttp.run")?.Certificate);
@@ -179,7 +178,7 @@ public sealed class CertificateTests
 
         var options = WriteArchive(workspace, "archive.example");
 
-        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+        using var loader = new CertificateLoader(options, null, NullLogger<CertificateLoader>.Instance);
 
         Assert.IsNull(loader.ProvideFiles(null), "an archive has no key file to hand over, so the engine has to take the loaded certificate");
         Assert.IsNull(loader.ProvideFiles("archive.example"));
@@ -193,9 +192,9 @@ public sealed class CertificateTests
     /// Writes a self signed certificate into the workspace and returns the
     /// options pointing at it.
     /// </summary>
-    private static LambdaOptions Write(TemporaryDirectory workspace, string name) => Write(workspace.Path, name);
+    private static ServerSettings Write(TemporaryDirectory workspace, string name) => Write(workspace.Path, name);
 
-    private static LambdaOptions Write(string directory, string name, params string[] alternatives)
+    private static ServerSettings Write(string directory, string name, params string[] alternatives)
     {
         using var key = RSA.Create(2048);
 
@@ -223,7 +222,7 @@ public sealed class CertificateTests
         Touch(certificatePath, certificate.ExportCertificatePem());
         Touch(keyPath, key.ExportPkcs8PrivateKeyPem());
 
-        return new LambdaOptions
+        return new ServerSettings
         {
             SecurePort = 8443,
             CertificatePath = certificatePath,
@@ -235,7 +234,7 @@ public sealed class CertificateTests
     /// Writes a self signed certificate as an archive, key included, the way
     /// it is configured when there is no separate key file.
     /// </summary>
-    private static LambdaOptions WriteArchive(TemporaryDirectory workspace, string name)
+    private static ServerSettings WriteArchive(TemporaryDirectory workspace, string name)
     {
         using var key = RSA.Create(2048);
 
@@ -247,13 +246,13 @@ public sealed class CertificateTests
 
         File.WriteAllBytes(archivePath, certificate.Export(X509ContentType.Pfx));
 
-        return new LambdaOptions { SecurePort = 8443, CertificatePath = archivePath };
+        return new ServerSettings { SecurePort = 8443, CertificatePath = archivePath };
     }
 
     /// <summary>
     /// Writes a leaf followed by its issuer, the way an ACME client does.
     /// </summary>
-    private static LambdaOptions WriteChain(TemporaryDirectory workspace, string leaf, string issuer)
+    private static ServerSettings WriteChain(TemporaryDirectory workspace, string leaf, string issuer)
     {
         using var issuerKey = RSA.Create(2048);
 
@@ -275,7 +274,7 @@ public sealed class CertificateTests
         Touch(certificatePath, signed.ExportCertificatePem() + "\n" + authority.ExportCertificatePem());
         Touch(keyPath, leafKey.ExportPkcs8PrivateKeyPem());
 
-        return new LambdaOptions { SecurePort = 8443, CertificatePath = certificatePath, CertificateKeyPath = keyPath };
+        return new ServerSettings { SecurePort = 8443, CertificatePath = certificatePath, CertificateKeyPath = keyPath };
     }
 
     /// <summary>

@@ -3,8 +3,10 @@
 This file holds the product and architectural decisions of this repository.
 Follow it, and when a decision is made or changed - by the owner in a
 conversation, in a review, anywhere - **put it here in the same change**. A rule
-that only lives in a chat is lost. The [README](README.md) has the reference
-(routes, API, configuration, operations); this file has the *why* and the rules.
+that only lives in a chat is lost. The [reference](docs/reference.md) has the
+routes, API, configuration and operations, and the [README](README.md) is the
+guide for whoever runs the community edition; this file has the *why* and the
+rules.
 
 `docker/agent/AGENTS.md` is something else: it is the brief of the build agent
 inside its throwaway container, not a steering file for people working on this
@@ -34,6 +36,110 @@ A platform on which somebody describes an app - or an agent writes a C# snippet
 that returns a GenHTTP `IHandler` - and gets a public URL that serves it. The
 snippet is compiled with Roslyn at runtime and hosted by the same GenHTTP
 server (`GenHTTP.Full.Ioxide`, .NET 11) that serves this application.
+
+It is **open source under MIT - decided by the owner** (`LICENSE`), the whole
+repository.
+
+## Editions and components
+
+**Decided by the owner:** the platform is a set of components that hosts put
+together the GenHTTP way, and there are two hosts - two editions:
+
+- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at
+  subdomains of the hosting domain, the marketing site (landing, `/build`,
+  `/ship`), the legal pages, its terms of use, its contact and abuse mailbox
+  and its description of itself to search engines (`CloudInstallation`,
+  `CloudStructuredData`). There is no page of prices any more.
+- **Community** (`src/GenHTTP.Lambda.Community`) is what anybody runs on
+  their own server, published as the Docker image `genhttp/lambda`: every
+  feature of the cloud, the build agent included, behind a simpler front page
+  for developers (`LandingPage`: what it does, the build box, connecting an
+  agent, what every app gets, how it runs) with the guide and the showcase -
+  translated like everything else, crisp, and selling nothing. No terms, no
+  legal pages, no imprint, no organization behind it; what its operator names
+  (`LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`) is shown, and nothing else.
+- **Lambdas answer by path in the community edition - decided by the owner**:
+  `/lambda/{key}/` on the one address an installation runs at
+  (`LambdaAddressing.Paths`, `LAMBDA_PUBLIC_URL`), with domains of their own
+  served as in the cloud. Giving it `LAMBDA_HOSTING_URL` switches it to
+  subdomains; `LAMBDA_ADDRESSING` decides over both. **The trade-off is said,
+  not hidden**: by path, a lambda shares the platform's origin and can read
+  what the editor and the panel keep in that browser. So the editor's pages
+  send no referrer (its key is in their address) and are not indexed, the
+  panel keeps its token for the tab only (session storage) wherever the
+  lambdas answer on its origin - local storage only once `/system` says they
+  do not - and the README says who should switch to subdomains.
+- **Nothing in the pages names the cloud.** What differs per installation -
+  where a lambda answers, the git address, where a domain has to point (the
+  server resolves its own public name, `DomainResponse.Target`), the page
+  with the build box (`LambdaOptions.StartPage`: `/build` on the cloud, `/`
+  elsewhere) - is asked of the installation, never written into a bundle.
+- **By path, the "Made with" line is a plain link** - a link within the same
+  site, as it was before the subdomains - and nofollow at subdomains; the
+  guide says whichever holds (`platform_guide`, `backlink`).
+
+The components, each a project with a builder in front (`X.Create(...)`, the
+GenHTTP style), and what they need given to the builder rather than read from
+the environment:
+
+| Component | Project | Builder | Mounted at |
+|---|---|---|---|
+| The platform: services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
+| The REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
+| The MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
+| The editor, the create page, the owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
+| The operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create()` | `/admin` |
+| The published sources, their public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` (no path of its own) |
+| Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
+| Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
+| Engine, ports, TLS, the environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
+
+- **A host's `Program.cs` is the composition, and stays short and plain**:
+  read the settings, build the platform, put the components into a layout,
+  hand it to the runner and the server. Read both before adding a component.
+- **Nothing below the hosts reads the environment - decided by the owner.**
+  `LambdaSettings.FromEnvironment()` (in `Server`) reads the `LAMBDA_*`
+  variables into the platform's options (`LambdaOptions`, the DTO the
+  components share) and the server's (`ServerSettings`: engine, ports,
+  certificates, ACME); a host adds what is its own (`CloudInstallation.Of`).
+  The variables are the same as before the split, so an installation's
+  configuration did not change - but for `LAMBDA_WEB_ROOT`, which went with
+  the one folder of pages it named, and three that were added
+  (`LAMBDA_ADDRESSING`, `LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`).
+- **The mount paths are fixed** (`PlatformRoutes`): the components link to
+  one another - the API hands out the editor's address, a clone keeps its
+  git address - so a host mounts each at its name and nowhere else.
+- **The runner goes around the site**, not into it: a lambda's own host owns
+  every path there. On the platform's host it takes `/features/` and, by path,
+  `/lambda/`, and leaves the rest to the site.
+- **The editor and the panel talk to the platform through the REST API
+  only**; the API and MCP share logic through the services (`OperationLog`,
+  `LambdaAccess`, the analytics' wire shape), never one door reaching into the
+  other. The admin token is the platform's (`LambdaOptions.AdminToken`).
+- **Every component with pages owns its frontend - decided by the owner.**
+  Its sources are in its `Frontend/` folder, an npm workspace at the root
+  builds each into its project's `bundle/`, and the project copies that beside
+  the host's assemblies (`bundles/<name>/`, read by `Bundle.Beside`; a
+  builder's `.Bundle(directory)` overrides it). No component serves another's
+  bundle and there is no shared folder of pages. What they share is source,
+  not a build: the kit (`src/Kit`, `@genhttp-lambda/kit`) - the shell, the
+  components, the i18n machinery, the API client, the build box, the guide,
+  the showcase, the Tailwind preset and the Vite helper. A link into another
+  bundle loads it (`claim`, `owns`).
+- **What only one installation says is the host's**: terms, contact, abuse
+  mailbox, legal pages (`LambdaOptions.Terms`, `Contact`, `AbuseContact`,
+  `LegalPages`). Without terms nothing is accepted on creating a lambda; the
+  pages every installation shares read the rest from `/system` (`operator`),
+  and leave out what is not there.
+- **Docker**: each host has its Dockerfile (`src/<host>/Dockerfile`, built
+  from the root); `docker-compose.yml` and `deploy.sh` build the cloud's,
+  unchanged otherwise. `.github/workflows/release.yml` publishes the community
+  image and the build agent (`genhttp/lambda-agent`) to the `genhttp` Docker
+  Hub account for amd64 and arm64, on a tag `v*` or by hand - nothing is
+  pushed otherwise. `samples/community` runs it with Compose, the build agent
+  as a profile.
+- **Shipped as project references for now**; the components are meant to
+  become NuGet packages, so a component takes nothing from a host.
 
 ## The number one rule: asymmetric interfaces
 
@@ -135,26 +241,29 @@ the path as requested, so `/api/v1/lambdas/{privateKey}/…` carries the key, an
 that is fine - the log is behind the admin token. There are no accounts.
 
 The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
-the README. It is GenHTTP's API key authentication (`AdminAuthentication`): 401
+the reference. It is GenHTTP's API key authentication (`AdminAuthentication`): 401
 without the header, 403 with the wrong token, and the routes are not there at
 all (404) on an installation without a token. Behind it are the panel, the
-server's telemetry and the log - and the editor's **Admin** section, which a
-browser holding the token shows in the editor of every lambda, in both views,
-and which nobody else sees; what it calls carries the token like the panel's. It
-holds the lambda's **block** - the same control as its page in the panel
-(`console/BlockControl.tsx`), and what only the operator decides about one
-lambda goes there; a token the server no longer takes is said there and
-entered again in the panel. (It held the sitemap switch once, which went when
-the lambdas moved to hosts of their own.)
+server's telemetry and the log. The token is **the platform's**
+(`LambdaOptions.AdminToken`, decided by the owner): the REST API's operator
+routes answer to it and the address block lets the panel through with it; the
+panel (`AdminPanel`) is pages only, over the REST API. **The editor has no
+Admin section any more - decided by the owner**, so the two components do not
+reach into each other: what only the operator decides about one lambda - its
+block (`console/BlockControl.tsx`), its tier - is on its page in the panel.
 **Only owners and the operator see telemetry**
 - the owner a lambda's own in the editor, the operator everybody's; nothing is
 public.
 
 ### Where the lambdas answer
 
-**Decided by the owner:** every lambda answers at a subdomain of the hosting
-domain named after its public key - `https://{key}.genhttp.run/`
-(`LAMBDA_HOSTING_URL`) - not below the site's own host.
+**Decided by the owner:** on genhttp.dev (the cloud edition) every lambda
+answers at a subdomain of the hosting domain named after its public key -
+`https://{key}.genhttp.run/` (`LAMBDA_HOSTING_URL`) - not below the site's own
+host. The community edition answers **by path** instead (see Editions below):
+`{public address}/lambda/{key}/` (`LambdaAddressing.Paths`), on the one address
+an installation is run at, and switches to subdomains once it is given a
+hosting URL. What follows is about subdomains unless it says otherwise.
 
 - **A site of its own.** A host of its own keeps what a lambda runs in a
   browser away from what the site keeps there - the admin token - and from the
@@ -165,6 +274,13 @@ domain named after its public key - `https://{key}.genhttp.run/`
   the panel. So do the previews of features at `/features/{key}/` - for now
   the one place a lambda's code still runs on the site's host; moving them is
   a decision of its own.
+- **A lambda on the site's host may not widen a service worker's scope**
+  (`LambdaExecutionHandler`): a preview always, a lambda by path too. A
+  response with `Service-Worker-Allowed` is refused there with a 500 that
+  says why, and a line in the log - a worker for `/` would see the editor
+  and the panel in that browser afterwards. Refused rather than stripped:
+  GenHTTP adds headers to a response and takes none away. At a host of its
+  own, its scope is its own business.
 - **`/lambda/{key}/…` redirects permanently** to where the lambda answers
   now - its domain while it has one - with the path and the query, before
   anything else the server does: no request line, no telemetry, no other
@@ -622,7 +738,8 @@ to read, star and download.
   on `/source` acts on the lambda. Whoever wants to build on it downloads it;
   `platform_guide` (`openSource.startingFromOne`) tells an agent how a download
   becomes a lambda again.
-- `/source` is a part of the frontend of its own (`src/Frontend/src/source`),
+- `/source` is a component of its own (`SourcePages`, with its bundle in
+  `src/GenHTTP.Lambda.Sources/Frontend`),
   in a frame of its own, not in the landing page's menu - but in the site's
   colours, languages and addresses per language. Not prerendered: the server
   names each page after its lambda, marks it up as `SoftwareSourceCode`, and
@@ -729,8 +846,8 @@ how to write apps and to give them a good starting point.
 ### Blocking
 
 What the operator does about abuse - a lambda that phishes, spreads malware or
-attacks others. It is the operator's alone, in the panel and the editor's
-Admin section, in English like the panel.
+attacks others. It is the operator's alone, in the panel, in English like the
+panel.
 
 - **A blocked lambda is offline and frozen.** Blocking takes it offline with
   its features' previews, and every change is refused, through every door, in
@@ -770,15 +887,16 @@ Admin section, in English like the panel.
   blocked with its /64. Held in memory and asked of every request, so it costs
   nothing while no block is held.
 - **The panel stays reachable from a blocked address - decided by the owner**
-  - its page, its assets, `/api/v1/system` and the API behind the token - so
-  an operator who blocked themselves can lift it. Nothing else is let through.
+  - its bundle below `/admin`, `/api/v1/system` and the API behind the token -
+  so an operator who blocked themselves can lift it. Nothing else is let
+  through.
 - **Two weeks, by a job - decided by the owner.** `AddressBlockJob` lets go
   of every block two weeks after it was made (`IAddressBlocks.Kept`); blocking
   an address again starts its time again. Addresses change hands, so a block
   that held for good would one day refuse somebody who did nothing.
 - The panel's **Blocked addresses** section lists the blocks with why, the
   lambda, until when and what each refused, marks the operator's own and lifts
-  them. This is said in the README (Blocking), `platform_guide`
+  them. This is said in the reference (Blocking), `platform_guide`
   (`theLambda.blocked`), the API's introduction, `/docs` (What it will not let
   you do), the terms and the privacy page - keep them the same.
 
@@ -791,8 +909,13 @@ chosen by the owner.
 - **Premium** is for running something in production, for example a website on a
   custom domain: kept online, larger limits. The simple view's overview offers
   it to every lambda that is not premium (or a demo), in a tile beside the
-  latest change; its only action is a mail to us naming the app by its public
-  address, never the editor key - the tier stays the operator's to assign.
+  latest change; its only action is a mail to the installation's contact
+  (`LambdaOptions.Contact`) naming the app by its public address, never the
+  editor key - the tier stays the operator's to assign. Where the installation
+  names no contact - a community one, usually - the tile is not there.
+- **Kept as they are in the community edition for now - decided by the owner**;
+  they are to be reworked later. The README tells whoever runs one that a free
+  app nobody uses is taken offline, and how to keep it.
 - **The limits of a tier are product settings, not server configuration -
   decided.** What a version may come to (its code and resources together),
   what the data may (its database and workspace together), versions and
@@ -810,18 +933,21 @@ chosen by the owner.
 - **Enterprise** - a customer running their own instance, on-prem or in the
   cloud - is planned but **do not anticipate enterprise features unless asked**.
   It is not decided that the enterprise code base will be the same as the cloud
-  one, so do not shape the cloud code for it. (`/enterprise` is only a page for
-  now.)
+  one, so do not shape the cloud code for it. The page with its prices was
+  removed from the cloud - decided by the owner, with the panel's switch for it
+  (V23).
 
 ## Architecture
 
-Read the README section "How it is put together" before touching services. The
-rules that matter:
+Read the reference's section "How it is put together" before touching
+services. The rules that matter:
 
-- One .NET project, divided into services behind interfaces; the API resources
-  talk to the interfaces. `Meta` is the only component that speaks to the
-  database, and its public surface is hand-mapped DTOs. Code lives on the file
-  system (`Storage`), never in the database.
+- The platform's services are one project, `GenHTTP.Lambda.Core`, divided into
+  services behind interfaces; every component talks to the interfaces. `Meta`
+  is the only part that speaks to the database, and its public surface is
+  hand-mapped DTOs. Code lives on the file system (`Storage`), never in the
+  database. The components over it, and the hosts that put them together, are
+  in Editions and components above.
 - **A service orchestrates, and the concerns it would mix are units of their
   own - decided in the architecture review.** A protocol, a count, a check:
   each goes into a class beside the service, in its folder, and the service
@@ -844,39 +970,46 @@ rules that matter:
   `ILogBook`). What another folder needs of a unit is added to the service's
   interface (`IMetaService.GetFacts`, `ISourceService.Star`), not taken from
   the unit. An exception is an entry in the test with its reason; today only
-  the composition root (`Application`) has one.
+  the platform's composition (`LambdaPlatform`, its builder and
+  `PlatformLogging`) has one. The test reads every component's assembly - a
+  component is outside every folder of the services.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.
   Existing migrations are never edited. **Before pushing a new migration check
   the highest `V` on `origin/main`** - a duplicate fails every test in CI. New
-  files under `src/GenHTTP.Lambda/Data/` are hidden by the `data/` rule in
+  files under `src/GenHTTP.Lambda.Core/Data/` are hidden by the `data/` rule in
   `.gitignore` on Windows: check with `git status --ignored` and `git add -f`.
-- The frontend is a React single page application in `src/Frontend`, built into
-  `src/GenHTTP.Lambda/wwwroot` (not committed). Public pages are prerendered per
+- The frontends are React applications in an npm workspace at the root: the
+  kit (`src/Kit`) and a bundle per component in its `Frontend/` folder (see
+  Editions and components). The sites' public pages are prerendered per
   language.
 - Links inside a lambda's front end are relative, never a full address: a
-  lambda answers at the root of its host, but a feature's preview below
+  lambda answers at the root of its address - its host, or `/lambda/{key}/`
+  where lambdas answer by path - but a feature's preview below
   `/features/{key}/` on the site, where a leading slash leaves it and the full
   address is the live lambda.
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; develop -
   change, drafts, code, tests; program and data - data, versions; run). A new
   section joins the group it belongs to rather
-  than the end of the list. The operator's **Admin** section is no group of the
-  owner's: it comes last in both views, behind a rule, for a browser holding
-  the admin token only (`ADMIN_SECTIONS`).
+  than the end of the list.
 - **Wired through the container**, not by hand and not in statics. A concern
   that needs nothing but services is an `IDependentConcern`, registered as a
   singleton and added with `Dependent.Concern<T>()`; only a concern built with
   an argument of its own is built by hand (the lookup of a lambda, whose
   locator differs per route). The scope they are resolved from is opened by
-  the outermost concern of the host (`AddDependencyInjection`, added last), so
-  nothing dependent goes outside it. What only a door needs - HTTP or MCP -
-  stays at the door (`WorkspaceFiles`, `OperationLog`); what is done with the
-  data (base64, a version's facts) is the service's. What is one per process,
-  the console, is installed by a service the application owns
-  (`ConsoleCapture`), so tests own it as well.
+  the outermost concern of the host (`AddDependencyInjection`, added by
+  `PlatformHosting`), so nothing dependent goes outside it. A component's own
+  singletons - the MCP tools, the pages of a bundle - are made once from the
+  platform's services by its builder (`ActivatorUtilities`); the container is
+  Core's and registers nothing of the components. What only a door needs -
+  HTTP or MCP - stays at the door (`WorkspaceFiles`); what both doors share
+  is the services' (`OperationLog`, `LambdaAccess`, the analytics' wire
+  shape), never one door reaching into the other. What is done with the data
+  (base64, a version's facts) is the service's. What is one per process, the
+  console, is installed by a service the platform owns (`ConsoleCapture`), so
+  tests own it as well.
 
 ### Serving, and the threads it runs on
 
@@ -894,7 +1027,7 @@ method is called - so the code is written the way it runs:
   thread: compiling, packing, copying a workspace or a database, reading a
   lambda's own database for the editor (it may be slow by design), a request
   body, the network. Do not add an async path beside a synchronous one.
-- **Enforced when it compiles.** `src/GenHTTP.Lambda/BannedSymbols.txt`
+- **Enforced when it compiles.** `src/BannedSymbols.txt`
   (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's async
   methods, waiting for a task, the `File.*Async` helpers and `Task.Run`, each
   with the reason. It lists every overload by its id, generated from the
@@ -970,7 +1103,7 @@ change; the helpers are in `OperationLog`.
 - API reads are not logged (the editor polls), apart from exports and
   downloads; an agent's reads through MCP are.
 - A refused request is not logged here - its request line has the status.
-- **The MCP module's own lines are filtered below warnings** (`Program`): it
+- **The MCP module's own lines are filtered below warnings** (`PlatformLogging`): it
   writes one per tool call beside the tool's own, and one per refusal. A tool
   that fails is an error, and is written down.
 
@@ -1020,34 +1153,45 @@ change; the helpers are in `OperationLog`.
 ```bash
 dotnet build GenHTTP.Lambda.slnx -c Release
 dotnet test GenHTTP.Lambda.slnx -c Release
-cd src/Frontend && npm run build      # type checks and builds; CI runs it too
+npm run build      # at the root: type checks and builds every bundle; CI runs it too
 ```
 
+- The fixture puts the components together the way the cloud host does, on a
+  test host, with a stand-in bundle per component (`LambdaFixture.BundleOf`);
+  path addressing is tested with `Addressing = LambdaAddressing.Paths`
+  (`PathHostingTests`). Build the frontend before the server when a page is
+  checked by hand: a project copies its bundle into the host's output when it
+  is built.
+
 On Windows the default Ioxide engine (io_uring) does not run: start the server
-with `LAMBDA_ENGINE=Kestrel`, and point `LAMBDA_WEB_ROOT` at
-`src/GenHTTP.Lambda/wwwroot` to serve a fresh frontend build.
+with `LAMBDA_ENGINE=Kestrel`.
 
 ## Translations
 
 - **Everything a visitor or owner sees is translated into all supported
-  languages, except the admin panel** (`/admin`, `src/Frontend/src/console`)
-  and the editor's Admin section that belongs to it (`control/AdminTab.tsx`),
-  which are English only; the section is named in the sidebar by the header's
-  word for the panel (`shell.admin`), which every language has. That includes the landing, `/build`, `/ship`, `/docs`,
-  `/showcase`, `/enterprise`, the legal pages, the create page, the editor, and
-  the page metadata in `pages.json`.
-- Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Frontend/src/i18n/languages.ts`,
-  mirrored in `Web/SiteLanguages.cs`). English is the source; every other
-  catalog is typed as it, so a missing string fails the frontend build. A new
-  language is added in both places, in every catalog, in `pages.json` and in the
-  social images.
-- The editor's words are a folder per language, `locales/<language>/editor/`:
-  a file for each section of the editor, named after its key, and an
-  `index.ts` that puts them together - so a change to one section touches one
-  file per language. A language's grammar helpers for the editor live beside
-  them in `language.ts`. A new section gets its file in English, its line in
-  every `index.ts`, and its translations from `apply`, which creates the
-  other languages' files.
+  languages, except the admin panel** (`/admin`, its bundle in
+  `src/GenHTTP.Lambda.Administration/Frontend`), which is English only; the
+  shell around it reads the kit's words. That includes both sites (the cloud's
+  landing, `/build`, `/ship` and legal pages; the community's front page), the
+  guide, the showcase, the published sources, the create page, the editor, the
+  runner's hosting pages and the page metadata in every table of pages.
+- **Every bundle has its own catalog** (`<component>/Frontend/src/locales/<language>/`),
+  and the kit's (`src/Kit/src/locales`) holds what several share: the shell,
+  what is said in many places, connecting an agent, the build box, the guide,
+  the showcase and the licenses. A bundle's site catalog is the kit's words
+  with its own (`defineSite`); the kit's components read the kit's part.
+- Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Kit/src/i18n/languages.ts`,
+  mirrored in `GenHTTP.Lambda.Web/SiteLanguages.cs`). English is the source;
+  every other catalog is typed as it, so a missing string fails the frontend
+  build. A new language is added in both places, in every catalog, in every
+  table of pages and in the social images.
+- The editor's words are a file per section and language
+  (`src/GenHTTP.Lambda.Editing/Frontend/src/locales/<language>/`), named
+  after its key, and an `index.ts` that puts them together - so a change to
+  one section touches one file per language. A language's grammar helpers for
+  the editor live beside them in `language.ts`. A new section gets its file in
+  English, its line in every `index.ts`, and its translations from `apply`,
+  which creates the other languages' files.
 - **Use the register that is normal for a product in that country**, and stay in
   it. Professional, never chummy or slangy; do not carry English idioms over
   literally. The form each language uses today:
@@ -1080,14 +1224,16 @@ with `LAMBDA_ENGINE=Kestrel`, and point `LAMBDA_WEB_ROOT` at
 Nobody reads a whole catalog to translate a sentence. A script hands each
 translator only what changed, and puts the answers back:
 
-1. Write the English - the catalogs in `src/Frontend/src/locales/en` and the
-   English titles and descriptions in `pages.json`. A new sentence whose place
-   is not plain from its key gets a doc comment saying where it appears: the
-   translator sees the comment, never the page.
-2. `npm run translations -- extract` (in `src/Frontend`) compares the English
+1. Write the English - the `en` folder of a catalog and the English titles
+   and descriptions of a table of pages (the script lists them all: `CATALOGS`
+   and `TABLES` in `src/Kit/scripts/translations.mjs`; a new catalog or table
+   is added there). A new sentence whose place is not plain from its key gets
+   a doc comment saying where it appears: the translator sees the comment,
+   never the page.
+2. `npm run translations -- extract` (at the root) compares the English
    with the base of the branch and writes requests into `.translations/`: per
    language its register from the table above, its fixed words from
-   `src/locales/glossary.json`, and each new or changed sentence with what the
+   `src/Kit/src/locales/glossary.json`, and each new or changed sentence with what the
    English said before and what the language says now. A large round is split
    into parts.
 3. One `translator` agent (`.claude/agents/translator.md`) per request, all at
@@ -1117,19 +1263,31 @@ translator only what changed, and puts the answers back:
 ## Documentation
 
 **The documentation must contain every feature and be kept up to date in the
-same change that changes the feature.** There are four places, and a feature
+same change that changes the feature.** There are five places, and a feature
 touches all that apply:
 
-1. `README.md` - routes, API, configuration, operations, how it fits together.
-2. `/docs` (`src/Frontend/src/locales/*/guide.tsx`) - for owners, in the
+1. `docs/reference.md` - routes, API, configuration, operations, how it fits
+   together. Where the other documents say "the reference", they mean it.
+2. `README.md` - the community edition for whoever might run it, written from
+   their use case - **decided by the owner**: what it *is* before what it
+   does (self-hosted hosting for the apps coding agents build), that hosting
+   it is one container and nothing else (no database server, one volume),
+   and that it hosts hundreds of apps, not one. Then what people build with
+   it, small screenshots of the features that matter (`docs/images/`, taken
+   from a real app on a local server, never mock-ups), how to run it,
+   connect an agent and the build agent, and what to know before letting
+   strangers build there. Not a reference: it links to one.
+3. `/docs` (`src/Kit/src/locales/*/guide.tsx`) - for owners, in the
    vocabulary of the simple view, translated.
-3. `platform_guide`, the MCP instructions and the tool descriptions
-   (`Api/Mcp`) - for agents; and `AGENTS.md` in every lambda's repository
-   (`Resources/Export/Agents.md.txt`) for an agent working in a clone.
-4. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
+4. `platform_guide`, the MCP instructions and the tool descriptions
+   (`GenHTTP.Lambda.Mcp`) - for agents; and `AGENTS.md` in every lambda's
+   repository (`Resources/Export/Agents.md.txt`) for an agent working in a
+   clone.
+5. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
    see below.
 
-The same rule is worded the same way in all of them.
+The same rule is worded the same way in all of them. Where an older rule
+here says "the README" for a feature, it means the reference.
 
 The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
@@ -1160,7 +1318,7 @@ GenHTTP's documentation attributes beside the code they describe.
 - **Tags are concepts, not classes**, in the order and groups of
   `ApiDocumentation` (`x-tagGroups`); a tag shared by several resources is
   described on one of them. The introduction everybody reads first is
-  `Resources/Api/Introduction.md`. The wording every route shares (the editor
+  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`. The wording every route shares (the editor
   key, a demo's refusal) is a constant of `ApiDocumentation`.
 - **Limits the operator sets are never written as numbers**: say where to
   read them (`GET /system`, the summary's `limits`). Fixed ones (100 secrets,

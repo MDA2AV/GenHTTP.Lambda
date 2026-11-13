@@ -1,0 +1,43 @@
+<Project>
+
+    <!-- what holds for every project of the repository, then what holds for its components -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <PropertyGroup>
+
+        <!--
+            .NET 11 can compile async methods into the runtime itself rather
+            than into a state machine class per method. A server is almost
+            entirely await, so this is where its allocation goes - and it is
+            decided when each assembly is compiled, so it is set for all of
+            them rather than only for the host.
+
+            Still a preview feature, hence the switch: build with
+            -p:RuntimeAsync=false to get the state machines back, which is the
+            first thing to try if something asynchronous starts misbehaving.
+        -->
+        <RuntimeAsync Condition="'$(RuntimeAsync)' == ''">true</RuntimeAsync>
+
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/MDA2AV/GenHTTP.Lambda</PackageProjectUrl>
+
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(RuntimeAsync)' == 'true'">
+        <Features>$(Features);runtime-async=on</Features>
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <!--
+            Refuses, at compile time, what the server must not call - EF
+            Core's async methods, waiting for a task, Task.Run (see
+            BannedSymbols.txt). Every component runs on the same reactors, so
+            every component is held to it.
+        -->
+        <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+        <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt" />
+
+    </ItemGroup>
+
+</Project>
