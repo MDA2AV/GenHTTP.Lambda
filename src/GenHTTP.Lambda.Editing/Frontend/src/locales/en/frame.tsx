@@ -23,7 +23,7 @@ export const frame = {
     analytics: 'Analytics',
     logs: 'Logs',
     /** Whether the code may connect to other servers - call an API, open a socket - which the operator allows, in the full view only. */
-    connectivity: 'Egress',
+    connectivity: 'Connectivity',
     /** Every file of a version - its code and its resources - to read and to change, in the full view only. */
     code: 'Code',
   },
