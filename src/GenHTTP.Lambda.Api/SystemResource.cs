@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Platform)]
 [Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
 [Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
-public sealed class SystemResource(ILimitsService limits, IBuildService builds, ISettingsService settings, ILambdaAddresses addresses,
+public sealed class SystemResource(ILimitsService limits, IBuildService builds, ILambdaAddresses addresses,
                                     LambdaOptions options)
 {
 
@@ -41,23 +41,9 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             ModuleCatalog.Imports,
             CompletionCatalog.Items,
             new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
-            addresses.Template
+            addresses.Template,
+            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages)
         );
-    }
-
-    /// <remarks>
-    /// Apart from the platform description, which carries the whole editor
-    /// vocabulary and is too much to ask for on every page.
-    /// </remarks>
-    [ResourceMethod("features")]
-    [Summary("Reads which pages the site links to")]
-    [Remarks("What the site asks on every page. Unrelated to the features of a lambda.")]
-    [return: Summary("Which pages are linked")]
-    public FeaturesResponse GetFeatures()
-    {
-        var current = settings.Get();
-
-        return new FeaturesResponse(current.EnterprisePage);
     }
 
     /// <summary>

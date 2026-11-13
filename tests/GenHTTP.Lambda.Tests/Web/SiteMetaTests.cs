@@ -55,8 +55,11 @@ public sealed class SiteMetaTests
     /// </summary>
     private static Func<LambdaOptions, LambdaOptions> Site(string? publicUrl = "https://genhttp.dev") => options =>
     {
-        File.WriteAllText(Path.Combine(options.WebRoot, "index.html"), Index);
-        File.WriteAllText(Path.Combine(options.WebRoot, "pages.json"), Pages);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "index.html"), Index);
+
+        // the editor is a bundle of its own, whose index is left as it is
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "editor"), "index.html"), Index);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "pages.json"), Pages);
 
         return options with { PublicUrl = publicUrl };
     };
@@ -134,7 +137,7 @@ public sealed class SiteMetaTests
         await using var fixture = await LambdaFixture.CreateAsync(options =>
         {
             options = Site()(options);
-            File.WriteAllText(Path.Combine(options.WebRoot, "pages.json"), pages);
+            File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "pages.json"), pages);
             return options;
         });
 

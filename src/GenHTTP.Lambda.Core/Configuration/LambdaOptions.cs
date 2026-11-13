@@ -68,11 +68,6 @@ public sealed record LambdaOptions
     public string DataDirectory { get; init; } = Path.Combine(AppContext.BaseDirectory, "data");
 
     /// <summary>
-    /// The directory holding the compiled single page application (index.html and assets).
-    /// </summary>
-    public string WebRoot { get; init; } = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-
-    /// <summary>
     /// How long a free tier lambda may go unused before it is taken offline.
     /// </summary>
     /// <remarks>
@@ -234,6 +229,25 @@ public sealed record LambdaOptions
     /// has nobody to agree terms with, so none are assumed.
     /// </remarks>
     public string? Terms { get; init; }
+
+    /// <summary>
+    /// Where to write to whoever runs this installation - about premium, for
+    /// one, which only they assign. Without, the pages offer nobody to write to.
+    /// </summary>
+    public string? Contact { get; init; }
+
+    /// <summary>
+    /// Where a lambda that does harm is reported. Without, the pages offer no
+    /// way to report one.
+    /// </summary>
+    public string? AbuseContact { get; init; }
+
+    /// <summary>
+    /// Whether the installation's site has terms, a privacy policy and an
+    /// imprint at <c>/terms</c>, <c>/privacy</c> and <c>/imprint</c>, which
+    /// the pages every installation shares then link to.
+    /// </summary>
+    public bool LegalPages { get; init; }
 
     /// <summary>
     /// How often a telemetry reading is taken.

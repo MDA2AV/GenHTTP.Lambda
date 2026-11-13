@@ -25,6 +25,9 @@
         <ProjectReference Include="../../src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
         <ProjectReference Include="../../src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
         <ProjectReference Include="../../src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
         <ProjectReference Include="../../src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
     </ItemGroup>
 

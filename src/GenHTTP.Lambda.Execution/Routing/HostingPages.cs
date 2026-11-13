@@ -24,14 +24,36 @@ namespace GenHTTP.Lambda.Execution;
 /// site's scripts are served there, and nothing of what the site keeps in a
 /// browser is ever on it.
 ///
-/// Their words are the build's, in <c>pages.json</c> beside the names of the
-/// site's pages, so they are translated with the rest; in the language the
-/// browser prefers, since a cookie of the site is never sent to this domain.
-/// Without a build they are in English.
+/// Their words are the runner's own, in <c>Resources/hosting.json</c> - a
+/// table like a bundle's <c>pages.json</c>, translated with the rest - in the
+/// language the browser prefers, since a cookie of the site is never sent to
+/// this domain. Nothing of a frontend build is needed to draw them.
 /// </remarks>
-public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
+public sealed class HostingPages(LambdaOptions options)
 {
     private const string Site = "GenHTTP Lambda";
+
+    /// <summary>The words of the page at the root of the hosting domain, with <c>{site}</c> where the site goes.</summary>
+    public const string HomeTemplate = "hosting:/";
+
+    /// <summary>The words of a subdomain nothing answers at, with <c>{address}</c> and <c>{site}</c>.</summary>
+    public const string MissingTemplate = "hosting:/:key";
+
+    private const string ImprintTemplate = "hosting:/imprint";
+
+    private const string PrivacyTemplate = "hosting:/privacy";
+
+    private readonly SiteMeta meta = SiteMeta.From(Words.Value, options.PublicUrl);
+
+    private static readonly Lazy<string> Words = new(() =>
+    {
+        using var stream = typeof(HostingPages).Assembly.GetManifestResourceStream("GenHTTP.Lambda.Execution.Resources.hosting.json")
+                           ?? throw new InvalidOperationException("The words of the hosting pages are missing from the assembly.");
+
+        using var reader = new StreamReader(stream);
+
+        return reader.ReadToEnd();
+    });
 
     private static readonly SiteText HomeFallback = new("Apps made with GenHTTP Lambda",
         "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of your own, go to {site}.");
@@ -87,7 +109,7 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
                           .Build();
         }
 
-        return Render(request, ResponseStatus.NotFound, SiteMeta.HostingMissingTemplate, MissingFallback, host);
+        return Render(request, ResponseStatus.NotFound, MissingTemplate, MissingFallback, host);
     }
 
     private IResponse Render(IRequest request, ResponseStatus status, string template, SiteText fallback, string host)
@@ -122,9 +144,9 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
                                                   .Replace("{site}", options.PublicUrl is { } named ? new Uri(named).Authority : Site, StringComparison.Ordinal));
 
         // who runs it and what is recorded of a visit, on the site's pages
-        // for both, named as the site names them in the same language
-        var legal = options.PublicUrl is { } root
-                        ? $"<small>{Legal(root, language, "/imprint", ImprintFallback)} · {Legal(root, language, "/privacy", PrivacyFallback)}</small>"
+        // for both - where it has them - named as the site names them
+        var legal = options.LegalPages && options.PublicUrl is { } root
+                        ? $"<small>{Legal(root, language, "/imprint", ImprintTemplate, ImprintFallback)} · {Legal(root, language, "/privacy", PrivacyTemplate, PrivacyFallback)}</small>"
                         : string.Empty;
 
         return $$"""
@@ -159,9 +181,9 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
             """;
     }
 
-    private string Legal(string root, string language, string page, SiteText fallback)
+    private string Legal(string root, string language, string page, string template, SiteText fallback)
     {
-        var (written, words) = meta.Words(page, language, fallback);
+        var (written, words) = meta.Words(template, language, fallback);
 
         return $"<a href=\"{Html.Encode(root + SiteLanguages.In(written, page))}\">{Html.Encode(words.Title)}</a>";
     }
@@ -182,7 +204,7 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
         {
             var status = request.Header.Path.ToString() == "/" ? ResponseStatus.Ok : ResponseStatus.NotFound;
 
-            return new(pages.Render(request, status, SiteMeta.HostingHomeTemplate, HomeFallback, request.GetHost()?.Name ?? string.Empty));
+            return new(pages.Render(request, status, HomeTemplate, HomeFallback, request.GetHost()?.Name ?? string.Empty));
         }
 
     }

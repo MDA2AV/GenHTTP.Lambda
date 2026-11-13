@@ -284,37 +284,17 @@ public sealed class AdminTests
     }
 
     [TestMethod]
-    public async Task TheEnterprisePageIsLinkedByDefault()
+    public async Task ThereIsNoPageOfPricesToLinkTo()
     {
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
-        using var response = await fixture.GetAsync("/api/v1/system/features");
+        using var page = await fixture.GetAsync("/en/enterprise", "text/html");
 
-        Assert.IsTrue((await response.GetContentAsync<FeaturesResponse>()).Enterprise);
-    }
-
-    [TestMethod]
-    public async Task TheEnterprisePageCanBeUnlinked()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
-
-        using var change = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", Token, new SettingsModel(false));
-
-        Assert.AreEqual(HttpStatusCode.OK, change.StatusCode);
-        Assert.IsFalse((await change.GetContentAsync<SettingsModel>()).EnterprisePage);
+        Assert.AreEqual(HttpStatusCode.NotFound, page.StatusCode, "the page of the enterprise edition's prices went with its switch");
 
         using var features = await fixture.GetAsync("/api/v1/system/features");
 
-        Assert.IsFalse((await features.GetContentAsync<FeaturesResponse>()).Enterprise);
-
-        using var settings = await Send(fixture, HttpMethod.Get, "/api/v1/admin/settings", Token);
-
-        Assert.IsFalse((await settings.GetContentAsync<SettingsModel>()).EnterprisePage);
-
-        // unlinked, not removed
-        using var page = await fixture.GetAsync("/enterprise", "text/html");
-
-        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, features.StatusCode, "and so did what the header asked about it");
     }
 
     [TestMethod]
@@ -322,13 +302,13 @@ public sealed class AdminTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
-        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(false));
+        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(BuildBox: false));
 
         Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
 
-        using var features = await fixture.GetAsync("/api/v1/system/features");
+        using var settings = await Send(fixture, HttpMethod.Get, "/api/v1/admin/settings", Token);
 
-        Assert.IsTrue((await features.GetContentAsync<FeaturesResponse>()).Enterprise);
+        Assert.IsTrue((await settings.GetContentAsync<SettingsModel>()).BuildBox, "nothing was changed");
     }
 
     #region Helpers

@@ -304,7 +304,7 @@ public sealed class AgentTests
         await using var agent = FakeAgent.Start();
         await using var fixture = await WithAgentAsync(agent);
 
-        using var off = await SwitchAsync(fixture, new SettingsModel(true, BuildBox: true, ChangeBox: false));
+        using var off = await SwitchAsync(fixture, new SettingsModel(BuildBox: true, ChangeBox: false));
 
         Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
 
@@ -331,7 +331,7 @@ public sealed class AgentTests
 
         Assert.IsTrue(await BuildOfferedAsync(fixture), "on by default");
 
-        using var off = await SwitchAsync(fixture, new SettingsModel(true, BuildBox: false, ChangeBox: true));
+        using var off = await SwitchAsync(fixture, new SettingsModel(BuildBox: false, ChangeBox: true));
 
         Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
 

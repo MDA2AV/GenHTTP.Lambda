@@ -15,4 +15,9 @@
         <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- the words of the pages the runner draws on its own, see HostingPages -->
+        <EmbeddedResource Include="Resources/hosting.json" WithCulture="false" />
+    </ItemGroup>
+
 </Project>

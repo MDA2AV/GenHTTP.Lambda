@@ -330,7 +330,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     {
         var current = settings.Get();
 
-        return new SettingsModel(current.EnterprisePage, current.BuildBox, current.ChangeBox);
+        return new SettingsModel(current.BuildBox, current.ChangeBox);
     }
 
     [ResourceMethod(Method.Put, "settings")]
@@ -339,12 +339,11 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [return: Summary("The settings, as they were saved")]
     public SettingsModel ChangeSettings(SettingsModel body)
     {
-        var saved = settings.Save(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
+        var saved = settings.Save(new SiteSettings(body.BuildBox, body.ChangeBox));
 
-        logger.LogInformation("Updated settings enterprisePage {EnterprisePage} buildBox {BuildBox} changeBox {ChangeBox} by operator",
-                              saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
+        logger.LogInformation("Updated settings buildBox {BuildBox} changeBox {ChangeBox} by operator", saved.BuildBox, saved.ChangeBox);
 
-        return new SettingsModel(saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
+        return new SettingsModel(saved.BuildBox, saved.ChangeBox);
     }
 
     #endregion

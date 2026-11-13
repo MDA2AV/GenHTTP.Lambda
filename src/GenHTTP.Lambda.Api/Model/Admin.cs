@@ -162,9 +162,7 @@ public sealed record LambdaOverviewResponse(
 
 [Summary("What the operator can switch on or off for the whole installation.")]
 public sealed record SettingsModel(
-    [Summary("Whether the header of the site links to the enterprise page")]
-    bool EnterprisePage,
-    [Summary("Whether `/build` offers its text box, where there is an agent")]
+    [Summary("Whether the site offers the text box that has the agent build an app, where there is an agent")]
     bool BuildBox = true,
     [Summary("Whether the Change section of the editor offers its text box, where there is an agent")]
     bool ChangeBox = true

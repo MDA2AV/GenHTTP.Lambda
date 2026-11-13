@@ -54,8 +54,8 @@ public sealed class SourcePageTests
 
     private static Func<LambdaOptions, LambdaOptions> Site(string? publicUrl = "https://genhttp.dev") => options =>
     {
-        File.WriteAllText(Path.Combine(options.WebRoot, "index.html"), Index);
-        File.WriteAllText(Path.Combine(options.WebRoot, "pages.json"), Pages);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "sources"), "index.html"), Index);
+        File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "sources"), "pages.json"), Pages);
 
         return options with { PublicUrl = publicUrl };
     };

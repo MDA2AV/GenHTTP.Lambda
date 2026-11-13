@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
 
+using GenHTTP.Lambda.Administration;
 using GenHTTP.Lambda.Api;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Cloud;
@@ -16,11 +17,13 @@ using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Testing;
 
+using GenHTTP.Lambda.Editing;
 using GenHTTP.Lambda.Execution;
 using GenHTTP.Lambda.Mcp;
 using GenHTTP.Lambda.Server;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Sources;
 
 using GenHTTP.Modules.Layouting;
 
@@ -133,22 +136,23 @@ internal sealed class LambdaFixture : IAsyncDisposable
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
-        var webRoot = Path.Combine(root, "wwwroot");
-
-        Directory.CreateDirectory(webRoot);
-
-        await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), SpaMarkup);
-
-        var options = new LambdaOptions
-        {
-            DataDirectory = root,
-            WebRoot = webRoot,
-            Terms = CloudTerms.Text
-        };
+        var options = CloudInstallation.Of(new LambdaOptions { DataDirectory = root });
 
         if (configure != null)
         {
             options = configure(options);
+        }
+
+        // a stand-in for each component's bundle, where a test did not write
+        // what it needs of a build there already (see BundleOf)
+        foreach (var bundle in Bundles)
+        {
+            var index = Path.Combine(BundleOf(options, bundle), "index.html");
+
+            if (!File.Exists(index))
+            {
+                await File.WriteAllTextAsync(index, SpaMarkup);
+            }
         }
 
         var book = new LogBook(options.LogHistory);
@@ -166,7 +170,10 @@ internal sealed class LambdaFixture : IAsyncDisposable
         var site = Layout.Create()
                          .Add("api", RestApi.Create(platform).Compiled(compiled))
                          .Add("mcp", McpServer.Create(platform))
-                         .Add(Website.Create(platform));
+                         .Add("editor", Editor.Create(platform).Bundle(BundleOf(options, "editor")))
+                         .Add("admin", AdminPanel.Create().Bundle(BundleOf(options, "admin")))
+                         .Add(SourcePages.Create(platform).Bundle(BundleOf(options, "sources")))
+                         .Add(Website.Create(platform).Bundle(BundleOf(options, "site")));
 
         var handler = LambdaServer.Create(platform)
                                   .Settings(server ?? new ServerSettings())
@@ -263,6 +270,19 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// The administration token of an installation made with <see cref="WithPanel"/>.
     /// </summary>
+    /// <summary>
+    /// The components with a bundle of their own.
+    /// </summary>
+    private static readonly string[] Bundles = ["site", "editor", "admin", "sources"];
+
+    /// <summary>
+    /// Where the fixture serves a component's bundle from: "site" for the
+    /// cloud's pages, "editor", "admin" or "sources" - for a test to put what
+    /// it needs of a build there before the application starts.
+    /// </summary>
+    public static string BundleOf(LambdaOptions options, string component)
+        => Directory.CreateDirectory(Path.Combine(options.DataDirectory, "bundles", component)).FullName;
+
     public const string OperatorToken = "a-token-nobody-would-guess";
 
     /// <summary>

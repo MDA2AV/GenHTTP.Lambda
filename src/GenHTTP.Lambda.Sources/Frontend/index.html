@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- the server names each page after its lambda (src/pages.json and the
+         lambda's showcase entry) and marks it up as SoftwareSourceCode -->
+    <meta name="description" content="The source code of apps made with GenHTTP Lambda, to read, star and download." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Open source - GenHTTP Lambda" />
+    <meta property="og:site_name" content="GenHTTP Lambda" />
+    <meta property="og:image" content="/source/social/default.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="%BASE_URL%favicon.ico" sizes="32x32" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+    <!-- the bar a phone draws above the page, in the colour of the theme; the
+         script below and the theme switch keep it in step -->
+    <meta name="theme-color" content="#202124" />
+    <title>Open source - GenHTTP Lambda</title>
+    <script>
+      // applied before the first paint so the page never flashes the wrong theme
+      (function () {
+        try {
+          var stored = localStorage.getItem('lambda-theme');
+          document.documentElement.classList.toggle('dark', stored !== 'light');
+          if (stored === 'light') {
+            document.querySelector('meta[name="theme-color"]').content = '#ffffff';
+          }
+        } catch (e) { /* private mode */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

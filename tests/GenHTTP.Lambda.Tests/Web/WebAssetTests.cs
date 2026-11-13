@@ -22,7 +22,7 @@ public sealed class WebAssetTests
     /// </summary>
     private static LambdaOptions WithBundle(LambdaOptions options)
     {
-        var assets = Path.Combine(options.WebRoot, "assets");
+        var assets = Path.Combine(LambdaFixture.BundleOf(options, "site"), "assets");
 
         Directory.CreateDirectory(assets);
 
@@ -113,7 +113,7 @@ public sealed class WebAssetTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(options =>
         {
-            var media = Path.Combine(options.WebRoot, "media");
+            var media = Path.Combine(LambdaFixture.BundleOf(options, "site"), "media");
 
             Directory.CreateDirectory(media);
 

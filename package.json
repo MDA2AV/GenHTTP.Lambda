@@ -1,0 +1,32 @@
+{
+  "name": "genhttp-lambda",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The frontends of GenHTTP Lambda: a kit they share, and one bundle per component that serves pages.",
+  "workspaces": [
+    "src/Kit",
+    "src/GenHTTP.Lambda.Editing/Frontend",
+    "src/GenHTTP.Lambda.Administration/Frontend",
+    "src/GenHTTP.Lambda.Sources/Frontend",
+    "src/GenHTTP.Lambda.Cloud/Frontend",
+    "src/GenHTTP.Lambda.Community/Frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "translations": "node src/Kit/scripts/translations.mjs"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
+    "@types/node": "^22.20.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.14"
+  }
+}

@@ -22,8 +22,20 @@ public sealed record PlatformResponse(
     IReadOnlyList<CompletionItem> Completions,
     [Summary("Whether the build agent is on offer, and how often")]
     BuildAvailability Build,
-    [Summary("Where a lambda answers, with `{key}` where its public key goes: `https://{key}.genhttp.run/`")]
-    string LambdaUrl
+    [Summary("Where a lambda answers, with `{key}` where its public key goes: `https://{key}.genhttp.run/`, or `http://localhost:8080/lambda/{key}/` where lambdas answer below a path")]
+    string LambdaUrl,
+    [Summary("Who runs the installation, as far as its pages have to say so")]
+    OperatorResponse Operator
+);
+
+[Summary("Who runs an installation, as far as its pages have to say so.")]
+public sealed record OperatorResponse(
+    [Summary("Where to write to them, about premium for one; absent where they name nobody")]
+    string? Contact,
+    [Summary("Where a lambda that does harm is reported; absent where there is nowhere")]
+    string? Abuse,
+    [Summary("Whether the site has its terms, privacy policy and imprint at `/terms`, `/privacy` and `/imprint`")]
+    bool Legal
 );
 
 [Summary("Something a new lambda can be started from.")]
@@ -36,10 +48,4 @@ public sealed record StarterResponse(
     string Description,
     [Summary("Where the demo it copies answers, to look at first; absent for the empty lambda")]
     string? Demo
-);
-
-[Summary("Which pages the site links to.")]
-public sealed record FeaturesResponse(
-    [Summary("Whether the header links to the enterprise page, which can be reached either way")]
-    bool Enterprise
 );

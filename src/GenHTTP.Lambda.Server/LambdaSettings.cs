@@ -54,7 +54,6 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             AgentFablePassword = ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
             AgentBuildsPerDay = ReadInt("LAMBDA_AGENT_BUILDS_PER_DAY", defaults.AgentBuildsPerDay),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
-            WebRoot = Path.GetFullPath(ReadString("LAMBDA_WEB_ROOT", defaults.WebRoot)),
             DeploymentLifetime = ReadSpan("LAMBDA_DEPLOYMENT_LIFETIME_HOURS", defaults.DeploymentLifetime),
             Retention = ReadSpan("LAMBDA_RETENTION_HOURS", defaults.Retention),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
@@ -93,6 +92,8 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             SecretsKey = ReadOptional("LAMBDA_SECRETS_KEY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
                          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            Contact = ReadOptional("LAMBDA_CONTACT"),
+            AbuseContact = ReadOptional("LAMBDA_ABUSE_CONTACT"),
             PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/'),
             HostingUrl = hosting,
             Addressing = Enum.TryParse<LambdaAddressing>(ReadOptional("LAMBDA_ADDRESSING"), true, out var chosen) ? chosen : addressed

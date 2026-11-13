@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- somebody's editor behind their key, or the operator's panel: nothing to be found -->
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="%BASE_URL%favicon.ico" sizes="32x32" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+    <!-- the bar a phone draws above the page, in the colour of the theme; the
+         script below and the theme switch keep it in step -->
+    <meta name="theme-color" content="#202124" />
+    <title>Editor - GenHTTP Lambda</title>
+    <script>
+      // applied before the first paint so the page never flashes the wrong theme
+      (function () {
+        try {
+          var stored = localStorage.getItem('lambda-theme');
+          document.documentElement.classList.toggle('dark', stored !== 'light');
+          if (stored === 'light') {
+            document.querySelector('meta[name="theme-color"]').content = '#ffffff';
+          }
+        } catch (e) { /* private mode */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

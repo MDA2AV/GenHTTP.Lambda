@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Git;
@@ -47,6 +48,8 @@ public sealed class GitRoutes : IHandler
 
     private readonly IHandler _git;
 
+    private readonly GitArea _area;
+
     private readonly IGitService _service;
 
     private readonly IMetaService _meta;
@@ -55,8 +58,9 @@ public sealed class GitRoutes : IHandler
 
     #region Initialization
 
-    public GitRoutes(IGitService service, IMetaService meta, LambdaOptions options, ILogger<GitRoutes> logger)
+    public GitRoutes(GitArea area, IGitService service, IMetaService meta, LambdaOptions options, ILogger<GitRoutes> logger)
     {
+        _area = area;
         _service = service;
         _meta = meta;
         _logger = logger;
@@ -78,7 +82,7 @@ public sealed class GitRoutes : IHandler
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        if (Parse(request.Header.Target) is not { } route)
+        if (Parse(_area, request.Header.Target) is not { } route)
         {
             return null;
         }
@@ -87,7 +91,7 @@ public sealed class GitRoutes : IHandler
         {
             // the repository's own address, opened in a browser
             return request.Header.Method == RequestMethod.Get || request.Header.Method == RequestMethod.Head
-                ? await Redirect.To(route.Owner ? $"/editor/{route.Key}" : $"/source/{route.Key}", true).Build().HandleAsync(request)
+                ? await Redirect.To(route.Owner ? PlatformRoutes.EditorOf(route.Key) : PlatformRoutes.SourceOf(route.Key), true).Build().HandleAsync(request)
                 : null;
         }
 
@@ -143,48 +147,51 @@ public sealed class GitRoutes : IHandler
     /// <param name="Fetching">Whether git asks what there is, which a clone, a fetch and a push begin with</param>
     private sealed record Route(bool Owner, string Key, int Skip, bool Fetching);
 
-    private static Route? Parse(IRequestTarget target)
+    /// <remarks>
+    /// Mounted by the component the area belongs to - the editor or the
+    /// published sources - below its own path, so the first segment it is
+    /// asked for is the key.
+    /// </remarks>
+    private static Route? Parse(GitArea area, IRequestTarget target)
     {
-        var area = target.Current?.Decode();
-
-        if (area is not ("editor" or "source") || target.Next(1)?.Decode() is not { Length: > 0 } second)
+        if (target.Current?.Decode() is not { Length: > 0 } first)
         {
             return null;
         }
 
         var rest = new List<string>();
 
-        for (var offset = 2; target.Next(offset) is { } segment && rest.Count < 4; offset++)
+        for (var offset = 1; target.Next(offset) is { } segment && rest.Count < 4; offset++)
         {
             rest.Add(segment.Decode());
         }
 
-        if (area == "source")
+        if (area == GitArea.Published)
         {
-            var named = second.EndsWith(".git", StringComparison.Ordinal);
+            var named = first.EndsWith(".git", StringComparison.Ordinal);
 
-            var key = named ? second[..^4] : second;
+            var key = named ? first[..^4] : first;
 
             if (named && rest.Count == 0)
             {
                 return new Route(false, key, 0, false);
             }
 
-            return Endpoint(rest) is { } endpoint ? new Route(false, key, 2, endpoint == 0) : null;
+            return Endpoint(rest) is { } endpoint ? new Route(false, key, 1, endpoint == 0) : null;
         }
 
         // below the editor's key: what git asks for, after a name or not
         if (Endpoint(rest) is { } direct)
         {
-            return new Route(true, second, 2, direct == 0);
+            return new Route(true, first, 1, direct == 0);
         }
 
         if (rest.Count == 1 && rest[0].EndsWith(".git", StringComparison.Ordinal))
         {
-            return new Route(true, second, 0, false);
+            return new Route(true, first, 0, false);
         }
 
-        return rest.Count > 1 && Endpoint(rest[1..]) is { } named2 ? new Route(true, second, 3, named2 == 0) : null;
+        return rest.Count > 1 && Endpoint(rest[1..]) is { } named2 ? new Route(true, first, 2, named2 == 0) : null;
     }
 
     /// <summary>
@@ -214,9 +221,23 @@ public sealed class GitRoutes : IHandler
 }
 
 /// <summary>
-/// Puts the repositories into the layout of the platform.
+/// Whose repositories a component serves.
 /// </summary>
-public sealed class GitRoutesBuilder(IGitService service, IMetaService meta, LambdaOptions options, ILogger<GitRoutes> logger) : IHandlerBuilder<GitRoutesBuilder>
+public enum GitArea
+{
+
+    /// <summary>The owner's, below the editor's key: <c>/editor/{privateKey}/{name}.git</c>.</summary>
+    Owned,
+
+    /// <summary>The published sources', for anybody: <c>/source/{publicKey}.git</c>.</summary>
+    Published
+
+}
+
+/// <summary>
+/// The repositories of an area, for the component it belongs to.
+/// </summary>
+public sealed class GitRoutesBuilder(GitArea area, IGitService service, IMetaService meta, LambdaOptions options, ILogger<GitRoutes> logger) : IHandlerBuilder<GitRoutesBuilder>
 {
     private readonly List<IConcernBuilder> _concerns = [];
 
@@ -226,6 +247,6 @@ public sealed class GitRoutesBuilder(IGitService service, IMetaService meta, Lam
         return this;
     }
 
-    public IHandler Build() => Concerns.Chain(_concerns, new GitRoutes(service, meta, options, logger));
+    public IHandler Build() => Concerns.Chain(_concerns, new GitRoutes(area, service, meta, options, logger));
 
 }

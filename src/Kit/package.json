@@ -1,0 +1,16 @@
+{
+  "name": "@genhttp-lambda/kit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "What the frontends of GenHTTP Lambda share, as source: the shell, the components, the words they have in common and the machinery to translate the rest. Each component bundles what it uses of it.",
+  "scripts": {
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "markdown-it": "^14.3.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0"
+  }
+}

@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Web;
@@ -68,27 +67,14 @@ public sealed class SiteMeta
     private static readonly SiteText SourceFallback = new("{name} - Source code",
         "The source code of {name}, an app built with GenHTTP Lambda: read it, download it and run it anywhere.");
 
-    /// <summary>
-    /// The entry of <c>pages.json</c> that holds the words of the page at the
-    /// root of the hosting domain, with <c>{site}</c> where the site goes.
-    /// </summary>
-    /// <remarks>
-    /// A template like <see cref="SourceTemplate"/>: that page is not one of
-    /// the site's, which only its words are taken for - so they are translated
-    /// with the rest, and the page needs nothing of the build but them.
-    /// </remarks>
-    public const string HostingHomeTemplate = "hosting:/";
-
-    /// <summary>
-    /// The entry that holds the words of the page at a subdomain of the
-    /// hosting domain nothing answers at, with <c>{address}</c> where the
-    /// address goes and <c>{site}</c> where the site goes.
-    /// </summary>
-    public const string HostingMissingTemplate = "hosting:/:key";
-
     #region Get-/Setters
 
-    private string PageFile { get; }
+    private string? PageFile { get; }
+
+    /// <summary>
+    /// The table where it is given rather than read from a bundle.
+    /// </summary>
+    private IReadOnlyDictionary<string, SiteEntry>? Fixed { get; }
 
     /// <summary>
     /// The address pages are canonical under, without a trailing slash.
@@ -99,11 +85,29 @@ public sealed class SiteMeta
 
     #region Initialization
 
-    public SiteMeta(LambdaOptions options)
+    /// <summary>
+    /// The pages of a bundle, named by the table its build put beside them.
+    /// </summary>
+    /// <param name="bundle">The bundle whose table it is</param>
+    /// <param name="publicUrl">Where the installation is found, which addresses are canonical under</param>
+    public SiteMeta(Bundle bundle, string? publicUrl)
     {
-        PageFile = Path.Combine(options.WebRoot, "pages.json");
-        PublicUrl = options.PublicUrl;
+        PageFile = bundle.PageFile;
+        PublicUrl = publicUrl;
     }
+
+    private SiteMeta(IReadOnlyDictionary<string, SiteEntry> table, string? publicUrl)
+    {
+        Fixed = table;
+        PublicUrl = publicUrl;
+    }
+
+    /// <summary>
+    /// A table that is part of an assembly rather than of a bundle - the words
+    /// of pages the server draws on its own.
+    /// </summary>
+    public static SiteMeta From(string json, string? publicUrl)
+        => new(JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(json, Json) ?? [], publicUrl);
 
     #endregion
 
@@ -247,11 +251,6 @@ public sealed class SiteMeta
             markup = InHead(markup, Alternates(page));
         }
 
-        if (page.Path == "/")
-        {
-            markup = InHead(markup, StructuredData.Render(Site, page.Description, page.Language));
-        }
-
         return markup;
     }
 
@@ -346,6 +345,14 @@ public sealed class SiteMeta
                                                                                                            .Select(hreflang => Alternate(hreflang, SiteLanguages.In(other, page.Key)))),
                                                              Alternate("x-default", page.Key))));
 
+        // the catalog of the published sources, which the component of the
+        // sources serves beside the site's pages, in every language - once
+        // there is something in it
+        var catalog = SiteLanguages.All.Select(language => new XElement(ns + "url",
+            new XElement(ns + "loc", PublicUrl + SiteLanguages.In(language, "/source")),
+            SiteLanguages.All.SelectMany(other => SiteLanguages.HreflangsOf(other).Select(hreflang => Alternate(hreflang, SiteLanguages.In(other, "/source")))),
+            Alternate("x-default", "/source")));
+
         // the page of each published source, when its newest version was saved
         // being when it last changed
         var template = ReadPages().GetValueOrDefault(SourceTemplate);
@@ -365,7 +372,7 @@ public sealed class SiteMeta
 
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
-            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published)
+            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, pages.ContainsKey("/source") || (sources ?? []).Count == 0 ? null : catalog, published)
         );
 
         return sitemap.Declaration + "\n" + sitemap;
@@ -485,6 +492,11 @@ public sealed class SiteMeta
     /// </remarks>
     private IReadOnlyDictionary<string, SiteEntry> ReadPages()
     {
+        if (Fixed != null || PageFile == null)
+        {
+            return Fixed ?? new Dictionary<string, SiteEntry>();
+        }
+
         var written = File.GetLastWriteTimeUtc(PageFile);
 
         if (_pages is { } known && known.Written == written)
@@ -556,7 +568,7 @@ public sealed class SiteMeta
         return existing.IsMatch(markup) ? existing.Replace(markup, _ => tag, 1) : InHead(markup, tag);
     }
 
-    private static string InHead(string markup, string element)
+    public static string InHead(string markup, string element)
     {
         var end = markup.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
 

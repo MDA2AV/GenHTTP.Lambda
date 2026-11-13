@@ -19,13 +19,19 @@
         <ProjectReference Include="../GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
         <ProjectReference Include="../GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
         <ProjectReference Include="../GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
     </ItemGroup>
 
     <ItemGroup>
 
-        <!-- the frontend is built into wwwroot by "npm run build" in src/Frontend -->
-        <None Remove="wwwroot/**" />
-        <Content Include="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <!-- the sources of the site's frontend and what npm builds them into are no part of the assembly -->
+        <None Remove="Frontend/**;bundle/**" />
+
+        <!-- the site's bundle, which "npm run build" puts into bundle/ (see Website) -->
+        <Content Include="bundle/**" Link="bundles/cloud/%(RecursiveDir)%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 
     </ItemGroup>
 

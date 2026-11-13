@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- the editor of a lambda behind its key, the page that creates one, and the owner’s git repositories -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Editing</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Editing</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the sources of the frontend and what npm builds them into are no part of the assembly -->
+        <None Remove="Frontend/**;bundle/**" />
+
+        <!--
+            The bundle "npm run build" puts into bundle/, carried into the
+            output of every host below bundles/editor/, where the component
+            looks for it (see Bundle.Beside).
+        -->
+        <Content Include="bundle/**" Link="bundles/editor/%(RecursiveDir)%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+</Project>

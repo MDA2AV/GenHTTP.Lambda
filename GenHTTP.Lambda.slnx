@@ -6,6 +6,9 @@
         <Project Path="src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
         <Project Path="src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
         <Project Path="src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
     </Folder>
     <Folder Name="/hosts/">
         <Project Path="src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />

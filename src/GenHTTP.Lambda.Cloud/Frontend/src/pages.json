@@ -1,0 +1,551 @@
+{
+  "/": {
+    "image": "/social/default.png",
+    "text": {
+      "id": {
+        "title": "Buat Aplikasi dengan AI, Hosting Gratis",
+        "description": "Ceritakan aplikasi Anda: AI membuat dan meng-hosting-nya, lengkap dengan link. Pakai agen kami atau Claude Code, Codex, Cursor. Gratis, tanpa daftar.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "KI-App-Builder mit kostenlosem Hosting",
+        "description": "Apps mit KI erstellen: Die KI baut und hostet die App, Sie teilen den Link. Mit unserem Agenten oder Claude Code, Codex, Cursor. Kostenlos, ohne Anmeldung.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "AI App Builder with Free Hosting",
+        "description": "Describe an app and AI builds it, hosts it and gives you a link to share. Use our agent or your own: Claude Code, Codex, Cursor. Free, no sign-up."
+      },
+      "es": {
+        "title": "Crear una app con IA gratis",
+        "description": "Describe una app: la IA la crea, la aloja y te da un enlace para compartir. Con nuestro agente o el tuyo: Claude Code, Codex, Cursor. Gratis, sin registro.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Créer une app avec l’IA gratuitement",
+        "description": "Décrivez une app : l’IA la crée, l’héberge et vous donne un lien. Notre agent ou le vôtre : Claude Code, Codex, Cursor. Gratuit, sans inscription.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Creare un’app con l’AI gratis",
+        "description": "Descrivi un’app: l’AI la crea, la ospita e ti dà un link. Con il nostro agente o il tuo: Claude Code, Codex, Cursor. Gratis, senza registrazione.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "App maken met AI, inclusief gratis hosting",
+        "description": "Beschrijf een app en AI bouwt hem, host hem en geeft je een link om te delen. Met onze agent of je eigen: Claude Code, Codex, Cursor. Gratis, geen account.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Kreator aplikacji AI z darmowym hostingiem",
+        "description": "Stwórz aplikację z AI: opisz ją, a AI ją zbuduje, zahostuje i da ci link. Nasz agent albo twój: Claude Code, Codex, Cursor. Za darmo, bez rejestracji.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Criar apps com IA, com hospedagem grátis",
+        "description": "Descreva um app e a IA cria, hospeda e entrega um link para compartilhar. Use o nosso agente ou o seu: Claude Code, Codex, Cursor. Grátis, sem cadastro.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Criar apps com IA, com alojamento grátis",
+        "description": "Descreve uma app e a IA cria-a, aloja-a e dá-te um link para partilhar. Usa o nosso agente ou o teu: Claude Code, Codex, Cursor. Grátis, sem registo.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Yapay Zekâ ile Uygulama Yapın ve Yayınlayın",
+        "description": "Uygulamanızı anlatın; yapay zekâ yapsın, barındırsın, linkini versin. Ya da kendi ajanınızı kullanın: Claude Code, Codex, Cursor. Ücretsiz, üyeliksiz.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "AIでアプリ作成から公開まで｜無料",
+        "description": "作りたいアプリを伝えるだけで、AIが作成してホスティングし、共有リンクが届きます。このサイトのエージェントでも、Claude Code・Codex・Cursorでも。無料・登録不要。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "AI로 앱 만들고 무료로 배포하기",
+        "description": "만들고 싶은 앱을 말하면 AI가 만들고 호스팅까지 해서 공유 링크를 줘요. 저희 에이전트도, Claude Code·Codex·Cursor 같은 내 에이전트도 좋아요. 무료, 가입 없이.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
+  "/build": {
+    "image": "/social/build.png",
+    "text": {
+      "id": {
+        "title": "Buat Website dengan AI Gratis, Tanpa Coding",
+        "description": "Ceritakan ide Anda, AI membuat website atau aplikasinya. Kami yang meng-hosting, jadi langsung online dengan link. Gratis, tanpa daftar, tanpa coding.",
+        "image": "/social/id/build.jpg"
+      },
+      "de": {
+        "title": "Website mit KI erstellen – kostenlos",
+        "description": "Beschreiben Sie Ihre Idee, die KI erstellt Website oder App. Wir hosten sie – in Minuten online, mit Link zum Teilen. Ohne Anmeldung, ohne Programmieren.",
+        "image": "/social/de/build.jpg"
+      },
+      "en": {
+        "title": "Create a Website with AI: Free, No Sign-Up",
+        "description": "Describe your idea and AI builds the website or app for you. We host it, so it is online in minutes with a link to share. Free, no sign-up, no coding."
+      },
+      "es": {
+        "title": "Crear una página web con IA gratis",
+        "description": "Describa su idea: la IA crea la página web y nosotros la alojamos. En línea en minutos, con un enlace para compartir. Gratis, sin registro, sin programar.",
+        "image": "/social/es/build.jpg"
+      },
+      "fr": {
+        "title": "Créer un site web gratuit avec l’IA",
+        "description": "Décrivez votre idée : l’IA crée le site, nous l’hébergeons. En ligne en quelques minutes, avec un lien à partager. Gratuit, sans inscription, sans coder.",
+        "image": "/social/fr/build.jpg"
+      },
+      "it": {
+        "title": "Creare un sito web con l’AI, gratis",
+        "description": "Descriva la Sua idea: l’AI crea il sito web, noi lo ospitiamo. Online in pochi minuti, con un link da condividere. Gratis, senza registrazione né codice.",
+        "image": "/social/it/build.jpg"
+      },
+      "nl": {
+        "title": "Gratis website maken met AI, zonder account",
+        "description": "Beschrijf je idee en AI maakt de website of app voor je. Wij hosten hem: binnen minuten online, met een link om te delen. Gratis, zonder programmeren.",
+        "image": "/social/nl/build.jpg"
+      },
+      "pl": {
+        "title": "Stwórz stronę internetową z AI za darmo",
+        "description": "Opisz pomysł, a AI stworzy stronę internetową lub aplikację. Hostujemy ją – online w kilka minut, z linkiem. Za darmo, bez rejestracji, bez programowania.",
+        "image": "/social/pl/build.jpg"
+      },
+      "pt": {
+        "title": "Criar site com IA grátis e sem cadastro",
+        "description": "Descreva sua ideia e a IA cria o site ou app para você. Nós hospedamos: no ar em minutos, com link para compartilhar. Grátis, sem cadastro, sem programar.",
+        "image": "/social/pt/build.jpg"
+      },
+      "pt-pt": {
+        "title": "Criar site com IA grátis e sem registo",
+        "description": "Descreve a tua ideia e a IA cria o site ou a app por ti. Nós alojamo-lo: online em minutos, com um link para partilhar. Grátis, sem registo, sem programar.",
+        "image": "/social/pt-pt/build.jpg"
+      },
+      "tr": {
+        "title": "Yapay Zekâ ile Ücretsiz Web Sitesi Yapın",
+        "description": "Fikrinizi anlatın, yapay zekâ web sitenizi ya da uygulamanızı yapsın. Hosting bizden, dakikalar içinde linkiyle yayında. Ücretsiz, üyeliksiz, kod bilmeden.",
+        "image": "/social/tr/build.jpg"
+      },
+      "ja": {
+        "title": "AIでホームページ作成｜無料・登録不要",
+        "description": "アイデアを伝えるだけで、AIがホームページやアプリを作成。サーバーもドメインも不要で、数分で公開、共有リンク付き。プログラミング不要・登録不要・無料。",
+        "image": "/social/ja/build.jpg"
+      },
+      "ko": {
+        "title": "AI로 홈페이지 만들기: 무료, 가입 없이",
+        "description": "아이디어만 말하면 AI가 홈페이지나 앱을 만들어 줘요. 호스팅은 저희가 해서 몇 분 만에 온라인, 공유 링크까지. 코딩도, 서버도, 도메인도 필요 없고 무료예요.",
+        "image": "/social/ko/build.jpg"
+      }
+    }
+  },
+  "/ship": {
+    "image": "/social/ship.png",
+    "text": {
+      "id": {
+        "title": "Deploy Gratis Aplikasi Buatan AI + Database",
+        "description": "Masih di localhost? Minta Claude Code, Codex, atau Cursor men-deploy aplikasi Anda di sini: link publik, database, dan multiplayer. Gratis, tanpa daftar.",
+        "image": "/social/id/ship.jpg"
+      },
+      "de": {
+        "title": "App kostenlos hosten und online stellen",
+        "description": "Ihre App läuft nur auf localhost? Claude Code, Codex oder Cursor stellt sie hier online: öffentlicher Link in Minuten, Datenbank inklusive. Ohne Anmeldung.",
+        "image": "/social/de/ship.jpg"
+      },
+      "en": {
+        "title": "Host Your Vibe-Coded App for Free",
+        "description": "App stuck on localhost? Ask Claude Code, Codex or Cursor to publish it here: a public link in minutes, database and multiplayer built in. Free, no sign-up."
+      },
+      "es": {
+        "title": "Publica tu app web gratis",
+        "description": "¿Tu app solo funciona en localhost? Pide a Claude Code, Codex o Cursor que la suba a internet, con base de datos y multijugador. Gratis y sin registro.",
+        "image": "/social/es/ship.jpg"
+      },
+      "fr": {
+        "title": "Mettre en ligne votre app web gratuitement",
+        "description": "App en localhost ? Claude Code, Codex ou Cursor la met en ligne ici en quelques minutes, base de données et multijoueur inclus. Gratuit, sans inscription.",
+        "image": "/social/fr/ship.jpg"
+      },
+      "it": {
+        "title": "Pubblica la tua web app online gratis",
+        "description": "La tua app gira solo su localhost? Claude Code, Codex o Cursor la mettono online in pochi minuti, con database e multiplayer. Gratis, senza registrazione.",
+        "image": "/social/it/ship.jpg"
+      },
+      "nl": {
+        "title": "Je app of website gratis online zetten",
+        "description": "Draait je app alleen op localhost? Laat Claude Code, Codex of Cursor hem online zetten: in minuten een openbare link, met database. Gratis, geen account.",
+        "image": "/social/nl/ship.jpg"
+      },
+      "pl": {
+        "title": "Darmowy hosting aplikacji webowych",
+        "description": "Aplikacja działa tylko na localhost? Claude Code, Codex albo Cursor opublikuje ją tutaj: link w kilka minut, z bazą danych. Za darmo, bez rejestracji.",
+        "image": "/social/pl/ship.jpg"
+      },
+      "pt": {
+        "title": "Publique seu app feito com IA de graça",
+        "description": "App preso no localhost? Peça ao Claude Code, Codex ou Cursor para publicar: link público em minutos, banco de dados e multiplayer. Grátis, sem cadastro.",
+        "image": "/social/pt/ship.jpg"
+      },
+      "pt-pt": {
+        "title": "Publicar a tua app feita com IA, grátis",
+        "description": "App presa em localhost? Pede ao Claude Code, Codex ou Cursor que a publique online: link em minutos, base de dados e multijogador. Grátis, sem registo.",
+        "image": "/social/pt-pt/ship.jpg"
+      },
+      "tr": {
+        "title": "Vibe Coding Projenizi Ücretsiz Yayınlayın",
+        "description": "Uygulamanız localhost’ta mı kaldı? Claude Code, Codex ya da Cursor burada yayınlasın; veritabanı ve çok oyunculu mod dahil. Ücretsiz, üyeliksiz.",
+        "image": "/social/tr/ship.jpg"
+      },
+      "ja": {
+        "title": "AIで作ったWebアプリを無料で公開",
+        "description": "localhostでしか動かないアプリを、Claude Code・Codex・Cursorに頼んでここで公開。数分で公開リンクが届き、データベースとマルチプレイも標準搭載。無料・登録不要。",
+        "image": "/social/ja/ship.jpg"
+      },
+      "ko": {
+        "title": "바이브 코딩으로 만든 앱, 무료로 배포하기",
+        "description": "localhost에서만 돌아가는 앱, Claude Code·Codex·Cursor에게 여기에 배포해 달라고 하세요. 몇 분이면 공개 링크가 생기고 DB와 멀티플레이도 기본이에요. 무료, 가입 없이.",
+        "image": "/social/ko/ship.jpg"
+      }
+    }
+  },
+  "/showcase": {
+    "image": "/social/showcase.png",
+    "text": {
+      "id": {
+        "title": "Showcase Aplikasi Buatan AI",
+        "description": "Aplikasi web yang dibuat di sini dengan agen AI dan dipamerkan pemiliknya: game, tool, halaman, dan layanan yang sedang online. Buka langsung di browser.",
+        "image": "/social/id/showcase.jpg"
+      },
+      "de": {
+        "title": "Showcase",
+        "description": "Web-Apps, die hier mit einem KI-Agenten gebaut wurden: Spiele, Tools, Seiten und Dienste, die gerade laufen. Jede öffnet sich direkt im Browser.",
+        "image": "/social/de/showcase.jpg"
+      },
+      "en": {
+        "title": "Showcase",
+        "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
+      },
+      "es": {
+        "title": "Galería de apps creadas con IA",
+        "description": "Apps web que la gente creó aquí con un agente de IA y quiso mostrar: juegos, herramientas, páginas y servicios, funcionando ahora. Ábrelas en tu navegador.",
+        "image": "/social/es/showcase.jpg"
+      },
+      "fr": {
+        "title": "Vitrine : apps créées avec l’IA",
+        "description": "Des apps web créées ici avec un agent IA et montrées par leurs auteurs : jeux, outils, pages, services. Toutes en ligne, à ouvrir dans votre navigateur.",
+        "image": "/social/fr/showcase.jpg"
+      },
+      "it": {
+        "title": "Vetrina: app create con l’AI",
+        "description": "App web create qui con un agente AI e messe in mostra da chi le ha fatte: giochi, strumenti, pagine e servizi, online adesso. Provale nel browser.",
+        "image": "/social/it/showcase.jpg"
+      },
+      "nl": {
+        "title": "Showcase",
+        "description": "Webapps die mensen hier met een AI-agent bouwden en graag laten zien: games, tools, pagina's en diensten die nu live zijn. Open ze direct in je browser.",
+        "image": "/social/nl/showcase.jpg"
+      },
+      "pl": {
+        "title": "Galeria aplikacji zrobionych z AI",
+        "description": "Aplikacje webowe zbudowane tu z agentem AI i pokazane przez ich twórców: gry, narzędzia, strony i usługi. Wszystkie działają – otwórz dowolną.",
+        "image": "/social/pl/showcase.jpg"
+      },
+      "pt": {
+        "title": "Vitrine de apps",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas rodando agora. Abra qualquer um no navegador.",
+        "image": "/social/pt/showcase.jpg"
+      },
+      "pt-pt": {
+        "title": "Montra de apps feitas com IA",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas, online agora. Abre qualquer uma no browser.",
+        "image": "/social/pt-pt/showcase.jpg"
+      },
+      "tr": {
+        "title": "Uygulama vitrini",
+        "description": "İnsanların burada yapay zekâ ajanıyla yaptığı web uygulamaları: oyunlar, araçlar, sayfalar. Hepsi şu an çalışıyor, tarayıcınızda hemen açın.",
+        "image": "/social/tr/showcase.jpg"
+      },
+      "ja": {
+        "title": "AIで作ったアプリのショーケース",
+        "description": "AIエージェントと一緒にここで作られたWebアプリを紹介します。ゲーム、ツール、ページ、サービスが、いまも動いています。どれもブラウザーですぐに開けます。",
+        "image": "/social/ja/showcase.jpg"
+      },
+      "ko": {
+        "title": "AI로 만든 앱 쇼케이스",
+        "description": "사람들이 여기서 AI 에이전트로 만들어 직접 공개한 웹앱이에요. 게임, 도구, 페이지, 서비스가 지금 실행 중이에요. 브라우저에서 바로 열어 보세요.",
+        "image": "/social/ko/showcase.jpg"
+      }
+    }
+  },
+  "/docs": {
+    "image": "/social/docs.png",
+    "text": {
+      "id": {
+        "title": "Cara Kerja dan Dokumentasi",
+        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat HTTPS publik dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya.",
+        "image": "/social/id/docs.jpg"
+      },
+      "de": {
+        "title": "So funktioniert es",
+        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt.",
+        "image": "/social/de/docs.jpg"
+      },
+      "en": {
+        "title": "How It Works",
+        "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+      },
+      "es": {
+        "title": "Cómo funciona",
+        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la vas a usar.",
+        "image": "/social/es/docs.jpg"
+      },
+      "fr": {
+        "title": "Documentation : comment ça marche",
+        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé en HTTPS, à une adresse publique, en quelques secondes. Toute la plateforme, étape par étape.",
+        "image": "/social/fr/docs.jpg"
+      },
+      "it": {
+        "title": "Guida: come funziona",
+        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo.",
+        "image": "/social/it/docs.jpg"
+      },
+      "nl": {
+        "title": "Zo werkt het",
+        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een openbaar HTTPS-adres. Het hele platform, in de volgorde waarin je het tegenkomt.",
+        "image": "/social/nl/docs.jpg"
+      },
+      "pl": {
+        "title": "Dokumentacja: jak to działa",
+        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod publiczny adres HTTPS. Cała platforma w kolejności, w jakiej ją poznasz.",
+        "image": "/social/pl/docs.jpg"
+      },
+      "pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar.",
+        "image": "/social/pt/docs.jpg"
+      },
+      "pt-pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço HTTPS público em segundos. A plataforma toda, pela ordem em que a vais usar.",
+        "image": "/social/pt-pt/docs.jpg"
+      },
+      "tr": {
+        "title": "Nasıl çalışır",
+        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde herkese açık bir HTTPS adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla.",
+        "image": "/social/tr/docs.jpg"
+      },
+      "ja": {
+        "title": "仕組みとドキュメント",
+        "description": "C#のスニペットを書くと、返したものが数秒でHTTPSの公開URLにホストされます。プラットフォームの全体を、実際に使う順に説明します。",
+        "image": "/social/ja/docs.jpg"
+      },
+      "ko": {
+        "title": "작동 방식과 개발 문서",
+        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 공개 HTTPS 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요.",
+        "image": "/social/ko/docs.jpg"
+      }
+    }
+  },
+  "/terms": {
+    "text": {
+      "id": {
+        "title": "Ketentuan Layanan",
+        "description": "Aturan pemakaian GenHTTP Lambda: apa yang tidak boleh di-host di sini, berapa lama aplikasi tetap online, dan bagaimana penyalahgunaan ditangani.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Nutzungsbedingungen",
+        "description": "Die Regeln für GenHTTP Lambda: was hier nicht gehostet werden darf, wie lange Apps online bleiben und wie wir mit Missbrauch umgehen.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Terms of Service",
+        "description": "The rules for using GenHTTP Lambda: what may not be hosted here, how long apps stay online and how abuse is handled."
+      },
+      "es": {
+        "title": "Condiciones del servicio",
+        "description": "Las reglas para usar GenHTTP Lambda: qué no se puede alojar aquí, cuánto tiempo siguen en línea las apps y cómo gestionamos los abusos.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Conditions d’utilisation",
+        "description": "Les règles de GenHTTP Lambda : ce qui est interdit ici, combien de temps les apps restent en ligne et comment nous traitons les abus.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Termini di servizio",
+        "description": "Le regole per usare GenHTTP Lambda: cosa non si può ospitare qui, per quanto tempo le app restano online e come gestiamo gli abusi.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Gebruiksvoorwaarden",
+        "description": "De regels voor GenHTTP Lambda: wat je hier niet mag hosten, hoe lang apps online blijven en hoe we met misbruik omgaan.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Regulamin",
+        "description": "Zasady korzystania z GenHTTP Lambda: czego nie wolno tu hostować, jak długo aplikacje zostają online i co robimy ze zgłoszeniami nadużyć.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Termos de uso",
+        "description": "As regras para usar o GenHTTP Lambda: o que não pode ser hospedado aqui, quanto tempo os apps ficam no ar e como tratamos denúncias de abuso.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Termos de utilização",
+        "description": "As regras de utilização do GenHTTP Lambda: o que não pode ser alojado aqui, quanto tempo as apps ficam online e como tratamos denúncias de abuso.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Kullanım koşulları",
+        "description": "GenHTTP Lambda’nın kullanım kuralları: burada neler barındırılamaz, uygulamalar ne kadar süre yayında kalır ve kötüye kullanım nasıl ele alınır.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "利用規約",
+        "description": "GenHTTP Lambdaの利用ルールです。ここに置いてはいけないもの、アプリがオンラインでいられる期間、不正利用への対応をまとめています。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "이용약관",
+        "description": "GenHTTP Lambda 이용 규칙이에요. 여기에 올리면 안 되는 것, 앱이 얼마나 오래 온라인에 유지되는지, 악용 신고를 어떻게 처리하는지 알려 드려요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
+  "/privacy": {
+    "text": {
+      "id": {
+        "title": "Kebijakan Privasi",
+        "description": "Apa yang dicatat GenHTTP Lambda tentang Anda dan alasannya: log permintaan, apa yang dikirim agen build ke Anthropic, cookie, lama penyimpanan, dan hak Anda.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Datenschutzerklärung",
+        "description": "Was GenHTTP Lambda über Sie speichert und warum: das Anfrage-Log, was der Build-Agent an Anthropic schickt, Cookies, Speicherdauer und Ihre Rechte.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Privacy Policy",
+        "description": "What GenHTTP Lambda records about you and why: the request log, what the build agent sends to Anthropic, cookies, how long it is kept, and your rights."
+      },
+      "es": {
+        "title": "Política de privacidad",
+        "description": "Qué guarda GenHTTP Lambda sobre ti y por qué: el registro de peticiones, lo que el agente envía a Anthropic, las cookies, cuánto se conserva y tus derechos.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Politique de confidentialité",
+        "description": "Ce que GenHTTP Lambda enregistre sur vous et pourquoi : journal des requêtes, ce que l’agent envoie à Anthropic, cookies, durée de conservation et vos droits.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Informativa sulla privacy",
+        "description": "Cosa registra GenHTTP Lambda su di te e perché: il log delle richieste, cosa invia l’agente ad Anthropic, i cookie, i tempi di conservazione e i tuoi diritti.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Privacybeleid",
+        "description": "Wat GenHTTP Lambda over je vastlegt en waarom: het verzoeklog, wat de bouwagent naar Anthropic stuurt, cookies, hoe lang we het bewaren en je rechten.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Polityka prywatności",
+        "description": "Co GenHTTP Lambda zapisuje o tobie i dlaczego: log żądań, co agent do budowania wysyła do Anthropic, pliki cookie, jak długo to trzymamy i twoje prawa.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Política de privacidade",
+        "description": "O que o GenHTTP Lambda registra sobre você e por quê: o log de requisições, o que o agente envia à Anthropic, cookies, por quanto tempo guarda e seus direitos.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Política de privacidade",
+        "description": "O que o GenHTTP Lambda regista sobre ti e porquê: o log de pedidos, o que o agente envia à Anthropic, os cookies, quanto tempo fica guardado e os teus direitos.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Gizlilik politikası",
+        "description": "GenHTTP Lambda’nın sizinle ilgili neleri, neden kaydettiği: istek logu, ajanın Anthropic’e gönderdikleri, çerezler, saklama süresi ve haklarınız.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "プライバシーポリシー",
+        "description": "GenHTTP Lambdaが記録する情報とその理由です。リクエストのログ、エージェントがAnthropicに送る内容、Cookie、保存期間、あなたの権利をまとめています。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "개인정보 처리방침",
+        "description": "GenHTTP Lambda가 무엇을 왜 기록하는지 알려 드려요. 요청 로그, 빌드 에이전트가 Anthropic에 보내는 내용, 쿠키, 보관 기간, 이용자의 권리를 다뤄요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
+  "/imprint": {
+    "text": {
+      "id": {
+        "title": "Informasi Hukum",
+        "description": "Siapa yang mengelola GenHTTP Lambda: penyedia dan alamat yang diwajibkan hukum Jerman, cara menghubungi kami, dan titik kontak menurut DSA.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Impressum",
+        "description": "Wer GenHTTP Lambda betreibt: Anbieter und Anschrift nach § 5 DDG, wie Sie uns erreichen und unsere Kontaktstelle nach dem Gesetz über digitale Dienste.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Legal Notice",
+        "description": "Who runs GenHTTP Lambda: the provider and address German law asks for, how to reach us, and our contact point under the Digital Services Act."
+      },
+      "es": {
+        "title": "Aviso legal",
+        "description": "Quién gestiona GenHTTP Lambda: prestador y dirección según la ley alemana, cómo contactarnos y el punto de contacto del Reglamento de Servicios Digitales.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Mentions légales",
+        "description": "Qui édite GenHTTP Lambda : l’éditeur et l’adresse exigés par la loi allemande, comment nous joindre et notre point de contact au titre du DSA.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Note legali",
+        "description": "Chi gestisce GenHTTP Lambda: fornitore e indirizzo richiesti dalla legge tedesca, come contattarci e il punto di contatto ai sensi del DSA.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Colofon",
+        "description": "Wie GenHTTP Lambda beheert: de aanbieder en het adres die de Duitse wet vraagt, hoe je ons bereikt en ons contactpunt volgens de DSA.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Nota prawna",
+        "description": "Kto prowadzi GenHTTP Lambda: usługodawca i adres wymagane przez niemieckie prawo, jak się z nami skontaktować i nasz punkt kontaktowy według DSA.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Aviso legal",
+        "description": "Quem administra o GenHTTP Lambda: provedor e endereço exigidos pela lei alemã, como nos contatar e o ponto de contato segundo o DSA.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Aviso legal",
+        "description": "Quem gere o GenHTTP Lambda: prestador e morada exigidos pela lei alemã, como nos contactar e o ponto de contacto ao abrigo do DSA.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Künye",
+        "description": "GenHTTP Lambda’yı kim işletiyor: Alman hukukunun istediği sağlayıcı ve adres bilgileri, bize nasıl ulaşabileceğiniz ve DSA kapsamındaki iletişim noktamız.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "運営者情報",
+        "description": "GenHTTP Lambdaの運営者情報です。ドイツの法律で求められる運営者名と住所、連絡先、デジタルサービス法（DSA）に基づく連絡窓口を記載しています。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "법적 고지",
+        "description": "GenHTTP Lambda를 누가 운영하는지 알려 드려요. 독일 법이 요구하는 운영자와 주소, 연락처, 디지털 서비스법(DSA)에 따른 연락 창구를 안내해요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  }
+}

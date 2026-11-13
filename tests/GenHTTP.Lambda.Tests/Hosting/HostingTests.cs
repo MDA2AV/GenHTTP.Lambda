@@ -302,18 +302,6 @@ public sealed class HostingTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { HostingUrl = "https://genhttp.run", PublicUrl = "https://genhttp.dev" });
 
-        await File.WriteAllTextAsync(Path.Combine(fixture.Options.WebRoot, "pages.json"), JsonSerializer.Serialize(new Dictionary<string, object>
-        {
-            ["hosting:/"] = new
-            {
-                text = new Dictionary<string, object>
-                {
-                    ["en"] = new { title = "Apps", description = "Made at {site}." },
-                    ["de"] = new { title = "Apps hier", description = "Gemacht auf {site}." }
-                }
-            }
-        }));
-
         using var request = fixture.Request("https://genhttp.run/");
 
         request.Headers.Add("Accept-Language", "de-AT,de;q=0.9,en;q=0.5");
@@ -323,13 +311,13 @@ public sealed class HostingTests
         var markup = await page.GetContentAsync();
 
         Assert.Contains("<html lang=\"de\">", markup);
-        Assert.Contains("Gemacht auf <a href=\"https://genhttp.dev/\">genhttp.dev</a>.", markup);
+        Assert.Contains("gehen Sie zu <a href=\"https://genhttp.dev/\">genhttp.dev</a>.", markup);
         Assert.AreEqual("de", page.Content.Headers.ContentLanguage.Single());
         Assert.IsTrue(page.Headers.Vary.Contains("Accept-Language"));
 
         using var english = await fixture.GetAsync("https://genhttp.run/");
 
-        Assert.Contains("Made at", await english.GetContentAsync(), "and in English where the browser asks for none of the languages");
+        Assert.Contains("go to <a href=\"https://genhttp.dev/\">genhttp.dev</a>.", await english.GetContentAsync(), "and in English where the browser asks for none of the languages");
     }
 
     [TestMethod]

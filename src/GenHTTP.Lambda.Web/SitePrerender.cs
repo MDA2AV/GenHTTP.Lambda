@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 
 using GenHTTP.Api.Protocol;
 
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Showcase;
@@ -48,7 +47,7 @@ public sealed partial class SitePrerender
 
     private string File { get; }
 
-    private LambdaOptions Options { get; }
+    private string? PublicUrl { get; }
 
     private ILimitsService Limits { get; }
 
@@ -64,11 +63,11 @@ public sealed partial class SitePrerender
 
     #region Initialization
 
-    public SitePrerender(LambdaOptions options, ILimitsService limits, IShowcaseService showcases, ILambdaAddresses addresses,
+    public SitePrerender(Bundle bundle, string? publicUrl, ILimitsService limits, IShowcaseService showcases, ILambdaAddresses addresses,
                          ILogger<SitePrerender> logger)
     {
-        File = Path.Combine(options.WebRoot, "prerender.json");
-        Options = options;
+        File = bundle.PrerenderFile;
+        PublicUrl = publicUrl;
         Limits = limits;
         Showcases = showcases;
         Addresses = addresses;
@@ -92,7 +91,7 @@ public sealed partial class SitePrerender
             return markup;
         }
 
-        var origin = Options.PublicUrl ?? RequestOrigin.Of(request);
+        var origin = PublicUrl ?? RequestOrigin.Of(request);
 
         var host = Uri.TryCreate(origin, UriKind.Absolute, out var parsed) ? parsed.Authority : origin;
 
@@ -100,10 +99,13 @@ public sealed partial class SitePrerender
 
         var lifetimeHours = (int)limits.OfflineAfter.TotalHours;
 
+        var (before, after) = Around(Addresses.Template);
+
         var facts = new SiteFacts(
             origin,
             host,
-            Addresses.Authority,
+            before,
+            after,
             lifetimeHours,
             (int)Math.Round(lifetimeHours / 24.0, MidpointRounding.AwayFromZero),
             (int)limits.RemovedAfter.TotalDays
@@ -187,12 +189,28 @@ public sealed partial class SitePrerender
         {
             "__LAMBDA_ORIGIN__" => WebUtility.HtmlEncode(facts.Origin),
             "__LAMBDA_HOST__" => WebUtility.HtmlEncode(facts.Host),
-            "__LAMBDA_HOSTING__" => WebUtility.HtmlEncode(facts.Hosting),
+            "__LAMBDA_BEFORE__" => WebUtility.HtmlEncode(facts.Before),
+            "__LAMBDA_AFTER__" => WebUtility.HtmlEncode(facts.After),
             "__LAMBDA_LIFETIME_HOURS__" => facts.LifetimeHours.ToString(),
             "__LAMBDA_OFFLINE_DAYS__" => facts.OfflineDays.ToString(),
             "__LAMBDA_RETENTION_DAYS__" => facts.RetentionDays.ToString(),
             _ => match.Value
         });
+
+    /// <summary>
+    /// What a lambda's address is shown with before its key and after it, as
+    /// <c>useExampleAddress</c> in the frontend makes it: <c>("", ".genhttp.run")</c>,
+    /// or <c>("localhost:8080/lambda/", "")</c> below a path.
+    /// </summary>
+    private static (string Before, string After) Around(string template)
+    {
+        var at = template.IndexOf("{key}", StringComparison.Ordinal);
+
+        var before = Regex.Replace(template[..at], "^https?://", string.Empty);
+        var after = template[(at + "{key}".Length)..].TrimEnd('/');
+
+        return (before, after);
+    }
 
     /// <summary>
     /// The same as <c>shownAddress</c> in the frontend: the host, without the
@@ -263,6 +281,7 @@ public sealed record Prerendered(
 /// <summary>
 /// What the server knows and the build could not, as <c>SiteFacts</c> in <c>site.ts</c>.
 /// </summary>
-/// <param name="Hosting">The domain the lambdas answer below, with its port where it has one: genhttp.run</param>
-public sealed record SiteFacts(string Origin, string Host, string Hosting, int LifetimeHours, int OfflineDays, int RetentionDays,
+/// <param name="Before">What a lambda's address is shown with before its key: "", or "localhost:8080/lambda/"</param>
+/// <param name="After">And after it: ".genhttp.run", or ""</param>
+public sealed record SiteFacts(string Origin, string Host, string Before, string After, int LifetimeHours, int OfflineDays, int RetentionDays,
                                ShowcaseListing? Showcase = null);

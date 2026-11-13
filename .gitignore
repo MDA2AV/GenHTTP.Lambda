@@ -56,16 +56,17 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# Node (the single page application in src/Frontend)
+# Node (the npm workspace of the frontends, at the root)
 node_modules/
 .npm
 *.tsbuildinfo
 
-# The built frontend, compiled into the web root of the server by
-# "npm run build" - the image and CI build it from source.
-src/GenHTTP.Lambda/wwwroot/
-src/Frontend/.prerender/
-src/Frontend/.translations/
+# The built bundles, which "npm run build" puts beside the project of each
+# component and the projects copy into a host's output - the images and CI
+# build them from source
+src/*/bundle/
+src/*/Frontend/.prerender/
+.translations/
 
 # Runtime data: the SQLite database, the stored code and the lambda workspaces
 data/
