@@ -1335,7 +1335,9 @@ touches all that apply:
    it, small screenshots of the features that matter (`docs/images/`, taken
    from a real app on a local server, never mock-ups), how to run it,
    connect an agent and the build agent, and what to know before letting
-   strangers build there. Not a reference: it links to one.
+   strangers build there. Not a reference: it links to one. Its tone is that
+   of a professional project README - decided by the owner - plain technical
+   English, not the style of this file.
 3. `/docs` (`src/Kit/src/locales/*/guide.tsx`) - for owners, in the
    vocabulary of the simple view, translated.
 4. `platform_guide`, the MCP instructions and the tool descriptions
