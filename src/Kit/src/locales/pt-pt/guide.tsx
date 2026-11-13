@@ -431,7 +431,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Todo o resto está lá, incluindo toda a API de módulos do GenHTTP. Se algo for recusado, ficas a saber em que linha e porquê, e não apenas que falhou.',
   limitsConnectivity:
-    'Ligar-se a outros servidores - chamar uma API com HttpClient, abrir um socket, enviar e-mail - precisa de permissão: uma lambda premium tem-na, qualquer outra pede-a em Ligações de saída no editor, dizendo a que se liga e porquê, e quem gere o site decide. Até lá, o código que se liga é recusado. O que as tuas páginas obtêm no browser não precisa de nada disto, por isso chama uma API pública a partir da página sempre que ela o permitir.',
+    'Ligar-se a outros servidores - chamar uma API com HttpClient, abrir um socket, enviar e-mail - precisa de permissão: uma lambda premium tem-na, qualquer outra pede-a em Conectividade no editor, dizendo a que se liga e porquê, e quem gere o site decide. Até lá, o código que se liga é recusado. O que as tuas páginas obtêm no browser não precisa de nada disto, por isso chama uma API pública a partir da página sempre que ela o permitir.',
   limitsBlocked:
     'Uma lambda que viole os termos - phishing, malware, ataques a outras pessoas - pode ser bloqueada por quem gere o site. Fica offline e nada nela pode ser alterado nem posto online até o bloqueio ser levantado; o painel de controlo di-lo no topo, com o motivo indicado. O que ela tem ainda pode ser lido e descarregado.',
 

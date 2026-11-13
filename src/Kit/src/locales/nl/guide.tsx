@@ -440,7 +440,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Al het andere is er, inclusief de hele module-API van GenHTTP. Wordt er iets geweigerd, dan hoor je welke regel en waarom, niet alleen dat het misging.',
   limitsConnectivity:
-    'Verbinden met andere servers - een API aanroepen met HttpClient, een socket openen, mail versturen - vraagt om toestemming: een premium lambda heeft die, elke andere vraagt erom onder Uitgaande verbindingen in de editor, met erbij waarmee hij verbindt en waarom, en wie de site beheert beslist. Tot die tijd wordt code die verbindt geweigerd. Wat je pagina’s in de browser ophalen heeft dit allemaal niet nodig, dus roep een openbare API aan vanaf de pagina waar die dat toestaat.',
+    'Verbinden met andere servers - een API aanroepen met HttpClient, een socket openen, mail versturen - vraagt om toestemming: een premium lambda heeft die, elke andere vraagt erom onder Connectiviteit in de editor, met erbij waarmee hij verbindt en waarom, en wie de site beheert beslist. Tot die tijd wordt code die verbindt geweigerd. Wat je pagina’s in de browser ophalen heeft dit allemaal niet nodig, dus roep een openbare API aan vanaf de pagina waar die dat toestaat.',
   limitsBlocked:
     'Een lambda die de voorwaarden overtreedt - phishing, malware, aanvallen op anderen - kan worden geblokkeerd door wie de site beheert. Hij gaat dan offline en er kan niets meer aan worden aangepast of online gezet totdat de blokkade is opgeheven; het dashboard meldt dat bovenaan, met de opgegeven reden. Wat hij heeft, kun je nog wel bekijken en downloaden.',
 

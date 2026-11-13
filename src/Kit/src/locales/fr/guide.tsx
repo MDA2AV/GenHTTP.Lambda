@@ -443,7 +443,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Tout le reste est là, y compris toute l’API des modules GenHTTP. Si quelque chose est refusé, on vous dit quelle ligne et pourquoi, pas simplement que ça a échoué.',
   limitsConnectivity:
-    'Se connecter à d’autres serveurs - appeler une API avec HttpClient, ouvrir un socket, envoyer un e-mail - demande une autorisation : une lambda premium l’a d’office, toute autre la demande sous Connexions sortantes dans l’éditeur, en indiquant à quoi elle se connecte et pourquoi, et c’est la personne qui gère le site qui décide. D’ici là, le code qui se connecte est refusé. Ce que vos pages récupèrent dans le navigateur n’a besoin de rien de tout cela : appelez donc une API publique depuis la page lorsqu’elle le permet.',
+    'Se connecter à d’autres serveurs - appeler une API avec HttpClient, ouvrir un socket, envoyer un e-mail - demande une autorisation : une lambda premium l’a d’office, toute autre la demande sous Connectivité dans l’éditeur, en indiquant à quoi elle se connecte et pourquoi, et c’est la personne qui gère le site qui décide. D’ici là, le code qui se connecte est refusé. Ce que vos pages récupèrent dans le navigateur n’a besoin de rien de tout cela : appelez donc une API publique depuis la page lorsqu’elle le permet.',
   limitsBlocked:
     'Une lambda qui enfreint les conditions d’utilisation - hameçonnage, logiciel malveillant, attaques contre d’autres personnes - peut être bloquée par celui qui exploite le site. Elle est mise hors ligne, et rien ne peut être modifié ni mis en ligne tant que le blocage n’est pas levé ; le tableau de bord l’indique tout en haut, avec la raison donnée. Ce qu’elle contient peut encore être lu et téléchargé.',
 

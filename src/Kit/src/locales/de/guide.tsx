@@ -440,7 +440,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
   limitsConnectivity:
-    'Verbindungen zu anderen Servern – eine API mit HttpClient aufrufen, einen Socket öffnen, E-Mails senden – brauchen eine Erlaubnis: Ein Premium-Lambda hat sie, jedes andere fragt sie im Editor unter „Ausgehende Verbindungen“ an und gibt an, womit es sich verbindet und warum; wer die Website betreibt, entscheidet. Bis dahin wird Code, der sich verbindet, abgelehnt. Was Ihre Seiten im Browser abrufen, braucht das alles nicht – rufen Sie daher eine öffentliche API von der Seite aus auf, wo sie das erlaubt.',
+    'Verbindungen zu anderen Servern – eine API mit HttpClient aufrufen, einen Socket öffnen, E-Mails senden – brauchen eine Erlaubnis: Ein Premium-Lambda hat sie, jedes andere fragt sie im Editor unter „Konnektivität“ an und gibt an, womit es sich verbindet und warum; wer die Website betreibt, entscheidet. Bis dahin wird Code, der sich verbindet, abgelehnt. Was Ihre Seiten im Browser abrufen, braucht das alles nicht – rufen Sie daher eine öffentliche API von der Seite aus auf, wo sie das erlaubt.',
   limitsBlocked:
     'Ein Lambda, das gegen die Bedingungen verstößt – Phishing, Schadsoftware, Angriffe auf andere –, kann vom Betreiber der Seite gesperrt werden. Es geht offline, und bis die Sperre aufgehoben ist, lässt sich nichts daran ändern oder online stellen; das Kontrollzentrum weist oben darauf hin und nennt den angegebenen Grund. Was es enthält, lässt sich weiterhin lesen und herunterladen.',
 

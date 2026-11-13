@@ -18,7 +18,7 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Statistik',
     analytics: 'Analitik',
     logs: 'Log',
-    connectivity: 'Koneksi keluar',
+    connectivity: 'Konektivitas',
     code: 'Kode',
   },
   sectionsLabel: 'Bagian',

@@ -433,7 +433,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Tutto il resto c’è, compresa l’intera API dei moduli GenHTTP. Se qualcosa viene rifiutato, vedi quale riga e perché, non solo che non ha funzionato.',
   limitsConnectivity:
-    'Connettersi ad altri server - chiamare un’API con HttpClient, aprire un socket, inviare e-mail - richiede un permesso: una lambda premium ce l’ha, ogni altra lo chiede in Connessioni in uscita nell’editor, indicando a cosa si connette e perché, e decide chi gestisce il sito. Fino ad allora il codice che si connette viene rifiutato. Ciò che le tue pagine recuperano nel browser non ne ha bisogno: chiama un’API pubblica dalla pagina, dove lo consente.',
+    'Connettersi ad altri server - chiamare un’API con HttpClient, aprire un socket, inviare e-mail - richiede un permesso: una lambda premium ce l’ha, ogni altra lo chiede in Connettività nell’editor, indicando a cosa si connette e perché, e decide chi gestisce il sito. Fino ad allora il codice che si connette viene rifiutato. Ciò che le tue pagine recuperano nel browser non ne ha bisogno: chiama un’API pubblica dalla pagina, dove lo consente.',
   limitsBlocked:
     'Una lambda che viola i termini (phishing, malware, attacchi ad altri) può essere bloccata da chi gestisce il sito. Va offline e finché il blocco non viene tolto non si può né modificare né mettere online; il pannello di controllo lo dice in alto, insieme al motivo indicato. Quello che contiene si può ancora leggere e scaricare.',
 

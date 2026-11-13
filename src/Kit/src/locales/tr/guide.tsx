@@ -438,7 +438,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Geri kalan her şey mevcut, GenHTTP modül API’sinin tamamı dahil. Bir şey reddedilirse sadece başarısız olduğu değil, hangi satırda ve neden reddedildiği de söylenir.',
   limitsConnectivity:
-    'Başka sunuculara bağlanmak - HttpClient ile bir API çağırmak, soket açmak, e-posta göndermek - izin gerektirir: premium bir lambdanın bu izni vardır, diğerleri editörde Dış bağlantılar bölümünden neye bağlandıklarını ve nedenini yazarak izin ister ve siteyi işletenler karar verir. O zamana kadar bağlanan kod reddedilir. Sayfalarınızın tarayıcıda getirdikleri için bunların hiçbiri gerekmez; izin veren herkese açık bir API’yi sayfadan çağırın.',
+    'Başka sunuculara bağlanmak - HttpClient ile bir API çağırmak, soket açmak, e-posta göndermek - izin gerektirir: premium bir lambdanın bu izni vardır, diğerleri editörde Dış bağlantı bölümünden neye bağlandıklarını ve nedenini yazarak izin ister ve siteyi işletenler karar verir. O zamana kadar bağlanan kod reddedilir. Sayfalarınızın tarayıcıda getirdikleri için bunların hiçbiri gerekmez; izin veren herkese açık bir API’yi sayfadan çağırın.',
   limitsBlocked:
     'Kuralları ihlal eden bir lambda - kimlik avı, kötü amaçlı yazılım, başkalarına saldırı - siteyi işleten kişi tarafından engellenebilir. Yayından kalkar ve engel kaldırılana kadar hakkında hiçbir şey değiştirilemez ya da yayına alınamaz; kontrol paneli bunu, belirtilen gerekçeyle birlikte en üstte belirtir. Sahip olduğu her şey yine de okunabilir ve indirilebilir.',
 
