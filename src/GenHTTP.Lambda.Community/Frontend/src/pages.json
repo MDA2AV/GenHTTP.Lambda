@@ -1,0 +1,197 @@
+{
+  "/": {
+    "image": "/social/default.png",
+    "text": {
+      "en": {
+        "title": "Self-hosted AI App Platform",
+        "description": "Describe an app, or let Claude Code, Codex or Cursor build it over MCP: online in seconds on your own server, with a database, secrets, versions and git."
+      },
+      "id": {
+        "title": "Platform Aplikasi AI Self-Hosted",
+        "description": "Jelaskan sebuah aplikasi, atau biarkan Claude Code, Codex atau Cursor membangunnya lewat MCP: online dalam hitungan detik di server Anda sendiri, dengan database, secret, versi, dan git."
+      },
+      "de": {
+        "title": "Selbst gehostete KI-App-Plattform",
+        "description": "Beschreiben Sie eine App oder lassen Sie Claude Code, Codex oder Cursor sie über MCP bauen: in Sekunden online auf Ihrem eigenen Server, mit Datenbank, Secrets, Versionen und Git."
+      },
+      "es": {
+        "title": "Plataforma de apps con IA en tu propio servidor",
+        "description": "Describe una app o deja que Claude Code, Codex o Cursor la creen por MCP: en línea en segundos en tu propio servidor, con base de datos, secretos, versiones y git."
+      },
+      "fr": {
+        "title": "Plateforme d’applications IA auto-hébergée",
+        "description": "Décrivez une application, ou laissez Claude Code, Codex ou Cursor la créer via MCP : en ligne en quelques secondes sur votre serveur, avec base de données, secrets, versions et git."
+      },
+      "it": {
+        "title": "Piattaforma AI per app self-hosted",
+        "description": "Descrivi un’app o falla creare da Claude Code, Codex o Cursor tramite MCP: online in pochi secondi sul tuo server, con database, segreti, versioni e git."
+      },
+      "nl": {
+        "title": "Zelf te hosten AI-appplatform",
+        "description": "Beschrijf een app, of laat Claude Code, Codex of Cursor hem bouwen via MCP: binnen seconden online op je eigen server, met database, sleutels, versies en git."
+      },
+      "pl": {
+        "title": "Platforma AI do tworzenia aplikacji na własnym serwerze",
+        "description": "Opisz aplikację albo zleć ją Claude Code, Codex lub Cursor przez MCP: online w kilka sekund na twoim serwerze, z bazą danych, sekretami, wersjami i gitem."
+      },
+      "pt": {
+        "title": "Plataforma de apps com IA no seu próprio servidor",
+        "description": "Descreva um app, ou deixe o Claude Code, o Codex ou o Cursor criá-lo via MCP: no ar em segundos no seu servidor, com banco de dados, segredos, versões e git."
+      },
+      "pt-pt": {
+        "title": "Plataforma de apps com IA em servidor próprio",
+        "description": "Descreve uma app, ou deixa o Claude Code, o Codex ou o Cursor criá-la por MCP: online em segundos no teu servidor, com base de dados, segredos, versões e git."
+      },
+      "tr": {
+        "title": "Kendi Sunucunuzda Yapay Zeka Uygulama Platformu",
+        "description": "Bir uygulamayı tarif edin ya da Claude Code, Codex veya Cursor MCP üzerinden yapsın: kendi sunucunuzda saniyeler içinde yayında; veritabanı, gizli anahtarlar, sürümler ve git ile."
+      },
+      "ja": {
+        "title": "セルフホスト型AIアプリ作成プラットフォーム",
+        "description": "アプリを説明するか、Claude Code・Codex・CursorにMCP経由で作らせると、自分のサーバーで数秒で公開。データベース、シークレット、バージョン、gitも利用できます。"
+      },
+      "ko": {
+        "title": "셀프 호스팅 AI 앱 플랫폼",
+        "description": "앱을 설명하거나 Claude Code, Codex, Cursor가 MCP로 만들게 하세요. 내 서버에서 몇 초 만에 온라인이 되고, 데이터베이스, 비밀 키, 버전, git을 갖춰요."
+      }
+    }
+  },
+  "/showcase": {
+    "image": "/social/showcase.png",
+    "text": {
+      "id": {
+        "title": "Showcase Aplikasi Buatan AI",
+        "description": "Aplikasi web yang dibuat di sini dengan agen AI dan dipamerkan pemiliknya: game, tool, halaman, dan layanan yang sedang online. Buka langsung di browser.",
+        "image": "/social/id/showcase.jpg"
+      },
+      "de": {
+        "title": "Showcase",
+        "description": "Web-Apps, die hier mit einem KI-Agenten gebaut wurden: Spiele, Tools, Seiten und Dienste, die gerade laufen. Jede öffnet sich direkt im Browser.",
+        "image": "/social/de/showcase.jpg"
+      },
+      "en": {
+        "title": "Showcase",
+        "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
+      },
+      "es": {
+        "title": "Galería de apps creadas con IA",
+        "description": "Apps web que la gente creó aquí con un agente de IA y quiso mostrar: juegos, herramientas, páginas y servicios, funcionando ahora. Ábrelas en tu navegador.",
+        "image": "/social/es/showcase.jpg"
+      },
+      "fr": {
+        "title": "Vitrine : apps créées avec l’IA",
+        "description": "Des apps web créées ici avec un agent IA et montrées par leurs auteurs : jeux, outils, pages, services. Toutes en ligne, à ouvrir dans votre navigateur.",
+        "image": "/social/fr/showcase.jpg"
+      },
+      "it": {
+        "title": "Vetrina: app create con l’AI",
+        "description": "App web create qui con un agente AI e messe in mostra da chi le ha fatte: giochi, strumenti, pagine e servizi, online adesso. Provale nel browser.",
+        "image": "/social/it/showcase.jpg"
+      },
+      "nl": {
+        "title": "Showcase",
+        "description": "Webapps die mensen hier met een AI-agent bouwden en graag laten zien: games, tools, pagina's en diensten die nu live zijn. Open ze direct in je browser.",
+        "image": "/social/nl/showcase.jpg"
+      },
+      "pl": {
+        "title": "Galeria aplikacji zrobionych z AI",
+        "description": "Aplikacje webowe zbudowane tu z agentem AI i pokazane przez ich twórców: gry, narzędzia, strony i usługi. Wszystkie działają – otwórz dowolną.",
+        "image": "/social/pl/showcase.jpg"
+      },
+      "pt": {
+        "title": "Vitrine de apps",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas rodando agora. Abra qualquer um no navegador.",
+        "image": "/social/pt/showcase.jpg"
+      },
+      "pt-pt": {
+        "title": "Montra de apps feitas com IA",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas, online agora. Abre qualquer uma no browser.",
+        "image": "/social/pt-pt/showcase.jpg"
+      },
+      "tr": {
+        "title": "Uygulama vitrini",
+        "description": "İnsanların burada yapay zekâ ajanıyla yaptığı web uygulamaları: oyunlar, araçlar, sayfalar. Hepsi şu an çalışıyor, tarayıcınızda hemen açın.",
+        "image": "/social/tr/showcase.jpg"
+      },
+      "ja": {
+        "title": "AIで作ったアプリのショーケース",
+        "description": "AIエージェントと一緒にここで作られたWebアプリを紹介します。ゲーム、ツール、ページ、サービスが、いまも動いています。どれもブラウザーですぐに開けます。",
+        "image": "/social/ja/showcase.jpg"
+      },
+      "ko": {
+        "title": "AI로 만든 앱 쇼케이스",
+        "description": "사람들이 여기서 AI 에이전트로 만들어 직접 공개한 웹앱이에요. 게임, 도구, 페이지, 서비스가 지금 실행 중이에요. 브라우저에서 바로 열어 보세요.",
+        "image": "/social/ko/showcase.jpg"
+      }
+    }
+  },
+  "/docs": {
+    "image": "/social/docs.png",
+    "text": {
+      "id": {
+        "title": "Cara Kerja dan Dokumentasi",
+        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat HTTPS publik dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya.",
+        "image": "/social/id/docs.jpg"
+      },
+      "de": {
+        "title": "So funktioniert es",
+        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt.",
+        "image": "/social/de/docs.jpg"
+      },
+      "en": {
+        "title": "How It Works",
+        "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+      },
+      "es": {
+        "title": "Cómo funciona",
+        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la vas a usar.",
+        "image": "/social/es/docs.jpg"
+      },
+      "fr": {
+        "title": "Documentation : comment ça marche",
+        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé en HTTPS, à une adresse publique, en quelques secondes. Toute la plateforme, étape par étape.",
+        "image": "/social/fr/docs.jpg"
+      },
+      "it": {
+        "title": "Guida: come funziona",
+        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo.",
+        "image": "/social/it/docs.jpg"
+      },
+      "nl": {
+        "title": "Zo werkt het",
+        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een openbaar HTTPS-adres. Het hele platform, in de volgorde waarin je het tegenkomt.",
+        "image": "/social/nl/docs.jpg"
+      },
+      "pl": {
+        "title": "Dokumentacja: jak to działa",
+        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod publiczny adres HTTPS. Cała platforma w kolejności, w jakiej ją poznasz.",
+        "image": "/social/pl/docs.jpg"
+      },
+      "pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar.",
+        "image": "/social/pt/docs.jpg"
+      },
+      "pt-pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço HTTPS público em segundos. A plataforma toda, pela ordem em que a vais usar.",
+        "image": "/social/pt-pt/docs.jpg"
+      },
+      "tr": {
+        "title": "Nasıl çalışır",
+        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde herkese açık bir HTTPS adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla.",
+        "image": "/social/tr/docs.jpg"
+      },
+      "ja": {
+        "title": "仕組みとドキュメント",
+        "description": "C#のスニペットを書くと、返したものが数秒でHTTPSの公開URLにホストされます。プラットフォームの全体を、実際に使う順に説明します。",
+        "image": "/social/ja/docs.jpg"
+      },
+      "ko": {
+        "title": "작동 방식과 개발 문서",
+        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 공개 HTTPS 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요.",
+        "image": "/social/ko/docs.jpg"
+      }
+    }
+  }
+}

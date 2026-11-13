@@ -33,7 +33,7 @@ public static class McpEndpoint
     {
         var tools = Tools.Create()
                          .Server("genhttp-lambda", "1.0.0", "GenHTTP Lambda")
-                         .Instructions(Instructions)
+                         .Instructions(InstructionsFor(options))
                          .Add(instance);
 
         foreach (var origin in Origins(options))
@@ -63,6 +63,13 @@ public static class McpEndpoint
     /// it reads the guide. The rest is in <c>platform_guide</c> and the tools'
     /// descriptions.
     /// </remarks>
+    /// <summary>
+    /// The instructions as this installation gives them: with its own address
+    /// where it has one, and the path below it where it does not.
+    /// </summary>
+    internal static string InstructionsFor(LambdaOptions options)
+        => Instructions.Replace("{home}", options.PublicUrl is { } url ? url + "/" : "/", StringComparison.Ordinal);
+
     internal static readonly string Instructions = string.Join('\n',
     [
         "Hosts small C# web services: a snippet returns a GenHTTP handler, served at a public address.",
@@ -121,7 +128,7 @@ public static class McpEndpoint
         "What you build resources or code from with a tool goes in a folder of the code, built by you and",
         "saved with what it built - nothing is built here: platform_guide, code.",
         "",
-        "If you can make HTTP requests, the REST API (https://genhttp.dev/api/v1/openapi.json) does the same",
+        "If you can make HTTP requests, the REST API ({home}api/v1/openapi.json) does the same",
         "with fewer tokens: download a feature as a zip, edit locally, put it back.",
         "",
         "If you can run git, clone the lambda instead (read_lambda's gitUrl) - AGENTS.md in it says how: a",

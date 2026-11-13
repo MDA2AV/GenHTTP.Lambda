@@ -12,6 +12,7 @@
     </Folder>
     <Folder Name="/hosts/">
         <Project Path="src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/GenHTTP.Lambda.Tests/GenHTTP.Lambda.Tests.csproj" />

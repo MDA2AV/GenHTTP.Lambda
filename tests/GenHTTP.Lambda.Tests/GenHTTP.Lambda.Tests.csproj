@@ -29,6 +29,7 @@
         <ProjectReference Include="../../src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
         <ProjectReference Include="../../src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
         <ProjectReference Include="../../src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
+        <ProjectReference Include="../../src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />
     </ItemGroup>
 
 </Project>

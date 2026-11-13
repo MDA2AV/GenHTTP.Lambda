@@ -2,14 +2,19 @@
 **/obj
 **/node_modules
 **/dist
-src/GenHTTP.Lambda/wwwroot
+# built by the images themselves, never taken from a checkout
+src/*/bundle
+src/*/Frontend/.prerender
 tests
+samples
 data
 .git
 .github
+.claude
+.translations
 .vs
 .idea
 *.md
-Dockerfile
+**/Dockerfile
 .dockerignore
-docker-compose.yml
+docker-compose*.yml

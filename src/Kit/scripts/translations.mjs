@@ -77,6 +77,9 @@ const TABLES = {
 
 const GLOSSARY = path.join(REPOSITORY, CATALOGS.kit, 'glossary.json');
 
+/** How the bundles import the kit, which is resolved to its sources. */
+const KIT_PACKAGE = '@genhttp-lambda/kit/';
+
 /** Whether a file is a table of page titles rather than a catalog. */
 const isTable = (file) => Object.hasOwn(TABLES, file);
 
@@ -326,7 +329,11 @@ function follow(name, source, fileName, read)
     }
 
     const specifier = statement.moduleSpecifier.text;
-    const base = path.resolve(path.dirname(fileName), specifier);
+
+    // the kit is imported by its name, which the bundles resolve to its sources
+    const base = specifier.startsWith(KIT_PACKAGE)
+      ? path.join(KIT, 'src', specifier.slice(KIT_PACKAGE.length))
+      : path.resolve(path.dirname(fileName), specifier);
 
     for (const candidate of [`${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')])
     {
@@ -772,10 +779,10 @@ function extract(options)
 
     for (const language of asked)
     {
-      plan.languages[language].requests.forEach((file) => console.log(`  src/Frontend/.translations/${file}`));
+      plan.languages[language].requests.forEach((file) => console.log(`  .translations/${file}`));
     }
 
-    console.log('Then: node scripts/translations.mjs apply');
+    console.log('Then: npm run translations -- apply');
   }
   else if (removed > 0)
   {

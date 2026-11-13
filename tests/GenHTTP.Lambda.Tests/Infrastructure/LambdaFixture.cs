@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Administration;
 using GenHTTP.Lambda.Api;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Cloud;
+using GenHTTP.Lambda.Community;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
@@ -131,12 +132,26 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// by default: calling it through reflection is what makes a fixture take
     /// milliseconds rather than a second.
     /// </param>
-    public static async Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
-                                                        bool compiled = false)
+    public static Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
+                                                  bool compiled = false)
+        => CreateAsync(Edition.Cloud, configure, server, compiled);
+
+    /// <summary>
+    /// Creates and starts the community edition: put together the way its
+    /// host does, with the lambdas below /lambda/ and none of what only the
+    /// cloud says about itself - no terms, no contact, no legal pages.
+    /// </summary>
+    public static Task<LambdaFixture> CreateCommunityAsync(Func<LambdaOptions, LambdaOptions>? configure = null)
+        => CreateAsync(Edition.Community, configure, null, false);
+
+    private static async Task<LambdaFixture> CreateAsync(Edition edition, Func<LambdaOptions, LambdaOptions>? configure, ServerSettings? server,
+                                                         bool compiled)
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
-        var options = CloudInstallation.Of(new LambdaOptions { DataDirectory = root });
+        var options = edition == Edition.Cloud
+                    ? CloudInstallation.Of(new LambdaOptions { DataDirectory = root })
+                    : new LambdaOptions { DataDirectory = root, Addressing = LambdaAddressing.Paths };
 
         if (configure != null)
         {
@@ -173,7 +188,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
                          .Add("editor", Editor.Create(platform).Bundle(BundleOf(options, "editor")))
                          .Add("admin", AdminPanel.Create().Bundle(BundleOf(options, "admin")))
                          .Add(SourcePages.Create(platform).Bundle(BundleOf(options, "sources")))
-                         .Add(Website.Create(platform).Bundle(BundleOf(options, "site")));
+                         .Add(edition == Edition.Cloud
+                                  ? Website.Create(platform).Bundle(BundleOf(options, "site"))
+                                  : LandingPage.Create(platform).Bundle(BundleOf(options, "site")));
 
         var handler = LambdaServer.Create(platform)
                                   .Settings(server ?? new ServerSettings())
@@ -190,6 +207,8 @@ internal sealed class LambdaFixture : IAsyncDisposable
     }
 
     #endregion
+
+    private enum Edition { Cloud, Community }
 
     #region Functionality
 

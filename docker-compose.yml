@@ -1,7 +1,9 @@
 services:
 
   lambda:
-    build: .
+    build:
+      context: .
+      dockerfile: src/GenHTTP.Lambda.Cloud/Dockerfile
     image: genhttp-lambda:latest
     ports:
       # the ports have to match the ones the server binds: it upgrades plain
