@@ -1,5 +1,9 @@
 # GenHTTP Lambda
 
+[![Cloud: genhttp.dev](https://img.shields.io/badge/cloud-genhttp.dev-blue)](https://genhttp.dev/)
+[![Community: community.genhttp.run](https://img.shields.io/badge/community-community.genhttp.run-green)](https://community.genhttp.run/)
+[![Docker Hub: genhttp/lambda](https://img.shields.io/docker/pulls/genhttp/lambda?label=genhttp%2Flambda&logo=docker)](https://hub.docker.com/r/genhttp/lambda)
+
 **Self-hosted hosting for the apps your coding agent builds.**
 
 Claude Code, Codex or Cursor write a small app in minutes. Getting it online is
