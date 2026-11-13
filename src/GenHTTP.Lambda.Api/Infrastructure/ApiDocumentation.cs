@@ -44,6 +44,8 @@ public static class ApiDocumentation
 
     public const string Code = "Code analysis";
 
+    public const string Connectivity = "Connectivity";
+
     public const string Data = "Data";
 
     public const string Database = "Database";
@@ -78,7 +80,7 @@ public static class ApiDocumentation
     internal static readonly IReadOnlyList<(string Group, string[] Tags)> Groups =
     [
         ("Getting started", [Platform, Keys, Demos, Lambdas]),
-        ("The program", [Versions, Deployment, Features, Code]),
+        ("The program", [Versions, Deployment, Features, Code, Connectivity]),
         ("What it keeps", [Data, Database, Workspace, Secrets]),
         ("How it is doing", [Monitoring, Analytics]),
         ("Sharing it", [Domain, Showcase, OpenSource]),

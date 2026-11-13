@@ -5,6 +5,7 @@ import { absoluteAddress, aroundKey, shownAddress } from '@genhttp-lambda/kit/ad
 import { useInstallation } from '@genhttp-lambda/kit/installation';
 import {
   ApiError,
+  CONNECTIVITY_REFUSED,
   allowsDomain,
   api,
   isActive,
@@ -34,6 +35,7 @@ import { ContextTab } from '../control/ContextTab';
 import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
+import { AskForServices, ConnectivityTab } from '../control/ConnectivityTab';
 import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDialog } from '../control/FeatureDialogs';
 import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
@@ -62,7 +64,7 @@ interface Props {
 
 type SectionId =
   | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats' | 'analytics'
-  | 'logs' | 'showcase' | 'source' | 'domain' | 'history';
+  | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'connectivity';
 
 /*
  * Where the sections that went into Code used to be - its files, what it was
@@ -89,14 +91,17 @@ type GroupId = 'develop' | 'program' | 'run' | 'sharing';
  * where a change is made: Change and the drafts, the code - every file of a
  * version, its resources included - and the tests that say whether a change
  * works. Then the program and what it keeps, side by side - the data of the
- * lambda, and the versions that all share it. Then how it runs.
+ * lambda, and the versions that all share it. Then how it runs - and,
+ * beside where it is put online, whether it may connect to other servers,
+ * which the operator decides and which decides whether code that does goes
+ * online at all.
  */
 const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
   { id: 'program', sections: ['data', 'versions'] },
-  { id: 'run', sections: ['deployments', 'stats', 'analytics', 'logs'] },
+  { id: 'run', sections: ['deployments', 'connectivity', 'stats', 'analytics', 'logs'] },
 ];
 
 const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
@@ -199,6 +204,8 @@ export function Editor({ theme }: Props) {
 
   /** What a new feature is to start from, while the dialog for one is open. */
   const [creating, setCreating] = useState<{ base?: number; files?: LambdaFile[] } | null>(null);
+  /** Whether the simple view's dialog that asks to use other services is open. */
+  const [askingServices, setAskingServices] = useState(false);
   const [featureDialog, setFeatureDialog] = useState<'notes' | 'base' | 'delete' | null>(null);
 
   /** The feature being put online, while the dialog for that is open - from its own page, or from the change that left it. */
@@ -499,6 +506,10 @@ export function Editor({ theme }: Props) {
   // switch on, so the simple view is not asked about it
   const databaseWanted = !simple && holding != null && holding.usesDatabase && !holding.databaseEnabled;
 
+  // the code connects to other servers, which the lambda may not: it does
+  // not compile until the operator allows it
+  const connectivityWanted = summary?.connects === true && lambda != null && !lambda.connectivity.allowed;
+
   // sections that only change the lambda, which a demo does not have - and
   // the drafts, while there are none: they are met through a change the agent
   // leaves to be tried, or started from a version or the code, and the list
@@ -508,6 +519,8 @@ export function Editor({ theme }: Props) {
     || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features' || id === 'analytics'))
     // nor what only changes a blocked one, or puts it before the public again
     || (blocked && (id === 'change' || id === 'showcase' || id === 'source'))
+    // a demo connects to nothing, and of a blocked lambda nothing changes
+    || (id === 'connectivity' && (demo || blocked))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
@@ -601,6 +614,10 @@ export function Editor({ theme }: Props) {
     : null;
 
   const featurePath = (key: string, view: FeatureView = 'overview') => `${base}/features/${key}${view === 'overview' ? '' : `/${view}`}`;
+
+  // a deployment or a preview refused for connecting to other servers, which
+  // the lambda may not do - said as such, with the way to ask for it
+  const connectivityRefused = rejection?.diagnostics.some((d) => d.id === CONNECTIVITY_REFUSED) === true && !lambda.connectivity.allowed;
 
   const control: Control = {
     privateKey,
@@ -735,6 +752,9 @@ export function Editor({ theme }: Props) {
         {id === 'logs' && problems && (
           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
         )}
+        {id === 'connectivity' && connectivityWanted && (
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.connectivity.connects} />
+        )}
         {id === 'data' && (missingSecrets.length > 0 || databaseWanted) && !demo && (
           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={missingSecrets.length > 0 ? t.data.missingDot : t.data.offDot} />
         )}
@@ -842,7 +862,7 @@ export function Editor({ theme }: Props) {
 
           {/* not while the agent is at work: what it saved last may be a
               version it is still fixing, and it deploys what it finishes */}
-          {!featureKey && ahead && latest != null && !demo && !blocked && !changing && (
+          {!featureKey && ahead && latest != null && !demo && !blocked && !changing && !(simple && connectivityWanted) && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -1076,6 +1096,8 @@ export function Editor({ theme }: Props) {
           <SourceTab control={control} onChanged={() => refresh().catch(() => undefined)} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
+        ) : section === 'connectivity' && !demo && !blocked ? (
+          <ConnectivityTab control={control} />
         ) : simple ? (
           <SimpleOverview control={control} />
         ) : (
@@ -1085,11 +1107,31 @@ export function Editor({ theme }: Props) {
     </div>
 
       <Dialog
-        title={rejection?.feature ? t.features.previewRejected : simple ? t.simple.refused : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
+        title={connectivityRefused
+          ? (simple ? t.simple.servicesRefused : t.connectivity.refused)
+          : rejection?.feature ? t.features.previewRejected : simple ? t.simple.refused : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
         open={rejection !== null}
         onClose={() => setRejection(null)}
         footer={
           <>
+            {/* refused for connecting to other servers: asking is the way on, not the code */}
+            {connectivityRefused && lambda.connectivity.status !== 'Requested' && (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  setRejection(null);
+
+                  if (simple) {
+                    setAskingServices(true);
+                  } else {
+                    go(`${base}/connectivity`);
+                  }
+                }}
+              >
+                {simple ? t.simple.servicesAsk : t.connectivity.openConnectivity}
+              </button>
+            )}
             {/* in the simple view, what is wrong with the code is the agent's to fix, not the owner's to read */}
             {simple && agent.state?.available && !changing && (
               <button
@@ -1131,7 +1173,9 @@ export function Editor({ theme }: Props) {
         }
       >
         <p className="text-slate-600 dark:text-slate-400">
-          {simple ? t.simple.refusedText : rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}
+          {connectivityRefused
+            ? (simple ? t.simple.servicesRefusedText : t.connectivity.refusedText)
+            : simple ? t.simple.refusedText : rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}
         </p>
         {!simple && (
           <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-ink-800">
@@ -1139,6 +1183,8 @@ export function Editor({ theme }: Props) {
           </div>
         )}
       </Dialog>
+
+      <AskForServices control={control} open={askingServices} onClose={() => setAskingServices(false)} />
 
       <NewFeatureDialog
         control={control}

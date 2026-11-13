@@ -112,7 +112,10 @@ const ALLOW = [
   // it switches the database and secrets on, reads the database to see that
   // its migrations ran, and says which secrets the code reads; the values are
   // the owner's to enter, so it has no way to set or remove one
-  'mcp__genhttp__enable_data', 'mcp__genhttp__read_database', 'mcp__genhttp__list_secrets'
+  'mcp__genhttp__enable_data', 'mcp__genhttp__read_database', 'mcp__genhttp__list_secrets',
+  // it asks for the lambda to connect to other servers where the server has
+  // to make a call; the operator decides, so asking is all it can do
+  'mcp__genhttp__request_connectivity'
 ];
 
 /*
@@ -226,6 +229,28 @@ function declined(text) {
 }
 
 /*
+ * Calling another service from the server, said the same way in both briefs.
+ *
+ * The server may only connect to other servers where the operator of the
+ * installation allowed it - lambdas were used as proxies - and asking takes
+ * longer than a run. So the agent is steered to the browser first, where a
+ * public API is fetched by the page and nothing needs allowing, and asks
+ * only where the server has to make the call: what it builds then works,
+ * and what waits is said where the owner reads it.
+ */
+const SERVICES = `Calling another web service - a weather forecast, a map, an AI, payments -
+from the server needs the operator's permission on this platform: code that
+connects to other servers does not compile until it is allowed, and that
+takes longer than you have. So call a public API from the page, with fetch
+in the browser, wherever it allows that: the server never connects, and it
+works at once. Only where the server has to make the call - a key the
+browser must not see, an API that refuses browsers - ask with
+request_connectivity, saying which service and what for; build the rest so it
+works without it, and say in your closing note that it waits for permission
+to use that service. Never build something that fetches whatever address it
+is given.`;
+
+/*
  * The brief for building something new.
  *
  * Whoever asked watches the build page while it runs, and the page shows what
@@ -275,6 +300,8 @@ How to work:
 
 Whatever the application keeps - entries, scores, accounts - is data: write
 it to the workspace from the code, never into the files of a version.
+
+${SERVICES}
 
 {clock}
 
@@ -384,6 +411,8 @@ read_lambda". Under fifteen words, no lists, no code.
 The owner is not a developer, and their control center calls a feature a
 draft. In everything they read, say draft, and say putting it online rather
 than merging it - never merge, branch, base or rebase.
+
+${SERVICES}
 
 {clock}
 
@@ -1189,6 +1218,7 @@ function begin(tool, input) {
     case 'enable_data': return { kind: 'data', ...(input?.kind ? { data: clip(String(input.kind), 20) } : {}) };
     case 'read_database': return { kind: 'records', ...preview };
     case 'list_secrets': return { kind: 'secrets', ...preview };
+    case 'request_connectivity': return { kind: 'connectivity' };
     default: return { kind: 'other', tool };
   }
 }

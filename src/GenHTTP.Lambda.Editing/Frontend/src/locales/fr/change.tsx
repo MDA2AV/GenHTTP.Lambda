@@ -90,6 +90,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Activation de la base de données', secrets: 'Activation des secrets', workspace: 'Activation du workspace' },
     records: 'Lecture de la base de données',
     secrets: 'Coup d’œil aux secrets',
+    connectivity: 'Demande de connexion à d’autres serveurs',
     other: (tool) => `Utilisation de ${tool}`,
   },
   marks: {

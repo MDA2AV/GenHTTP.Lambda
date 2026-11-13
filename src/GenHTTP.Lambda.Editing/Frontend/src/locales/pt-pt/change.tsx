@@ -76,6 +76,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'A ligar a base de dados', secrets: 'A ligar as chaves e palavras-passe', workspace: 'A ligar o que é guardado pela tua app' },
     records: 'A ler a base de dados',
     secrets: 'A ver as chaves e palavras-passe',
+    connectivity: 'A pedir para ligar a outros servidores',
     other: (tool) => `A usar ${tool}`,
   },
   marks: {

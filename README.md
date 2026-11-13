@@ -213,6 +213,13 @@ docker compose --profile agent up -d
 - **Apps run inside the server.** That is what makes hundreds of them cheap.
   Their code is checked for what it must not do before it runs, but it shares
   the server's process - this is no sandbox. Run code you would run yourself.
+- **Apps ask before they call other servers.** An app's code may only connect
+  to other servers - call an API, open a socket, send mail - once you allowed
+  it in the panel's *Connectivity* section, where its owner's request waits with
+  what it is for; *premium* apps may without asking. Without that, anybody
+  could send their traffic through your server with an app that fetches
+  whatever it is asked to. Pages that fetch from other sites in the browser
+  need nothing, and the agents are told to do that where they can.
 - **Unused apps are taken offline.** A new app is *free*: one that nobody
   visits or changes for 30 days is taken offline, and removed 90 days after
   that. In the panel, make an app *premium* to keep it for good, or change how

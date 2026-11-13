@@ -82,6 +82,10 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
         lambdas.Property(l => l.Blocked).HasColumnName("blocked");
         lambdas.Property(l => l.BlockReason).HasColumnName("block_reason");
+        lambdas.Property(l => l.Connectivity).HasColumnName("connectivity").HasConversion<string>();
+        lambdas.Property(l => l.ConnectivityChanged).HasColumnName("connectivity_changed");
+        lambdas.Property(l => l.ConnectivityPurpose).HasColumnName("connectivity_purpose");
+        lambdas.Property(l => l.ConnectivityNote).HasColumnName("connectivity_note");
 
         lambdas.HasIndex(l => l.PublicKey).IsUnique();
         lambdas.HasIndex(l => l.PrivateKey).IsUnique();

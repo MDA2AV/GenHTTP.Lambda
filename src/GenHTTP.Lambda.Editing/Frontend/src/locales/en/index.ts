@@ -2,6 +2,7 @@ import { analytics } from './analytics';
 import { change } from './change';
 import { clone } from './clone';
 import { code } from './code';
+import { connectivity } from './connectivity';
 import { context } from './context';
 import { data } from './data';
 import { deployments } from './deployments';
@@ -44,6 +45,7 @@ export const editor = {
   showcase,
   openSource,
   domain,
+  connectivity,
   code,
   clone,
   tabs,

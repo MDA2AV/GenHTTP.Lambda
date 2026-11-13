@@ -7,6 +7,7 @@ import { IconSpinner, IconTrash } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago, Empty, Pills, Section, StatusBadge, TierBadge } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
+import { ConnectivityBadge } from './ConnectivityControl';
 import { BlockedBadge } from './LambdaDetail';
 
 /**
@@ -158,7 +159,12 @@ export function LambdasSection({ access }: { access: Access }) {
                       </Link>
                     </td>
                     <td className="px-4 py-2">{lambda.blocked ? <BlockedBadge /> : <StatusBadge version={lambda.activeVersion} />}</td>
-                    <td className="px-4 py-2"><TierBadge tier={lambda.tier} /></td>
+                    <td className="px-4 py-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <TierBadge tier={lambda.tier} />
+                        <ConnectivityBadge connectivity={lambda.connectivity} />
+                      </span>
+                    </td>
                     <td className="max-w-[14rem] truncate px-4 py-2 font-mono text-[13px]">
                       {lambda.domain ? (
                         <span

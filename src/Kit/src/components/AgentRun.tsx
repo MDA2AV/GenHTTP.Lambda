@@ -11,6 +11,7 @@ import {
   IconDraft,
   IconEye,
   IconFolder,
+  IconGlobe,
   IconHistory,
   IconInfo,
   IconKey,
@@ -313,6 +314,7 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   data: IconDatabase,
   records: IconTable,
   secrets: IconKey,
+  connectivity: IconGlobe,
   other: IconDots,
 };
 

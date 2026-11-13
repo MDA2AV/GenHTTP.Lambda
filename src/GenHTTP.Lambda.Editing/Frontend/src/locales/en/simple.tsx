@@ -54,6 +54,36 @@ export const simple = {
   ),
   enterKey: 'Enter it',
 
+  /**
+   * The tile that asks for the app to use other services - an API on the
+   * internet the agent wrote it to call - which the operator of the site
+   * allows, app by app.
+   */
+  servicesTitle: 'Your app wants to use other services',
+  servicesText:
+    'It fetches from other services on the internet, which apps here may only do once the operator of this site allows it. Ask for it, and say what for.',
+  servicesAsk: 'Ask for permission',
+  servicesWaiting: 'Waiting for permission to use other services',
+  servicesWaitingText: 'The operator of this site decides. Until then, what your app needs them for does not work.',
+  servicesDeclined: 'Permission to use other services was declined',
+  servicesDeclinedText: 'You can ask again, saying more about what your app needs them for.',
+  servicesAskAgain: 'Ask again',
+  /** Above what the owner said, in the tile. */
+  servicesYouSaid: 'You said',
+  /** Above the note of the operator, in the tile. */
+  servicesTheySaid: 'The operator said',
+  servicesDialog: 'Ask to use other services',
+  servicesPurpose: 'What does your app use them for?',
+  servicesPurposeHint: 'Name the services if you know them. The operator of this site reads it to decide.',
+  servicesExample: 'The weather forecast on the front page, from open-meteo.com',
+  servicesSend: 'Ask',
+  servicesCancel: 'Cancel',
+  servicesAsked: 'Asked. The operator of this site decides.',
+  servicesFailed: 'The request could not be sent.',
+  /** In the dialog that says a change did not go online, when the reason is that it uses other services. */
+  servicesRefused: 'Your change uses other services',
+  servicesRefusedText: 'Your app may not do that yet. Ask for permission, and the operator of this site decides.',
+
   activity: 'Today',
   hits: 'Hits today',
   hitsTitle: 'Every page, picture and request your app answered today',

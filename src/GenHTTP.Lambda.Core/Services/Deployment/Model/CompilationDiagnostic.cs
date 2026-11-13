@@ -10,7 +10,7 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 public sealed record CompilationDiagnostic(
     [Summary("`Error`, which keeps the code from going online, or `Warning`")]
     string Severity,
-    [Summary("What kind of message it is: the C# compiler's (`CS1002`), `LAMBDA0001` for something lambdas may not do, `LAMBDA0002` for a handler the platform cannot serve, or `LAMBDA` for anything else the platform refused")]
+    [Summary("What kind of message it is: the C# compiler's (`CS1002`), `LAMBDA0001` for something lambdas may not do, `LAMBDA0002` for a handler the platform cannot serve, `LAMBDA0003` for code that connects to other servers where the lambda may not, or `LAMBDA` for anything else the platform refused")]
     string Id,
     [Summary("What is wrong, and often what to do about it")]
     string Message,

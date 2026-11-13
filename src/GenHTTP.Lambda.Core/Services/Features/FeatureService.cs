@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
@@ -367,7 +368,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         int stamp, revision;
 
-        WorkspaceLimits workspace;
+        BuildSettings settings;
 
         {
             var (database, lambda, entity, turn) = Locked(privateKey, feature);
@@ -379,7 +380,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             code = storage.ReadFeature(lambda.Id, entity.Id)
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-            workspace = limits.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id));
+            // built as the lambda is, so a preview may connect where the lambda may
+            settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id)),
+                                         ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
 
             // handed out here, so one started meanwhile is given the next
             stamp = _stamps.AddOrUpdate(entity.Id, entity.Preview + 1, (_, last) => Math.Max(last, entity.Preview) + 1);
@@ -396,7 +399,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                ? LambdaOutput.Enter(new OutputScope(publicKey, book, options.MaxOutputLines, lambdaId, featureId))
                : null)
         {
-            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, code, workspace, cancellation);
+            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, code, settings, cancellation);
         }
 
         try

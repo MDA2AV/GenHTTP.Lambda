@@ -97,9 +97,39 @@ public sealed class LambdaEntity
     public DateTime? Blocked { get; set; }
 
     /// <summary>
-    /// Why it was blocked, in the operator's words. Never shown to its owner.
+    /// Why it was blocked, in the operator's words, which its owner reads in
+    /// its editor.
     /// </summary>
     public string? BlockReason { get; set; }
+
+    /// <summary>
+    /// Where the owner's request for it to connect to other servers stands,
+    /// or nothing while nobody asked.
+    /// </summary>
+    /// <remarks>
+    /// Without it, its code is compiled without the means to connect -
+    /// HttpClient, sockets, a WebSocket client, mail - and refused where it
+    /// reaches for them (see <c>CodeGuard</c>). A premium lambda may connect
+    /// whatever this says (see <c>ConnectivityRule</c>).
+    /// </remarks>
+    public ConnectivityStatus? Connectivity { get; set; }
+
+    /// <summary>
+    /// Since when <see cref="Connectivity"/> stands as it does: when it was asked
+    /// for, allowed or declined.
+    /// </summary>
+    public DateTime? ConnectivityChanged { get; set; }
+
+    /// <summary>
+    /// What the owner said it connects to, and why - kept once it is decided,
+    /// so the operator can read later what they allowed.
+    /// </summary>
+    public string? ConnectivityPurpose { get; set; }
+
+    /// <summary>
+    /// What the operator said deciding it, which the owner reads.
+    /// </summary>
+    public string? ConnectivityNote { get; set; }
 
     public List<DeploymentEntity> Deployments { get; set; } = [];
 

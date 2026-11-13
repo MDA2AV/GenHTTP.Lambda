@@ -6,6 +6,7 @@ import { ApiError, api, refusedToken } from '@genhttp-lambda/kit/api';
 import { IconLock, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { BlocksSection } from '../console/BlocksSection';
 import type { Access } from '../console/context';
+import { ConnectivitySection } from '../console/ConnectivitySection';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LimitsSection } from '../console/LimitsSection';
@@ -15,11 +16,12 @@ import { SettingsSection } from '../console/SettingsSection';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'server' | 'lambdas' | 'blocks' | 'log' | 'settings' | 'limits';
+type SectionId = 'server' | 'lambdas' | 'connectivity' | 'blocks' | 'log' | 'settings' | 'limits';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
   { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
+  { id: 'connectivity', title: 'Connectivity', note: 'Lambdas asking to connect to other servers' },
   { id: 'blocks', title: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
@@ -45,6 +47,31 @@ export function Admin({ theme }: { theme: Theme }) {
   const [token, setToken] = useAdminToken();
   const [refused, setRefused] = useState(false);
 
+  /*
+   * How many requests for connectivity wait for a decision, beside the section
+   * that has them - asked again whenever the operator goes elsewhere in the
+   * panel or decides one, rather than on a timer: the operator is the one
+   * who changes it, apart from owners asking, which the next look shows.
+   */
+  const [waiting, setWaiting] = useState(0);
+  const [asked, setAsked] = useState(0);
+
+  useEffect(() => {
+    if (token === '') {
+      return;
+    }
+
+    let current = true;
+
+    api.admin.connectivity(token)
+      .then((listing) => current && setWaiting(listing.requested.length))
+      .catch(() => undefined);
+
+    return () => {
+      current = false;
+    };
+  }, [token, segment, detail, asked]);
+
   // a token that stops working - the host restarted with another one - locks
   // the whole panel again rather than leaving each section to say so
   const deny = useCallback(() => {
@@ -64,7 +91,7 @@ export function Admin({ theme }: { theme: Theme }) {
     );
   }
 
-  const access: Access = { token, deny, dark: theme === 'dark' };
+  const access: Access = { token, deny, dark: theme === 'dark', changed: () => setAsked((n) => n + 1) };
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -106,6 +133,14 @@ export function Admin({ theme }: { theme: Theme }) {
                   }`}
                 >
                   {item.title}
+                  {item.id === 'connectivity' && waiting > 0 && (
+                    <span
+                      className="ml-auto rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-400"
+                      title={`${waiting} waiting for a decision`}
+                    >
+                      {waiting}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -117,6 +152,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LambdaDetail key={detail} access={access} publicKey={decodeURIComponent(detail)} />
           ) : section === 'lambdas' ? (
             <LambdasSection access={access} />
+          ) : section === 'connectivity' ? (
+            <ConnectivitySection access={access} />
           ) : section === 'blocks' ? (
             <BlocksSection access={access} />
           ) : section === 'log' ? (

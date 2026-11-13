@@ -84,6 +84,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Schaltet die Datenbank ein', secrets: 'Schaltet Schlüssel und Passwörter ein', workspace: 'Schaltet „von Ihrer App gespeichert“ ein' },
     records: 'Liest die Datenbank',
     secrets: 'Sieht sich die Schlüssel und Passwörter an',
+    connectivity: 'Bittet um Verbindungen zu anderen Servern',
     other: (tool) => `Nutzt ${tool}`,
   },
   marks: {

@@ -7,6 +7,7 @@ using GenHTTP.Modules.IO;
 using Microsoft.Extensions.Logging;
 
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Settings;
@@ -42,11 +43,13 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimi
     {
         var lambda = request.RequireLambda();
 
-        var workspace = limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled);
+        // what it is built with, read on every request: a lambda whose tier,
+        // workspace or connectivity changed is built again on this one
+        var settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled), lambda.Connectivity);
 
         if (lambda.Feature is not { } feature)
         {
-            var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, workspace);
+            var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, settings);
 
             var answer = await handler.HandleAsync(request);
 
@@ -54,7 +57,7 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimi
             return request.GetHost() == null ? Confined(request, answer, lambda.PublicKey) : answer;
         }
 
-        var preview = await deployments.ResolvePreviewAsync(lambda.Id, feature.Id, feature.Preview, workspace);
+        var preview = await deployments.ResolvePreviewAsync(lambda.Id, feature.Id, feature.Preview, settings);
 
         var response = Confined(request, await preview.HandleAsync(request), lambda.PublicKey);
 

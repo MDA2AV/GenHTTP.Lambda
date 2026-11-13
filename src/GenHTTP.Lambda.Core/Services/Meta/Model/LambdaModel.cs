@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Connectivity;
 
 namespace GenHTTP.Lambda.Services.Meta.Model;
 
@@ -14,6 +15,7 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="Address">Where to link to it: its domain while that is served, its address below the hosting domain otherwise</param>
 /// <param name="Blocked">Since when the operator has blocked it, or nothing</param>
 /// <param name="BlockReason">Why, in the operator's words - which its owner reads as well</param>
+/// <param name="Connectivity">Whether it may connect to other servers, and where its request for that stands</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -30,7 +32,8 @@ public sealed record LambdaInfo(
     string PublicUrl,
     string Address,
     DateTime? Blocked = null,
-    string? BlockReason = null
+    string? BlockReason = null,
+    ConnectivityInfo? Connectivity = null
 );
 
 /// <summary>
@@ -114,8 +117,13 @@ public sealed record LambdaActivation(int Version, DateTime Started, string? Ori
 /// Since when its owner has its visits counted, or nothing while analytics are off - read on every request, so
 /// switching them on counts from the next one, and switching them off stops at once.
 /// </param>
+/// <param name="Connectivity">
+/// Whether it may connect to other servers, read on every request for the same reason as the tier: it is compiled in,
+/// so a decision of the operator builds it again on the next one.
+/// </param>
 public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt,
-                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null, DateTime? AnalyticsSince = null);
+                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null, DateTime? AnalyticsSince = null,
+                                    bool Connectivity = false);
 
 /// <summary>
 /// The preview of a feature a request was addressed to.
@@ -181,5 +189,6 @@ public sealed record LambdaOverview(
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
     string? Domain,
-    DateTime? Blocked = null
+    DateTime? Blocked = null,
+    ConnectivityInfo? Connectivity = null
 );

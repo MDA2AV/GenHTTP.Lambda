@@ -9,9 +9,19 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// <summary>
 /// Rejects snippets that reach for capabilities a hosted lambda has no business
 /// using: the file system of the host, other processes, or the reflection APIs
-/// that would route around those rules. Outbound network access is not among
-/// them - a lambda may use HttpClient and sockets directly.
+/// that would route around those rules - and, unless the lambda may, other
+/// servers: HttpClient, sockets, WebSocket clients, mail.
 /// </summary>
+/// <remarks>
+/// Whether a lambda may connect to other servers is its connectivity, which its
+/// tier includes or the operator allowed. Without it, the assemblies that
+/// connect are not handed to the compiler at all (see
+/// <see cref="ReferenceProvider"/>), which is what holds; the names and
+/// namespaces refused here are what makes the refusal say why and what to do,
+/// rather than that a type could not be found. What other assemblies do on
+/// the code's behalf - XML loaded from an address, the keys of a token's
+/// issuer - is asked of the compilation, see <see cref="InspectConnectivity"/>.
+/// </remarks>
 /// <remarks>
 /// A database is a file, so it is held to the same rule: a lambda uses the
 /// connection <c>Database.GetConnection()</c> hands it and makes none of its
@@ -59,6 +69,58 @@ public static class CodeGuard
         "GenHTTP.Modules.ReverseProxy"
     };
 
+    /// <summary>
+    /// The namespaces that are nothing but connecting to other servers, refused
+    /// in a lambda that may not.
+    /// </summary>
+    /// <remarks>
+    /// Not System.Net.Sockets or System.Net.Mail as a whole: an address family
+    /// and a mail address are in them, which have nothing to connect with.
+    /// </remarks>
+    private static readonly HashSet<string> ConnectivityNamespaces = new(StringComparer.Ordinal)
+    {
+        "System.Net.Http",
+        "System.Net.Quic",
+        "System.Net.NetworkInformation",
+        "System.IO.Pipes"
+    };
+
+    /// <summary>
+    /// The types that connect to other servers, refused as names in a lambda
+    /// that may not.
+    /// </summary>
+    /// <remarks>
+    /// As types only: the same name read off an object - a connection's
+    /// <c>Ping()</c>, a request's <c>Socket</c> - is whatever that object
+    /// calls it, and where it is one of these the compiler refuses it anyway,
+    /// since the assembly behind it is not referenced.
+    /// </remarks>
+    private static readonly HashSet<string> ConnectivityNames = new(StringComparer.Ordinal)
+    {
+        "HttpClient", "HttpClientHandler", "SocketsHttpHandler", "HttpMessageHandler", "HttpMessageInvoker", "DelegatingHandler",
+        "HttpRequestMessage", "HttpResponseMessage", "IHttpClientFactory",
+        "WebRequest", "HttpWebRequest", "FtpWebRequest", "WebClient",
+        "Socket", "TcpClient", "TcpListener", "UdpClient", "NetworkStream", "ClientWebSocket", "QuicConnection", "QuicListener",
+        "Dns", "Ping", "NetworkInterface", "SmtpClient",
+        "NamedPipeClientStream", "NamedPipeServerStream", "AnonymousPipeClientStream", "AnonymousPipeServerStream",
+        "XmlUrlResolver", "XmlSecureResolver"
+    };
+
+    /// <summary>
+    /// What a lambda that may not connect to other servers is told, after
+    /// what it reached for.
+    /// </summary>
+    internal const string ConnectivityMessage =
+        "which this lambda may not do. Its owner can ask for that - request_connectivity, PUT /api/v1/lambdas/{privateKey}/connectivity " +
+        "or Connectivity in the editor - saying what it connects to and why, and the operator of the installation decides; a premium lambda may. " +
+        "A public API that browsers may call can be called from the lambda's page instead (platform_guide, connectivity).";
+
+    /// <summary>
+    /// The id of a refusal for want of connectivity, so the editor and an agent can
+    /// tell it from the rest.
+    /// </summary>
+    public const string ConnectivityId = "LAMBDA0003";
+
     #region Functionality
 
     /// <summary>
@@ -70,7 +132,8 @@ public static class CodeGuard
     /// <summary>
     /// Inspects the parsed snippet and returns a message for every rule it breaks.
     /// </summary>
-    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null)
+    /// <param name="connectivity">Whether the lambda may connect to other servers</param>
+    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null, bool connectivity = true)
     {
         var findings = new List<CompilationDiagnostic>();
 
@@ -81,20 +144,25 @@ public static class CodeGuard
             switch (node)
             {
                 case UsingDirectiveSyntax @using when @using.Name != null:
-                    CheckNamespace(@using.Name.ToString(), @using.GetLocation(), findings);
+                    CheckNamespace(@using.Name.ToString(), @using.GetLocation(), findings, connectivity);
                     break;
 
                 case QualifiedNameSyntax qualified when qualified.Parent is not QualifiedNameSyntax:
-                    CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings);
+                    CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings, connectivity);
                     break;
 
                 case MemberAccessExpressionSyntax access when access.Parent is not MemberAccessExpressionSyntax && Chain(access) is { } chain:
-                    CheckChain(chain, access.GetLocation(), findings);
+                    CheckChain(chain, access.GetLocation(), findings, connectivity);
                     break;
 
                 case IdentifierNameSyntax identifier
                     when !IsHarmlessMember(identifier) && !declared.Contains(identifier.Identifier.ValueText):
                     CheckName(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
+
+                    if (!connectivity && !IsMember(identifier))
+                    {
+                        CheckConnectivity(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
+                    }
                     break;
 
                 case GenericNameSyntax generic when !declared.Contains(generic.Identifier.ValueText):
@@ -178,7 +246,7 @@ public static class CodeGuard
         return nested;
     }
 
-    private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings)
+    private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings, bool connectivity = true)
     {
         // global::System.Reflection is System.Reflection, and the arguments
         // of a generic type are names of their own, checked where they stand
@@ -197,7 +265,25 @@ public static class CodeGuard
                 return;
             }
         }
+
+        if (!connectivity && ConnectivityNamespace(name) is { } connecting && !NamesConnecting(name))
+        {
+            findings.Add(Reject($"'{connecting}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
+        }
     }
+
+    /// <summary>
+    /// Whether a name written out in full goes on to a type that is refused by
+    /// its own name - <c>System.Net.Http.HttpClient</c> - which says it once.
+    /// </summary>
+    private static bool NamesConnecting(string name) => name.Split('.').Any(ConnectivityNames.Contains);
+
+    /// <summary>
+    /// The namespace that connects to other servers a name is in or starts
+    /// with, if it is one.
+    /// </summary>
+    private static string? ConnectivityNamespace(string name)
+        => ConnectivityNamespaces.FirstOrDefault(e => name.Equals(e, StringComparison.Ordinal) || name.StartsWith(e + ".", StringComparison.Ordinal));
 
     /// <summary>
     /// The namespace to name when refusing one: the banned one, or - below a
@@ -224,12 +310,17 @@ public static class CodeGuard
     /// goes on into an allowed one, the banned one itself or one inside it,
     /// and from there into one of its types rather than a namespace below it.
     /// </remarks>
-    private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings)
+    private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings, bool connectivity = true)
     {
         var banned = BannedNamespaces.Where(b => chain.StartsWith(b + ".", StringComparison.Ordinal)).MaxBy(b => b.Length);
 
         if (banned == null)
         {
+            if (!connectivity && ConnectivityNamespace(chain) is { } connecting && !NamesConnecting(chain))
+            {
+                findings.Add(Reject($"'{connecting}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
+            }
+
             return;
         }
 
@@ -399,6 +490,40 @@ public static class CodeGuard
         return root is not IdentifierNameSyntax start || !BannedRoots.Contains(start.Identifier.ValueText);
     }
 
+    /// <summary>
+    /// Whether a name is read off an expression - <c>connection.Ping</c> -
+    /// rather than naming a type, written alone or after its namespace.
+    /// </summary>
+    private static bool IsMember(IdentifierNameSyntax identifier)
+    {
+        if (identifier.Parent is MemberBindingExpressionSyntax)
+        {
+            return true;
+        }
+
+        if (identifier.Parent is not MemberAccessExpressionSyntax access || access.Name != identifier)
+        {
+            return false;
+        }
+
+        var root = access.Expression;
+
+        while (root is MemberAccessExpressionSyntax inner)
+        {
+            root = inner.Expression;
+        }
+
+        return root is not IdentifierNameSyntax start || !BannedRoots.Contains(start.Identifier.ValueText);
+    }
+
+    private static void CheckConnectivity(string name, Location location, List<CompilationDiagnostic> findings)
+    {
+        if (ConnectivityNames.Contains(name))
+        {
+            findings.Add(Reject($"'{name}' connects to other servers, {ConnectivityMessage}", location, ConnectivityId));
+        }
+    }
+
     private static void CheckName(string name, Location location, List<CompilationDiagnostic> findings)
     {
         if (BannedNames.TryGetValue(name, out var reason))
@@ -554,6 +679,158 @@ public static class CodeGuard
     }
 
     /// <summary>
+    /// The names of what fetches from another server on the code's behalf,
+    /// and so are bound to see whether they do.
+    /// </summary>
+    private static readonly HashSet<string> FetchingNames = new(StringComparer.Ordinal)
+    {
+        "Create", "Load", "Transform", "Add", "ReadXml", "ReadXmlSchema", "Issuer", "FromWeb"
+    };
+
+    /// <summary>
+    /// The types that connect to other servers and live in an assembly a
+    /// lambda is handed all the same, for what else is in it.
+    /// </summary>
+    private static readonly HashSet<string> ConnectingTypes = new(StringComparer.Ordinal)
+    {
+        "System.Net.Mail.SmtpClient", "System.Xml.XmlUrlResolver", "System.Xml.XmlSecureResolver"
+    };
+
+    /// <summary>
+    /// Refuses, in a lambda that may not connect to other servers, what would
+    /// connect on its behalf: XML read from an address, the keys of a token's
+    /// issuer, a resource on the web, a mail client.
+    /// </summary>
+    /// <remarks>
+    /// The assemblies that connect are not referenced by such a lambda (see
+    /// <see cref="ReferenceProvider"/>), but others it is handed connect
+    /// through them as they run: <c>XDocument.Load("https://...")</c> fetches
+    /// what it is given, and so does an <c>XmlTextReader</c> made with an
+    /// address, a <c>DataSet</c> reading XML from one, and the bearer
+    /// authentication of GenHTTP asking the issuer of a token for its keys.
+    /// The same members with a stream or a string of XML are left alone.
+    ///
+    /// Asked of the compilation, because only the overload a call binds to
+    /// says whether it is given an address - and a type made with a
+    /// target-typed <c>new()</c> names nothing. Only the names in question
+    /// and the creations are bound.
+    /// </remarks>
+    public static IReadOnlyList<CompilationDiagnostic> InspectConnectivity(Microsoft.CodeAnalysis.Compilation compilation)
+    {
+        var findings = new List<CompilationDiagnostic>();
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            SemanticModel? model = null;
+
+            foreach (var node in tree.GetRoot().DescendantNodes())
+            {
+                var (method, at) = node switch
+                {
+                    BaseObjectCreationExpressionSyntax creation => ((model ??= compilation.GetSemanticModel(tree)).GetSymbolInfo(creation).Symbol as IMethodSymbol, creation),
+                    SimpleNameSyntax name when FetchingNames.Contains(name.Identifier.ValueText)
+                        => ((model ??= compilation.GetSemanticModel(tree)).GetSymbolInfo(name).Symbol as IMethodSymbol, (SyntaxNode)name),
+                    _ => (null, node)
+                };
+
+                if (method == null || Fetches(method) is not { } what)
+                {
+                    continue;
+                }
+
+                var span = at.GetLocation().GetMappedLineSpan();
+
+                findings.Add(new CompilationDiagnostic("Error", ConnectivityId, $"{what}, {ConnectivityMessage}",
+                                                       span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1,
+                                                       span.HasMappedPath ? span.Path : null));
+            }
+        }
+
+        return findings;
+    }
+
+    /// <summary>
+    /// What a member does that connects to another server, or nothing where it does not.
+    /// </summary>
+    private static string? Fetches(IMethodSymbol method)
+    {
+        var type = method.ContainingType;
+
+        var space = type?.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+
+        if (type != null && ConnectingTypes.Contains(type.ToDisplayString()))
+        {
+            return $"'{type.Name}' connects to other servers";
+        }
+
+        // what reads XML takes a path, which is an address as well
+        if ((space.StartsWith("System.Xml", StringComparison.Ordinal) || space == "System.Data")
+            && method.Parameters.Any(p => p.Type.SpecialType == SpecialType.System_String && IsAddress(p.Name)))
+        {
+            var name = method.MethodKind == MethodKind.Constructor ? $"new {type!.Name}" : $"{type!.Name}.{method.Name}";
+
+            return $"'{name}' with an address fetches what it names from where it is, another server included";
+        }
+
+        if (method.Name == "Issuer" && space.StartsWith("GenHTTP.Modules.Authentication", StringComparison.Ordinal))
+        {
+            return "'Issuer' has the keys of the tokens fetched from the issuer, another server";
+        }
+
+        if (method.Name == "FromWeb" && space.StartsWith("GenHTTP.Modules.IO", StringComparison.Ordinal))
+        {
+            return "'FromWeb' fetches the resource from another server";
+        }
+
+        return null;
+
+        // the address of what is read, not the base a relative one would be
+        // resolved against, nor the name of a namespace
+        static bool IsAddress(string parameter)
+            => (parameter.Contains("uri", StringComparison.OrdinalIgnoreCase)
+             || parameter.Contains("url", StringComparison.OrdinalIgnoreCase)
+             || parameter.Equals("filename", StringComparison.OrdinalIgnoreCase))
+            && !parameter.StartsWith("base", StringComparison.OrdinalIgnoreCase)
+            && !parameter.Contains("namespace", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Whether the code reaches for what connects to other servers, as far as
+    /// what is written tells - for the overview of a version, not a check.
+    /// </summary>
+    /// <remarks>
+    /// The names and namespaces <see cref="Inspect"/> refuses where a lambda
+    /// may not connect, read the same way: in what is written, the names a
+    /// lambda declares for itself left alone, a comment or a string ignored.
+    /// </remarks>
+    public static bool Connects(IEnumerable<SyntaxNode> roots)
+    {
+        var all = roots.ToList();
+
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var root in all)
+        {
+            declared.UnionWith(Declared(root));
+        }
+
+        return all.Any(root => Inspect(root, declared, connectivity: false).Any(f => f.Id == ConnectivityId));
+    }
+
+    /// <summary>
+    /// Whether the code of a version reaches for what connects to other
+    /// servers - lambda.cs read as the script it is, the other C# files as the
+    /// types they hold, the rest of the files not at all.
+    /// </summary>
+    public static bool Connects(IEnumerable<LambdaFile> files)
+    {
+        var compiled = files.Where(f => f.IsCompiled).ToList();
+
+        return compiled.Count > 0
+            && Connects(compiled.Select((f, i) => (i == 0 ? SourceBuilder.ParseSnippet(f.Code) : SourceBuilder.ParseFile(f.Code, f.Name)).GetRoot()));
+    }
+
+    /// <summary>
     /// What a lambda is told that waits for a task instead of awaiting it.
     /// </summary>
     internal const string WaitingMessage =
@@ -660,11 +937,11 @@ public static class CodeGuard
             && type.ContainingNamespace?.ToDisplayString() == "System.Runtime.CompilerServices";
     }
 
-    private static CompilationDiagnostic Reject(string message, Location location)
+    private static CompilationDiagnostic Reject(string message, Location location, string id = "LAMBDA0001")
     {
         var position = location.GetLineSpan().StartLinePosition;
 
-        return new CompilationDiagnostic("Error", "LAMBDA0001", message, position.Line + 1, position.Character + 1);
+        return new CompilationDiagnostic("Error", id, message, position.Line + 1, position.Character + 1);
     }
 
     /// <summary>

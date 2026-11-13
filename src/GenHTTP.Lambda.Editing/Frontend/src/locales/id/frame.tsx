@@ -18,6 +18,7 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Statistik',
     analytics: 'Analitik',
     logs: 'Log',
+    connectivity: 'Konektivitas',
     code: 'Kode',
   },
   sectionsLabel: 'Bagian',

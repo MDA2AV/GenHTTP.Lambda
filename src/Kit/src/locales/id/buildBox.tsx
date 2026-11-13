@@ -45,6 +45,7 @@ export const buildBox: KitMessages['buildBox'] = {
     addFile: 'Menambahkan file',
     removeFile: 'Menghapus file',
     files: 'Melihat yang sudah disimpannya',
+    services: 'Meminta izin untuk menggunakan layanan lain',
   },
 
   yourApp: 'Website Anda',

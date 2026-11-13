@@ -45,6 +45,7 @@ export const buildBox: KitMessages['buildBox'] = {
     addFile: 'Fügt eine Datei hinzu',
     removeFile: 'Entfernt eine Datei',
     files: 'Sieht sich an, was sie gespeichert hat',
+    services: 'Bittet darum, andere Dienste zu nutzen',
   },
 
   yourApp: 'Ihre Website',

@@ -36,6 +36,7 @@ These, and nothing else:
 | `enable_data` | switches the database or the secrets on |
 | `read_database` | the tables of the database and their rows - with `feature`, that feature's copy |
 | `list_secrets` | lists the secrets by name, and which ones the code reads that have no value yet |
+| `request_connectivity` | asks the operator for the lambda to connect to other servers, saying which and why - only where the server has to make the call |
 
 `write_code` and `change_code` take `deploy: true` to go online in the same
 call, and `check: true` to compile what they saved without putting it
@@ -154,6 +155,21 @@ application can do without it - and switch secrets on with `enable_data`. You
 cannot set the value and must not make one up: the owner enters it in their
 control center, which asks them for every name the code reads that has no
 value. Say in one line which one they need to enter and where to get it.
+
+## Other services
+
+A lambda shares its server with every other one, so its code may only
+connect to other servers - call an API with `HttpClient`, open a socket, send
+mail - where the operator of the installation allowed it. Until then, code
+that does is refused when it compiles, with `LAMBDA0003`, and the operator
+takes longer to decide than you have. So call a public API from the page,
+with `fetch` in the browser, wherever it allows that: the server never
+connects and it works at once. Only where the server has to make the call - a
+key the browser must not see, an API that refuses browsers - ask with
+`request_connectivity`, saying which service and what for, build the rest so that
+it works without it, and say in your closing note that it waits for
+permission to use that service. Never build something that fetches whatever
+address it is given: that is a proxy, and it is what this rule is for.
 
 ## What is written about it
 

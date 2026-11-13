@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Blocking;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -43,7 +44,7 @@ namespace GenHTTP.Lambda.Api;
          request on.
          """)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
-                                   IAddressBlocks blocks, LambdaOptions options, ILogger<AdminResource> logger)
+                                   IAddressBlocks blocks, IConnectivityService connectivity, LambdaOptions options, ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -85,7 +86,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 seen?.LastSeen,
                 l.Domain,
                 LambdaDescription.Serves(l.Tier, l.Domain),
-                l.Blocked
+                l.Blocked,
+                ConnectivityResponse.Of(l.Connectivity)
             );
         }).ToList();
 
@@ -321,6 +323,56 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
     #endregion
 
+    #region Connectivity
+
+    [ResourceMethod("connectivity")]
+    [Summary("Lists the requests to connect to other servers")]
+    [Remarks("""
+             The lambdas whose owner asked for their code to connect to other servers and waits for a decision, the longest
+             waiting first, with what they said it is for - and the lambdas allowed so far, the most recently allowed first, to
+             be looked at again. A premium lambda may connect without asking, and is not listed unless it asked as well.
+             """)]
+    [return: Summary("What waits, and what was allowed")]
+    public AdminConnectivityListing GetConnectivity()
+    {
+        var listed = connectivity.List();
+
+        return new AdminConnectivityListing([.. listed.Where(l => l.Connectivity.Status == ConnectivityStatus.Requested).Select(Describe)],
+                                      [.. listed.Where(l => l.Connectivity.Status == ConnectivityStatus.Allowed).Select(Describe)]);
+    }
+
+    [ResourceMethod(Method.Put, "lambdas/:publicKey/connectivity")]
+    [Summary("Decides whether a lambda may connect to other servers")]
+    [Remarks("""
+             Allows it - asked for or not - or declines what was asked, which takes back what was allowed as well. The note is
+             shown to the owner as it is written, in the editor and as `connectivity.note` of the lambda; the owner may ask again
+             after a decline.
+
+             It takes effect from the next request, without a deploy: the lambda and the previews of its features are built
+             again under the decision. Taken back, code that connects stops compiling, and the version online answers with an
+             error until it is changed. A premium lambda may connect whatever is decided here, for as long as it is premium.
+             """)]
+    [Response(ResponseStatus.Forbidden, "The lambda is a demo, which does not connect to other servers, or it is blocked, of which nothing changes but its block.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "Declining, where nothing was asked for and nothing is allowed.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The lambda afterwards")]
+    public AdminLambdaDetail DecideConnectivity([Summary("The public key of the lambda")] string publicKey, ConnectivityDecision body, IRequest request)
+    {
+        var privateKey = meta.RequirePrivateKey(publicKey);
+
+        connectivity.Decide(privateKey, body.Allow, body.Note);
+
+        logger.LogInformation(body.Allow ? "Allowed connectivity for lambda {Lambda} by operator" : "Declined connectivity for lambda {Lambda} by operator", publicKey);
+
+        return Detail(privateKey, request);
+    }
+
+    private static AdminConnectivityEntry Describe(ConnectivityListing listing)
+        => new(listing.PublicKey, listing.Tier, listing.ActiveVersion, listing.Blocked, ConnectivityResponse.Of(listing.Connectivity), listing.Connects);
+
+    #endregion
+
     #region Settings
 
     [ResourceMethod("settings")]
@@ -430,7 +482,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())],
             lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
             [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
-            You(request)
+            You(request),
+            connectivity.Connects(id, lambda.ActiveVersion, lambda.LatestVersion)
         );
     }
 

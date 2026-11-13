@@ -34,7 +34,9 @@ public sealed record LambdaSummaryResponse(
     [Summary("What its tier allows it")]
     SummaryLimits Limits,
     [Summary("What the documentation of the version the storage is about says, and which of its pages it has")]
-    DocumentationSummary Documentation
+    DocumentationSummary Documentation,
+    [Summary("Whether the code of the version online, or of the newest, connects to other servers - as far as what is written tells. It compiles only where `lambda.connectivity.allowed`.")]
+    bool Connects = false
 );
 
 /// <remarks>

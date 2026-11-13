@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
@@ -334,7 +335,7 @@ public sealed class MetaService : IMetaService
         var workspace = DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace);
 
         return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace,
-                                  AnalyticsSince: lambda.AnalyticsSince);
+                                  AnalyticsSince: lambda.AnalyticsSince, Connectivity: ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
     }
 
     public IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey)
@@ -485,7 +486,7 @@ public sealed class MetaService : IMetaService
 
         long id;
 
-        WorkspaceLimits limits;
+        BuildSettings settings;
 
         using (var database = Databases.CreateDbContext())
         {
@@ -493,10 +494,10 @@ public sealed class MetaService : IMetaService
 
             VersionInput.ValidateAllowance(files, lambda.Tier, Limits);
 
-            (id, limits) = (lambda.Id, WorkspaceOf(database, lambda));
+            (id, settings) = (lambda.Id, SettingsOf(database, lambda));
         }
 
-        return await Deployments.ValidateAsync(code, id, limits, cancellation);
+        return await Deployments.ValidateAsync(code, id, settings, cancellation);
     }
 
     /// <remarks>
@@ -516,7 +517,7 @@ public sealed class MetaService : IMetaService
 
         int target;
 
-        WorkspaceLimits limits;
+        BuildSettings settings;
 
         using (var database = Databases.CreateDbContext())
         {
@@ -533,7 +534,7 @@ public sealed class MetaService : IMetaService
                 throw LambdaException.NotFound($"Version {target} does not exist.");
             }
 
-            (id, publicKey, limits) = (lambda.Id, lambda.PublicKey, WorkspaceOf(database, lambda));
+            (id, publicKey, settings) = (lambda.Id, lambda.PublicKey, SettingsOf(database, lambda));
         }
 
         /*
@@ -549,7 +550,7 @@ public sealed class MetaService : IMetaService
                ? LambdaOutput.Enter(new OutputScope(publicKey, Book, Options.MaxOutputLines, id))
                : null)
         {
-            outcome = await Deployments.ActivateAsync(id, target, limits, cancellation);
+            outcome = await Deployments.ActivateAsync(id, target, settings, cancellation);
         }
 
         return Activated(privateKey, target, origin, outcome);
@@ -811,10 +812,12 @@ public sealed class MetaService : IMetaService
     #region Helpers
 
     /// <summary>
-    /// What the lambda may keep in its workspace, which is compiled into it.
+    /// What the lambda is compiled with: what it may keep in its workspace,
+    /// and whether it may connect to other servers.
     /// </summary>
-    private WorkspaceLimits WorkspaceOf(LambdaDbContext database, LambdaEntity lambda)
-        => Limits.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace));
+    private BuildSettings SettingsOf(LambdaDbContext database, LambdaEntity lambda)
+        => new(Limits.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace)),
+               ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
 
     /// <summary>
     /// The lambda of the key, read once it is its turn to change (see <see cref="_turns" />).
