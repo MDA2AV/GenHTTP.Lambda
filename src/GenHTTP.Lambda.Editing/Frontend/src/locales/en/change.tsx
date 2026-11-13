@@ -79,6 +79,8 @@ export const change = {
     switchOn: { database: 'Switching on the database', secrets: 'Switching on secrets', workspace: 'Switching on the workspace' },
     records: 'Reading the database',
     secrets: 'Looking at the secrets',
+    /** The agent asked for the lambda to connect to other servers, which the operator of the site allows. */
+    egress: 'Asking to connect to other servers',
     other: (tool: string) => `Using ${tool}`,
   },
   marks: {

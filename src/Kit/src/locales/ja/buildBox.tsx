@@ -43,6 +43,7 @@ export const buildBox: KitMessages['buildBox'] = {
     addFile: 'ファイルを追加しています',
     removeFile: 'ファイルを削除しています',
     files: '保存したものを確認しています',
+    services: '他のサービスを使う許可を依頼しています',
   },
 
   yourApp: 'あなたのホームページ',

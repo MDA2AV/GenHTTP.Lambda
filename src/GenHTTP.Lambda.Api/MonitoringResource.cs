@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Egress;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -39,7 +40,8 @@ namespace GenHTTP.Lambda.Api;
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
-                                               ITelemetryService telemetry, ILogBook book, LambdaOptions options, ILimitsService limits)
+                                               ITelemetryService telemetry, ILogBook book, LambdaOptions options, ILimitsService limits,
+                                               IEgressService egress)
 {
 
     #region Functionality
@@ -115,7 +117,8 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
                 (int)product.RemovedAfter.TotalDays,
                 limits.Of(tier).Features
             ),
-            known.Documentation
+            known.Documentation,
+            egress.Connects(id, live?.Version, latest?.Version)
         );
     }
 

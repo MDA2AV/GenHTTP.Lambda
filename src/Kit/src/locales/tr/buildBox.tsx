@@ -45,6 +45,7 @@ export const buildBox: KitMessages['buildBox'] = {
     addFile: 'Dosya ekleniyor',
     removeFile: 'Dosya kaldırılıyor',
     files: 'Kaydedilenlere bakılıyor',
+    services: 'Başka hizmetleri kullanma izni isteniyor',
   },
 
   yourApp: 'Web siteniz',

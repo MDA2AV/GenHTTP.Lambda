@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 
 import { absoluteAddress } from '@genhttp-lambda/kit/address';
 import { isActive, isDemo } from '@genhttp-lambda/kit/api';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconKey, IconMail, IconPlay, IconSpark, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconGlobe, IconKey, IconMail, IconPlay, IconSpark, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useInstallation } from '@genhttp-lambda/kit/installation';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
+import { AskForServices } from './EgressTab';
 import { count, span } from '@genhttp-lambda/kit/ui/format';
 import { Names } from './SecretsPanel';
 import { AgentMark, Ago, Figure, Section, Sparkline } from '@genhttp-lambda/kit/ui/ui';
@@ -54,6 +55,8 @@ export function SimpleOverview({ control }: { control: Control }) {
         </div>
 
         {!demo && <NeedsKey control={control} />}
+
+        {!demo && <NeedsServices control={control} />}
 
         {problems && !demo && <Problems control={control} />}
 
@@ -106,7 +109,10 @@ function Status({ control }: { control: Control }) {
   // go online, or by somebody who went back. Not while the agent works: what
   // it saved last may be something it is still fixing, and it puts online
   // what it finishes
-  const pending = live && latest != null && latest !== lambda.activeVersion && !isActive(control.agent.state?.job) && !isDemo(lambda.tier) && !lambda.blocked;
+  const pending = live && latest != null && latest !== lambda.activeVersion && !isActive(control.agent.state?.job) && !isDemo(lambda.tier) && !lambda.blocked
+    // nor while what it saved uses other services it may not: putting it
+    // online would only be refused, and the tile below says what it waits for
+    && !(summary?.connects && !lambda.egress.allowed);
 
   const since = summary?.activation ? span(summary.activation.seconds, t.shared) : null;
 
@@ -238,6 +244,66 @@ function NeedsKey({ control }: { control: Control }) {
       <button type="button" onClick={() => control.openData('secrets', missing[0])} className="btn-primary !px-4 !py-1.5 text-[13px]">
         {said.enterKey}
       </button>
+    </section>
+  );
+}
+
+/**
+ * That the app uses other services on the internet - an API the agent wrote
+ * it to call - which apps here may only do once the operator of the site
+ * allows it: asking for that, waiting for it, or reading why not.
+ *
+ * Only while there is something to ask, to wait for or to read. An app that
+ * may use them says nothing about it here: there is nothing to do.
+ */
+function NeedsServices({ control }: { control: Control }) {
+  const said = useEditorT().simple;
+  const [asking, setAsking] = useState(false);
+
+  const egress = control.lambda.egress;
+  const connects = control.summary?.connects ?? false;
+
+  if (egress.allowed || (!connects && egress.status !== 'Requested' && egress.status !== 'Declined')) {
+    return null;
+  }
+
+  const waiting = egress.status === 'Requested';
+  const declined = egress.status === 'Declined';
+
+  return (
+    <section className={`flex flex-wrap items-start gap-x-4 gap-y-3 border px-5 py-4 ${
+      declined ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/40 bg-amber-500/5'
+    }`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+        declined ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+      }`}>
+        <IconGlobe className="h-[18px] w-[18px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-sm font-medium">
+          {waiting ? said.servicesWaiting : declined ? said.servicesDeclined : said.servicesTitle}
+        </h2>
+        <p className="mt-0.5 text-[13px] text-slate-600 dark:text-slate-400">
+          {waiting ? said.servicesWaitingText : declined ? said.servicesDeclinedText : said.servicesText}
+        </p>
+        {waiting && egress.purpose && (
+          <p className="mt-2 whitespace-pre-line break-words text-[13px]">
+            <span className="text-slate-500">{said.servicesYouSaid}: </span>{egress.purpose}
+          </p>
+        )}
+        {declined && egress.note && (
+          <p className="mt-2 whitespace-pre-line break-words text-[13px]">
+            <span className="text-slate-500">{said.servicesTheySaid}: </span>{egress.note}
+          </p>
+        )}
+      </div>
+      {!waiting && (
+        <button type="button" onClick={() => setAsking(true)} className="btn-primary !px-4 !py-1.5 text-[13px]">
+          {declined ? said.servicesAskAgain : said.servicesAsk}
+        </button>
+      )}
+
+      <AskForServices control={control} open={asking} onClose={() => setAsking(false)} />
     </section>
   );
 }

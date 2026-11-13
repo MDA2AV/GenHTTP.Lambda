@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Storage;
 
@@ -17,8 +18,9 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// <param name="CodeBytes">What those weigh</param>
 /// <param name="ResourceFiles">The files it reads and serves while it runs</param>
 /// <param name="ResourceBytes">What those weigh, decoded</param>
+/// <param name="UsesNetwork">Whether its code connects to other servers, which it may only with egress</param>
 public sealed record VersionFacts(int CodeFiles, long CodeBytes, int ResourceFiles, long ResourceBytes, bool ServesResources, bool ServesWorkspace,
-                                  bool UsesWorkspace, bool UsesDatabase, DocumentationSummary Documentation);
+                                  bool UsesWorkspace, bool UsesDatabase, bool UsesNetwork, DocumentationSummary Documentation);
 
 /// <summary>
 /// What a version says about itself: the pages of its code kept in
@@ -91,7 +93,7 @@ public sealed partial class VersionFactsCache(IStorageService storage)
         return _facts[(lambdaId, wanted)] = Read(LambdaSource.Parse(code));
     }
 
-    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0));
+    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0));
 
     #endregion
 
@@ -114,6 +116,8 @@ public sealed partial class VersionFactsCache(IStorageService storage)
             compiled.Any(f => ServingWorkspace().IsMatch(f.Code)),
             compiled.Any(f => UsingWorkspace().IsMatch(f.Code)),
             compiled.Any(f => DatabaseService.Uses(f.Code)),
+            // read as the code guard reads it where a lambda may not connect
+            CodeGuard.Connects(compiled),
             Document(files)
         );
     }

@@ -35,12 +35,44 @@ public static class ReferenceProvider
         "ioxide"
     ];
 
+    /// <summary>
+    /// What a lambda that may not connect to other servers is compiled
+    /// without, by the names of the assemblies they start with.
+    /// </summary>
+    private static readonly string[] Network =
+    [
+        "System.Net.Http",
+        "System.Net.Sockets",
+        "System.Net.Requests",
+        "System.Net.WebClient",
+        "System.Net.WebSockets.Client",
+        "System.Net.Quic",
+        "System.Net.NameResolution",
+        "System.Net.Ping",
+        "System.Net.NetworkInformation",
+        "System.IO.Pipes"
+    ];
+
     private static readonly Lazy<MetadataReference[]> References = new(Collect, LazyThreadSafetyMode.ExecutionAndPublication);
 
+    private static readonly Lazy<MetadataReference[]> Offline = new(() => [.. References.Value.Where(r => !IsNetwork(r))],
+                                                                     LazyThreadSafetyMode.ExecutionAndPublication);
+
     /// <summary>
-    /// The metadata references a lambda may be compiled against.
+    /// The metadata references a lambda may be compiled against, at most:
+    /// those of one that may connect to other servers.
     /// </summary>
     public static MetadataReference[] Resolve() => References.Value;
+
+    /// <summary>
+    /// The metadata references a lambda is compiled against, which leave out
+    /// what connects to other servers unless it may.
+    /// </summary>
+    /// <remarks>
+    /// The same references either way, filtered - nothing is read twice.
+    /// </remarks>
+    /// <param name="egress">Whether the lambda may connect to other servers</param>
+    public static MetadataReference[] Resolve(bool egress) => egress ? References.Value : Offline.Value;
 
     private static MetadataReference[] Collect()
     {
@@ -106,9 +138,14 @@ public static class ReferenceProvider
                         .Select(a => a.Location);
     }
 
-    private static bool IsExcluded(string name)
+    private static bool IsExcluded(string name) => Starts(name, Excluded);
+
+    private static bool IsNetwork(MetadataReference reference)
+        => reference is PortableExecutableReference { FilePath: { } path } && Starts(Path.GetFileNameWithoutExtension(path), Network);
+
+    private static bool Starts(string name, string[] prefixes)
     {
-        foreach (var prefix in Excluded)
+        foreach (var prefix in prefixes)
         {
             if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {

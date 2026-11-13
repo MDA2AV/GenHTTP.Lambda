@@ -89,6 +89,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Attivazione del database', secrets: 'Attivazione di chiavi e password', workspace: 'Attivazione dei file salvati dalla tua app' },
     records: 'Lettura del database',
     secrets: 'Uno sguardo a chiavi e password',
+    egress: 'Richiesta di connessione ad altri server',
     other: (tool) => `Uso di ${tool}`,
   },
   marks: {

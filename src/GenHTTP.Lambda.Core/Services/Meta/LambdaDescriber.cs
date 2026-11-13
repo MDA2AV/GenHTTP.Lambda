@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Egress;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -28,7 +29,8 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lifetime.DeployedUntil(lambda), lifetime.KeptUntil(lambda),
                               lambda.Domain, lambda.View.ToString(), addresses.Of(lambda.PublicKey),
-                              addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain), lambda.Blocked, lambda.BlockReason);
+                              addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain), lambda.Blocked, lambda.BlockReason,
+                              EgressRule.Describe(lambda));
     }
 
     /// <summary>
@@ -48,6 +50,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
                lifetime.DeployedUntil(lambda),
                lifetime.KeptUntil(lambda),
                lambda.Domain,
-               lambda.Blocked);
+               lambda.Blocked,
+               EgressRule.Describe(lambda));
 
 }

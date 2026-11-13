@@ -853,6 +853,8 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.records}</>;
     case 'secrets':
       return <>{words.secrets}</>;
+    case 'egress':
+      return <>{words.egress}</>;
     default:
       return <>{words.other(step.tool ?? '')}</>;
   }

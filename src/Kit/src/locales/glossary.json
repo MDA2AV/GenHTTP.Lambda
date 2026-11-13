@@ -143,6 +143,16 @@
       "en": "push",
       "note": "git: sending commits to the platform; git push and its options stay as they are",
       "id": "push", "de": "pushen", "es": "hacer push", "fr": "pousser", "it": "fare push", "nl": "pushen", "pl": "wypchnąć", "pt": "fazer push", "pt-pt": "fazer push", "tr": "push etmek", "ja": "プッシュ", "ko": "푸시"
+    },
+    {
+      "en": "Egress",
+      "note": "the full view's and the panel's word for the code connecting to other servers - calling an API, opening a socket, sending mail - which the operator of the site allows; in English the technical term, elsewhere the usual words for outbound connections",
+      "id": "Koneksi keluar", "de": "Ausgehende Verbindungen", "es": "Conexiones salientes", "fr": "Connexions sortantes", "it": "Connessioni in uscita", "nl": "Uitgaande verbindingen", "pl": "Połączenia wychodzące", "pt": "Conexões de saída", "pt-pt": "Ligações de saída", "tr": "Dış bağlantılar", "ja": "外部通信", "ko": "외부 연결"
+    },
+    {
+      "en": "use other services",
+      "note": "the simple view's words for an app that fetches from another service on the internet - a weather forecast, an AI - which needs the operator's permission; never egress, connections or servers there",
+      "id": "menggunakan layanan lain", "de": "andere Dienste nutzen", "es": "usar otros servicios", "fr": "utiliser d’autres services", "it": "usare altri servizi", "nl": "andere diensten gebruiken", "pl": "korzystać z innych usług", "pt": "usar outros serviços", "pt-pt": "usar outros serviços", "tr": "başka hizmetleri kullanmak", "ja": "他のサービスを使う", "ko": "다른 서비스 사용"
     }
   ]
 }

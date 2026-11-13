@@ -88,6 +88,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Zet de database aan', secrets: 'Zet sleutels en wachtwoorden aan', workspace: 'Zet de opslag van je app aan' },
     records: 'Leest de database',
     secrets: 'Bekijkt de sleutels en wachtwoorden',
+    egress: 'Vraagt toestemming om met andere servers te verbinden',
     other: (tool) => `Gebruikt ${tool}`,
   },
   marks: {

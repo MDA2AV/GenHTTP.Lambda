@@ -57,7 +57,9 @@ public sealed record AdminLambda(
     [Summary("Whether it answers at that domain")]
     bool DomainServed,
     [Summary("Since when it is blocked; absent while it is not")]
-    DateTime? Blocked = null
+    DateTime? Blocked = null,
+    [Summary("Whether it may connect to other servers, and where its request for that stands")]
+    EgressResponse? Egress = null
 );
 
 [Summary("Everything about one lambda, for the operator.")]
@@ -77,7 +79,9 @@ public sealed record AdminLambdaDetail(
     [Summary("The addresses it was changed from with its editor key lately, most recent first - which a block may block as well. Never one of the installation's own networks, and none where the server keeps no addresses (`LAMBDA_LOG_CLIENT_ADDRESS`).")]
     IReadOnlyList<EditorAddressResponse>? EditorAddresses = null,
     [Summary("The address this request came from as a block would cover it, so the operator does not block themselves; absent where it is on one of the installation's own networks")]
-    string? You = null
+    string? You = null,
+    [Summary("Whether the code of its version online, or of its newest, connects to other servers - as far as what is written tells - which it may only where `lambda.egress.allowed`")]
+    bool Connects = false
 );
 
 [Summary("That the operator blocked a lambda, and why.")]

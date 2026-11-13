@@ -82,6 +82,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: '데이터베이스 켜기', secrets: '키와 비밀번호 켜기', workspace: '앱이 저장한 것 켜기' },
     records: '데이터베이스 읽기',
     secrets: '키와 비밀번호 살펴보기',
+    egress: '다른 서버에 연결하도록 요청하고 있어요',
     other: (tool) => `${tool} 사용`,
   },
   marks: {

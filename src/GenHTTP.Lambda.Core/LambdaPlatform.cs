@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Egress;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Hosting;
@@ -159,6 +160,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<ISecretService, SecretService>();
         services.AddSingleton<IDatabaseService, DatabaseService>();
         services.AddSingleton<IShowcaseService, ShowcaseService>();
+        services.AddSingleton<IEgressService, EgressService>();
         services.AddSingleton<SourceCache>();
         services.AddSingleton<StarGuard>();
         services.AddSingleton<ISourceService, SourceService>();

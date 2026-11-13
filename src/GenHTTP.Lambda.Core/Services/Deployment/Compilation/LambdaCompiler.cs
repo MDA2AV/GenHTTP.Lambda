@@ -100,7 +100,7 @@ internal static class LambdaCompiler
         // only looked at the snippet would be avoided by moving the code
         foreach (var node in roots)
         {
-            rejections.AddRange(CodeGuard.Inspect(node, declared));
+            rejections.AddRange(CodeGuard.Inspect(node, declared, request.Settings.Egress));
         }
 
         if (rejections.Count > 0)
@@ -116,25 +116,30 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
-        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Resources, scope, request.Limits) };
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Resources, scope, request.Settings.Workspace) };
 
         foreach (var other in others)
         {
             trees.Add(SourceBuilder.WrapFile(other.Tree, scope, other.File.Name));
         }
 
+        // a lambda that may not connect to other servers is not handed the
+        // assemblies that would, so it cannot even name what is in them
         var compilation = CSharpCompilation.Create(
             scope,
             trees,
-            ReferenceProvider.Resolve(),
+            ReferenceProvider.Resolve(request.Settings.Egress),
             CompilationOptions
         );
 
         // what needs the compiler to tell: a connection made without naming
-        // its type, a task waited for rather than awaited, and a context of
-        // Entity Framework that is not on the lambda's connection
+        // its type, a task waited for rather than awaited, a context of
+        // Entity Framework that is not on the lambda's connection - and,
+        // where it may not connect, what would fetch from another server on
+        // its behalf
         List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation),
-                                                   .. CodeGuard.InspectEntityFramework(compilation)];
+                                                   .. CodeGuard.InspectEntityFramework(compilation),
+                                                   .. (request.Settings.Egress ? [] : CodeGuard.InspectEgress(compilation))];
 
         if (constructed.Count > 0)
         {
@@ -237,9 +242,9 @@ internal static class LambdaCompiler
     /// code does not add another assembly to the process.
     /// </summary>
     /// <remarks>
-    /// The directories and the limits are part of it because they are compiled
-    /// in: the same code in another tier, with its workspace switched off, or
-    /// as the preview of a feature, is another assembly. Beyond those it is the
+    /// The directories and the settings are part of it because they are compiled
+    /// in: the same code in another tier, with its workspace switched off, with
+    /// or without egress, or as the preview of a feature, is another assembly. Beyond those it is the
     /// C# files and nothing else. The resources are read from their directory
     /// while the lambda runs - only where that directory is gets compiled in -
     /// and the rest of the code is never built, so a version that only
@@ -256,7 +261,7 @@ internal static class LambdaCompiler
 
         Append(hash, request.Workspace);
         Append(hash, $"\n{request.Resources}");
-        Append(hash, $"\n{request.Limits.Quota}\n{request.Limits.Enabled}");
+        Append(hash, $"\n{request.Settings.Workspace.Quota}\n{request.Settings.Workspace.Enabled}\n{request.Settings.Egress}");
 
         foreach (var file in request.Files.Where(f => f.IsCompiled))
         {
@@ -394,12 +399,12 @@ internal static class LambdaCompiler
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
-/// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
+/// <param name="Settings">What the lambda may keep in its workspace and whether it may connect to other servers, compiled into it</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 /// <param name="Database">What the lambda connects to its database with, once it runs</param>
 /// <param name="DatabaseSize">What its workspace reads the room the database takes with, once it runs</param>
 /// <param name="WorkspaceChanged">What its workspace calls once it wrote, once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Resources, string AssemblyDirectory, string Name, bool Run,
-                                          WorkspaceLimits Limits, Func<string, bool, string?>? Secrets = null,
+                                          BuildSettings Settings, Func<string, bool, string?>? Secrets = null,
                                           Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null,
                                           Func<long>? DatabaseSize = null, Action? WorkspaceChanged = null);

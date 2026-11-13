@@ -442,6 +442,8 @@ export const guide: KitMessages['guide'] = {
     'Votre code tourne sur un serveur partagé. Une partie de C# est donc refusée avant même la compilation : lancer des processus, ouvrir vos propres sockets, charger des assemblies, accéder au système de fichiers en dehors de votre workspace, et la réflexion utilisée pour contourner tout ça. De même pour l’attente d’une tâche avec .Result ou .Wait() au lieu de await : les requêtes s’exécutent sur un thread par cœur, et la tâche devrait se terminer sur le thread même qui l’attend.',
   limits2:
     'Tout le reste est là, y compris toute l’API des modules GenHTTP. Si quelque chose est refusé, on vous dit quelle ligne et pourquoi, pas simplement que ça a échoué.',
+  limitsEgress:
+    'Se connecter à d’autres serveurs - appeler une API avec HttpClient, ouvrir un socket, envoyer un e-mail - demande une autorisation : une lambda premium l’a d’office, toute autre la demande sous Connexions sortantes dans l’éditeur, en indiquant à quoi elle se connecte et pourquoi, et c’est la personne qui gère le site qui décide. D’ici là, le code qui se connecte est refusé. Ce que vos pages récupèrent dans le navigateur n’a besoin de rien de tout cela : appelez donc une API publique depuis la page lorsqu’elle le permet.',
   limitsBlocked:
     'Une lambda qui enfreint les conditions d’utilisation - hameçonnage, logiciel malveillant, attaques contre d’autres personnes - peut être bloquée par celui qui exploite le site. Elle est mise hors ligne, et rien ne peut être modifié ni mis en ligne tant que le blocage n’est pas levé ; le tableau de bord l’indique tout en haut, avec la raison donnée. Ce qu’elle contient peut encore être lu et téléchargé.',
 

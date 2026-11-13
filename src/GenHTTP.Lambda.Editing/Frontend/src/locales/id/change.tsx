@@ -87,6 +87,7 @@ export const change: EditorMessages['change'] = {
     switchOn: { database: 'Mengaktifkan database', secrets: 'Mengaktifkan kunci dan kata sandi', workspace: 'Mengaktifkan penyimpanan file aplikasi' },
     records: 'Membaca database',
     secrets: 'Melihat kunci dan kata sandi',
+    egress: 'Meminta izin untuk terhubung ke server lain',
     other: (tool) => `Memakai ${tool}`,
   },
   marks: {

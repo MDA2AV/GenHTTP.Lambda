@@ -22,6 +22,8 @@ export const frame = {
     /** Who visits the lambda - from where, to which pages, on what - once its owner switched it on. */
     analytics: 'Analytics',
     logs: 'Logs',
+    /** Whether the code may connect to other servers - call an API, open a socket - which the operator allows, in the full view only. */
+    egress: 'Egress',
     /** Every file of a version - its code and its resources - to read and to change, in the full view only. */
     code: 'Code',
   },

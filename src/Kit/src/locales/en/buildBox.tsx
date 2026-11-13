@@ -49,6 +49,8 @@ export const buildBox = {
     addFile: 'Adding a file',
     removeFile: 'Removing a file',
     files: 'Looking at what it saved',
+    /** The agent asked for the website to use other services on the internet, which the operator of the site allows. */
+    services: 'Asking to use other services',
   },
 
   yourApp: 'Your website',

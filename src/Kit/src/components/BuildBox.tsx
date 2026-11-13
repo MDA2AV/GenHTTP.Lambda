@@ -83,6 +83,8 @@ function doingOf(steps: AgentStep[], words: Words): string | null {
           return words.records;
         case 'secrets':
           return words.keys;
+        case 'egress':
+          return words.services;
         case 'upload':
           return words.addFile;
         case 'delete':

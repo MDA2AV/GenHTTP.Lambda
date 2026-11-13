@@ -76,12 +76,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Functionality
 
-    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default)
+    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, BuildSettings? settings = null, CancellationToken cancellation = default)
     {
         var id = lambdaId ?? 0;
 
         var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetResourceDirectory(id),
-                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, limits ?? WorkspaceLimits.Standard);
+                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, settings ?? BuildSettings.Standard);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -104,29 +104,29 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    public ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
+    public ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, BuildSettings settings, CancellationToken cancellation = default)
+        => ActivateAsync(new Slot(lambdaId, null), version, settings, () => Storage.Read(lambdaId, version), cancellation);
 
-    public ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
+    public ValueTask<IHandler> ResolveAsync(long lambdaId, int version, BuildSettings settings, CancellationToken cancellation = default)
+        => ResolveAsync(new Slot(lambdaId, null), version, settings, () => Storage.Read(lambdaId, version), cancellation);
 
-    public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, WorkspaceLimits limits,
+    public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, BuildSettings settings,
                                                       CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, featureId), preview, limits, () => code, cancellation);
+        => ActivateAsync(new Slot(lambdaId, featureId), preview, settings, () => code, cancellation);
 
-    public ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, WorkspaceLimits limits,
+    public ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, BuildSettings settings,
                                                    CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, featureId), preview, limits, () => Storage.ReadPreview(lambdaId, featureId), cancellation);
+        => ResolveAsync(new Slot(lambdaId, featureId), preview, settings, () => Storage.ReadPreview(lambdaId, featureId), cancellation);
 
     /// <summary>
     /// Builds what a slot is to serve and makes it what it serves.
     /// </summary>
     /// <param name="stamp">Which build this is: the version, or the deployment of a preview</param>
     /// <param name="read">Where the code comes from</param>
-    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
                                                               CancellationToken cancellation)
     {
-        if (IsDeployed(slot, stamp, limits))
+        if (IsDeployed(slot, stamp, settings))
         {
             return CompilationOutcome.Succeeded();
         }
@@ -145,7 +145,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         try
         {
-            if (IsDeployed(slot, stamp, limits))
+            if (IsDeployed(slot, stamp, settings))
             {
                 return CompilationOutcome.Succeeded();
             }
@@ -156,7 +156,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
              * either way; the other connections of its reactor should not
              * have to (see Offload).
              */
-            return await Offload.Run(() => BuildAsync(slot, stamp, limits, read, cancellation), cancellation);
+            return await Offload.Run(() => BuildAsync(slot, stamp, settings, read, cancellation), cancellation);
         }
         finally
         {
@@ -168,7 +168,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// Reads, writes out and compiles what a slot is to serve - under the lock
     /// and away from the reactor, see the activation above.
     /// </summary>
-    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
                                                            CancellationToken cancellation)
     {
         var code = read();
@@ -193,7 +193,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId, featureId),
                                              Storage.GetResourceDirectory(lambdaId, featureId),
-                                             Storage.GetAssemblyDirectory(lambdaId), name, true, limits,
+                                             Storage.GetAssemblyDirectory(lambdaId), name, true, settings,
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
                                              () => Databases.SizeOf(lambdaId, featureId),
@@ -233,7 +233,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                 return CompilationOutcome.Failed(broken);
             }
 
-            _deployed[slot] = new CompiledLambda(stamp, request.Limits, handler);
+            _deployed[slot] = new CompiledLambda(stamp, request.Settings, handler);
 
             Logger.LogInformation("Deployed {Slot} build {Stamp}", slot, stamp);
 
@@ -283,22 +283,22 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
                                                    CancellationToken cancellation)
     {
-        if (_deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Limits == limits)
+        if (_deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Settings == settings)
         {
             return existing.Handler;
         }
 
         // the same thing failed a moment ago and nothing about it has changed:
         // compiling it again for every visitor would change nothing but the load
-        if (_broken.TryGetValue(slot, out var breakage) && breakage.Matches(stamp, limits))
+        if (_broken.TryGetValue(slot, out var breakage) && breakage.Matches(stamp, settings))
         {
             throw new InvalidOperationException(breakage.Message);
         }
 
-        var outcome = await ActivateAsync(slot, stamp, limits, read, cancellation);
+        var outcome = await ActivateAsync(slot, stamp, settings, read, cancellation);
 
         if (!outcome.Success)
         {
@@ -306,7 +306,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             var reason = $"The code of this lambda does not compile: {message}";
 
-            _broken[slot] = new Breakage(stamp, limits, reason);
+            _broken[slot] = new Breakage(stamp, settings, reason);
 
             throw new InvalidOperationException(reason);
         }
@@ -315,10 +315,10 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     }
 
     /// <summary>
-    /// Whether the slot serves this build already, compiled with these limits.
+    /// Whether the slot serves this build already, compiled with these settings.
     /// </summary>
-    private bool IsDeployed(Slot slot, int stamp, WorkspaceLimits limits)
-        => _deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Limits == limits;
+    private bool IsDeployed(Slot slot, int stamp, BuildSettings settings)
+        => _deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Settings == settings;
 
     /// <summary>
     /// Writes the resources of what is being deployed into the directory it
@@ -424,12 +424,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// on something outside itself - a service it calls while it starts up
     /// being down - that mends without anybody deploying anything.
     /// </remarks>
-    private sealed record Breakage(int Stamp, WorkspaceLimits Limits, string Message)
+    private sealed record Breakage(int Stamp, BuildSettings Settings, string Message)
     {
         private readonly DateTime _noticed = DateTime.UtcNow;
 
-        public bool Matches(int stamp, WorkspaceLimits limits)
-            => Stamp == stamp && Limits == limits && DateTime.UtcNow - _noticed < TimeSpan.FromMinutes(1);
+        public bool Matches(int stamp, BuildSettings settings)
+            => Stamp == stamp && Settings == settings && DateTime.UtcNow - _noticed < TimeSpan.FromMinutes(1);
     }
 
 }

@@ -63,7 +63,7 @@ public sealed record BuildResult(
 public sealed record AgentStep(
     [Summary("Seconds into the run")]
     int At,
-    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets) or `other`")]
+    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets), `egress` (asked for the lambda to connect to other servers) or `other`")]
     string Kind,
     [Summary("What the agent said, for a step of kind `say`")]
     string? Text = null,

@@ -422,6 +422,7 @@ return Layout.Create().Add("chat", socket);`} />
           <Section id="limits" title={said.parts.limits}>
             <p>{said.limits}</p>
             <p>{said.limits2}</p>
+            <p>{said.limitsEgress}</p>
             <p>{said.limitsBlocked}</p>
           </Section>
 

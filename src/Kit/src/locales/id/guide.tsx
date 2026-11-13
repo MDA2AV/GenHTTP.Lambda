@@ -439,6 +439,8 @@ export const guide: KitMessages['guide'] = {
     'Kode Anda berjalan di server bersama, jadi sebagian C# ditolak sebelum dikompilasi: menjalankan proses, membuka socket sendiri, memuat assembly, mengakses file system di luar workspace Anda, dan reflection yang dipakai untuk mengakali semua itu. Begitu pula menunggu task dengan .Result atau .Wait() alih-alih await: request berjalan di satu thread per core, dan task tersebut harus selesai justru di thread yang sedang menunggunya.',
   limits2:
     'Semua yang lain tersedia, termasuk seluruh API modul GenHTTP. Kalau ada yang ditolak, Anda diberi tahu baris mana dan alasannya, bukan sekadar pesan gagal.',
+  limitsEgress:
+    'Terhubung ke server lain - memanggil API dengan HttpClient, membuka socket, mengirim email - memerlukan izin: lambda premium sudah memilikinya, lambda lain memintanya di bagian Koneksi keluar di editor dengan menyebutkan ke mana ia terhubung dan alasannya, lalu pengelola situs yang memutuskan. Sampai saat itu, kode yang terhubung ditolak. Apa yang diambil halaman Anda di browser tidak memerlukan semua ini, jadi panggil API publik dari halaman bila memungkinkan.',
   limitsBlocked:
     'Lambda yang melanggar ketentuan - phishing, malware, serangan terhadap pihak lain - bisa diblokir oleh pengelola situs. Lambda itu menjadi offline, dan tidak ada yang bisa diubah atau dijadikan online sampai blokirnya dicabut; pusat kontrol menyatakannya di bagian atas, beserta alasan yang diberikan. Isinya tetap bisa dibaca dan diunduh.',
 

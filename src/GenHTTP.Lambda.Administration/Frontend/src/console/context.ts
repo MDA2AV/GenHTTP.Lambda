@@ -10,4 +10,6 @@ export interface Access {
   /** The server answered as though there were no administration here. */
   deny: () => void;
   dark: boolean;
+  /** Something was decided that the frame counts - a request for egress, say - so it asks again. */
+  changed?: () => void;
 }
