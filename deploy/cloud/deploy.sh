@@ -1,20 +1,14 @@
 #!/usr/bin/env bash
 #
-# Rebuilds and restarts the GenHTTP.Lambda server.
+# Rebuilds and restarts genhttp.dev: the server and the build agent.
 #
-# There is one reason this script exists rather than a line in a README: the
-# stack is spread over three compose files, and leaving one out does not fail.
-# It silently produces a half-configured server - drop the agent overlay and the
-# site comes back looking healthy while /build reports "no build agent"; drop
-# the ioxide overlay and it quietly falls back to the slower engine. So the file
-# list lives here, once, and the checks at the end prove the result rather than
-# assuming it.
-#
-# The build agent is rebuilt with the server, because the two change together:
-# the runner reads the answers of the server's tools, and a runner left behind
-# reads them as they used to be. Its container is only recreated when its image
-# changed, and only once the builds running at that moment are done - they live
-# in the runner, and recreating it would lose them.
+# The two are rebuilt together, because they change together: the runner
+# reads the answers of the server's tools, and a runner left behind reads them
+# as they used to be. Both images are built before anything restarts, and the
+# runner's container is only recreated when its image changed, and only once
+# the builds running at that moment are done - they live in the runner, and
+# recreating it would lose them. The checks at the end prove the result rather
+# than assume it.
 #
 #   sudo genhttp-deploy            rebuild and restart what is on disk
 #   sudo genhttp-deploy --pull     fetch origin/main first, then do that
@@ -23,10 +17,12 @@
 #
 set -euo pipefail
 
-REPO=/root/GenHTTP.Lambda
+# where this file is, followed through the link on the path
+HERE=$(dirname "$(readlink -f "$0")")
+
 SITE=https://genhttp.dev
 CONTAINER=genhttplambda-lambda-1
-FILES=(-f docker-compose.yml -f docker-compose.ioxide.yml -f docker-compose.agent.yml)
+COMPOSE=(docker compose -f "$HERE/docker-compose.yml")
 
 # the image the runner, the egress proxy and every build are started from
 AGENT_IMAGE=genhttp-agent:latest
@@ -41,18 +37,26 @@ for arg in "$@"; do
     --pull)  pull=yes ;;
     --check) check_only=yes ;;
     -y|--yes) assume_yes=yes ;;
-    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "This needs root, for docker and for the repo under /root." >&2
+  echo "This needs root, for docker and for the checkout." >&2
   echo "Run:  sudo $(basename "$0") $*" >&2
   exit 1
 fi
 
-cd "$REPO"
+REPO=$(git -C "$HERE" rev-parse --show-toplevel)
+
+# The settings moved here with the compose file. Started without them the
+# server comes back with no panel and no build agent, looking healthy.
+if [ ! -f "$HERE/.env" ]; then
+  echo "No .env beside $HERE/docker-compose.yml." >&2
+  [ -f "$REPO/.env" ] && echo "It moved here from the root of the checkout:  mv $REPO/.env $HERE/.env" >&2
+  exit 1
+fi
 
 say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32mok\033[0m   %s\n' "$*"; }
@@ -62,7 +66,7 @@ bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$*"; }
 # after a build that changed something, until the runner is recreated
 runner_image() {
   local id
-  id=$(docker compose "${FILES[@]}" ps -q agent 2>/dev/null || true)
+  id=$("${COMPOSE[@]}" ps -q agent 2>/dev/null || true)
   [ -n "$id" ] && docker inspect "$id" --format '{{.Image}}' 2>/dev/null || echo none
 }
 
@@ -84,21 +88,16 @@ verify() {
   code=$(curl -sL --max-time 20 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
   [ "$code" = 200 ] && ok "site answering (HTTP $code)" || { bad "site returned $code"; failed=1; }
 
-  # The check that catches a missing agent overlay, which is otherwise
-  # invisible. Availability moved from /build to /system when the API was
-  # reorganised, so both are tried - this script has to keep working across a
-  # deploy that is itself the thing moving the endpoint.
-  local build
-  build=$(curl -s --max-time 20 "$SITE/api/v1/system" || echo '{}')
-  grep -q '"available"' <<<"$build" || build=$(curl -s --max-time 20 "$SITE/api/v1/build" || echo '{}')
-  if grep -q '"available":true' <<<"$build"; then
+  local system
+  system=$(curl -s --max-time 20 "$SITE/api/v1/system" || echo '{}')
+  if grep -q '"available":true' <<<"$system"; then
     ok "build agent reachable"
-  elif grep -q '"available"' <<<"$build"; then
-    bad "build agent NOT configured - the agent compose file was probably missed"
+  elif grep -q '"available"' <<<"$system"; then
+    bad "build agent NOT available - is it running, and does .env hold the same LAMBDA_AGENT_TOKEN for both?"
     failed=1
   else
-    bad "could not read build availability from /system or /build"
-    printf '       %s\n' "${build:0:160}"
+    bad "could not read build availability from /system"
+    printf '       %s\n' "${system:0:160}"
     failed=1
   fi
 
@@ -119,7 +118,7 @@ verify() {
   local engine
   engine=$(docker inspect "$CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
            | grep -i '^LAMBDA_ENGINE=' | cut -d= -f2 || true)
-  [ -n "$engine" ] && ok "engine: $engine" || printf '  ---- engine not pinned in env (compose default)\n'
+  [ "$engine" = ioxide ] && ok "engine: $engine" || { bad "engine is '${engine:-not set}', not ioxide"; failed=1; }
 
   return $failed
 }
@@ -131,7 +130,7 @@ fi
 
 say "About to redeploy"
 printf '  repo:   %s\n' "$REPO"
-printf '  commit: %s\n' "$(git log --oneline -1 2>/dev/null || echo 'not a git checkout')"
+printf '  commit: %s\n' "$(git -C "$REPO" log --oneline -1)"
 [ "$pull" = yes ] && printf '  will fetch origin/main first\n'
 printf '\n  \033[33mThis restarts the server and drops every open connection.\033[0m\n'
 printf '  Anyone using a hosted lambda right now - including arena players - is disconnected.\n'
@@ -144,19 +143,19 @@ fi
 
 if [ "$pull" = yes ]; then
   say "Fetching origin/main"
-  git fetch --quiet origin main
-  git merge --ff-only origin/main
-  printf '  now at: %s\n' "$(git log --oneline -1)"
+  git -C "$REPO" fetch --quiet origin main
+  git -C "$REPO" merge --ff-only origin/main
+  printf '  now at: %s\n' "$(git -C "$REPO" log --oneline -1)"
 fi
 
 # Both images are built before anything restarts, so the server is down for
 # its restart and not for a build as well. Building touches nothing running:
 # the runner keeps the image it was started from.
 say "Building the server and the build agent (the server's image builds the frontend too, so this takes a few minutes)"
-docker compose "${FILES[@]}" build lambda agent
+"${COMPOSE[@]}" build lambda agent
 
 say "Restarting the server"
-docker compose "${FILES[@]}" up -d lambda
+"${COMPOSE[@]}" up -d lambda
 
 say "Waiting for it to come back"
 # Wait for the health status as well as the site, not just the site. The server
@@ -189,12 +188,12 @@ else
   # earlier `compose build` leaves `up -d` with the containers "Running", and
   # the runner on the image before. That the image changed is known above.
   say "Restarting the build agent"
-  docker compose "${FILES[@]}" up -d --force-recreate agent egress-proxy
+  "${COMPOSE[@]}" up -d --force-recreate agent egress-proxy
 fi
 
 say "Verifying"
 if verify; then
-  say "Deployed. $(git log --oneline -1)"
+  say "Deployed. $(git -C "$REPO" log --oneline -1)"
 else
   say "Deployed, but the checks above did not all pass. Do not walk away from this."
   exit 1

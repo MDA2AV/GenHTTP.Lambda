@@ -52,25 +52,10 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             AgentUrl = ReadOptional("LAMBDA_AGENT_URL"),
             AgentToken = ReadOptional("LAMBDA_AGENT_TOKEN"),
             AgentFablePassword = ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
-            AgentBuildsPerDay = ReadInt("LAMBDA_AGENT_BUILDS_PER_DAY", defaults.AgentBuildsPerDay),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
-            DeploymentLifetime = ReadSpan("LAMBDA_DEPLOYMENT_LIFETIME_HOURS", defaults.DeploymentLifetime),
-            Retention = ReadSpan("LAMBDA_RETENTION_HOURS", defaults.Retention),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
-            BuildBytes = Combined(defaults.BuildBytes, ("LAMBDA_MAX_CODE_LENGTH", LambdaOptions.RetiredDefaults["code-characters"].Free),
-                                  ("LAMBDA_MAX_ASSET_BYTES", LambdaOptions.RetiredDefaults["asset-bytes"].Free)),
-            PremiumBuildBytes = Combined(defaults.PremiumBuildBytes, ("LAMBDA_PREMIUM_MAX_CODE_LENGTH", LambdaOptions.RetiredDefaults["code-characters"].Premium),
-                                         ("LAMBDA_PREMIUM_MAX_ASSET_BYTES", LambdaOptions.RetiredDefaults["asset-bytes"].Premium)),
-            DataBytes = Combined(defaults.DataBytes, ("LAMBDA_WORKSPACE_BYTES", LambdaOptions.RetiredDefaults["workspace-bytes"].Free),
-                                 ("LAMBDA_DATABASE_BYTES", LambdaOptions.RetiredDefaults["database-bytes"].Free)),
-            PremiumDataBytes = Combined(defaults.PremiumDataBytes, ("LAMBDA_PREMIUM_WORKSPACE_BYTES", LambdaOptions.RetiredDefaults["workspace-bytes"].Premium),
-                                        ("LAMBDA_PREMIUM_DATABASE_BYTES", LambdaOptions.RetiredDefaults["database-bytes"].Premium)),
-            MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
-            MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
-            MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),
             SourceCacheBytes = ReadLong("LAMBDA_SOURCE_CACHE_BYTES", defaults.SourceCacheBytes),
             GitMaxPushBytes = ReadLong("LAMBDA_GIT_MAX_PUSH_BYTES", defaults.GitMaxPushBytes),
-            RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),
             AdminToken = ReadOptional("LAMBDA_ADMIN_TOKEN"),
@@ -117,18 +102,11 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
     }
 
     /// <summary>
-    /// Says what about the configuration the operator should know: what is
-    /// read from where it no longer belongs, and what was left out.
+    /// Says what about the configuration the operator should know: what was
+    /// left out, and what does not fit together.
     /// </summary>
     public void Report(ILogger logger)
     {
-        // the limits of the tiers moved to the administration panel; the variables
-        // still give their defaults for this release, and are ignored after it
-        foreach (var variable in MovedToPanel())
-        {
-            logger.LogWarning("Read {Variable} from the environment, which is deprecated: the limits of the tiers are set in the administration panel, and a value saved there wins", variable);
-        }
-
         // an entry that names no origin is left out rather than keep the server from
         // starting, and said here so the operator finds out
         foreach (var entry in Platform.McpOrigins.Where(e => McpOrigins.Of(e) == null))
@@ -150,43 +128,6 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             logger.LogInformation("LAMBDA_PUBLIC_URL is not set, so the addresses of the lambdas read http://localhost:{Port}/lambda/: set it to where the installation is reached, such as https://lambda.example.com", Platform.Port);
         }
     }
-
-    /// <summary>
-    /// The environment variables that set a limit of the tiers, which the
-    /// administration panel sets now.
-    /// </summary>
-    public static IReadOnlyList<string> LimitVariables { get; } =
-    [
-        "LAMBDA_MAX_CODE_LENGTH", "LAMBDA_PREMIUM_MAX_CODE_LENGTH", "LAMBDA_MAX_ASSET_BYTES", "LAMBDA_PREMIUM_MAX_ASSET_BYTES",
-        "LAMBDA_WORKSPACE_BYTES", "LAMBDA_PREMIUM_WORKSPACE_BYTES", "LAMBDA_DATABASE_BYTES", "LAMBDA_PREMIUM_DATABASE_BYTES",
-        "LAMBDA_DEPLOYMENT_LIFETIME_HOURS", "LAMBDA_RETENTION_HOURS", "LAMBDA_MAX_VERSIONS", "LAMBDA_MAX_FEATURES",
-        "LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", "LAMBDA_RATE_LIMIT", "LAMBDA_AGENT_BUILDS_PER_DAY"
-    ];
-
-    /// <summary>
-    /// What the variables of the four allowances that became two set: the
-    /// characters of code and the bytes of assets, which a version's build
-    /// allowance counts together now, and the room of the workspace and of
-    /// the database, which share the data allowance.
-    /// </summary>
-    /// <remarks>
-    /// Only where one of them is set, as the sum of both - the one that is
-    /// not set counting as its old default - so an installation that raised
-    /// one keeps what it raised until the panel says otherwise.
-    /// </remarks>
-    private static long Combined(long fallback, (string Name, long Before) first, (string Name, long Before) second)
-    {
-        var one = ReadOptional(first.Name) is { } a && long.TryParse(a, out var x) ? x : (long?)null;
-        var other = ReadOptional(second.Name) is { } b && long.TryParse(b, out var y) ? y : (long?)null;
-
-        return one == null && other == null ? fallback : (one ?? first.Before) + (other ?? second.Before);
-    }
-
-    /// <summary>
-    /// Which of <see cref="LimitVariables"/> are set in this environment.
-    /// </summary>
-    public static IReadOnlyList<string> MovedToPanel()
-        => [.. LimitVariables.Where(v => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(v)))];
 
     private static string ReadString(string key, string fallback)
     {
