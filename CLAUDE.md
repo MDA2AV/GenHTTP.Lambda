@@ -132,8 +132,11 @@ the environment:
   pages every installation shares read the rest from `/system` (`operator`),
   and leave out what is not there.
 - **Docker**: each host has its Dockerfile (`src/<host>/Dockerfile`, built
-  from the root); `docker-compose.yml` and `deploy.sh` build the cloud's,
-  unchanged otherwise. `.github/workflows/release.yml` publishes the community
+  from the root). The cloud's operations are in `deploy/cloud` - one compose
+  file with the build agent, its `.env`, `deploy.sh` and `set-token.sh` - so
+  the root holds nothing only genhttp.dev needs; its compose file names the
+  project (`genhttplambda`), since the containers and the data volume are
+  named after it. `.github/workflows/release.yml` publishes the community
   image and the build agent (`genhttp/lambda-agent`) to the `genhttp` Docker
   Hub account for amd64 and arm64, on a tag `v*` or by hand - nothing is
   pushed otherwise. `samples/community` runs it with Compose, the build agent
@@ -985,8 +988,7 @@ chosen by the owner.
   A change applies to what is checked next and takes nothing away. Ports,
   directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
   timeout stay environment variables: they protect the process. The old
-  limit variables give the defaults for one release, with a startup warning,
-  and are then removed. Callers ask `ILimitsService`, never `LambdaOptions`,
+  limit variables are no longer read. Callers ask `ILimitsService`, never `LambdaOptions`,
   for a limit.
 - **Enterprise** - a customer running their own instance, on-prem or in the
   cloud - is planned but **do not anticipate enterprise features unless asked**.

@@ -40,10 +40,10 @@ published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
 `.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
 hand.
 
-genhttp.dev is the cloud edition: `docker-compose.yml` at the root builds it
-from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the overlays `deploy.sh`
-knows (see [Redeploying](#redeploying)), and its lambdas answer at
-subdomains of `LAMBDA_HOSTING_URL`, one each.
+genhttp.dev is the cloud edition: `deploy/cloud/docker-compose.yml` builds it
+from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
+[Redeploying](#redeploying)), and its lambdas answer at subdomains of
+`LAMBDA_HOSTING_URL`, one each.
 
 ## Developing locally
 
@@ -1657,13 +1657,9 @@ and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so both images default to
 `LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
-and allowed; genhttp.dev does with an overlay of its compose file:
+and allowed; genhttp.dev does, in `deploy/cloud/docker-compose.yml`.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.ioxide.yml up -d
-```
-
-That override runs the server on io_uring under `seccomp-ioxide.json`, which is
+It runs the server on io_uring under `deploy/cloud/seccomp-ioxide.json`, which is
 the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
 `io_uring_register` added and nothing else. Without it the engine stops at
 `io_uring_setup failed: -1` before the first request. The hole is small but it
@@ -1692,19 +1688,14 @@ reads, the partial file had been kept as if it were the whole.
 
 ### Redeploying
 
-genhttp.dev, which also runs the build agent, is spread over three compose
-files at the root of the repository (the community edition's sample has one,
-the agent a profile in it), and leaving one out does not fail loudly - it
-produces a server that looks healthy while some part of it is switched off.
-Drop the agent overlay and
-`/build` reports "no build agent"; drop the ioxide overlay and the engine
-quietly falls back to Kestrel. So there is a script that knows the list and
-checks the result:
+genhttp.dev, the server and the build agent, is one compose file in
+`deploy/cloud`, its secret settings in `.env` beside it. A script beside both
+builds, restarts and checks the result:
 
 ```bash
-sudo ./deploy.sh              # rebuild and restart what is on disk
-sudo ./deploy.sh --pull       # fetch origin/main first, then do that
-sudo ./deploy.sh --check      # verify the running server, change nothing
+sudo deploy/cloud/deploy.sh              # rebuild and restart what is on disk
+sudo deploy/cloud/deploy.sh --pull       # fetch origin/main first, then do that
+sudo deploy/cloud/deploy.sh --check      # verify the running server, change nothing
 ```
 
 `--check` is safe at any time and is the quickest way to answer "is the build
@@ -1725,8 +1716,12 @@ built last.
 Linking it onto the path makes it available to anyone with sudo:
 
 ```bash
-sudo ln -sf "$PWD/deploy.sh" /usr/local/bin/genhttp-deploy
+sudo ln -sf "$PWD/deploy/cloud/deploy.sh" /usr/local/bin/genhttp-deploy
 ```
+
+The builds sign in with a token of the subscription, made with
+`claude setup-token`; `sudo deploy/cloud/set-token.sh` writes it into `.env`
+and restarts the agent on it.
 
 ## Telemetry
 
@@ -1878,7 +1873,7 @@ receives, a lambda's own domain included, where the path would otherwise be
 the lambda's. Nothing else in the folder is served.
 
 ```bash
-mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see docker-compose.yml
+mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see deploy/cloud/docker-compose.yml
 
 certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
 ```
@@ -1960,19 +1955,6 @@ on to the domain, and has to trust the server before they can be told so.
 Leave it out where its DNS does not point here, or certbot fails for both
 names. The challenge for `www.` is sent on to the domain like any other
 request once the domain is set, which the certificate authority follows.
-
-`reissue-www.sh` adds `www.` to the certificates issued without it. It looks
-through the certificates folder and reissues each certificate whose names lack
-their `www.` with both names. It finds the certbot lineage by the names, and
-leaves out a `www.` that does not resolve to where its domain does, saying so.
-Then it installs the files. It does not restart the server, so the new
-certificates are served from the next restart on:
-
-```bash
-sudo ./reissue-www.sh --list      # what would be reissued, nothing changed
-sudo ./reissue-www.sh --dry-run   # asks the staging CA, installs nothing
-sudo ./reissue-www.sh             # reissues and installs
-```
 
 Mind the order: once the domain is set, the lambda's subdomain sends its
 visitors to the domain at once. The challenge is answered for any host as
@@ -2292,8 +2274,7 @@ showcase picture (3 MB), requests per second and client to the lambdas (250),
 and builds and changes per address and day from the build agent (10).
 
 They are kept in the `settings` table beside the panel's switches, a row each,
-and held in memory. A missing row is the default - the table above, or what
-the environment variable that used to set it says. Saving writes every value,
+and held in memory. A missing row is the default - the table above. Saving writes every value,
 refuses one that is not greater than zero and a premium tier that allows less
 than the free one, and logs a line per limit that changed
 (`Changed limit limits.free.build-bytes from 33554432 to 16777216 by operator`).
@@ -2309,16 +2290,11 @@ There were four of the two once: the characters of C# apart from the bytes of
 assets, and the room of the workspace apart from the database's. A value an
 operator saved for one of them is carried over as the sum of the pair - the
 other counting as its old default - and the old rows are removed with the next
-save. The variables below are carried over the same way.
+save.
 
-The variables that used to set them - `LAMBDA_MAX_CODE_LENGTH`,
-`LAMBDA_MAX_ASSET_BYTES`, `LAMBDA_WORKSPACE_BYTES`, `LAMBDA_DATABASE_BYTES` and
-their `LAMBDA_PREMIUM_` twins, `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`,
-`LAMBDA_RETENTION_HOURS`, `LAMBDA_MAX_VERSIONS`, `LAMBDA_MAX_FEATURES`,
-`LAMBDA_MAX_SHOWCASE_IMAGE_BYTES`, `LAMBDA_RATE_LIMIT` and
-`LAMBDA_AGENT_BUILDS_PER_DAY` - still give the defaults for this release, and
-the server warns on startup for each that is set. A value saved in the panel
-wins. They are removed in the next release.
+The environment variables that set them before the panel did
+(`LAMBDA_MAX_CODE_LENGTH`, `LAMBDA_RATE_LIMIT`, `LAMBDA_AGENT_BUILDS_PER_DAY`
+and the others) are no longer read.
 
 `/logs` is the tail of this run, live. It holds everything the server logged
 and everything a lambda printed while it was serving a request - the two are
