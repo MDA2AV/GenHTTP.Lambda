@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Domínio removido. A lambda volta a responder no endereço daqui.',
   removeFailed: 'Não foi possível remover o domínio.',
   hint:
-    'Uma lambda premium pode responder em um domínio próprio (o domínio inteiro, a partir da raiz). Aponte primeiro o domínio para este servidor e informe-o aqui: a partir daí, as requisições para ele chegam à lambda e o endereço daqui encaminha os visitantes para ele.',
+    'O plano desta lambda permite que ela responda em um domínio próprio (o domínio inteiro, a partir da raiz). Aponte primeiro o domínio para este servidor e informe-o aqui: a partir daí, as requisições para ele chegam à lambda e o endereço daqui encaminha os visitantes para ele.',
   loading: 'Carregando…',
   example: 'seu-dominio.com.br',
   open: (domain) => `Abrir ${domain}`,

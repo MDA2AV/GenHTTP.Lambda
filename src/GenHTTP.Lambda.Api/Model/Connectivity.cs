@@ -6,9 +6,9 @@ namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("Whether a lambda's code may connect to other servers, and where its owner's request for that stands.")]
 public sealed record ConnectivityResponse(
-    [Summary("Whether its code may connect to other servers now - HttpClient, sockets, a WebSocket client, mail, DNS: its tier includes it, or the operator allowed it. Where it may not, code that does is refused as it compiles, with `LAMBDA0003`.")]
+    [Summary("Whether its code may connect to other servers now - HttpClient, sockets, a WebSocket client, mail, DNS: the operator allowed it, or its tier does by default and the operator did not decline it. Where it may not, code that does is refused as it compiles, with `LAMBDA0003`.")]
     bool Allowed,
-    [Summary("Whether its tier includes it, whatever was asked: the premium tier does")]
+    [Summary("Whether its tier allows it while nothing was decided about the lambda - production does by default; a decision of the operator comes first")]
     bool Included,
     [Summary("Where the request stands: `Requested` while it waits for the operator, `Allowed`, or `Declined` - asked for and turned down, or allowed and taken back. Absent while nobody asked.")]
     string? Status,
@@ -48,7 +48,7 @@ public sealed record ConnectivityDecision(
 public sealed record AdminConnectivityListing(
     [Summary("Those whose request waits for a decision, the longest waiting first")]
     IReadOnlyList<AdminConnectivityEntry> Requested,
-    [Summary("Those the operator allowed, the most recently allowed first. Premium lambdas may connect without being listed here.")]
+    [Summary("Those the operator allowed, the most recently allowed first. Lambdas whose tier connects by default may connect without being listed here.")]
     IReadOnlyList<AdminConnectivityEntry> Allowed
 );
 
@@ -56,7 +56,7 @@ public sealed record AdminConnectivityListing(
 public sealed record AdminConnectivityEntry(
     [Summary("Its public key")]
     string PublicKey,
-    [Summary("`Free`, `Premium` or `Demo`")]
+    [Summary("`Sandbox`, `Production`, `System` or `Demo`")]
     string Tier,
     [Summary("The version online; absent while none is")]
     int? ActiveVersion,

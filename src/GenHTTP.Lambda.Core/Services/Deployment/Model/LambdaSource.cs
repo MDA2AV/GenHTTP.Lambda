@@ -297,7 +297,7 @@ public static class LambdaSource
     /// </summary>
     /// <remarks>
     /// Measured without decoding anything: this is asked of every version on
-    /// its way in, and a premium lambda may ship a hundred megabytes that
+    /// its way in, and a lambda in production may ship a hundred megabytes that
     /// would otherwise be decoded just to be counted and thrown away.
     /// </remarks>
     public static long Size(IEnumerable<LambdaFile> files)

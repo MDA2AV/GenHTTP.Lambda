@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Domena została usunięta. Lambda znów odpowiada pod swoim adresem tutaj.',
   removeFailed: 'Nie udało się usunąć domeny.',
   hint:
-    'Lambda premium może odpowiadać pod własną domeną – całą, od korzenia. Najpierw skieruj domenę na ten serwer, potem wpisz ją tutaj: od tej chwili żądania do niej trafiają do lambdy, a jej adres tutaj przekierowuje odwiedzających na domenę.',
+    'Plan tej lambdy pozwala jej odpowiadać pod własną domeną – całą, od korzenia. Najpierw skieruj domenę na ten serwer, potem wpisz ją tutaj: od tej chwili żądania do niej trafiają do lambdy, a jej adres tutaj przekierowuje odwiedzających na domenę.',
   loading: 'Ładowanie…',
   example: 'twoja-domena.pl',
   open: (domain) => `Otwórz ${domain}`,

@@ -2,10 +2,10 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'Apakah kode boleh terhubung ke server lain: memanggil API, membuka socket, mengirim email. Lambda berbagi satu server, jadi izin ini diberikan per lambda - lambda premium boleh, yang lain setelah operator situs ini mengizinkannya.',
+    'Apakah kode boleh terhubung ke server lain: memanggil API, membuka socket, mengirim email. Lambda berbagi satu server, jadi izin ini diberikan per lambda: jika paketnya sudah mencakupnya dan operator situs ini tidak menolaknya, atau setelah operator mengizinkannya.',
 
-  included: 'Termasuk dalam premium',
-  includedText: 'Kode boleh terhubung ke server lain: premium sudah mencakupnya.',
+  included: (tier) => `Termasuk dalam ${tier}`,
+  includedText: (tier) => `Kode boleh terhubung ke server lain: ${tier} sudah mencakupnya.`,
   allowed: 'Diizinkan',
   allowedText: (ago) => <>Operator situs ini mengizinkannya {ago}. Kode boleh terhubung ke server lain.</>,
   requested: 'Menunggu operator',

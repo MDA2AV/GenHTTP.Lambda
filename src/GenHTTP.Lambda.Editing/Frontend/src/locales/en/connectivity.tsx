@@ -9,11 +9,12 @@ type Node = ReactNode;
  */
 export const connectivity = {
   hint:
-    'Whether the code may connect to other servers: call an API, open a socket, send mail. Lambdas share one server, so that is allowed lambda by lambda - a premium one may, any other once the operator of this site allowed it.',
+    'Whether the code may connect to other servers: call an API, open a socket, send mail. Lambdas share one server, so that is allowed lambda by lambda: where its tier includes it and the operator of this site did not decline it, or once they allowed it.',
 
   /** The state, as the heading of the card at the top of the section. */
-  included: 'Included with premium',
-  includedText: 'The code may connect to other servers: premium includes it.',
+  /** With the name of the lambda's tier, as the installation calls it - "Premium" on genhttp.dev. */
+  included: (tier: string) => `Included with ${tier}`,
+  includedText: (tier: string) => `The code may connect to other servers: ${tier} includes it.`,
   allowed: 'Allowed',
   /** `ago` is a relative time, such as "3 days ago". */
   allowedText: (ago: Node) => <>The operator of this site allowed it {ago}. The code may connect to other servers.</>,

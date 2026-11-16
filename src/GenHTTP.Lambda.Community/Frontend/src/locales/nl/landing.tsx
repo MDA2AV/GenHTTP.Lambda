@@ -21,7 +21,7 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Wat elke app krijgt',
   features: [
-    { title: 'Een adres', text: 'Een eigen adres op deze server, genoemd naar de sleutel - en een eigen domein zodra de lambda premium is.' },
+    { title: 'Een adres', text: 'Een eigen adres op deze server, genoemd naar de sleutel - en een eigen domein zodra de lambda in productie draait.' },
     { title: 'Items', text: 'Een eigen SQLite-database, met tabellen die door migraties worden gemaakt, gelezen en geschreven met Entity Framework Core.' },
     { title: 'Bestanden', text: 'Een map voor wat de app opslaat: uploads, exports, alles wat geen item is.' },
     { title: 'Sleutels en wachtwoorden', text: 'Verzegeld bewaard op de server. De agent zegt welke hij nodig heeft, jij voert ze in en niemand leest ze terug.' },

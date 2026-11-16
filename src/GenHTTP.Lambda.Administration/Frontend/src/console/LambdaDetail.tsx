@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { ApiError, allowsDomain, api, type AdminLambdaDetail, type LambdaFile } from '@genhttp-lambda/kit/api';
+import { ApiError, api, type AdminLambdaDetail, type LambdaFile } from '@genhttp-lambda/kit/api';
 import { BlockControl } from './BlockControl';
 import { ConnectivityChip, ConnectivityControl } from './ConnectivityControl';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
@@ -107,7 +107,9 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
   const live = lambda.activeVersion != null;
   const latest = lambda.latestVersion;
   const totals = traffic.totals;
-  const premium = allowsDomain(lambda.tier);
+  // whether its tier has domains of its own - production and system
+  const ownDomain = lambda.tierPolicy.ownDomain;
+  const called = (tier: string) => (tier === lambda.tier && lambda.tierPolicy.label ? `${tier} (“${lambda.tierPolicy.label}”)` : tier);
   // nothing about a blocked lambda changes but its block, or its going
   const blocked = detail.block != null;
 
@@ -134,7 +136,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
   const changeTier = (tier: string) =>
     act('tier', async () => {
       adopt(await api.admin.tier(token, lambda.publicKey, tier));
-      toast(`"${lambda.publicKey}" is in the ${tier} tier now.`, 'success');
+      toast(`"${lambda.publicKey}" is in the ${tier} tier now. It keeps running; only what it may have changed.`, 'success');
     }, 'The tier could not be changed.');
 
   const changeDomain = (value: string | null) => {
@@ -177,7 +179,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         <span className="flex items-center gap-2">
           <span className="font-mono">{lambda.publicKey}</span>
           <StatusBadge version={lambda.activeVersion} />
-          <TierBadge tier={lambda.tier} />
+          <TierBadge tier={lambda.tier} label={lambda.tierPolicy.label} />
           {blocked && <BlockedBadge />}
           {!lambda.connectivity.included && (lambda.connectivity.status === 'Requested' || lambda.connectivity.status === 'Allowed') && <ConnectivityChip connectivity={lambda.connectivity} />}
         </span>
@@ -227,7 +229,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
               {lambda.domainServed ? (
                 <LambdaLink address={lambda.address} className="text-accent-500 hover:underline dark:text-accent-400" />
               ) : (
-                <span title="Configured, but not served outside the premium tier" className="text-slate-400 line-through">{lambda.domain}</span>
+                <span title="Configured, but not served in a tier without domains" className="text-slate-400 line-through">{lambda.domain}</span>
               )}
             </span>
           ) : (
@@ -272,7 +274,9 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         <div className="surface p-4">
           <h2 className="text-sm font-medium">Tier</h2>
           <p className="mt-1 text-[13px] text-slate-500">
-            Premium lambdas may answer at a domain of their own, have more room for code, resources and data, and are never taken offline or removed for going unused.
+            What it is for. The sandbox is taken offline once unused. Production is for an app people use: kept, with a domain of its own and more room.
+            System is for what this installation depends on: kept, never blocked, never in the showcase, and deleted only here. Moving it changes what it
+            may have, not what it has - it keeps running.
           </p>
           <div role="radiogroup" aria-label="Tier" className="mt-3 flex flex-wrap gap-1.5">
             {tiers.map((tier) => (
@@ -290,13 +294,13 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
                 }`}
               >
                 {busy === 'tier' && tier !== lambda.tier && <IconSpinner className="h-3 w-3" />}
-                {tier}
+                {called(tier)}
               </button>
             ))}
           </div>
-          {lambda.domain && !premium && (
+          {lambda.domain && !ownDomain && (
             <p className="mt-3 text-[13px] text-amber-600 dark:text-amber-400">
-              {lambda.domain} is configured but not served while the lambda is outside the premium tier.
+              {lambda.domain} is configured but not served while the lambda is in a tier without domains.
             </p>
           )}
         </div>
@@ -312,16 +316,16 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           <p className="mt-1 text-[13px] text-slate-500">
             {blocked
               ? 'Kept as it is while the lambda is blocked.'
-              : premium
+              : ownDomain
                 ? 'The owner sets this in their editor; it can be corrected or removed here.'
-                : 'Only a premium lambda can be given one. Removing one is always possible.'}
+                : 'Only a lambda in production or the system tier can be given one. Removing one is always possible.'}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
-              placeholder={premium ? 'shop.example.com' : 'premium only'}
-              disabled={blocked || (!premium && !lambda.domain)}
+              placeholder={ownDomain ? 'shop.example.com' : 'production only'}
+              disabled={blocked || (!ownDomain && !lambda.domain)}
               spellCheck={false}
               autoComplete="off"
               className="field min-w-0 flex-1 py-1.5 font-mono text-sm"
@@ -329,7 +333,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
             />
             <button
               type="submit"
-              disabled={busy !== null || blocked || domain.trim() === (lambda.domain ?? '') || (!premium && domain.trim() !== '')}
+              disabled={busy !== null || blocked || domain.trim() === (lambda.domain ?? '') || (!ownDomain && domain.trim() !== '')}
               className="btn-primary !px-3 !py-1.5 text-[13px]"
             >
               {busy === 'domain' && <IconSpinner />}

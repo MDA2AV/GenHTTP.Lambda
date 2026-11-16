@@ -125,7 +125,7 @@ the previews, and the host's site the rest (see
 | `/lambda/:publicKey/…` | where the lambdas answer by path, the deployed handler - or, while it answers at a domain of its own, a permanent redirect there; `/lambda/:publicKey` without the slash is sent on to the address with it. Where they answer at subdomains, the address a lambda answered at once: a permanent redirect to where it answers now, with the rest of the path and the query |
 | `/features/:feature` | the preview of a feature, while it is online              |
 | any path, at `{publicKey}.{hosting domain}` | where the lambdas answer at subdomains, the deployed handler - or, while the lambda answers at a domain of its own, a permanent redirect there |
-| any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
+| any path, at a lambda's own domain | the deployed handler of the lambda with that domain, in a tier that has domains of its own (production, system) |
 | the hosting domain itself | where the lambdas answer at subdomains, a page saying what is hosted there, leading to the site |
 | `/api/v1/`           | everything the editor and the panel call, see below (`RestApi`) |
 | `/mcp`               | the same, for agents (`McpServer`)                        |
@@ -192,7 +192,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
 | `GET /demos`                                          | the demos, and the keys to read them with |
 | `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
-| `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a premium lambda, whether it is served, and what it resolves to |
+| `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a lambda in production or the system tier, whether it is served, and what it resolves to |
 | `GET / PUT / DELETE /lambdas/:privateKey/connectivity`      | whether its code may connect to other servers; asks the operator for it (`purpose`); takes the request back or gives it up, see [Connectivity](#connectivity) |
 | `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
 | `GET / PUT / DELETE /lambdas/:privateKey/analytics`   | who visits it, by day, over the last `days` (at most what its tier shows); switches counting on; switches it off and deletes what was counted, see [Analytics](#analytics) |
@@ -238,7 +238,7 @@ own describes itself as OpenAPI, in the words of `[Summary]`, `[Remarks]`,
 attributes are imported for every lambda and in its export; `demo-crud` shows
 both, and the guide says how (`toolsForAgents`, `describingAnApi`).
 
-The editor says when both free tier timers run out: a hint under the public URL
+The editor says when both timers of a sandbox lambda run out: a hint under the public URL
 for the deployment, and a chip beside the buttons for the lambda itself, which
 opens an explanation of how each one is extended.
 
@@ -304,8 +304,8 @@ the community edition to subdomains.
   has is sent on as well - the address moved, whether or not something is
   there - while a path below `/lambda/` that could never have been a key is
   not found.
-- **A domain of its own.** A premium lambda with a domain answers there and
-  only there: its subdomain - or below a path, `/lambda/{key}/…` - sends
+- **A domain of its own.** A lambda with a domain, in a tier that has domains
+  of its own - production or the system tier - answers there and only there: its subdomain - or below a path, `/lambda/{key}/…` - sends
   visitors on to the domain the same way, so there is one address for search
   engines to keep and for visitors to pass on. Removing the domain, or the
   tier that serves it, has the subdomain or the path answer again. For the
@@ -332,7 +332,7 @@ the community edition to subdomains.
   the hosts in `LAMBDA_MCP_ORIGINS` - and a host that is neither one of those
   nor a lambda's is told nothing is online there, in the same page, with a
   404 on every path. That is usually a domain pointed here before its owner
-  entered it, or after it left the lambda or the premium tier. Served the
+  entered it, or after it left the lambda, or the lambda left a tier with domains. Served the
   site, it was a copy of the site under somebody else's name, which crawlers
   kept and kept asking for once the domain was a lambda's. The challenges of
   an ACME client are answered there all the same. An installation without
@@ -384,8 +384,10 @@ no versions of its own. Its preview is built from its files against its copy of
 the data and answers at `/features/{feature}/`, a random key nobody guesses,
 told to search engines with `X-Robots-Tag: noindex` and a `Disallow` in
 `robots.txt`. It serves what was deployed until it is deployed again, a restart
-included, is counted neither in the lambda's traffic nor in its log, and on the
-free tier goes offline like a deployment does when nobody works on it. Once it
+included, is counted neither in the lambda's traffic nor in its log, and in the
+sandbox goes offline like a deployment does when nobody works on it - measured,
+like the lambda's own clocks, from no earlier than the lambda's move into the
+sandbox. Once it
 does what was asked it is **merged**: its files become the next version, with
 its notes, and the feature goes - preview, copy of the data and all; the
 lambda's own data is not touched. Only a feature based on the newest version
@@ -395,9 +397,9 @@ merging or rebasing machinery: whoever works on the feature brings a newer
 version's changes in and then says so by moving its `base` (`PATCH`, or
 `update_feature`), and the merge takes the lambda's lock and checks the base
 once more, so two merges cannot both win. A lambda may have ten features open
-(a limit of its tier, set in the panel); a demo has none. Each holds a full copy of the
+(a limit of the installation, the same in every tier, set in the panel); a demo has none. Each holds a full copy of the
 workspace and of the database, taken on a thread of its own and swapped in
-whole, so ten features of a premium lambda with a full workspace take ten times
+whole, so ten features of a lambda in production with a full workspace take ten times
 its room on disk.
 
 **Data** is what the program keeps: the database, a SQLite database for its
@@ -716,11 +718,13 @@ their records like this, `demo-crud` the plainest of them.
   as are the pragmas that would point it at other directories or lift its
   quota, and SQLite's defensive mode is on. The handle underneath is a type
   the code cannot name.
-- **Its room.** 256 MB, and 2 GB for a premium lambda, by default - a
-  [limit](#limits) of its tier - enforced by SQLite with `max_page_count` on
-  every connection: past it a write fails with *database or disk is full*. A
-  limit the operator lowers holds from the next connection; nothing stored is
-  removed.
+- **Its room.** The room of the lambda's data - 512 MB in the sandbox, 4 GB
+  in production, by default, a [limit](#limits) of its tier - less what its
+  workspace takes, enforced by SQLite with `max_page_count` on every
+  connection: past it a write fails with *database or disk is full*. A limit
+  the operator lowers, or a move to a tier with less, holds from the next
+  connection; nothing stored is removed, and a database already larger is read
+  as before and grows no further.
 - **Features get a copy.** Taken with SQLite's backup, which reads the database
   in one transaction while the lambda goes on writing, so it is the database
   as it was at one moment. A preview migrates its copy as it starts, which is
@@ -828,9 +832,13 @@ whether they were peppered, so accounts made before still sign in.
 Whether a lambda's code may connect to other servers - call an API with
 `HttpClient`, open a socket, a WebSocket or mail client, look up a name. Every
 lambda shares the server, and lambdas were used as proxies - an API of their
-own that fetched whatever address it was handed - so it is allowed lambda by
-lambda: **a premium lambda may**, any other once its owner asked and the
-operator allowed it (`ConnectivityRule`).
+own that fetched whatever address it was handed - so it is a grant of the
+lambda's, **decided by the operator**. The tier only says what holds while
+nothing was decided about the lambda (`TierPolicy.Connectivity`, as each
+installation sets it): production connects by default, the sandbox does not.
+A decision about the lambda comes first either way - allowed is allowed in any
+tier, declined is declined even in production - and a request that waits
+connects nothing until it is allowed (`ConnectivityRule`).
 
 - **Refused as it compiles.** Without connectivity a lambda is compiled without the
   assemblies that connect - HTTP, sockets, WebSocket and QUIC clients, the
@@ -845,28 +853,34 @@ operator allowed it (`ConnectivityRule`).
   with them stays: an address family, a mail address, XML parsed from a string,
   a name of the lambda's own. It is governance like the rest of the guard, not
   a sandbox.
-- **Part of the build.** Whether a lambda may connect is compiled in with its
-  workspace limits (`BuildSettings`), so a decision of the operator, or a
-  change of tier, builds it again on its next request - the lambda and the
-  previews of its features alike - without a deploy. Taken back, code that
-  connects stops compiling and its requests are answered with an error until
-  it changes.
+- **Part of the build.** Whether a lambda may connect is compiled in
+  (`BuildSettings`), so a decision of the operator that takes it away, or a
+  change of tier or of a tier's default that does, builds a lambda that was
+  built with it again on its next request - the lambda and the previews of its
+  features alike - without a deploy. A build made without connectivity keeps serving once the lambda may
+  connect: it compiled without the means to, so it does not, and moving a
+  lambda to a tier that connects by default does not start it again. Taken
+  back, code that connects stops compiling and its requests are answered with
+  an error until it changes.
 - **Asked by the owner, decided by the operator.** `PUT /lambdas/{privateKey}/connectivity`
   with a `purpose` - what it connects to and why - or the `request_connectivity`
   tool, or the editor's **Connectivity** section (the full view) and a tile on the
   simple overview, which appears once the code connects, or a request waits
   or was declined. A purpose is required. Asked again while it waits, the
   purpose is replaced; after a decline, it waits anew. `DELETE` takes the
-  request back, or gives up what was allowed. Demos and blocked lambdas cannot
-  ask. The answer, and `connectivity` of every lambda, say `allowed`, `included` (by
-  the tier), `status` (`Requested`, `Allowed`, `Declined`), since when, the
+  request back, or gives up what was allowed. Moving a lambda to a tier that
+  connects by default forgets a request that waits. Demos and blocked lambdas cannot
+  ask. The answer, and `connectivity` of every lambda, say `allowed`, `included` (what
+  its tier allows while nothing was decided), `status` (`Requested`, `Allowed`, `Declined`), since when, the
   purpose and the operator's `note`, which the owner reads in their editor.
 - **The panel** lists what waits in its **Connectivity** section, the longest
   waiting first, with the purpose and whether the code connects at all, and
   what was allowed below it (`GET /admin/connectivity`); the count of what waits is
   beside the section's name. A lambda's page has the same card. Allowing or
-  declining - which takes back what was allowed - is
-  `PUT /admin/lambdas/{publicKey}/connectivity` with `allow` and an optional `note`.
+  declining - which takes back what was allowed, and what the tier allows by
+  default as well - is `PUT /admin/lambdas/{publicKey}/connectivity` with `allow`
+  and an optional `note`. A lambda whose tier connects by default is not listed
+  unless something was asked or decided about it.
 - **What the code does is said.** The summary's `connects` says whether the
   version online or the newest connects, read as the guard reads it; the
   editor marks the section, and the refusal of a deployment for it says so in
@@ -876,8 +890,10 @@ operator allowed it (`ConnectivityRule`).
   to call a public API from the page wherever it allows that, and to ask only
   where the server has to make the call.
 - **Nothing was allowed for the lambdas that existed** when this came: a
-  free lambda that connects stops compiling at its next build until the
-  operator allows it.
+  free lambda - a sandbox one now - that connects stops compiling at its next
+  build until the operator allows it. When the tiers were named by purpose
+  (V25), a decline or a request standing for a lambda in production was
+  forgotten, since its tier had included connectivity whatever was decided.
 
 ### Changing a lambda by asking
 
@@ -982,9 +998,9 @@ what was counted. A demo's visitors are not counted, and neither is a
 feature's preview.
 
 - **By day, in UTC, kept for a year.** How much of the year the owner sees is
-  a limit of the tier - seven days for a free lambda, all of it for a premium
-  one (see [Limits](#limits)) - so a lambda that becomes premium shows what was
-  counted before it was. A range of the same length before is summed for a
+  a limit of the tier - seven days in the sandbox, all of it in production and
+  the system tier, by default (see [Limits](#limits)) - so a lambda moved to a
+  tier that shows more shows what was counted before it was. A range of the same length before is summed for a
   comparison only where the tier shows it as well.
 - **Counted in front of the lambda, written behind it.** A request to a
   lambda or a preview is made into one visit (`LambdaVisit`: its status, its
@@ -1252,7 +1268,7 @@ the origin `git`, the first line of its message as the change and the rest
 as the specification. `main` only moves forward one commit after another - no
 force push, no merge commit, no deletion - and a version saved meanwhile in
 the editor or by an agent makes the push "fetch first". A push holding more
-commits than the tier keeps versions is refused, asking for them to be
+commits than the installation keeps versions is refused, asking for them to be
 squashed. The newest is compiled first, the code guard included, and a push
 that does not compile is refused - its problems come back with the file and
 line in the repository, `Project.cs(14,9)`. `-o deploy` puts the newest
@@ -1426,6 +1442,16 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   removes a lambda with everything that hangs on it, and `LambdaDescriber`
   maps the DTOs. `LambdaGuard` (who may change a lambda - not a demo) and
   `VersionInput` (what a version may hold) are rules other services apply too.
+- **Settings** (`Services/Settings`) - the panel's switches and the limits,
+  and what each tier means. `TierPolicies` maps a tier to a `TierPolicy` -
+  what a version and the data may come to, the days of analytics shown,
+  whether it connects by default, has domains of its own, expires when unused,
+  is the installation's own or read only, and its label - from what the
+  operator set (`LimitsService`), and is the one place a tier is compared with
+  a value: every check reads `ILimitsService.PolicyOf`, a query of the tiers
+  whose policy says so `TiersWhere`, and a refusal names the tier above with
+  `Above`. The demo seeder is the exception, since it is what puts a lambda
+  among the demos.
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
   file per version. Never in the database.
 - **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on
@@ -1438,10 +1464,11 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   hand behaves like one the lambda wrote itself. Only the room it takes is
   limited - in any number of files of any size - counted in blocks of 4 KB as
   the disk counts it, so an empty file or a folder is not free. It shares the
-  room of the lambda's data with its database: the data's allowance is
-  compiled into the lambda - so moving it to another tier builds it again on
-  its next request - and the size of the database is asked as a file is
-  written, through a function handed to it. `WorkspaceVault`
+  room of the lambda's data with its database: the data's allowance, as the
+  lambda's tier allows it now, and the size of the database are asked as a
+  file is written, through functions handed to it (`IDatabaseVault.DataRoomFor`),
+  so moving the lambda to another tier, or changing what a tier allows,
+  leaves it running as it is. `WorkspaceVault`
   (`IWorkspaceVault`) measures what a workspace takes, keeping the answer a
   few seconds, and is what the database asks in turn for the room it may
   grow to (`DatabaseVault.RoomOf`).
@@ -1552,9 +1579,9 @@ writes its lines to the console it was given before the tee existed, and takes
 the lock of `Console.Out` first - the console takes that lock itself under
 every write, and in the other order a print and a log line waited for each
 other for good.
-- **Background** (`Services/Background`) - a small scheduler that undeploys
-  free tier lambdas a day after their last deployment and removes them after
-  30 days without a save.
+- **Background** (`Services/Background`) - a small scheduler that runs the
+  sweeps: it takes sandbox lambdas offline once nobody has visited or edited
+  them for the window of the [limits](#limits), and removes them later.
 
 The editor asks the compiler what the code means rather than guessing from how
 it is spelled. `Services/Deployment/Compilation/SemanticClassifier.cs` says
@@ -1603,7 +1630,9 @@ Everything is read from the environment on startup, by
 the only place below the hosts that reads it - apart from the limits of the
 tiers, which are the product's promises rather than the server's
 configuration and are set in the administration panel while it runs (see
-[Limits](#limits)). The variables are read into two: the platform's options
+[Limits](#limits)); a host gives their defaults (`LambdaOptions.Sandbox`,
+`Production`, `System`, `DefaultTier`), as genhttp.dev gives the sandbox and
+production the labels *Free* and *Premium*. The variables are read into two: the platform's options
 ([`LambdaOptions`](../src/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
 which every component is built with, and the host's (`ServerSettings`), which
 only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
@@ -1650,7 +1679,7 @@ and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
 | `LAMBDA_PUBLIC_URL`                 | - (the community image: `http://localhost:8080`) | canonical address, enables the sitemap; set, the platform answers only at its own names; below a path, the lambdas' addresses are made from it, see [Where the lambdas answer](#where-the-lambdas-answer) |
 | `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run`; set, the community edition answers at subdomains as well |
 | `LAMBDA_ADDRESSING`                 | the host's       | `subdomains` or `paths`, over what the host and `LAMBDA_HOSTING_URL` say: genhttp.dev answers at subdomains, the community edition by path unless `LAMBDA_HOSTING_URL` is set |
-| `LAMBDA_CONTACT`                    | -                | where to write to whoever runs the installation, which the pages offer - about premium, for one; without, they offer nobody |
+| `LAMBDA_CONTACT`                    | -                | where to write to whoever runs the installation, which the pages offer - about moving an app to production, for one; without, they offer nobody |
 | `LAMBDA_ABUSE_CONTACT`              | -                | where a lambda that does harm is reported; without, the pages offer no way to report one |
 | `LAMBDA_AGENT_URL`                  | -                | where the build agent listens; without, nothing is built from a request and its text boxes are not offered |
 | `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask |
@@ -1847,17 +1876,17 @@ version may come to, its code and its resources together, is a
 [limit](#limits) of the lambda's tier. How many files there are is not
 limited, and neither is the number of C# files.
 
-Budget the disk for the premium tier. A version is kept whole, its files as
+Budget the disk for production. A version is kept whole, its files as
 text or base64 in JSON, so each version saved at the limit takes up to half as
 much again on disk - 184 MB for 128 MB of pictures - and fifty of them are
-kept by default: at the defaults, a premium lambda that is saved over and over
+kept by default: at the defaults, a lambda in production that is saved over and over
 at its limit can come to around 9 GB of history.
 
 Budget the memory too. A version is read and written whole: with the 128 MB
-the premium tier allows, saving one took the server to 2.3 GB and deploying it
-to 2.8 GB. Even the 32 MB of a free lambda took a server idling at 350 MB to
-950 MB to save, and anybody can create a free lambda. Set what a version may
-come to, for both tiers, in the panel's **Limits** to what the machine can
+production allows, saving one took the server to 2.3 GB and deploying it
+to 2.8 GB. Even the 32 MB of a sandbox lambda took a server idling at 350 MB to
+950 MB to save, and anybody can create one. Set what a version may
+come to, for every tier, in the panel's **Limits** to what the machine can
 carry until resources are stored apart from the versions.
 
 ### More than one hostname
@@ -1971,7 +2000,7 @@ it says when no certificate names the hosting domain itself.
 
 ### Custom domains
 
-A lambda in the premium tier can answer at a domain of its own instead of its
+A lambda in a tier with domains of its own - production or the system tier - can answer at a domain of its own instead of its
 subdomain of the hosting domain or its path, which its owner sets in the editor after
 pointing the domain's A and AAAA records at the server. Plain requests to it are redirected to HTTPS on the same domain like
 every other request, so it needs a certificate - issued by hand for now, with
@@ -2168,8 +2197,10 @@ resources first, then the rest of the code, and after two hundred files named
 only how many more there are; `file` then fetches one in full,
 up to a megabyte, and anything larger is left to the zip of the version - a
 hundred megabytes of base64 is nothing an agent can read. It also
-says which tier the lambda is in and what that allows, and `platform_guide`
-lays out both tiers. The guide, `write_code` and `upload_file` also steer a
+says which tier the lambda is in (`tier`, and `tierLabel`, what the
+installation calls it), what that allows and what the tier above allows
+(`limits`), and `platform_guide` lays out the tiers as this installation set
+them, by their identifiers and their labels. The guide, `write_code` and `upload_file` also steer a
 large file that is data rather than program - a model, a dataset, media - into
 the workspace, where it is kept once instead of in every version, and a
 refusal for a version over the limit says the same.
@@ -2188,8 +2219,8 @@ be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
 as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
 
 Everything that would change a demo - saving, deploying, stopping, moving,
-deleting, the workspace, the showcase, its license - is refused by its tier,
-whichever way the request comes in. Their code is published on `/source` under
+deleting, the workspace, the showcase, its license - is refused by its tier
+(`TierPolicy.ReadOnly`), whichever way the request comes in. Their code is published on `/source` under
 MIT by the seeder, so anybody can read and download a demo there as well. `create_lambda` with a demo's id as its template starts a
 lambda of one's own from a copy. Keys starting with `demo-` cannot be claimed.
 
@@ -2244,6 +2275,69 @@ The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
 operator everybody's.
 
+### Tiers
+
+A lambda's tier is what it is for, and only the operator moves a lambda
+between them - on its page in the panel, **Tier**
+(`PUT /admin/lambdas/{publicKey}/tier`). Its owner cannot choose.
+
+| Tier         | For                                   | Kept while unused | Domain of its own | Connects by default | Blocked | Showcase | Deleted with its editor key |
+|--------------|---------------------------------------|-------------------|-------------------|---------------------|---------|----------|-----------------------------|
+| `Sandbox`    | trying something; where a new lambda starts | no - offline after 30 days, removed after 90 | no | no | yes | yes | yes |
+| `Production` | an app people use                     | yes               | yes               | yes                 | yes     | yes      | yes |
+| `System`     | what the installation itself depends on, such as the collector of usage reports | yes | yes | yes | never | never | no - only by the operator |
+| `Demo`       | the installation's demos, read only, never assigned by hand | yes | no | never | never | never | no |
+
+What a tier means is said in one place (`TierPolicies`, see
+[How it is put together](#how-it-is-put-together)); how much a lambda in it may
+have, whether it connects by default and what the pages call it are the
+operator's to set (see [Limits](#limits)). A system lambda is the
+installation's own: editor keys and every door work for it as for any other,
+but it cannot be blocked - a block is refused, and a blocked lambda is not
+moved there until the block is lifted - it is never listed in the showcase,
+its entry kept and back once it leaves the tier, and it is deleted only by the
+operator (`DELETE /admin/lambdas/{publicKey}`). An address block refuses
+requests to it like to every other. It is also where running a lambda apart
+from the others or ahead of them would hang, which nothing does yet: every
+lambda shares the process.
+
+- **Moving a lambda changes its policy and nothing else.** It keeps running:
+  the room of its data is read as it writes, and a build made without
+  connectivity keeps serving where the new tier connects by default - it is
+  built again only where connectivity is taken away. Nothing of its data
+  moves.
+- **Moved to a tier that allows less**, it keeps what it has. Its versions
+  can still be put online and rolled back to; a new save, a merge or a push
+  that is larger is refused, naming the limit and the tier above it as the
+  installation calls them (`The code and the resources of a version must not
+  exceed 32 MB together in the tier 'Free'; … In the tier 'Premium' a version
+  may come to 128 MB`). Data beyond its new room stays and is read; writes that
+  would grow it fail, as they do when the data is full. A domain is kept but
+  not served in a tier without domains.
+- **Moved into the sandbox**, it is given the whole time from the move: its
+  clocks and those of its features' previews never count from before it
+  (`tier_changed`), when nothing would have taken it offline.
+- **Labels.** An installation may call a tier otherwise on its pages - a
+  word shown as written in every language: genhttp.dev calls the sandbox
+  *Free* and production *Premium* (`CloudInstallation`). The pages, refusals
+  and `platform_guide` say the label; the API and the code name the tiers by
+  their identifiers only, and `tierPolicy.label` of a lambda says what it is
+  called. Without a label a tier goes by its own name, which the pages translate.
+- **What the API says.** `tier` of a lambda is its identifier, `tierPolicy`
+  what that tier lets it have here, with the tier above (`above`,
+  `aboveLabel`) - what the editor offers and refusals name. `GET /system`
+  has the tier a new lambda starts in (`defaultTier`) and every tier the
+  operator assigns (`tiers`). `Free` and `Premium`, what the sandbox and
+  production were called before, are still read by `PUT …/tier` and the
+  panel's `?tier=` filter; nothing answers with them.
+- **From before.** Migration V25 renamed what was stored: `Free` became
+  `Sandbox` and `Premium` became `Production`, the limits the panel saved went
+  with them, the versions kept and features open - the same in every tier -
+  became one setting each, the larger where two were saved, and a decline or a
+  request standing for a lambda in production was forgotten, since its tier
+  had included connectivity whatever was decided. Nothing became a system
+  lambda: that is the operator's to decide, lambda by lambda.
+
 ### Blocking
 
 What the operator does about a lambda that breaks the terms - phishing,
@@ -2263,6 +2357,10 @@ malware, attacks on others. **Block** is on its page in the panel
   source is not found while the block lasts, and a blocked lambda is never
   removed for going unused - removed by itself, its key would be free again for
   whoever it was blocked for. Lifting the block leaves it offline.
+- **Not the installation's own.** A system lambda or a demo cannot be
+  blocked; an operator who means to stop a system lambda moves it to another
+  tier first, as a decision of its own. A blocked lambda is not moved into
+  the system tier.
 - **The addresses it was changed from.** Where the server keeps addresses
   (`LAMBDA_LOG_CLIENT_ADDRESS`), every lambda remembers the addresses it was
   created, saved, put online or otherwise changed from with its editor key,
@@ -2297,38 +2395,49 @@ the panel's **Connectivity** section or on the lambda's page - see [Connectivity
 
 ### Limits
 
-What a lambda may have in its tier is set in the panel's **Limits** section
-(`GET / PUT /admin/limits`), not by environment variables: these are the
-product's promises, and changing one should not take a restart. One form: the
-limits of the tiers as a table with a column per tier, and the limits that have
-no tier in a block of their own below it.
+What a lambda may have in its tier, and what holds for every lambda, is set in
+the panel's **Limits** section (`GET / PUT /admin/limits`), not by environment
+variables: these are the product's promises, and changing one should not take
+a restart. One form: the tiers as a table with a column each, what holds for
+every lambda in a block below it, and the limits that are counted per caller
+in another.
 
-| Limit             | Free     | Premium  | What it bounds                                   |
-|-------------------|----------|----------|--------------------------------------------------|
-| Build             | 32 MB    | 128 MB   | a version: its code - the C#, and everything kept with it - and its resources, together |
-| Data              | 512 MB   | 4 GB     | what a lambda keeps: its database and its workspace, together |
-| Versions kept     | 50       | 50       | older ones are removed, never the one online     |
-| Features open     | 10       | 10       | each holds a copy of the workspace and database  |
-| Analytics shown   | 7 days   | 365 days | how far back the owner sees what was counted of their visitors; a year is kept of every lambda, so at most 366 |
+| Limit               | Sandbox  | Production | System   | What it bounds                                   |
+|---------------------|----------|------------|----------|--------------------------------------------------|
+| Called              | -        | -          | -        | what the pages call the tier, as written in every language - *Free* and *Premium* on genhttp.dev; empty for its own name, at most 24 characters |
+| Build               | 32 MB    | 128 MB     | 128 MB   | a version: its code - the C#, and everything kept with it - and its resources, together |
+| Data                | 512 MB   | 4 GB       | 4 GB     | what a lambda keeps: its database and its workspace, together |
+| Analytics shown     | 7 days   | 365 days   | 365 days | how far back the owner sees what was counted of their visitors; a year is kept of every lambda, so at most 365 |
+| Connects by default | no       | yes        | yes      | whether its code may connect to other servers while nothing was decided about the lambda, see [Connectivity](#connectivity) |
+| Offline after       | 720 h    | never      | never    | without visits or edits; the sandbox only |
+| Removed after       | 2160 h   | never      | never    | without visits or edits; the sandbox only |
 
-A free lambda also goes offline after 720 hours without visits or edits and is
-removed after 2160; a premium one stays online and is kept. Three limits are
-counted per caller rather than per lambda and have no tier: the size of a
-showcase picture (3 MB), requests per second and client to the lambdas (250),
-and builds and changes per address and day from the build agent (10).
+A demo is held to the sandbox's sizes, and never connects. For every lambda
+alike: new lambdas start in the sandbox (or in production, for an
+installation run for a team rather than for strangers; never in a tier of the
+installation's own), the newest 50 versions are kept and 10 features may be
+open. Three limits are counted per caller rather than per lambda and have no
+tier: the size of a showcase picture (3 MB), requests per second and client to
+the lambdas (250), and builds and changes per address and day from the build
+agent (10).
 
-They are kept in the `settings` table beside the panel's switches, a row each,
-and held in memory. A missing row is the default - the table above. Saving writes every value,
-refuses one that is not greater than zero and a premium tier that allows less
-than the free one, and logs a line per limit that changed
-(`Changed limit limits.free.build-bytes from 33554432 to 16777216 by operator`).
+They are kept in the `settings` table beside the panel's switches, a row each
+(`limits.sandbox.build-bytes`, `limits.versions`, `limits.default-tier`, …),
+and held in memory. A missing row is the default - the table above, or what
+the host gives (`LambdaOptions`). Saving writes every value, refuses a number
+that is not greater than zero, production allowing less than the sandbox, a
+label longer than 24 characters and a new lambda starting in a tier of the
+installation's own, and logs a line per limit that changed
+(`Changed limit limits.sandbox.build-bytes from 33554432 to 16777216 by operator`).
 
-A change applies to what is checked next - a save, an upload, a deploy, a new
-feature, a connection to a database - and takes nothing away: a lambda already
-over a lowered limit keeps what it has and cannot save a version until it fits;
-a database over its new size keeps its records and grows no further. The
-data's allowance is compiled into a lambda's workspace, so changing it compiles
-every lambda of that tier again on its next request.
+A change applies to what is checked next - a save, an upload, a write to a
+workspace, a new feature, a connection to a database, the next sweep - and
+takes nothing away: a lambda already over a lowered limit keeps what it has
+and cannot save a version until it fits; a database over its new size keeps
+its records and grows no further. Nothing is compiled again for a changed
+size, since the workspace reads its room as it writes; a tier whose
+connectivity default is taken away builds its lambdas that relied on it again
+on their next request.
 
 There were four of the two once: the characters of C# apart from the bytes of
 assets, and the room of the workspace apart from the database's. A value an

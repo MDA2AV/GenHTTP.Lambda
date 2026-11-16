@@ -18,8 +18,10 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// A lambda stays online for as long as it is used. One that nobody visits
 /// and nobody edits for <see cref="ProductLimits.OfflineAfter"/> is taken
 /// offline, and one left alone for <see cref="ProductLimits.RemovedAfter"/>
-/// is removed - both as the operator set them in the panel. Demos and premium
-/// lambdas are kept by their tier.
+/// is removed - both as the operator set them in the panel - where its tier
+/// says it is not kept while unused (<see cref="TierPolicy.ExpiresWhenUnused"/>),
+/// a sandbox. A lambda moved to such a tier is measured from the move at the
+/// earliest, never from a visit before it.
 ///
 /// The deadlines the editor shows and the sweep that acts on them are kept
 /// together, so that what an owner is told is what happens.
@@ -34,23 +36,23 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// When the sweep takes the lambda offline unless it is used before then.
     /// </summary>
     public DateTime? DeployedUntil(LambdaEntity lambda)
-        => lambda.ActiveVersion != null && !Kept(lambda) ? Quiet(lambda) + limits.Get().OfflineAfter : null;
+        => lambda.ActiveVersion != null && Expires(lambda) ? Quiet(lambda) + limits.Get().OfflineAfter : null;
 
     /// <summary>
     /// When the sweep removes the lambda unless it is used before then.
     /// </summary>
     public DateTime? KeptUntil(LambdaEntity lambda)
-        => !Kept(lambda) && lambda.Blocked == null ? Quiet(lambda) + limits.Get().RemovedAfter : null;
+        => Expires(lambda) && lambda.Blocked == null ? Quiet(lambda) + limits.Get().RemovedAfter : null;
 
     /// <summary>
-    /// Whether the tier of a lambda keeps it, rather than the sweeps deciding.
+    /// Whether the sweeps decide about the lambda, rather than its tier keeping it.
     /// </summary>
     /// <remarks>
-    /// Demos because they are the installation's own; premium lambdas
-    /// because they answer at somebody's domain, and a site going offline
-    /// because it had a quiet month is not something anybody would pay for.
+    /// A demo or a system lambda is the installation's own; a lambda in
+    /// production is an app people use, which going offline because it had a
+    /// quiet month would break.
     /// </remarks>
-    private static bool Kept(LambdaEntity lambda) => lambda.Tier is LambdaTier.Demo or LambdaTier.Premium;
+    private bool Expires(LambdaEntity lambda) => limits.PolicyOf(lambda.Tier).ExpiresWhenUnused;
 
     /// <summary>
     /// When a lambda last had any attention of either kind.
@@ -59,9 +61,14 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// Both clocks run from here, so what a visitor is told about how long
     /// something has left is measured the same way the sweep measures it.
     /// Anything else would show a date that passes without anything happening.
+    /// Never before its tier last changed: until then nothing measured it.
     /// </remarks>
     private static DateTime Quiet(LambdaEntity lambda)
-        => lambda.LastSeen > lambda.Modified ? lambda.LastSeen.Value : lambda.Modified;
+    {
+        var used = lambda.LastSeen > lambda.Modified ? lambda.LastSeen.Value : lambda.Modified;
+
+        return lambda.TierChanged > used ? lambda.TierChanged.Value : used;
+    }
 
     #endregion
 
@@ -88,14 +95,17 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         var abandoned = now - limits.Get().RemovedAfter;
 
-        // demos are the installation's own, and being untouched is their
-        // normal state rather than a sign that nobody wants them; premium
-        // lambdas are kept by their tier (see Kept). A blocked lambda is the
+        // only the tiers that are not kept while unused (see Expires): for a
+        // demo or a system lambda, being untouched is its normal state rather
+        // than a sign that nobody wants it. A blocked lambda is the
         // operator's to delete or let go: removed by itself, its key would be
         // free again for whoever it was blocked for
+        var expiring = limits.TiersWhere(p => p.ExpiresWhenUnused);
+
         var expired = database.Lambdas
-                              .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Blocked == null && l.Modified < abandoned
-                                             && (l.LastSeen == null || l.LastSeen < abandoned))
+                              .Where(l => expiring.Contains(l.Tier) && l.Blocked == null && l.Modified < abandoned
+                                             && (l.LastSeen == null || l.LastSeen < abandoned)
+                                             && (l.TierChanged == null || l.TierChanged < abandoned))
                               .ToList();
 
         foreach (var lambda in expired)
@@ -105,7 +115,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         var quiet = now - limits.Get().OfflineAfter;
 
-        var running = database.Lambdas.Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
+        var running = database.Lambdas.Where(l => expiring.Contains(l.Tier) && l.ActiveVersion != null)
                               .ToList();
 
         var undeployed = 0;

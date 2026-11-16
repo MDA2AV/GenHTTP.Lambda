@@ -117,7 +117,7 @@ public static class McpEndpoint
         "API keys and passwords: Secret.Read(\"NAME\") and enable_data 'secrets'; the user enters the value",
         "in the editor.",
         "",
-        "Connecting to other servers (HttpClient, sockets) does not compile unless the lambda may: premium",
+        "Connecting to other servers (HttpClient, sockets) does not compile unless the lambda may: production",
         "ones may, any other asks the operator with request_connectivity. Fetch public APIs from the page where",
         "browsers may - platform_guide, connectivity.",
         "",

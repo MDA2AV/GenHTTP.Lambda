@@ -210,6 +210,11 @@ internal static class LambdaCompiler
             Connect(lambda, SourceBuilder.WorkspaceType, request.WorkspaceChanged, SourceBuilder.ChangedHook);
         }
 
+        if (request.DataRoom != null)
+        {
+            Connect(lambda, SourceBuilder.WorkspaceType, request.DataRoom, SourceBuilder.RoomSource);
+        }
+
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
                  ?? throw new InvalidOperationException("The compiled lambda does not contain an entry point.");
 
@@ -243,8 +248,9 @@ internal static class LambdaCompiler
     /// </summary>
     /// <remarks>
     /// The directories and the settings are part of it because they are compiled
-    /// in: the same code in another tier, with its workspace switched off, with
-    /// or without connectivity, or as the preview of a feature, is another assembly. Beyond those it is the
+    /// in: the same code with its workspace switched off, with or without
+    /// connectivity, or as the preview of a feature, is another assembly - in
+    /// another tier it is not, since the room of its data is read as it runs. Beyond those it is the
     /// C# files and nothing else. The resources are read from their directory
     /// while the lambda runs - only where that directory is gets compiled in -
     /// and the rest of the code is never built, so a version that only
@@ -261,7 +267,7 @@ internal static class LambdaCompiler
 
         Append(hash, request.Workspace);
         Append(hash, $"\n{request.Resources}");
-        Append(hash, $"\n{request.Settings.Workspace.Quota}\n{request.Settings.Workspace.Enabled}\n{request.Settings.Connectivity}");
+        Append(hash, $"\n{request.Settings.Workspace}\n{request.Settings.Connectivity}");
 
         foreach (var file in request.Files.Where(f => f.IsCompiled))
         {
@@ -399,12 +405,13 @@ internal static class LambdaCompiler
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
-/// <param name="Settings">What the lambda may keep in its workspace and whether it may connect to other servers, compiled into it</param>
+/// <param name="Settings">Whether the lambda has a workspace and whether it may connect to other servers, compiled into it</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 /// <param name="Database">What the lambda connects to its database with, once it runs</param>
 /// <param name="DatabaseSize">What its workspace reads the room the database takes with, once it runs</param>
 /// <param name="WorkspaceChanged">What its workspace calls once it wrote, once it runs</param>
+/// <param name="DataRoom">What its workspace reads the room of its data with - as its tier allows it now - once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Resources, string AssemblyDirectory, string Name, bool Run,
                                           BuildSettings Settings, Func<string, bool, string?>? Secrets = null,
                                           Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null,
-                                          Func<long>? DatabaseSize = null, Action? WorkspaceChanged = null);
+                                          Func<long>? DatabaseSize = null, Action? WorkspaceChanged = null, Func<long>? DataRoom = null);

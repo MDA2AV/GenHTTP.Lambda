@@ -14,10 +14,13 @@ export const analytics = {
     'How many people come each day, which pages they open, which sites send them, from which countries and on which devices - counted day by day, from the moment you switch it on.',
   offPrivate: 'No cookies, and no banner your visitors have to accept',
   offAddresses: 'No addresses are kept - only how many visits there were each day',
-  offKept: (days: number) =>
+  /** With the tier that shows more, as the installation calls it - "Premium" on genhttp.dev - where there is one. */
+  offKept: (days: number, tier: string | null) =>
     days >= 365
       ? 'Kept for a year, and all of it shown to you'
-      : `Kept for a year - the last ${days} days are shown, all of it with Premium`,
+      : tier
+        ? `Kept for a year - the last ${days} days are shown, all of it with ${tier}`
+        : `Kept for a year - the last ${days} days are shown`,
   switchOn: 'Switch on analytics',
   switchedOn: 'Analytics are on. The first visits show up within a few minutes.',
   switchOnFailed: 'Analytics could not be switched on.',
@@ -25,8 +28,8 @@ export const analytics = {
 
   range: 'Time range',
   days: (days: number) => (days >= 365 ? '12 months' : `${days} days`),
-  /** On a range the tier does not show, on hover. */
-  premiumRange: 'Premium shows up to a year',
+  /** On a range the tier does not show, on hover, with the tier that does - "Premium" on genhttp.dev. */
+  premiumRange: (tier: string) => `${tier} shows up to a year`,
 
   /** The figures at the top; each one picks what the chart below shows. */
   visitors: 'Visitors',
@@ -119,10 +122,13 @@ export const analytics = {
   share: (part: string, whole: string) => `${part} of ${whole}`,
   none: 'Nothing yet.',
 
-  /** For a free app that counted more than it shows. */
-  moreKept: (since: string) => `Counted since ${since} - Premium shows all of it, up to a year.`,
-  premiumAsk: 'Ask about Premium',
-  premiumSubject: 'Premium for my app',
+  /**
+   * For an app that counted more than its tier shows, with the tier that shows
+   * it - "Premium" on genhttp.dev.
+   */
+  moreKept: (since: string, tier: string) => `Counted since ${since} - ${tier} shows all of it, up to a year.`,
+  premiumAsk: (tier: string) => `Ask about ${tier}`,
+  premiumSubject: (tier: string) => `${tier} for my app`,
   premiumBody: (address: string) => `Hello,\n\nI would like to see all of my app's analytics: ${address}\n\n`,
 
   /** At the foot of the page. */

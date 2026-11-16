@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,8 @@ namespace GenHTTP.Lambda.Services.Connectivity;
 /// next carries the new answer, and the build compiled under the old one is
 /// replaced on that request.
 /// </remarks>
-public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, ILogger<ConnectivityService> logger) : IConnectivityService
+public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, ILimitsService limits,
+                                        ILogger<ConnectivityService> logger) : IConnectivityService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -27,7 +29,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
     {
         using var database = databases.CreateDbContext();
 
-        return ConnectivityRule.Describe(LambdaGuard.Require(database, privateKey));
+        return Describe(LambdaGuard.Require(database, privateKey));
     }
 
     public ConnectivityInfo Request(string privateKey, string? purpose)
@@ -42,10 +44,10 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         var lambda = database.Lambdas.FirstOrDefault(l => l.Id == id) ?? throw LambdaException.NotFound(Missing);
 
-        if (ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity))
+        if (ConnectivityRule.Allows(limits.PolicyOf(lambda.Tier), lambda.Connectivity))
         {
             // there is nothing to wait for: the answer says it may
-            return ConnectivityRule.Describe(lambda);
+            return Describe(lambda);
         }
 
         if (lambda.Connectivity != ConnectivityStatus.Requested)
@@ -63,7 +65,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         logger.LogInformation("Requested connectivity for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
-        return ConnectivityRule.Describe(lambda);
+        return Describe(lambda);
     }
 
     public ConnectivityInfo Withdraw(string privateKey)
@@ -89,7 +91,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
                                   lambda.PublicKey, lambda.Id);
         }
 
-        return ConnectivityRule.Describe(lambda);
+        return Describe(lambda);
     }
 
     #endregion
@@ -102,7 +104,9 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
-        if (lambda.Tier == LambdaTier.Demo)
+        var policy = limits.PolicyOf(lambda.Tier);
+
+        if (policy.ReadOnly)
         {
             throw LambdaException.Forbidden($"'{lambda.PublicKey}' is a demo, which the installation keeps: demos do not connect to other servers, and there is nothing to decide.");
         }
@@ -112,7 +116,9 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         var wanted = allow ? ConnectivityStatus.Allowed : ConnectivityStatus.Declined;
 
-        if (!allow && lambda.Connectivity is not (ConnectivityStatus.Requested or ConnectivityStatus.Allowed))
+        // what its tier allows by default may be declined as well: it is a
+        // grant of the lambda's, which the tier only starts it with
+        if (!allow && lambda.Connectivity != ConnectivityStatus.Requested && !ConnectivityRule.Allows(policy, lambda.Connectivity))
         {
             throw LambdaException.Conflict($"Nothing was asked for '{lambda.PublicKey}', and nothing is allowed: there is nothing to decline.");
         }
@@ -135,7 +141,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
                                   lambda.PublicKey, lambda.Id);
         }
 
-        return ConnectivityRule.Describe(lambda);
+        return Describe(lambda);
     }
 
     public IReadOnlyList<ConnectivityListing> List()
@@ -158,9 +164,11 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
         // was allowed, the newest first, to be looked at again
         return [.. lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).OrderBy(l => l.ConnectivityChanged)
                           .Concat(lambdas.Where(l => l.Connectivity == ConnectivityStatus.Allowed).OrderByDescending(l => l.ConnectivityChanged))
-                          .Select(l => new ConnectivityListing(l.PublicKey, l.Tier.ToString(), l.ActiveVersion, l.Blocked, ConnectivityRule.Describe(l),
+                          .Select(l => new ConnectivityListing(l.PublicKey, l.Tier.ToString(), l.ActiveVersion, l.Blocked, Describe(l),
                                                          Connects(l.Id, l.ActiveVersion, latest.GetValueOrDefault(l.Id))))];
     }
+
+    private ConnectivityInfo Describe(LambdaEntity lambda) => ConnectivityRule.Describe(lambda, limits.PolicyOf(lambda.Tier));
 
     public bool Connects(long lambdaId, int? live, int? latest)
     {

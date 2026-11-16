@@ -95,7 +95,7 @@ public sealed class ConnectivityTests
             var feed = System.Xml.Linq.XDocument.Load("https://example.com/feed.xml");
 
             return Content.From(Resource.FromString("networking is available"));
-            """, settings: new BuildSettings(WorkspaceLimits.Standard, Connectivity: true));
+            """, settings: new BuildSettings(Connectivity: true));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -187,7 +187,7 @@ public sealed class ConnectivityTests
     }
 
     [TestMethod]
-    public async Task APremiumLambdaMayConnectWithoutAsking()
+    public async Task ALambdaInProductionMayConnectWithoutAsking()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 

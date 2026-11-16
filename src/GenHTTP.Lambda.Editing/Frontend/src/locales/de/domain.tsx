@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Die Domain ist entfernt. Das Lambda antwortet wieder unter seiner Adresse hier.',
   removeFailed: 'Die Domain konnte nicht entfernt werden.',
   hint:
-    'Ein Premium-Lambda kann unter einer eigenen Domain antworten – unter der ganzen Domain, ab der Wurzel. Lassen Sie die Domain zuerst auf diesen Server zeigen und tragen Sie sie dann hier ein: Ab dann erreichen Requests an die Domain das Lambda, und seine Adresse hier leitet Besucher dorthin weiter.',
+    'Der Tarif dieses Lambdas erlaubt es, unter einer eigenen Domain zu antworten – unter der ganzen Domain, ab der Wurzel. Lassen Sie die Domain zuerst auf diesen Server zeigen und tragen Sie sie dann hier ein: Ab dann erreichen Requests an die Domain das Lambda, und seine Adresse hier leitet Besucher dorthin weiter.',
   loading: 'Lädt …',
   example: 'ihre-domain.de',
   open: (domain) => `${domain} öffnen`,

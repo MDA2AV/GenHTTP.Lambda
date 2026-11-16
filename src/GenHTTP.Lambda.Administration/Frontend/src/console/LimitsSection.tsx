@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { ApiError, refusedToken, api, type AdminLimits, type TierLimits } from '@genhttp-lambda/kit/api';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
@@ -6,7 +6,14 @@ import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
 
-type Tier = 'free' | 'premium';
+type Tier = 'sandbox' | 'production' | 'system';
+
+/** The tiers the operator sets, a column each - the demos are held to the sandbox's. */
+const TIERS: { key: Tier; name: string }[] = [
+  { key: 'sandbox', name: 'Sandbox' },
+  { key: 'production', name: 'Production' },
+  { key: 'system', name: 'System' },
+];
 
 const MB = 1024 * 1024;
 
@@ -17,28 +24,40 @@ interface Limit {
   note: string;
   unit: string;
   bytes?: boolean;
+  /** A yes or a no rather than a number. */
+  flag?: boolean;
+  /** Words rather than a number, which may be left empty. */
+  text?: boolean;
 }
 
-/** What each tier has, the same for both: a column each. */
+/** What each tier has, the same for every tier: a column each. */
 const TIER: (Limit & { key: keyof TierLimits })[] = [
+  { key: 'label', title: 'Called', unit: '', text: true,
+    note: 'What the pages call the tier, as written, in every language - "Free" and "Premium" on genhttp.dev. Empty for its own name, which the pages translate. The API and the code use the name only.' },
   { key: 'buildBytes', title: 'Build', unit: 'MB', bytes: true,
     note: 'A version: its code - the C#, and the documentation, the tests and whatever else is kept with it - and its resources, together. Kept in every version. The C# is compiled, so this also bounds what the compiler spends, which the whole server shares.' },
   { key: 'dataBytes', title: 'Data', unit: 'MB', bytes: true,
     note: 'What a lambda keeps while it runs: its database and its workspace, together. Holds from the next write; nothing already stored is removed.' },
+  { key: 'analyticsDays', title: 'Analytics shown', unit: 'days',
+    note: 'How far back the owner sees what was counted of their visitors. A year is kept of every lambda, so at most 365; moved to a tier that shows more, a lambda shows what was counted before.' },
+  { key: 'connectivity', title: 'Connects by default', unit: '', flag: true,
+    note: 'Whether its code may connect to other servers while nothing was decided about the lambda. What is allowed or declined in Connectivity comes first. Switched off, the lambdas of the tier that connect are built again.' },
+];
+
+/** Only the sandbox's: production and system lambdas are kept online and kept. */
+const LIFETIME: Limit[] = [
+  { key: 'offlineAfterHours', title: 'Offline after', unit: 'hours',
+    note: 'Without visits or edits. Its address stops answering until it is used or deployed again. A lambda moved into the sandbox gets the whole time from the move.' },
+  { key: 'removedAfterHours', title: 'Removed after', unit: 'hours',
+    note: 'Without visits or edits: versions, features and data, all of it.' },
+];
+
+/** The same for every lambda, whatever its tier. */
+const EVERY_LAMBDA: Limit[] = [
   { key: 'versions', title: 'Versions kept', unit: '',
     note: 'Older ones are removed when a new one is saved, never the one online.' },
   { key: 'features', title: 'Features open at once', unit: '',
     note: 'Each holds a copy of the files, the workspace and the database.' },
-  { key: 'analyticsDays', title: 'Analytics shown', unit: 'days',
-    note: 'How far back the owner sees what was counted of their visitors. A year is kept of every lambda, so at most 366; moved to a tier that shows more, a lambda shows what was counted before.' },
-];
-
-/** Only the free tier's: a premium lambda is kept online and kept. */
-const LIFETIME: Limit[] = [
-  { key: 'offlineAfterHours', title: 'Offline after', unit: 'hours',
-    note: 'Without visits or edits. Its address stops answering until it is used or deployed again.' },
-  { key: 'removedAfterHours', title: 'Removed after', unit: 'hours',
-    note: 'Without visits or edits: versions, features and data, all of it.' },
 ];
 
 /** Counted per caller rather than per lambda, so there is no tier to them. */
@@ -51,21 +70,26 @@ const EVERYBODY: Limit[] = [
     note: 'Builds and changes the agent of this installation makes for one address. Counted in memory.' },
 ];
 
+/** The tiers a new lambda may start in: the installation's own are not among them. */
+const STARTS = ['Sandbox', 'Production'];
+
 type Draft = Record<string, string>;
 
 const show = (value: number, bytes?: boolean) =>
   bytes ? String(Math.round((value / MB) * 100) / 100) : String(value);
 
 function toDraft(limits: AdminLimits): Draft {
-  const draft: Draft = {};
+  const draft: Draft = { defaultTier: limits.defaultTier };
 
-  for (const tier of ['free', 'premium'] as const) {
+  for (const { key: tier } of TIERS) {
     for (const limit of TIER) {
-      draft[`${tier}.${limit.key}`] = show(limits[tier][limit.key], limit.bytes);
+      const value = limits[tier][limit.key];
+
+      draft[`${tier}.${limit.key}`] = limit.flag ? String(value === true) : limit.text ? String(value ?? '') : show(value as number, limit.bytes);
     }
   }
 
-  for (const limit of [...LIFETIME, ...EVERYBODY]) {
+  for (const limit of [...LIFETIME, ...EVERY_LAMBDA, ...EVERYBODY]) {
     draft[limit.key] = show(limits[limit.key as keyof AdminLimits] as number, limit.bytes);
   }
 
@@ -87,29 +111,41 @@ function parse(text: string, bytes?: boolean): number | null {
   return Number.isInteger(value) ? value : null;
 }
 
+/** Whether a field holds what the server takes for it. */
+const valid = (limit: Limit, text: string) =>
+  limit.flag ? true : limit.text ? text.trim().length <= 24 : parse(text, limit.bytes) !== null;
+
 function fromDraft(draft: Draft): AdminLimits | null {
   const read = (key: string, bytes?: boolean) => parse(draft[key] ?? '', bytes);
 
   const tier = (name: Tier): TierLimits | null => {
-    const values = TIER.map((limit) => read(`${name}.${limit.key}`, limit.bytes));
+    if (TIER.some((limit) => !valid(limit, draft[`${name}.${limit.key}`] ?? ''))) return null;
 
-    if (values.some((v) => v === null)) return null;
+    const value = (key: string) => draft[`${name}.${key}`] ?? '';
 
-    return Object.fromEntries(TIER.map((limit, i) => [limit.key, values[i]])) as unknown as TierLimits;
+    return {
+      buildBytes: read(`${name}.buildBytes`, true)!,
+      dataBytes: read(`${name}.dataBytes`, true)!,
+      analyticsDays: read(`${name}.analyticsDays`)!,
+      connectivity: value('connectivity') === 'true',
+      label: value('label').trim() === '' ? null : value('label').trim(),
+    };
   };
 
-  const free = tier('free');
-  const premium = tier('premium');
-  const rest = [...LIFETIME, ...EVERYBODY].map((limit) => read(limit.key, limit.bytes));
+  const tiers = TIERS.map(({ key }) => tier(key));
+  const others = [...LIFETIME, ...EVERY_LAMBDA, ...EVERYBODY];
+  const rest = others.map((limit) => read(limit.key, limit.bytes));
 
-  if (free === null || premium === null || rest.some((v) => v === null)) {
+  if (tiers.some((t) => t === null) || rest.some((v) => v === null) || !STARTS.includes(draft.defaultTier ?? '')) {
     return null;
   }
 
   return {
-    free,
-    premium,
-    ...Object.fromEntries([...LIFETIME, ...EVERYBODY].map((limit, i) => [limit.key, rest[i]])),
+    defaultTier: draft.defaultTier,
+    sandbox: tiers[0]!,
+    production: tiers[1]!,
+    system: tiers[2]!,
+    ...Object.fromEntries(others.map((limit, i) => [limit.key, rest[i]])),
   } as AdminLimits;
 }
 
@@ -162,7 +198,7 @@ export function LimitsSection({ access }: { access: Access }) {
       setSaved(result);
       setDraft(toDraft(result));
 
-      toast('The limits are saved. They apply to the next save, upload, deploy or connection.', 'success');
+      toast('The limits are saved. They apply to the next save, upload, write, connection or sweep.', 'success');
     } catch (problem) {
       if (refusedToken(problem)) {
         deny();
@@ -179,10 +215,10 @@ export function LimitsSection({ access }: { access: Access }) {
       id={`limit-${key.replace('.', '-')}`}
       label={column ? `${limit.title}, ${column}` : limit.title}
       column={column}
-      unit={limit.unit}
+      limit={limit}
       value={draft[key] ?? ''}
       changed={changed(key)}
-      valid={parse(draft[key] ?? '', limit.bytes) !== null}
+      valid={valid(limit, draft[key] ?? '')}
       onChange={(value) => setDraft((current) => ({ ...current, [key]: value }))}
     />
   );
@@ -190,7 +226,7 @@ export function LimitsSection({ access }: { access: Access }) {
   return (
     <Section
       title="Limits"
-      hint="What a lambda may have. A change applies to what is checked next - a save, an upload, a deploy, a connection to a database - and takes nothing away that a lambda already has. No restart needed."
+      hint="What a lambda may have, per tier and for every lambda. A change applies to what is checked next - a save, an upload, a write, a connection to a database, the next sweep - and takes nothing away that a lambda already has. No restart needed."
     >
       {saved === null ? (
         error !== null ? (
@@ -211,31 +247,64 @@ export function LimitsSection({ access }: { access: Access }) {
           <section>
             <h2 className="text-sm font-medium">Per tier</h2>
             <p className="mt-1 text-[13px] text-slate-500">
-              What one lambda may have. A demo is held to the free tier; premium never to less than free.
+              What one lambda may have, by what it is for: the sandbox to try something, production for an app people use, system
+              for what this installation depends on - never blocked, never in the showcase, not deleted with its editor key. A
+              demo is held to the sandbox; production never to less than the sandbox.
             </p>
 
             <div className="surface mt-3">
-              <div className="hidden border-b border-grey-300 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-ink-800 sm:grid sm:grid-cols-[1fr_10rem_10rem] sm:gap-4">
+              <div className="hidden border-b border-grey-300 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-ink-800 sm:grid sm:grid-cols-[1fr_9rem_9rem_9rem] sm:gap-4">
                 <span>Limit</span>
-                <span>Free</span>
-                <span>Premium</span>
+                {TIERS.map((tier) => <span key={tier.key}>{tier.name}</span>)}
               </div>
 
               <div className="divide-y divide-grey-300 dark:divide-ink-800">
                 {TIER.map((limit) => (
                   <Row key={limit.key} limit={limit}>
-                    {input(limit, `free.${limit.key}`, 'Free')}
-                    {input(limit, `premium.${limit.key}`, 'Premium')}
+                    {TIERS.map((tier) => <Fragment key={tier.key}>{input(limit, `${tier.key}.${limit.key}`, tier.name)}</Fragment>)}
                   </Row>
                 ))}
 
                 {LIFETIME.map((limit) => (
                   <Row key={limit.key} limit={limit}>
-                    {input(limit, limit.key, 'Free')}
-                    <Kept />
+                    {input(limit, limit.key, 'Sandbox')}
+                    <Kept tier="Production" />
+                    <Kept tier="System" />
                   </Row>
                 ))}
               </div>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-medium">For every lambda</h2>
+            <p className="mt-1 text-[13px] text-slate-500">
+              The same whatever its tier.
+            </p>
+
+            <div className="surface mt-3 divide-y divide-grey-300 dark:divide-ink-800">
+              <Row limit={{ key: 'defaultTier', title: 'New lambdas start in', unit: '', note: 'The sandbox where strangers create them; production on an installation run for a team, where nothing should go offline by itself.' }} single>
+                <div className="min-w-0">
+                  <div className="relative">
+                    <select
+                      id="limit-defaultTier"
+                      aria-label="New lambdas start in"
+                      value={draft.defaultTier ?? ''}
+                      onChange={(event) => setDraft((current) => ({ ...current, defaultTier: event.target.value }))}
+                      className="field py-1.5 text-sm"
+                    >
+                      {STARTS.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
+                    </select>
+                    {changed('defaultTier') && <span className="pointer-events-none absolute inset-y-0 right-8 flex items-center"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Changed, not saved yet" /></span>}
+                  </div>
+                </div>
+              </Row>
+
+              {EVERY_LAMBDA.map((limit) => (
+                <Row key={limit.key} limit={limit} single>
+                  {input(limit, limit.key)}
+                </Row>
+              ))}
             </div>
           </section>
 
@@ -268,7 +337,7 @@ export function LimitsSection({ access }: { access: Access }) {
 
             <span className="text-[13px] text-slate-500">
               {parsed === null
-                ? 'Every limit is a whole number greater than zero; sizes may have decimals.'
+                ? 'Every limit is a whole number greater than zero; sizes may have decimals, and a label is at most 24 characters.'
                 : dirty
                   ? 'Not saved yet.'
                   : 'Everything is saved.'}
@@ -286,39 +355,61 @@ export function LimitsSection({ access }: { access: Access }) {
  */
 function Row({ limit, single = false, children }: { limit: Limit; single?: boolean; children: ReactNode }) {
   return (
-    <div className="grid gap-3 p-4 sm:grid-cols-[1fr_10rem_10rem] sm:items-center sm:gap-4">
+    <div className="grid gap-3 p-4 sm:grid-cols-[1fr_9rem_9rem_9rem] sm:items-center sm:gap-4">
       <div className="min-w-0">
         <p className="text-[15px] font-medium">{limit.title}</p>
         <p className="mt-1 text-[13px] text-slate-500">{limit.note}</p>
       </div>
 
-      <div className={`grid gap-3 sm:contents ${single ? 'grid-cols-1' : 'grid-cols-2'}`}>{children}</div>
+      <div className={`grid gap-3 sm:contents ${single ? 'grid-cols-1' : 'grid-cols-3'}`}>{children}</div>
     </div>
   );
 }
 
-/** Where a premium lambda has no limit: it stays online and is kept. */
-function Kept() {
+/** Where a tier has no such limit: its lambdas stay online and are kept. */
+function Kept({ tier }: { tier: string }) {
   return (
     <div>
-      <span className="mb-1 block text-xs text-slate-500 sm:hidden">Premium</span>
+      <span className="mb-1 block text-xs text-slate-500 sm:hidden">{tier}</span>
       <p className="py-1.5 text-[13px] text-slate-500">never - kept online</p>
     </div>
   );
 }
 
-function Input({ id, label, column, unit, value, changed, valid, onChange }: {
+function Input({ id, label, column, limit, value, changed, valid, onChange }: {
   id: string;
   label: string;
   /** The tier the column is for, said above the field where the columns have no header - on a phone. */
   column?: string;
-  unit: string;
+  limit: Limit;
   value: string;
   changed: boolean;
   valid: boolean;
   onChange: (value: string) => void;
 }) {
+  const unit = limit.unit;
   const hours = unit === 'hours' ? Number(value) : NaN;
+
+  if (limit.flag) {
+    return (
+      <div className="min-w-0">
+        {column && <span className="mb-1 block text-xs text-slate-500 sm:hidden">{column}</span>}
+
+        <label className="inline-flex cursor-pointer items-center gap-2 py-1.5 text-sm">
+          <input
+            id={id}
+            type="checkbox"
+            checked={value === 'true'}
+            onChange={(event) => onChange(String(event.target.checked))}
+            aria-label={label}
+            className="h-4 w-4 accent-logo-600"
+          />
+          {value === 'true' ? 'yes' : 'no'}
+          {changed && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Changed, not saved yet" />}
+        </label>
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0">
@@ -329,12 +420,13 @@ function Input({ id, label, column, unit, value, changed, valid, onChange }: {
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          inputMode={unit === 'MB' ? 'decimal' : 'numeric'}
+          inputMode={limit.text ? 'text' : unit === 'MB' ? 'decimal' : 'numeric'}
           autoComplete="off"
           aria-label={label}
           aria-invalid={!valid}
+          placeholder={limit.text ? column : undefined}
           style={{ paddingRight: `${(unit === '' ? 0.75 : unit.length * 0.5 + 1.4) + (changed ? 0.75 : 0)}rem` }}
-          className={`field py-1.5 text-right font-mono text-sm ${valid ? '' : '!border-red-500 !ring-red-500'}`}
+          className={`field py-1.5 text-sm ${limit.text ? '' : 'text-right font-mono'} ${valid ? '' : '!border-red-500 !ring-red-500'}`}
         />
         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-1.5 text-xs text-slate-400">
           {changed && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Changed, not saved yet" />}

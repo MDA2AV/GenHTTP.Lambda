@@ -87,8 +87,10 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             try
             {
-                // out of the tier first, which is what makes it removable at all
-                lambda.Tier = LambdaTier.Free;
+                // out of the tier first, which is what makes it removable at
+                // all - the seeder is what puts a lambda there, and finds its
+                // own by it
+                lambda.Tier = LambdaTier.Sandbox;
 
                 database.SaveChanges();
 

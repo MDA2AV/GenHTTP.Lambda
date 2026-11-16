@@ -13,7 +13,8 @@ import { BlockedBadge } from './LambdaDetail';
  * The lambdas that ask to connect to other servers, and the ones allowed to.
  *
  * Lambdas were used as proxies - an API of their own that fetched whatever
- * address it was handed - so only a premium lambda connects without asking.
+ * address it was handed - so only a lambda whose tier connects by default
+ * (production, usually) connects without asking.
  * The rest ask, saying what for, and wait here: the longest waiting first,
  * each with what its owner said, whether its code connects at all, and the
  * two answers. What was allowed stays listed below, to be looked at again
@@ -51,7 +52,7 @@ export function ConnectivitySection({ access }: { access: Access }) {
   return (
     <Section
       title="Connectivity"
-      hint="Whether a lambda's code may connect to other servers - call an API, open a socket, send mail. Premium lambdas may without asking; any other asks here, saying what for. A decision applies from the lambda's next request, without a deploy."
+      hint="Whether a lambda's code may connect to other servers - call an API, open a socket, send mail. Lambdas whose tier connects by default - production, usually - may without asking; any other asks here, saying what for. A decision applies from the lambda's next request, without a deploy."
     >
       {listing === null ? (
         failure ? (
@@ -111,7 +112,7 @@ export function ConnectivitySection({ access }: { access: Access }) {
             Allowed {allowed.length > 0 && <span className="ml-1 text-slate-500">{allowed.length}</span>}
           </h2>
           <p className="mt-1 text-[13px] text-slate-500">
-            By you, the most recently allowed first. Premium lambdas are not listed: their tier includes it.
+            By you, the most recently allowed first. Lambdas whose tier connects by default are not listed unless you decided about them.
           </p>
 
           {allowed.length === 0 ? (

@@ -134,7 +134,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         /*
          * Everything from reading the version on happens inside the lock, not
          * only the compilation. The requests that reach a lambda nobody has
-         * compiled since the server started - or since its tier moved - all
+         * compiled since the server started - or since its connectivity changed - all
          * arrive here together, and each of them used to read, unpack and
          * write out the whole version before queueing for the compiler; with
          * a hundred megabytes of resources that is a hundred megabytes, several
@@ -197,7 +197,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
                                              () => Databases.SizeOf(lambdaId, featureId),
-                                             () => Workspaces.Changed(lambdaId, featureId));
+                                             () => Workspaces.Changed(lambdaId, featureId),
+                                             Databases.DataRoomFor(lambdaId, featureId));
 
         var outcome = await CompileAsync(slot, stamp, request);
 
@@ -315,10 +316,19 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     }
 
     /// <summary>
-    /// Whether the slot serves this build already, compiled with these settings.
+    /// Whether the slot serves this build already, compiled with settings
+    /// that hold for these.
     /// </summary>
+    /// <remarks>
+    /// A build compiled without connectivity serves where the lambda may
+    /// connect as well: it compiled without the means to, so it does not, and
+    /// building it again would only run its startup again - which a lambda
+    /// moved to a tier that connects by default should not notice. The other
+    /// way round it is built again, since code that connects must stop.
+    /// </remarks>
     private bool IsDeployed(Slot slot, int stamp, BuildSettings settings)
-        => _deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Settings == settings;
+        => _deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Settings.Workspace == settings.Workspace
+        && (existing.Settings.Connectivity == settings.Connectivity || !existing.Settings.Connectivity);
 
     /// <summary>
     /// Writes the resources of what is being deployed into the directory it

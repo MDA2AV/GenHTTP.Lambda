@@ -33,8 +33,10 @@ public sealed record LambdaResponse(
     string PublicKey,
     [Summary("The editor key, which authorizes every call about the lambda. Treat it like a password.")]
     string PrivateKey,
-    [Summary("`Free`, `Premium` or `Demo`, assigned by the operator. Decides its limits, whether it is kept online while nobody uses it, and whether it may answer at a domain of its own.")]
+    [Summary("`Sandbox`, `Production`, `System` or `Demo`, assigned by the operator - what the lambda is for. Decides its limits, whether it is kept online while nobody uses it, and whether it may answer at a domain of its own; `tierPolicy` says how, on this installation.")]
     string Tier,
+    [Summary("What its tier lets it have and how it is kept, as this installation set it, with what the installation calls the tier and the one above")]
+    TierResponse TierPolicy,
     [Summary("When it was created")]
     DateTime Created,
     [Summary("When something about it last changed: a save, a deployment, a setting")]
@@ -85,6 +87,7 @@ public static class LambdaDescription
         lambda.PublicKey,
         lambda.PrivateKey,
         lambda.Tier,
+        TierDescription.Of(lambda.Policy, lambda.Above),
         lambda.Created,
         lambda.Modified,
         lambda.ActiveVersion,
@@ -95,7 +98,7 @@ public static class LambdaDescription
         lambda.DeployedUntil,
         lambda.KeptUntil,
         lambda.Domain,
-        Serves(lambda.Tier, lambda.Domain),
+        lambda.Domain != null && lambda.Policy.OwnDomain,
         lambda.Address,
         lambda.View,
         PlatformRoutes.RepositoryOf(lambda.PrivateKey, lambda.PublicKey),
@@ -103,17 +106,6 @@ public static class LambdaDescription
         lambda.BlockReason,
         ConnectivityResponse.Of(lambda.Connectivity)
     );
-
-    /// <summary>
-    /// Whether a lambda of this tier may answer at a domain of its own.
-    /// </summary>
-    public static bool AllowsDomain(string tier) => tier == nameof(LambdaTier.Premium);
-
-    /// <summary>
-    /// Whether a lambda of this tier with this domain is answering at it, as
-    /// <see cref="LambdaAddresses.Serves"/> decides.
-    /// </summary>
-    public static bool Serves(string tier, string? domain) => LambdaAddresses.Serves(tier, domain);
 }
 
 /// <summary>

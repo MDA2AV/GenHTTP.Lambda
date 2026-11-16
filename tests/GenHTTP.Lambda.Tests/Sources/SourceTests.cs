@@ -479,7 +479,7 @@ public sealed class SourceTests
         Assert.AreEqual("http://shop.localhost:8080/", before.Source.Address, "its own address, while it has no domain");
         Assert.IsTrue(before.Versions[0].Online, "and which version is the one online");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var domain = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("shop.example.com")))
         {

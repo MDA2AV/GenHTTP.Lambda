@@ -166,9 +166,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var workspace = DataSwitches.IsEnabled(database, found.Lambda.Id, DataKinds.Workspace);
 
+        // built as the lambda is, so a preview may connect where the lambda
+        // may - and is not built again on its first request for being told
+        // otherwise than its deployment was
         return new ResolvedLambda(found.Lambda.Id, found.Lambda.PublicKey, found.Lambda.Tier, found.Feature.BaseVersion,
                                   found.Feature.Previewed!.Value, workspace,
-                                  new ResolvedFeature(found.Feature.Id, found.Feature.Key, found.Feature.Preview));
+                                  new ResolvedFeature(found.Feature.Id, found.Feature.Key, found.Feature.Preview),
+                                  Connectivity: ConnectivityRule.Allows(limits.PolicyOf(found.Lambda.Tier), found.Lambda.Connectivity));
     }
 
     #endregion
@@ -185,7 +189,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var lambda = database.Lambdas.First(l => l.Id == lambdaId);
 
-        var allowed = limits.Of(lambda.Tier).Features;
+        var allowed = limits.Get().Features;
 
         if (database.Features.Count(f => f.LambdaId == lambdaId) >= allowed)
         {
@@ -223,7 +227,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         database.Features.Add(entity);
 
-        // being worked on is being used: a free lambda somebody is changing
+        // being worked on is being used: a sandbox lambda somebody is changing
         // is not left to expire while they do
         lambda.Modified = now;
 
@@ -381,8 +385,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
             // built as the lambda is, so a preview may connect where the lambda may
-            settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id)),
-                                         ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
+            settings = new BuildSettings(WorkspaceEnabled(database, lambda.Id),
+                                         ConnectivityRule.Allows(limits.PolicyOf(lambda.Tier), lambda.Connectivity));
 
             // handed out here, so one started meanwhile is given the next
             stamp = _stamps.AddOrUpdate(entity.Id, entity.Preview + 1, (_, last) => Math.Max(last, entity.Preview) + 1);
@@ -684,8 +688,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // the same rule the lambda's own deployment lives by: online while
         // somebody works on it, offline once nobody has for the whole window
+        // - in a tier that is not kept while unused, and never counted from
+        // before the lambda moved into it
+        var expiring = limits.TiersWhere(p => p.ExpiresWhenUnused);
+
         var stale = database.Features.AsNoTracking()
-                            .Where(f => f.Previewed != null && f.Modified < quiet && f.Lambda!.Tier == LambdaTier.Free)
+                            .Where(f => f.Previewed != null && f.Modified < quiet && expiring.Contains(f.Lambda!.Tier)
+                                        && (f.Lambda.TierChanged == null || f.Lambda.TierChanged < quiet))
                             .Select(f => new { f.Id, f.LambdaId })
                             .ToList();
 

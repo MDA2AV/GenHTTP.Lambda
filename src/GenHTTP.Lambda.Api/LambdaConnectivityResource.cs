@@ -24,8 +24,10 @@ namespace GenHTTP.Lambda.Api;
 [Summary("Whether a lambda's code may connect to other servers - asked for by its owner, decided by the operator.")]
 [Remarks("""
          A lambda shares the server with every other, so it may only connect to other servers - call an API with
-         `HttpClient`, open a socket, a WebSocket client or a mail client, look up a name - where it was allowed: the premium
-         tier includes it, and any other lambda asks the operator of the installation, saying what it connects to and why.
+         `HttpClient`, open a socket, a WebSocket client or a mail client, look up a name - where it was allowed: its tier may
+         allow it by default (`tierPolicy.connectivity` - production, as most installations set it), and any other lambda asks
+         the operator of the installation, saying what it connects to and why. A decision of the operator about the lambda
+         comes before what its tier allows, either way.
          Without it, code that connects is refused as it compiles, with `LAMBDA0003` and a message that says so.
 
          A decision takes effect from the next request, without a deploy: the lambda and the previews of its features are
@@ -49,7 +51,7 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
              The request waits for the operator of the installation, who reads what it is for and allows or declines it - the
              answer says where it stands, and `note` what they said. Asked again while it waits, the purpose is replaced and it
              keeps its place; asked again after it was declined, it waits anew. Nothing is asked for a lambda that may connect
-             already - a premium one, or one allowed - and the answer says so.
+             already - by its tier, or allowed - and the answer says so.
 
              Say what it connects to and why: the addresses or services, and what the lambda does with them. A lambda that
              passes on whatever it is asked to fetch, a proxy, is the kind of thing this is here to keep off the server.
@@ -70,8 +72,8 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
     [Summary("Takes a request back, or gives up connectivity")]
     [Remarks("""
              Takes back a request that waits, or gives up what the operator allowed - from the next request on, code that connects
-             is refused as it compiles, and a version online that does stops working. A premium lambda may connect whatever is
-             asked here. Nothing happens when nothing was asked, or it was declined.
+             is refused as it compiles, and a version online that does stops working - unless its tier allows it by default.
+             Nothing happens when nothing was asked, or it was declined.
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]

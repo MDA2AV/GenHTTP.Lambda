@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Connectivity;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Meta.Model;
 
@@ -16,10 +17,14 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="Blocked">Since when the operator has blocked it, or nothing</param>
 /// <param name="BlockReason">Why, in the operator's words - which its owner reads as well</param>
 /// <param name="Connectivity">Whether it may connect to other servers, and where its request for that stands</param>
+/// <param name="Policy">What its tier lets it have and how it is kept, as the installation set it</param>
+/// <param name="Above">The tier it would be moved to for more, or nothing where there is none</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
     string Tier,
+    TierPolicy Policy,
+    TierPolicy? Above,
     DateTime Created,
     DateTime Modified,
     int? ActiveVersion,
@@ -181,6 +186,7 @@ public sealed record LambdaOverview(
     string PublicKey,
     string PrivateKey,
     string Tier,
+    TierPolicy Policy,
     DateTime Created,
     DateTime Modified,
     int? ActiveVersion,

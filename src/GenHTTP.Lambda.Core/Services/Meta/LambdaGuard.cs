@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Meta;
 
@@ -28,12 +29,13 @@ internal static class LambdaGuard
     /// Checked in the services rather than in front of the API, so that no
     /// door into a lambda - the editor, the REST API or an agent - can forget it.
     /// </remarks>
+    /// <param name="policy">What its tier says about it</param>
     /// <param name="origin">Who is asking: the seeder and the operator may change a demo, nobody else</param>
-    public static void EnsureEditable(LambdaEntity lambda, string? origin = null)
+    public static void EnsureEditable(LambdaEntity lambda, TierPolicy policy, string? origin = null)
     {
         EnsureUnblocked(lambda);
 
-        if (lambda.Tier == LambdaTier.Demo && origin is not (VersionOrigins.System or VersionOrigins.Admin))
+        if (policy.ReadOnly && origin is not (VersionOrigins.System or VersionOrigins.Admin))
         {
             throw LambdaException.Forbidden(ReadOnly(lambda.PublicKey));
         }

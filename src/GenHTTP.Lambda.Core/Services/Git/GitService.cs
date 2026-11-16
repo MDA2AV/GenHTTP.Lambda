@@ -110,7 +110,7 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
             return;
         }
 
-        if (lambda.Tier == nameof(LambdaTier.Demo))
+        if (lambda.ReadOnly)
         {
             pushes.RefuseAll(lambda, push, LambdaGuard.ReadOnly(lambda.PublicKey));
             return;
@@ -153,7 +153,7 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
             ? new RepositoryLicense(found, DateTime.UtcNow.Year, SourceLicenses.Holder(source.Author, lambda.PublicKey))
             : null;
 
-        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Tier, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license),
+        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Policy.ReadOnly, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license),
                              origin.TrimEnd('/'), lambda.Blocked != null);
     }
 

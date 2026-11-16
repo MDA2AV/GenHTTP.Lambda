@@ -161,7 +161,7 @@ export function LambdasSection({ access }: { access: Access }) {
                     <td className="px-4 py-2">{lambda.blocked ? <BlockedBadge /> : <StatusBadge version={lambda.activeVersion} />}</td>
                     <td className="px-4 py-2">
                       <span className="inline-flex items-center gap-1.5">
-                        <TierBadge tier={lambda.tier} />
+                        <TierBadge tier={lambda.tier} label={lambda.tierLabel} />
                         <ConnectivityBadge connectivity={lambda.connectivity} />
                       </span>
                     </td>
@@ -169,7 +169,7 @@ export function LambdasSection({ access }: { access: Access }) {
                       {lambda.domain ? (
                         <span
                           className={lambda.domainServed ? '' : 'text-slate-400 line-through'}
-                          title={lambda.domainServed ? `Answers at ${lambda.domain}` : 'Configured, but not served outside the premium tier'}
+                          title={lambda.domainServed ? `Answers at ${lambda.domain}` : 'Configured, but not served in a tier without domains'}
                         >
                           {lambda.domain}
                         </span>

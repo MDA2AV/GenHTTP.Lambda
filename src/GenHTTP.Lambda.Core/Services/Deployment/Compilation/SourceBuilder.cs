@@ -56,6 +56,13 @@ internal static class SourceBuilder
     internal const string ChangedHook = "_changed";
 
     /// <summary>
+    /// The field of the generated workspace class the platform puts the
+    /// function it reads the room of the lambda's data with into, once the
+    /// lambda is loaded - what its tier allows it now.
+    /// </summary>
+    internal const string RoomSource = "_room";
+
+    /// <summary>
     /// Holds what every file of a lambda may name without qualifying it.
     /// </summary>
     /// <remarks>
@@ -144,11 +151,11 @@ internal static class SourceBuilder
     /// <param name="workspace">The directory this lambda may read and write</param>
     /// <param name="resources">The directory this lambda's resources were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
-    /// <param name="limits">
-    /// What the lambda may keep in its workspace, which its tier decides. Left
-    /// out where nothing is going to run, such as for the editor's questions.
+    /// <param name="enabled">
+    /// Whether the lambda has a workspace, which its owner decides. Left out
+    /// where nothing is going to run, such as for the editor's questions.
     /// </param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string resources, string scope, WorkspaceLimits? limits = null)
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string resources, string scope, bool enabled = true)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -230,7 +237,7 @@ internal static class SourceBuilder
 
         builder.AppendLine("#line default");
         builder.AppendLine();
-        builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
+        builder.AppendLine(WorkspaceSource(enabled));
         builder.AppendLine(ResourceSource);
         builder.AppendLine(SecretSourceCode);
         builder.AppendLine(DatabaseSourceCode);
@@ -537,17 +544,20 @@ internal static class SourceBuilder
     /// invisible to the code being compiled.
     /// </summary>
     /// <remarks>
-    /// The quota is written in as a constant, so the code of the lambda can
-    /// read it and cannot change it. Only the room is limited, counted in
-    /// blocks as <see cref="WorkspaceLimits"/> explains; reading never creates
-    /// anything, and a folder is only made once there is room for it.
+    /// Only the room is limited, counted in blocks as <see cref="WorkspaceLimits"/>
+    /// explains; reading never creates anything, and a folder is only made once
+    /// there is room for it.
     ///
     /// The quota is the room of the lambda's data, which its database takes
-    /// some of. What it takes is read through a function the platform hands
-    /// the class once the lambda is loaded, like the secrets, so the lambda
-    /// never learns where its database is; and the class tells the platform
-    /// it wrote, through another, so a connection to the database opened
-    /// next may grow only into what the workspace left.
+    /// some of. Both are read through functions the platform hands the class
+    /// once the lambda is loaded, like the secrets: the quota as the lambda's
+    /// tier allows it now, so moving the lambda to another tier changes what it
+    /// may write without compiling it again or running its startup again, and
+    /// what the database takes, so the lambda never learns where its database
+    /// is. The class tells the platform it wrote, through another, so a
+    /// connection to the database opened next may grow only into what the
+    /// workspace left. Without the platform's function - nothing is running -
+    /// there is no room at all.
     ///
     /// A workspace its owner switched off is still the same class, so code
     /// that names it compiles, but every member refuses with the reason and
@@ -555,10 +565,12 @@ internal static class SourceBuilder
     /// says. Written as two bodies of one method rather than a flag to test,
     /// so the compiler has no unreachable branch to warn the author about.
     /// </remarks>
-    private static string WorkspaceSource(WorkspaceLimits limits) => $$"""
+    private static string WorkspaceSource(bool enabled) => $$"""
         internal sealed class {{WorkspaceType}}
         {
-            private const long Quota = {{limits.Quota}};
+            private static global::System.Func<long> {{RoomSource}} = null;
+
+            private static long Quota => {{RoomSource}} == null ? 0 : {{RoomSource}}();
 
             private const long Block = {{WorkspaceLimits.Block}};
 
@@ -573,10 +585,10 @@ internal static class SourceBuilder
                 _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
                       + global::System.IO.Path.DirectorySeparatorChar;
 
-                {{(limits.Enabled ? "global::System.IO.Directory.CreateDirectory(_root);" : "// switched off, so there is nothing to make")}}
+                {{(enabled ? "global::System.IO.Directory.CreateDirectory(_root);" : "// switched off, so there is nothing to make")}}
             }
 
-            {{(limits.Enabled
+            {{(enabled
                 ? "private static void Guard() { }"
                 : $"private static void Guard() => throw new global::System.InvalidOperationException({Literal(DataKinds.WorkspaceOff)});")}}
 

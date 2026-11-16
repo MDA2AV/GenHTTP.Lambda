@@ -21,12 +21,24 @@ public sealed class LambdaEntity
     public LambdaTier Tier { get; set; }
 
     /// <summary>
+    /// When the operator last moved it to another tier, or nothing while it
+    /// is in the one it started in.
+    /// </summary>
+    /// <remarks>
+    /// The earliest the sweeps may measure from: a lambda moved to a tier
+    /// that takes unused lambdas offline - it and the previews of its
+    /// features - gets the whole time from the move, not from a visit long
+    /// before it, when nothing would have taken it offline.
+    /// </remarks>
+    public DateTime? TierChanged { get; set; }
+
+    /// <summary>
     /// The domain the lambda answers at instead of its subdomain of the
     /// hosting domain, such as <c>shop.example.com</c>.
     /// </summary>
     /// <remarks>
     /// Kept in the form it is matched in (see <c>DomainNames</c>) and only
-    /// honoured in the premium tier - a lambda demoted keeps it, unserved,
+    /// honoured in a tier with domains of its own - a lambda moved out keeps it, unserved,
     /// until it is promoted again.
     /// </remarks>
     public string? Domain { get; set; }
@@ -109,7 +121,7 @@ public sealed class LambdaEntity
     /// <remarks>
     /// Without it, its code is compiled without the means to connect -
     /// HttpClient, sockets, a WebSocket client, mail - and refused where it
-    /// reaches for them (see <c>CodeGuard</c>). A premium lambda may connect
+    /// reaches for them (see <c>CodeGuard</c>). A lambda whose tier connects by default may connect
     /// whatever this says (see <c>ConnectivityRule</c>).
     /// </remarks>
     public ConnectivityStatus? Connectivity { get; set; }

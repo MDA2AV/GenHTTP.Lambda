@@ -84,7 +84,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         var obsolete = database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
                                .OrderByDescending(d => d.Version)
-                               .Skip(limits.Of(lambda.Tier).Versions)
+                               .Skip(limits.Get().Versions)
                                .ToList();
 
         if (obsolete.Count == 0)
@@ -179,7 +179,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// <param name="kind">What happened, one of <see cref="LambdaEvents"/></param>
     public void Record(LambdaDbContext database, LambdaEntity lambda, string kind)
     {
-        if (lambda.Tier == LambdaTier.Demo)
+        if (limits.PolicyOf(lambda.Tier).ReadOnly)
         {
             return;
         }

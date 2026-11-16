@@ -439,7 +439,7 @@ export const guide = {
     'Everything else is there, including the whole of the GenHTTP module API. If something is refused you are told which line and why, not simply that it failed.',
   /** A paragraph of "What it will not let you do": connecting to other servers, which whoever runs the site allows. */
   limitsConnectivity:
-    'Connecting to other servers - calling an API with HttpClient, opening a socket, sending mail - needs permission: a premium lambda has it, any other asks for it under Connectivity in the editor, saying what it connects to and why, and whoever runs the site decides. Until then, code that connects is refused. What your pages fetch in the browser needs none of this, so call a public API from the page where it allows that.',
+    'Connecting to other servers - calling an API with HttpClient, opening a socket, sending mail - needs permission: an app whose tier includes it - production, usually - has it, any other asks for it under Connectivity in the editor, saying what it connects to and why, and whoever runs the site decides. Until then, code that connects is refused. What your pages fetch in the browser needs none of this, so call a public API from the page where it allows that.',
   /** The last paragraph of "What it will not let you do": what happens to a lambda that breaks the terms. */
   limitsBlocked:
     'A lambda that breaks the terms - phishing, malware, attacks on others - can be blocked by whoever runs the site. It goes offline, and nothing about it can be changed or put online until the block is lifted; the control center says so at the top, with the reason given. What it has can still be read and downloaded.',
@@ -523,9 +523,9 @@ export const guide = {
       no banner for your visitors to accept. Only counts per day are kept - never an address, and of the page somebody
       came from only the site. A visitor is a person who opened a page, counted once a day: search engines, AI crawlers and other
       programs are counted apart, by what they are, and Google, Bing, OpenAI, Apple and Perplexity only by name when
-      the visit came from an address they publish - anybody can claim to be them. A year is kept; a free app shows the last seven
-      days of it and {k.b('Premium')} all of it, what was counted before included. Switching it off deletes what was
-      counted.
+      the visit came from an address they publish - anybody can claim to be them. A year is kept, and how much of it you see
+      depends on the tier shown beside your app's name: an app for trying something out shows the last seven days of it,
+      one {k.b('in production')} all of it, what was counted before included. Switching it off deletes what was counted.
     </>
   )) as Text,
   visitorsAside:

@@ -117,18 +117,26 @@ an upload that does not fit is refused with `400`, and a feature or a secret
 more than a lambda may have with `409`. The message names the limit either
 way.
 
-The tier of a lambda (`Free`, `Premium` or `Demo`) is assigned by the operator.
-A free lambda that nobody visits or edits for a while is taken offline, and
-later removed. `deployedUntil` and `keptUntil` say when; both move forward with
-every visit and every edit.
+The tier of a lambda is what it is for, and is assigned by the operator: a
+`Sandbox` for trying something, where a new lambda starts; `Production` for an
+app people use, kept, with more room and a domain of its own; `System` for what
+the installation itself depends on, which cannot be blocked and is not deleted
+with its editor key; and `Demo` for the installation's demos. `tierPolicy` of a
+lambda says what its tier lets it have on this installation, and `tiers` of
+`GET /system` what each does; an installation may call a tier otherwise on its
+pages (`label` - genhttp.dev says `Free` and `Premium`), but the API names the
+tiers by these identifiers only. A sandbox lambda that nobody visits or edits
+for a while is taken offline, and later removed. `deployedUntil` and
+`keptUntil` say when; both move forward with every visit and every edit.
 
 ## Connecting to other servers
 
 A lambda's code may only connect to other servers - call an API with
 `HttpClient`, open a socket, a WebSocket or mail client - where `connectivity.allowed`
-says it may: a premium lambda may, any other once its owner asked
-(`PUT /lambdas/{privateKey}/connectivity`, saying what it connects to and why) and
-the operator allowed it. Until then, code that connects is refused as it
+says it may: where its tier connects by default (`tierPolicy.connectivity` -
+production, usually) and the operator did not decline it, or once its owner
+asked (`PUT /lambdas/{privateKey}/connectivity`, saying what it connects to and
+why) and the operator allowed it. Until then, code that connects is refused as it
 compiles, with `LAMBDA0003`. What the lambda's pages fetch in the visitor's
 browser needs none of this.
 

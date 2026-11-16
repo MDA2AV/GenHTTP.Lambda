@@ -8,9 +8,9 @@ public sealed record DomainResponse(
     string? Domain,
     [Summary("The tier of the lambda, which decides whether it may have one")]
     string Tier,
-    [Summary("Whether the tier includes a domain of its own: only the premium tier does")]
+    [Summary("Whether the tier includes a domain of its own: production and system lambdas do, a sandbox does not")]
     bool Allowed,
-    [Summary("Whether requests to the domain reach the lambda right now - it has one, and its tier includes it. A domain kept from a premium tier is not served.")]
+    [Summary("Whether requests to the domain reach the lambda right now - it has one, and its tier includes it. A domain kept from a tier that had one is not served.")]
     bool Served,
     [Summary("What the domain resolves to, as the server sees it; absent without a domain")]
     DnsResponse? Dns,

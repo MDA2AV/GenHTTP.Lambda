@@ -35,9 +35,18 @@ export const shared: EditorMessages['shared'] = {
   onlineTitle: (version) => `Online, versie ${version} draait`,
   offline: 'Offline',
   offlineTitle: 'Offline: er wordt niets geserveerd',
-  premium:
-    'Premium: kan op een eigen domein draaien, heeft meer ruimte voor code, resources en data, en blijft online hoe stil het ook is',
-  demo: 'Demo: door deze installatie online gehouden, alleen-lezen',
+  tiers: {
+    Sandbox: 'Sandbox',
+    Production: 'Productie',
+    System: 'Systeem',
+    Demo: 'Demo',
+  },
+  tierTitles: {
+    Sandbox: 'Om iets uit te proberen: wordt offline gehaald als er een tijd niemand op komt of iets aanpast',
+    Production: 'Een app die mensen gebruiken: blijft online hoe rustig het ook wordt, mag op een eigen domein draaien en heeft meer ruimte voor code, resources en data',
+    System: 'Iets waar deze installatie van afhankelijk is: blijft online, wordt nooit geblokkeerd en staat nooit in de showcase',
+    Demo: 'Wordt door deze installatie online gehouden en is alleen-lezen',
+  },
   tier: (tier) => `Pakket: ${tier}`,
   entrances: {
     title: 'Bereikt via',

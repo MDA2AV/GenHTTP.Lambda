@@ -438,7 +438,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Geri kalan her şey mevcut, GenHTTP modül API’sinin tamamı dahil. Bir şey reddedilirse sadece başarısız olduğu değil, hangi satırda ve neden reddedildiği de söylenir.',
   limitsConnectivity:
-    'Başka sunuculara bağlanmak - HttpClient ile bir API çağırmak, soket açmak, e-posta göndermek - izin gerektirir: premium bir lambdanın bu izni vardır, diğerleri editörde Dış bağlantı bölümünden neye bağlandıklarını ve nedenini yazarak izin ister ve siteyi işletenler karar verir. O zamana kadar bağlanan kod reddedilir. Sayfalarınızın tarayıcıda getirdikleri için bunların hiçbiri gerekmez; izin veren herkese açık bir API’yi sayfadan çağırın.',
+    'Başka sunuculara bağlanmak - HttpClient ile bir API çağırmak, soket açmak, e-posta göndermek - izin gerektirir: planı buna izin veren bir uygulamanın - genellikle üretimdekinin - bu izni vardır, diğerleri editörde Dış bağlantı bölümünden neye bağlandıklarını ve nedenini yazarak izin ister ve siteyi işletenler karar verir. O zamana kadar bağlanan kod reddedilir. Sayfalarınızın tarayıcıda getirdikleri için bunların hiçbiri gerekmez; izin veren herkese açık bir API’yi sayfadan çağırın.',
   limitsBlocked:
     'Kuralları ihlal eden bir lambda - kimlik avı, kötü amaçlı yazılım, başkalarına saldırı - siteyi işleten kişi tarafından engellenebilir. Yayından kalkar ve engel kaldırılana kadar hakkında hiçbir şey değiştirilemez ya da yayına alınamaz; kontrol paneli bunu, belirtilen gerekçeyle birlikte en üstte belirtir. Sahip olduğu her şey yine de okunabilir ve indirilebilir.',
 
@@ -516,17 +516,18 @@ export const guide: KitMessages['guide'] = {
       açın.
     </>
   )),
-  visitors2: ((k) => (
+  visitors2: (k) => (
     <>
       Sayımı platform yapar, uygulamanızın önünde; bu yüzden uygulamanızın bunun için hiçbir şeye ihtiyacı yoktur:
       çerez yok, script yok, ziyaretçilerinizin kabul etmesi gereken banner yok. Yalnızca günlük sayılar saklanır - hiçbir
       adres saklanmaz, birinin geldiği sayfadan da yalnızca site saklanır. Ziyaretçi, bir sayfa açan kişidir ve günde bir
       kez sayılır: arama motorları, yapay zekâ tarayıcıları ve diğer programlar ne olduklarına göre ayrıca sayılır; Google,
       Bing, OpenAI, Apple ve Perplexity ise yalnızca ziyaret, yayımladıkları bir adresten geldiyse adıyla sayılır - herkes
-      onlardan biri olduğunu iddia edebilir. Bir yıl saklanır; ücretsiz bir uygulama bunun son yedi gününü,
-      {k.b('Premium')} ise öncesinde sayılanlar dahil tamamını gösterir. Analitiği kapatmak, sayılanları siler.
+      onlardan biri olduğunu iddia edebilir. Bir yıl saklanır ve ne kadarını göreceğiniz, uygulamanızın adının yanında
+      gösterilen plana bağlıdır: bir şeyi denemek için olan uygulama bunun son yedi gününü, {k.b('üretimdeki')} bir
+      uygulama ise öncesinde sayılanlar dahil tamamını gösterir. Analitiği kapatmak, sayılanları siler.
     </>
-  )),
+  ),
   visitorsAside:
     'Rakamlar birkaç dakikada bir yazılır, bu yüzden son ziyaretler biraz geç görünür. Bir taslak asla sayılmaz: bir değişikliği denemek ziyaret değildir.',
 

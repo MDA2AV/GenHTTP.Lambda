@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: 'Minta perubahan',
 
   premiumHeading: 'Saat mulai populer',
-  premiumChip: 'Premium',
   premiumTitle: 'Hosting secara profesional',
   premiumText:
     'Aplikasi Anda di alamat sendiri, seperti aplikasianda.com, tetap online meski sepi pengunjung, dan dengan ruang lebih besar untuk semua yang disimpannya.',
   premiumAsk: 'Hubungi kami',
-  premiumSubject: 'Hosting Premium untuk aplikasi saya',
+  premiumSubject: (tier) => `Hosting ${tier} untuk aplikasi saya`,
   premiumBody: (address) => `Halo,\n\nsaya ingin meng-hosting aplikasi saya secara profesional: ${address}\n\n`,
 
   historyHint: 'Semua perubahan aplikasi Anda, yang terbaru di atas. Anda dapat kembali ke keadaan sebelumnya kapan saja - data yang disimpan aplikasi Anda tetap seperti semula.',

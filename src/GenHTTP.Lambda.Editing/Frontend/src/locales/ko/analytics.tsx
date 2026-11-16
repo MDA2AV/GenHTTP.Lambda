@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     '하루에 몇 명이 오는지, 어떤 페이지를 여는지, 어떤 사이트에서 오는지, 어느 나라에서 어떤 기기로 오는지를 켠 순간부터 하루 단위로 집계해요.',
   offPrivate: '쿠키도 없고, 방문자가 동의해야 하는 배너도 없어요',
   offAddresses: '주소는 저장하지 않고, 하루에 방문이 몇 번이었는지만 기록해요',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? '1년 동안 보관하고, 전부 보여 드려요'
-      : `1년 동안 보관하며, 최근 ${days}일만 보여 드려요. 전체는 프리미엄에서 볼 수 있어요`,
+      : tier
+        ? `1년 동안 보관하며, 최근 ${days}일만 보여 드려요. 전체는 ${tier}에서 볼 수 있어요`
+        : `1년 동안 보관하며, 최근 ${days}일만 보여 드려요`,
   switchOn: '분석 켜기',
   switchedOn: '분석을 켰어요. 첫 방문은 몇 분 안에 나타나요.',
   switchOnFailed: '분석을 켜지 못했어요.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: '기간',
   days: (days) => (days >= 365 ? '12개월' : `${days}일`),
-  premiumRange: '프리미엄에서는 최대 1년까지 볼 수 있어요',
+  premiumRange: (tier) => `${tier}에서는 최대 1년까지 볼 수 있어요`,
 
   visitors: '방문자',
   visitorsHint: '페이지를 연 서로 다른 사람을 하루에 한 번씩 세어요. 검색 엔진과 그 밖의 프로그램은 방문자가 아니에요.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${whole} 중 ${part}`,
   none: '아직 없어요.',
 
-  moreKept: (since) => `${since}부터 집계했어요. 프리미엄에서는 최대 1년까지 전부 볼 수 있어요.`,
-  premiumAsk: '프리미엄 문의',
-  premiumSubject: '내 앱의 프리미엄',
+  moreKept: (since, tier) => `${since}부터 집계했어요. ${tier}에서는 최대 1년까지 전부 볼 수 있어요.`,
+  premiumAsk: (tier) => `${tier} 문의`,
+  premiumSubject: (tier) => `내 앱의 ${tier}`,
   premiumBody: (address) => `안녕하세요.\n\n제 앱의 분석을 모두 보고 싶습니다: ${address}\n\n`,
 
   footer: (minutes) =>

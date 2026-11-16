@@ -440,7 +440,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Al het andere is er, inclusief de hele module-API van GenHTTP. Wordt er iets geweigerd, dan hoor je welke regel en waarom, niet alleen dat het misging.',
   limitsConnectivity:
-    'Verbinden met andere servers - een API aanroepen met HttpClient, een socket openen, mail versturen - vraagt om toestemming: een premium lambda heeft die, elke andere vraagt erom onder Connectiviteit in de editor, met erbij waarmee hij verbindt en waarom, en wie de site beheert beslist. Tot die tijd wordt code die verbindt geweigerd. Wat je pagina’s in de browser ophalen heeft dit allemaal niet nodig, dus roep een openbare API aan vanaf de pagina waar die dat toestaat.',
+    'Verbinden met andere servers - een API aanroepen met HttpClient, een socket openen, mail versturen - vraagt om toestemming: een app waarvan het pakket dat bevat - meestal productie - heeft die, elke andere vraagt erom onder Connectiviteit in de editor, met erbij waarmee hij verbindt en waarom, en wie de site beheert beslist. Tot die tijd wordt code die verbindt geweigerd. Wat je pagina’s in de browser ophalen heeft dit allemaal niet nodig, dus roep een openbare API aan vanaf de pagina waar die dat toestaat.',
   limitsBlocked:
     'Een lambda die de voorwaarden overtreedt - phishing, malware, aanvallen op anderen - kan worden geblokkeerd door wie de site beheert. Hij gaat dan offline en er kan niets meer aan worden aangepast of online gezet totdat de blokkade is opgeheven; het dashboard meldt dat bovenaan, met de opgegeven reden. Wat hij heeft, kun je nog wel bekijken en downloaden.',
 
@@ -525,8 +525,9 @@ export const guide: KitMessages['guide'] = {
       de pagina waar iemand vandaan kwam alleen de site. Een bezoeker is een persoon die een pagina heeft geopend, één
       keer per dag geteld: zoekmachines, AI-crawlers en andere programma’s worden apart geteld, per soort, en Google,
       Bing, OpenAI, Apple en Perplexity alleen bij naam als het bezoek van een door hen gepubliceerd adres kwam –
-      iedereen kan zich als hen voordoen. Een jaar wordt bewaard; een gratis app toont daarvan de laatste zeven dagen en
-      {k.b('Premium')} alles, ook wat eerder geteld is. Als je het uitzet, wordt wat geteld was verwijderd.
+      iedereen kan zich als hen voordoen. Een jaar wordt bewaard, en hoeveel je daarvan ziet hangt af van het pakket
+      naast de naam van je app: bij een app om iets uit te proberen zie je de laatste zeven dagen, bij een app{' '}
+      {k.b('in productie')} alles, ook wat eerder geteld is. Als je het uitzet, wordt wat geteld was verwijderd.
     </>
   )),
   visitorsAside:

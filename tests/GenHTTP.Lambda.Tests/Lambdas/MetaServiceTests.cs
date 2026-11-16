@@ -17,7 +17,7 @@ public sealed class MetaServiceTests
 
         var lambda = fixture.Meta.Create(null);
 
-        Assert.AreEqual("Free", lambda.Tier);
+        Assert.AreEqual("Sandbox", lambda.Tier);
         Assert.AreEqual(1, lambda.LatestVersion);
         Assert.IsNull(lambda.ActiveVersion, "a new lambda is not online yet");
 

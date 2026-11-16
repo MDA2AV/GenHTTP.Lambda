@@ -4,8 +4,8 @@ using GenHTTP.Lambda.Services.Workspace;
 namespace GenHTTP.Lambda.Services.Settings;
 
 /// <summary>
-/// What a lambda may have and do in its tier, as the operator set it in the
-/// administration panel.
+/// What a lambda may have and do in its tier, and what holds for every
+/// lambda alike, as the operator set it in the administration panel.
 /// </summary>
 public interface ILimitsService
 {
@@ -16,23 +16,26 @@ public interface ILimitsService
     ProductLimits Get();
 
     /// <summary>
-    /// What a lambda in the given tier may have. A demo is held to what a free
-    /// lambda may have.
+    /// What a lambda in the given tier may have and how it is treated.
     /// </summary>
-    TierLimits Of(LambdaTier tier);
+    TierPolicy PolicyOf(LambdaTier tier);
 
     /// <summary>
-    /// How large a version of a lambda in the given tier may be, its code and
-    /// its resources together - never less for a premium lambda than for any
-    /// other.
+    /// The tiers whose policy says so - for a query that asks the database
+    /// about the lambdas of those tiers.
     /// </summary>
-    long BuildOf(LambdaTier tier);
+    IReadOnlyList<LambdaTier> TiersWhere(Func<TierPolicy, bool> predicate);
 
     /// <summary>
-    /// How much room the data of a lambda in the given tier may take, its
-    /// database and its workspace together.
+    /// The tier an app in the given one would be moved to for more - what a
+    /// refusal names, and what the editor offers - or nothing where there is
+    /// none: in production, or in one of the installation's own tiers.
     /// </summary>
-    long DataOf(LambdaTier tier);
+    /// <remarks>
+    /// Never one of the installation's own tiers: an owner is not told that a
+    /// system lambda or a demo would have more room.
+    /// </remarks>
+    TierPolicy? Above(LambdaTier tier);
 
     /// <summary>
     /// What a lambda in the given tier may keep in its workspace: the room of

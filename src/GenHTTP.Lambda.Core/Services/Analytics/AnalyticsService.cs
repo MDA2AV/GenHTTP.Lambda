@@ -187,12 +187,12 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// </summary>
     /// <remarks>
     /// The days before are summed for a comparison only where the tier shows
-    /// those as well - a free lambda's week is not compared with the week
+    /// those as well - a sandbox lambda's week is not compared with the week
     /// before, which it does not show.
     /// </remarks>
     private LambdaAnalytics Describe(LambdaEntity lambda, int? days, DateTime now)
     {
-        var window = Math.Clamp(limits.Of(lambda.Tier).AnalyticsDays, 1, AnalyticsStore.Kept);
+        var window = Math.Clamp(limits.PolicyOf(lambda.Tier).AnalyticsDays, 1, AnalyticsStore.Kept);
 
         var shown = Math.Clamp(days ?? window, 1, window);
 
@@ -223,14 +223,14 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// A demo's key is announced, so holding it says nothing about being the
     /// one who decides whether its visitors are counted.
     /// </remarks>
-    private static LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
     {
         var lambda = database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey)
                   ?? throw LambdaException.NotFound(Missing);
 
         LambdaGuard.EnsureUnblocked(lambda);
 
-        if (lambda.Tier == LambdaTier.Demo)
+        if (limits.PolicyOf(lambda.Tier).ReadOnly)
         {
             throw LambdaException.Forbidden($"'{lambda.PublicKey}' is a demo and read only: its visitors are not counted. A lambda of your own made from it can count them.");
         }

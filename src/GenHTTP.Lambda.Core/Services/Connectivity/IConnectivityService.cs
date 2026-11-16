@@ -7,7 +7,7 @@ namespace GenHTTP.Lambda.Services.Connectivity;
 /// <remarks>
 /// The asymmetry of the platform once more: an owner, or their agent, says
 /// what the lambda connects to and why, and the operator - who answers for
-/// what the server does to others - decides. A premium lambda may without
+/// what the server does to others - decides. A lambda whose tier connects by default may without
 /// asking (see <see cref="ConnectivityRule"/>).
 ///
 /// Nothing here deploys or compiles anything. What a lambda is compiled with

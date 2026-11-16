@@ -9,7 +9,7 @@ export const domain = {
   removed: 'The domain is removed. The lambda answers at its address here again.',
   removeFailed: 'The domain could not be removed.',
   hint:
-    'A premium lambda can answer at a domain of its own - the whole of it, from the root down. Point the domain at this server first, then enter it here: from then on requests to it reach the lambda, and its address here sends visitors on to it.',
+    "This lambda's tier lets it answer at a domain of its own - the whole of it, from the root down. Point the domain at this server first, then enter it here: from then on requests to it reach the lambda, and its address here sends visitors on to it.",
   loading: 'Loading…',
   example: 'your-domain.com',
   open: (domain: string) => `Open ${domain}`,

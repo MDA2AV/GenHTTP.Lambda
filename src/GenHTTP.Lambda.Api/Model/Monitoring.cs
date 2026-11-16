@@ -119,9 +119,9 @@ public sealed record SummaryLimits(
     long DataBytes,
     [Summary("How many versions are kept; the oldest beyond that go with every save, but never the one online or one a feature is based on")]
     int Versions,
-    [Summary("How long a free lambda may go without a visit or an edit before it is taken offline, in hours")]
+    [Summary("How long a lambda in a tier that is not kept while unused - the sandbox - may go without a visit or an edit before it is taken offline, in hours")]
     int DeploymentLifetimeHours,
-    [Summary("How long a free lambda may go without a visit or an edit before it is deleted, in days")]
+    [Summary("How long such a lambda may go without a visit or an edit before it is deleted, in days")]
     int RetentionDays,
     [Summary("How many features it may have open at once")]
     int Features

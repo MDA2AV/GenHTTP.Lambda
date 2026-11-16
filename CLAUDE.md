@@ -595,10 +595,11 @@ section.
   off a kind of data, so an agent may switch it on when the user asks
   (`analytics` with `enable`) and never off. A demo and a feature's preview
   are not counted.
-- **By day, kept for a year, shown per tier - decided by the owner.** Free
-  shows seven days, premium the year; the window is a tier limit in the
-  panel (`analytics-days`), the year is `AnalyticsStore.Kept`. What is kept
-  beyond the window is shown once the lambda is premium, which is the point.
+- **By day, kept for a year, shown per tier - decided by the owner.** The
+  sandbox shows seven days, production the year; the window is a tier limit
+  in the panel (`analytics-days`), the year is `AnalyticsStore.Kept`. What is
+  kept beyond the window is shown once the lambda is moved to a tier that
+  shows more, which is the point.
 - **One visit per request, read by whoever needs it - decided by the
   owner.** `LambdaVisitConcern` makes the `LambdaVisit` once (status, time,
   bytes, path, caller's country and agent), for previews too, and does
@@ -891,8 +892,12 @@ panel.
   published source not found - kept, and back once the block is lifted.
 - **Kept until the operator decides**: a blocked lambda is never removed for
   going unused, since removed its key would be free again for whoever it was
-  blocked for. Lifting the block leaves it offline and starts a free lambda's
-  time again. A demo cannot be blocked.
+  blocked for. Lifting the block leaves it offline and starts a sandbox
+  lambda's time again. A demo cannot be blocked, **nor can a system lambda -
+  decided by the owner** (`TierPolicy.Blockable`): an operator who means to
+  stop one moves it to another tier first, and a blocked lambda is not moved
+  into the system tier. An address block still refuses an address at a system
+  lambda as everywhere else.
 - **The addresses a lambda was changed from are recorded with it**
   (`EditorAddresses`, `editor_addresses`): wherever it is created, saved, put
   online or asked for as a lambda its owner may change, through any door, at
@@ -929,14 +934,20 @@ panel.
 Whether a lambda's code may connect to other servers - call an API with
 `HttpClient`, open a socket, a WebSocket or mail client, look up a name.
 Lambdas were used as proxies and jump hosts - an API of their own that fetched
-whatever address it was handed - so **it is a flag beside the tier - decided
-by the owner**: a lambda may connect where its tier includes it or the
-operator allowed it (`ConnectivityRule`). **It is called connectivity
+whatever address it was handed - so **it is a grant of the lambda's, not a
+property of its tier - decided by the owner**: the operator allows or
+declines it per lambda, and the tier only says what holds while nothing was
+decided (`ConnectivityRule`, `TierPolicy.Connectivity`), as each installation
+sets it. **It is called connectivity
 everywhere - decided by the owner** - not egress: the API, MCP, the code and
 the pages.
 
-- **Premium includes it - decided by the owner**; any other lambda asks. A
-  demo never connects, and a blocked lambda cannot ask nor be decided about.
+- **Production connects by default, everywhere - decided by the owner**; the
+  sandbox asks. A decision about the lambda comes first either way: declined
+  is declined in production too, and a request connects nothing until it is
+  allowed. Moving a lambda to a tier that connects by default forgets a
+  request that waits. A demo never connects, and a blocked lambda cannot ask
+  nor be decided about.
 - **Asked for by the owner, decided by the operator** - the asymmetric
   interface again: the agent, which knows what the code connects to, asks
   with `request_connectivity` and a purpose (the servers and why), the owner reads
@@ -953,12 +964,14 @@ the pages.
   (`CodeGuard.InspectConnectivity`). It stays governance, not a sandbox. Keep the
   three together when touching any of them: a new way to connect is excluded
   or refused, and said in the message.
-- **Part of the build.** It is compiled in with the workspace limits
-  (`BuildSettings`), so a decision or a change of tier builds the lambda and
-  its previews again on the next request, without a deploy. Taken back, code
-  that connects stops compiling and answers with an error until it changes.
+- **Part of the build.** It is compiled in (`BuildSettings`), so a decision
+  that takes it away builds the lambda and its previews again on the next
+  request, without a deploy; taken back, code that connects stops compiling
+  and answers with an error until it changes. A build made without it keeps
+  serving once it may connect - it compiled without the means to - so a
+  lambda moved to production is not started again for it.
 - **Nothing was allowed for the lambdas that existed - decided by the owner.**
-  The migration (V24) grants nothing; the operator allows the free lambdas
+  The migration (V24) grants nothing; the operator allows the sandbox lambdas
   that need it by hand.
 - **The browser first.** What a lambda's pages fetch is the visitor's
   browser's business and needs nothing. Agents - the build agent above all,
@@ -983,29 +996,84 @@ the pages.
 
 ### Tiers
 
-`Free`, `Premium`, `Demo` (`LambdaTier`), assigned by an administrator and never
-chosen by the owner.
+**Named by purpose, not by price - decided by the owner.** `Free` and
+`Premium` mixed two questions: who pays, which is the installation's business,
+and how much a lambda matters, which is the lambda's - and on the community
+edition "premium" meant nothing. The tiers (`LambdaTier`) say what a lambda is
+for, assigned by the operator and never chosen by the owner:
 
-- **Free** is for trying: taken offline when unused, removed when abandoned.
-- **Premium** is for running something in production, for example a website on a
-  custom domain: kept online, larger limits, and it may connect to other
-  servers without asking (see Connectivity). The simple view's overview offers
-  it to every lambda that is not premium (or a demo), in a tile beside the
-  latest change; its only action is a mail to the installation's contact
-  (`LambdaOptions.Contact`) naming the app by its public address, never the
-  editor key - the tier stays the operator's to assign. Where the installation
-  names no contact - a community one, usually - the tile is not there.
-- **Kept as they are in the community edition for now - decided by the owner**;
-  they are to be reworked later. The README tells whoever runs one that a free
-  app nobody uses is taken offline, and how to keep it.
+| | Sandbox | Production | System |
+|---|---|---|---|
+| For | trying something | an app people use | what the installation depends on (the usage report collector) |
+| Unused | offline after 30 days, removed after 90 | kept | kept; deleted only by the operator |
+| Version / data | 32 MB / 512 MB | 128 MB / 4 GB | 128 MB / 4 GB - limits, not none |
+| Domain of its own | no | yes | yes |
+| Analytics shown | 7 days | the year | the year |
+| Connects by default | no | yes | yes |
+
+`Demo` stays beside them - **decided by the owner** - as the installation's
+own demos, which nobody assigns (the seeder does) and which are read only.
+
+- **One policy, resolved in one place - decided.** `TierPolicies.Of` maps a
+  tier and the installation's settings to a `TierPolicy`, and every check
+  reads it (`ILimitsService.PolicyOf`; `TiersWhere` for a query of the
+  database, `Above` for the tier that allows more). Nothing else compares a
+  tier with a value - but the seeder, whose tier the demos are. What a tier is
+  for is fixed there (expires when unused, own domain, the installation's own,
+  read only); how much it may have, whether it connects by default and what it
+  is called are the installation's (`TierSettings`, a default in
+  `LambdaOptions`, the panel's Limits over it). A sandbox that is kept for ever
+  is a lambda in production, so the purpose is not a setting.
+- **The installation's settings**: the tier a new lambda starts in - the
+  sandbox, on both editions by default (decided by the owner), production for
+  an installation run for a team - and per tier the sizes, the analytics
+  shown, the connectivity default and a **label**. The label is what the
+  pages call the tier, shown as written in every language; without one the
+  tier's own name is translated. **genhttp.dev labels the sandbox "Free" and
+  production "Premium" - decided by the owner** (`CloudInstallation`). The
+  API, MCP and the code name the tiers by their identifiers only; a refusal
+  names the limit and the tier above by its label.
+- **The same for every lambda**: how many versions are kept and how many
+  features may be open, which were the same in every tier.
+- **Editor keys and access are as they were - decided by the owner.** A
+  system lambda is owned through its editor key like any other, and moved
+  there by the operator like any tier; what makes it the installation's is
+  its policy: never blocked, never in the showcase (an entry it has is
+  hidden, and back once it leaves), not deleted with the editor key. **System
+  is the intended hook for running a lambda apart from the others or ahead of
+  them**, which nothing does yet: every lambda shares one process.
+- **A move changes the policy and nothing else - decided by the owner.** No
+  restart: the room of a lambda's data is read as its workspace writes
+  (`IDatabaseVault.DataRoomFor`), not compiled in, and a build without
+  connectivity keeps serving where the lambda may connect. No data is moved.
+  What a lambda has beyond its new tier stays: its versions can still be put
+  online, its data is read and does not grow (writes fail as they do when the
+  data is full), and what it saves, merges or pushes next is held to the new
+  limits. Moved into the sandbox, a lambda - and its previews - is measured
+  from the move (`tier_changed`), never from a visit before it.
+- **The simple view offers the tier above** (`tierPolicy.above`, production
+  for a sandbox) in a tile beside the latest change, named by its label; its
+  only action is a mail to the installation's contact (`LambdaOptions.Contact`)
+  naming the app by its public address, never the editor key - the tier stays
+  the operator's to assign. Where the installation names no contact - a
+  community one, usually - the tile is not there.
+- **Migrated, not reassigned (V25).** Free became the sandbox and Premium
+  production, the panel's limits came along under the new names, versions and
+  features became the larger of the two, and a production lambda's stale
+  connectivity request or decline was forgotten so it keeps connecting.
+  Nothing was made a system lambda: that is the operator's, lambda by lambda.
+  Usage reports keep `free` and `premium` and add `sandbox`, `production` and
+  `system`; the admin API still reads `Free` and `Premium` as aliases.
 - **The limits of a tier are product settings, not server configuration -
   decided.** What a version may come to (its code and resources together),
-  what the data may (its database and workspace together), versions and
-  features per tier, the free tier's lifetime, and the per-caller limits (showcase picture,
-  requests per second, builds per day) are set in the panel's **Limits**
-  (`LimitsService`, rows in `settings`): one form, the tier limits as a table
-  with a column per tier and the per-caller ones in a block of their own, so
-  which is which is plain without a switch hiding half of it.
+  what the data may (its database and workspace together), the analytics
+  shown, the connectivity default and the label per tier, versions and
+  features for every lambda, the sandbox's lifetime, the default tier, and
+  the per-caller limits (showcase picture, requests per second, builds per
+  day) are set in the panel's **Limits** (`LimitsService`, rows in
+  `settings`): one form, the tier limits as a table with a column per tier,
+  what holds for every lambda and the per-caller ones in blocks of their own,
+  so which is which is plain without a switch hiding half of it.
   A change applies to what is checked next and takes nothing away. Ports,
   directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
   timeout stay environment variables: they protect the process. The old
@@ -1427,7 +1495,6 @@ GenHTTP's documentation attributes beside the code they describe.
 - Tailwind for styling, both light and dark themes, phones included.
 - Check a change you cannot test in the browser by running the app (see above)
   and looking at it; type checks and tests are not proof that a UI works.
-- PR screenshots: one branch `pr-assets`, unrelated to `main`, with a folder
-  per topic (`<topic>/<file>.png`), a commit added on top for each PR and
-  linked from the PR body by commit-pinned raw URLs - decided by the owner;
-  no branch per topic.
+- PR screenshots go through the `pr-screenshots` skill - uploaded to
+  pr-screenshots.genhttp.run and embedded in the PR body - decided by the
+  owner; the `pr-assets` branch is no longer used.

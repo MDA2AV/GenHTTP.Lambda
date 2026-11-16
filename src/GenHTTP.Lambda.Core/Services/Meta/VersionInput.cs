@@ -42,18 +42,21 @@ internal static class VersionInput
     /// its code and its resources together.
     /// </summary>
     /// <remarks>
-    /// Only ever when a version is written. A lambda that leaves the premium
-    /// tier keeps the versions it has, and can put any of them online again;
-    /// what it cannot do is save a new one until it fits. A refusal names
-    /// what the premium tier allows, so whoever reads it knows there is more.
-    /// A feature is held to the same, since what it holds becomes a version.
+    /// Only ever when a version is written. A lambda moved to a tier that
+    /// allows less keeps the versions it has, and can put any of them online
+    /// again; what it cannot do is save a new one until it fits. A refusal
+    /// names the limit, its tier and the tier that allows more, as the
+    /// installation calls them, so whoever reads it knows there is more. A
+    /// feature is held to the same, since what it holds becomes a version.
     ///
     /// Counted in bytes as they are, whatever a file is - every version
     /// carries its own copy of all of it, and is read and written whole.
     /// </remarks>
     public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, ILimitsService limits)
     {
-        var allowed = limits.BuildOf(tier);
+        var policy = limits.PolicyOf(tier);
+
+        var allowed = policy.MaxVersionBytes;
 
         var size = LambdaSource.Size(files);
 
@@ -74,8 +77,12 @@ internal static class VersionInput
             ? $" {largest.Folder} comes to {Readable(largest.Bytes)}: what a build installs, caches or makes is no part of a version - list it in a .gitignore of that folder, which a clone and a zip follow."
             : string.Empty;
 
-        throw LambdaException.Invalid($"The code and the resources of a version must not exceed {Readable(allowed)} together; these come to {Readable(size)}."
-                                    + $"{Beyond(tier, allowed, limits.BuildOf(LambdaTier.Premium), Readable(limits.BuildOf(LambdaTier.Premium)))}{where}"
+        var beyond = limits.Above(tier) is { } more && more.MaxVersionBytes > allowed
+            ? $" In the tier '{more.Name}' a version may come to {Readable(more.MaxVersionBytes)}; whoever runs this installation decides the tier."
+            : string.Empty;
+
+        throw LambdaException.Invalid($"The code and the resources of a version must not exceed {Readable(allowed)} together in the tier '{policy.Name}'; these come to {Readable(size)}."
+                                    + $"{beyond}{where}"
                                     + " A large file that is no part of the program - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
     }
 
@@ -100,9 +107,6 @@ internal static class VersionInput
 
         return trimmed.Length <= most ? trimmed : string.Concat(trimmed.AsSpan(0, most - 2), " …");
     }
-
-    private static string Beyond(LambdaTier tier, long allowed, long premium, string readable)
-        => tier != LambdaTier.Premium && premium > allowed ? $" A lambda in the premium tier may have {readable}." : string.Empty;
 
     private static string Readable(long bytes)
         => bytes % (1024 * 1024) == 0 || bytes >= 10 * 1024 * 1024 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";

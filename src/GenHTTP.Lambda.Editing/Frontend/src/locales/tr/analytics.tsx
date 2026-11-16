@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Her gün kaç kişinin geldiği, hangi sayfaları açtıkları, onları hangi sitelerin yönlendirdiği, hangi ülkelerden ve hangi cihazlarla geldikleri - açtığınız andan itibaren gün gün sayılır.',
   offPrivate: 'Çerez yok ve ziyaretçilerinizin kabul etmesi gereken bir banner yok',
   offAddresses: 'Hiçbir adres saklanmaz - yalnızca her gün kaç ziyaret olduğu saklanır',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Bir yıl saklanır ve tamamı size gösterilir'
-      : `Bir yıl saklanır - son ${days} gün gösterilir, tamamı Premium ile`,
+      : tier
+        ? `Bir yıl saklanır - son ${days} gün gösterilir, tamamı ${tier} ile`
+        : `Bir yıl saklanır - son ${days} gün gösterilir`,
   switchOn: 'Analitiği aç',
   switchedOn: 'Analitik açık. İlk ziyaretler birkaç dakika içinde görünür.',
   switchOnFailed: 'Analitik açılamadı.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Zaman aralığı',
   days: (days) => (days >= 365 ? '12 ay' : `${days} gün`),
-  premiumRange: 'Premium bir yıla kadar gösterir',
+  premiumRange: (tier) => `${tier} bir yıla kadar gösterir`,
 
   visitors: 'Ziyaretçiler',
   visitorsHint: 'Bir sayfa açan farklı kişiler, her biri günde bir kez sayılır. Arama motorları ve diğer programlar ziyaretçi sayılmaz.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${whole} içinden ${part}`,
   none: 'Henüz hiçbir şey yok.',
 
-  moreKept: (since) => `${since} tarihinden beri sayılıyor - Premium, bir yıla kadar tamamını gösterir.`,
-  premiumAsk: 'Premium hakkında sorun',
-  premiumSubject: 'Uygulamam için Premium',
+  moreKept: (since, tier) => `${since} tarihinden beri sayılıyor - ${tier}, bir yıla kadar tamamını gösterir.`,
+  premiumAsk: (tier) => `${tier} hakkında sorun`,
+  premiumSubject: (tier) => `Uygulamam için ${tier}`,
   premiumBody: (address) => `Merhaba,\n\nUygulamamın tüm analitik verilerini görmek istiyorum: ${address}\n\n`,
 
   footer: (minutes) =>

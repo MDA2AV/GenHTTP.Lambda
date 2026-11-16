@@ -26,7 +26,8 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Domain)]
 [Summary("A domain of a lambda's own, which it answers at instead of its own address on the platform.")]
 [Remarks("""
-         Part of the premium tier, which only the operator assigns. While a lambda answers at its domain, its own address on
+         Part of the production and system tiers (`tierPolicy.ownDomain`), which only the operator assigns. While a lambda
+         answers at its domain, its own address on
          the platform sends its visitors on to the domain with a permanent redirect, and `address` names the domain.
 
          The domain is entered as it should answer. `www.` in front of a domain is sent on to the domain itself, unless the
@@ -63,7 +64,7 @@ public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions option
              platform. Sending none removes it, as `DELETE` does.
              """)]
     [Response(ResponseStatus.BadRequest, "That is not a domain that can be used. The message says why.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [Response(ResponseStatus.Forbidden, "The lambda is not in the premium tier - or it is a demo.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, "The lambda's tier has no domain of its own - the sandbox - or it is a demo. The message names the tier that has.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "Another lambda answers at that domain.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The domain afterwards, and what it resolves to")]
     public async ValueTask<DomainResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, DomainChangeRequest request)
@@ -91,17 +92,17 @@ public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions option
 
     private async ValueTask<DomainResponse> DescribeAsync(LambdaInfo lambda)
     {
-        var allowed = LambdaDescription.AllowsDomain(lambda.Tier);
+        var allowed = lambda.Policy.OwnDomain;
 
         if (lambda.Domain == null)
         {
-            return new DomainResponse(null, lambda.Tier, allowed, LambdaDescription.Serves(lambda.Tier, null), null, null);
+            return new DomainResponse(null, lambda.Tier, allowed, false, null, null);
         }
 
         var dns = ResolveAsync(lambda.Domain);
         var target = TargetAsync();
 
-        return new DomainResponse(lambda.Domain, lambda.Tier, allowed, LambdaDescription.Serves(lambda.Tier, lambda.Domain), await dns, await target);
+        return new DomainResponse(lambda.Domain, lambda.Tier, allowed, allowed, await dns, await target);
     }
 
     /// <summary>

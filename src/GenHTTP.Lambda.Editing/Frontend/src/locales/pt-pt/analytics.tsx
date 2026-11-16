@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Quantas pessoas chegam por dia, que páginas abrem, que sites as enviam, de que países e em que dispositivos - contado dia a dia, a partir do momento em que ligares.',
   offPrivate: 'Sem cookies e sem banners para os teus visitantes aceitarem',
   offAddresses: 'Não se guardam endereços - apenas quantas visitas houve em cada dia',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Guardado durante um ano, e tudo é mostrado a ti'
-      : `Guardado durante um ano - são mostrados os últimos ${days} dias, e tudo com o Premium`,
+      : tier
+        ? `Guardado durante um ano - são mostrados os últimos ${days} dias, e tudo com o plano ${tier}`
+        : `Guardado durante um ano - são mostrados os últimos ${days} dias`,
   switchOn: 'Ligar a análise de visitas',
   switchedOn: 'A análise de visitas está ligada. As primeiras visitas aparecem dentro de alguns minutos.',
   switchOnFailed: 'Não foi possível ligar a análise de visitas.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Período',
   days: (days) => (days >= 365 ? '12 meses' : `${days} dias`),
-  premiumRange: 'O Premium mostra até um ano',
+  premiumRange: (tier) => `O plano ${tier} mostra até um ano`,
 
   visitors: 'Visitantes',
   visitorsHint: 'Pessoas diferentes que abriram uma página, cada uma contada uma vez por dia. Motores de pesquisa e outros programas não são visitantes.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} de ${whole}`,
   none: 'Ainda nada.',
 
-  moreKept: (since) => `Contado desde ${since} - o Premium mostra tudo, até um ano.`,
-  premiumAsk: 'Pergunta pelo Premium',
-  premiumSubject: 'Premium para a minha app',
+  moreKept: (since, tier) => `Contado desde ${since} - o plano ${tier} mostra tudo, até um ano.`,
+  premiumAsk: (tier) => `Pergunta pelo plano ${tier}`,
+  premiumSubject: (tier) => `Plano ${tier} para a minha app`,
   premiumBody: (address) => `Olá,\n\nGostaria de ver toda a análise de visitas da minha app: ${address}\n\n`,
 
   footer: (minutes) =>

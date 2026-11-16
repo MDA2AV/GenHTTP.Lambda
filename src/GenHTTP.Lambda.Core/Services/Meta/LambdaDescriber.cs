@@ -3,6 +3,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Meta;
 
@@ -15,7 +16,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// two deadlines the sweep will act on (see <see cref="LambdaLifetime"/>), so
 /// the editor can say when rather than leaving it to be discovered.
 /// </remarks>
-public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses addresses)
+public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses addresses, ILimitsService limits)
 {
 
     /// <summary>
@@ -26,11 +27,13 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
         var latest = database.Deployments.Where(d => d.LambdaId == lambda.Id)
                              .Max(d => (int?)d.Version);
 
-        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
+        var policy = limits.PolicyOf(lambda.Tier);
+
+        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), policy, limits.Above(lambda.Tier), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lifetime.DeployedUntil(lambda), lifetime.KeptUntil(lambda),
                               lambda.Domain, lambda.View.ToString(), addresses.Of(lambda.PublicKey),
                               addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain), lambda.Blocked, lambda.BlockReason,
-                              ConnectivityRule.Describe(lambda));
+                              ConnectivityRule.Describe(lambda, policy));
     }
 
     /// <summary>
@@ -42,6 +45,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
         => new(lambda.PublicKey,
                lambda.PrivateKey,
                lambda.Tier.ToString(),
+               limits.PolicyOf(lambda.Tier),
                lambda.Created,
                lambda.Modified,
                lambda.ActiveVersion,
@@ -51,6 +55,6 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
                lifetime.KeptUntil(lambda),
                lambda.Domain,
                lambda.Blocked,
-               ConnectivityRule.Describe(lambda));
+               ConnectivityRule.Describe(lambda, limits.PolicyOf(lambda.Tier)));
 
 }

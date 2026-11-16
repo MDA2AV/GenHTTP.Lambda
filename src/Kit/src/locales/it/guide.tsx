@@ -433,7 +433,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Tutto il resto c’è, compresa l’intera API dei moduli GenHTTP. Se qualcosa viene rifiutato, vedi quale riga e perché, non solo che non ha funzionato.',
   limitsConnectivity:
-    'Connettersi ad altri server - chiamare un’API con HttpClient, aprire un socket, inviare e-mail - richiede un permesso: una lambda premium ce l’ha, ogni altra lo chiede in Connettività nell’editor, indicando a cosa si connette e perché, e decide chi gestisce il sito. Fino ad allora il codice che si connette viene rifiutato. Ciò che le tue pagine recuperano nel browser non ne ha bisogno: chiama un’API pubblica dalla pagina, dove lo consente.',
+    'Connettersi ad altri server - chiamare un’API con HttpClient, aprire un socket, inviare e-mail - richiede un permesso: un’app il cui piano lo include - di solito quello di produzione - ce l’ha, ogni altra lo chiede in Connettività nell’editor, indicando a cosa si connette e perché, e decide chi gestisce il sito. Fino ad allora il codice che si connette viene rifiutato. Ciò che le tue pagine recuperano nel browser non ne ha bisogno: chiama un’API pubblica dalla pagina, dove lo consente.',
   limitsBlocked:
     'Una lambda che viola i termini (phishing, malware, attacchi ad altri) può essere bloccata da chi gestisce il sito. Va offline e finché il blocco non viene tolto non si può né modificare né mettere online; il pannello di controllo lo dice in alto, insieme al motivo indicato. Quello che contiene si può ancora leggere e scaricare.',
 
@@ -517,9 +517,9 @@ export const guide: KitMessages['guide'] = {
       della pagina da cui qualcuno è arrivato, solo il sito. Un visitatore è una persona che ha aperto una pagina, contata
       una volta al giorno: i motori di ricerca, i crawler IA e gli altri programmi vengono contati a parte, per ciò che
       sono, e Google, Bing, OpenAI, Apple e Perplexity solo per nome quando la visita arriva da un indirizzo che
-      pubblicano: chiunque può dichiararsi uno di loro. Si conserva un anno: un’app gratuita ne mostra gli ultimi sette
-      giorni e {k.b('Premium')} tutto, anche ciò che è stato contato prima. Disattivandolo, ciò che è stato contato viene
-      eliminato.
+      pubblicano: chiunque può dichiararsi uno di loro. Si conserva un anno, e quanto ne vedi dipende dal piano indicato
+      accanto al nome della tua app: un’app per fare prove ne mostra gli ultimi sette giorni, una {k.b('in produzione')}
+      tutto, anche ciò che è stato contato prima. Disattivandolo, ciò che è stato contato viene eliminato.
     </>
   )),
   visitorsAside:

@@ -66,6 +66,11 @@ export function AnalyticsTab({ control }: { control: Control }) {
   const t = useEditorT();
   const said = t.analytics;
   const title = t.frame.sections.analytics;
+
+  // the tier an app would move to to see more, as the installation calls it
+  // ("Premium" on genhttp.dev), or nothing where there is none
+  const policy = lambda.tierPolicy;
+  const above = policy.above != null ? (policy.aboveLabel ?? t.shared.tiers[policy.above] ?? policy.above) : null;
   const tag = tagOf(useLanguage());
   const toast = useToast();
 
@@ -172,7 +177,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
   if (!state.enabled || !state.totals || !state.daily) {
     return (
       <Section title={title} hint={said.hint}>
-        <Off window={state.window} demo={isDemo(lambda.tier)} busy={switching} onSwitch={switchOn} />
+        <Off window={state.window} above={above} demo={isDemo(lambda.tier)} busy={switching} onSwitch={switchOn} />
       </Section>
     );
   }
@@ -200,7 +205,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
             role="radio"
             aria-checked={active}
             aria-disabled={locked}
-            title={locked ? said.premiumRange : undefined}
+            title={locked && above ? said.premiumRange(above) : undefined}
             onClick={() => !locked && setDays(range)}
             className={`${pill(active)} ${locked ? 'cursor-not-allowed opacity-60' : ''}`}
           >
@@ -231,8 +236,8 @@ export function AnalyticsTab({ control }: { control: Control }) {
 
   return (
     <Section title={title} hint={said.hint} pills={toolbar}>
-      {hidden && lambda.tier !== 'Premium' && (
-        <Nudge since={date(state.earliest!, { day: 'numeric', month: 'long', year: 'numeric' })} address={absoluteAddress(lambda.address)} />
+      {hidden && above && (
+        <Nudge since={date(state.earliest!, { day: 'numeric', month: 'long', year: 'numeric' })} tier={above} address={absoluteAddress(lambda.address)} />
       )}
 
       <Figures state={shown} measure={measure} onPick={setMeasure} dark={dark} bots={bots} />
@@ -344,7 +349,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
  * the second as important as the first, since it is about the owner's
  * visitors.
  */
-function Off({ window, demo, busy, onSwitch }: { window: number; demo: boolean; busy: boolean; onSwitch: () => void }) {
+function Off({ window, above, demo, busy, onSwitch }: { window: number; above: string | null; demo: boolean; busy: boolean; onSwitch: () => void }) {
   const said = useEditorT().analytics;
 
   return (
@@ -356,7 +361,7 @@ function Off({ window, demo, busy, onSwitch }: { window: number; demo: boolean; 
         <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{said.offText}</p>
 
         <ul className="mt-5 space-y-2 text-sm">
-          {[said.offPrivate, said.offAddresses, said.offKept(window)].map((line) => (
+          {[said.offPrivate, said.offAddresses, said.offKept(window, above)].map((line) => (
             <li key={line} className="flex items-start gap-2">
               <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>{line}</span>
@@ -394,7 +399,7 @@ function Preview() {
  * For a free app that counted more than its tier shows: where the rest is.
  * The address of the app in the mail, never its editor link.
  */
-function Nudge({ since, address }: { since: string; address: string }) {
+function Nudge({ since, tier, address }: { since: string; tier: string; address: string }) {
   const said = useEditorT().analytics;
 
   const installation = useInstallation();
@@ -405,14 +410,14 @@ function Nudge({ since, address }: { since: string; address: string }) {
     return null;
   }
 
-  const mail = `mailto:${installation.contact}?subject=${encodeURIComponent(said.premiumSubject)}&body=${encodeURIComponent(said.premiumBody(address))}`;
+  const mail = `mailto:${installation.contact}?subject=${encodeURIComponent(said.premiumSubject(tier))}&body=${encodeURIComponent(said.premiumBody(address))}`;
 
   return (
     <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 border border-logo-500/40 bg-logo-500/[0.03] px-4 py-3 text-sm dark:border-logo-400/30 dark:bg-logo-400/[0.04]">
-      <span className="flex-1">{said.moreKept(since)}</span>
+      <span className="flex-1">{said.moreKept(since, tier)}</span>
       <a href={mail} className="inline-flex items-center gap-1.5 text-[13px] text-logo-700 hover:underline dark:text-logo-400">
         <IconMail className="h-3.5 w-3.5" />
-        {said.premiumAsk}
+        {said.premiumAsk(tier)}
       </a>
     </div>
   );

@@ -2,10 +2,10 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'Kodun başka sunuculara bağlanıp bağlanamayacağı: bir API çağırmak, soket açmak, e-posta göndermek. Lambdalar tek bir sunucuyu paylaşır, bu yüzden izin lambda lambda verilir - premium bir lambda bağlanabilir, diğerleri ise bu sitenin operatörü izin verdikten sonra.',
+    'Kodun başka sunuculara bağlanıp bağlanamayacağı: bir API çağırmak, soket açmak, e-posta göndermek. Lambdalar tek bir sunucuyu paylaşır, bu yüzden izin lambda lambda verilir: planı buna izin veriyorsa ve bu sitenin operatörü reddetmediyse ya da operatör izin verdikten sonra.',
 
-  included: 'Premium ile dahil',
-  includedText: 'Kod başka sunuculara bağlanabilir: premium bunu içerir.',
+  included: (tier) => `${tier} ile dahil`,
+  includedText: (tier) => `Kod başka sunuculara bağlanabilir: ${tier} bunu içerir.`,
   allowed: 'İzin verildi',
   allowedText: (ago) => <>Bu sitenin operatörü {ago} izin verdi. Kod başka sunuculara bağlanabilir.</>,
   requested: 'Operatör bekleniyor',

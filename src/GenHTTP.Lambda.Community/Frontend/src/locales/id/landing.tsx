@@ -21,7 +21,7 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Yang didapat setiap aplikasi',
   features: [
-    { title: 'Sebuah alamat', text: 'Alamat sendiri di server ini, dinamai sesuai kuncinya - dan domain sendiri setelah dijadikan premium.' },
+    { title: 'Sebuah alamat', text: 'Alamat sendiri di server ini, dinamai sesuai kuncinya - dan domain sendiri setelah dipindahkan ke produksi.' },
     { title: 'Catatan', text: 'Database SQLite tersendiri, tabelnya dibuat lewat migrasi, dibaca dan ditulis dengan Entity Framework Core.' },
     { title: 'File', text: 'Sebuah folder untuk apa yang disimpan aplikasi: unggahan, ekspor, apa pun yang bukan catatan.' },
     { title: 'Kunci dan kata sandi', text: 'Disimpan tersegel di server. Agen menyebutkan mana yang dibutuhkan, Anda memasukkannya, dan tidak ada yang bisa membacanya kembali.' },

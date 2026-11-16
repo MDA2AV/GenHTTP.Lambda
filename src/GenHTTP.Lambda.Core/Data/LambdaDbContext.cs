@@ -71,6 +71,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.PublicKey).HasColumnName("public_key");
         lambdas.Property(l => l.PrivateKey).HasColumnName("private_key");
         lambdas.Property(l => l.Tier).HasColumnName("tier").HasConversion<string>();
+        lambdas.Property(l => l.TierChanged).HasColumnName("tier_changed");
         lambdas.Property(l => l.ActiveVersion).HasColumnName("active_version");
         lambdas.Property(l => l.Created).HasColumnName("created");
         lambdas.Property(l => l.Modified).HasColumnName("modified");

@@ -13,7 +13,7 @@ using GenHTTP.Testing;
 namespace GenHTTP.Lambda.Tests.Lambdas;
 
 /// <summary>
-/// What a lambda may keep, which its tier decides: a premium lambda's versions
+/// What a lambda may keep, which its tier decides: the versions of one in production
 /// may be larger - its code and its resources - and its data may take more
 /// room than everybody else's.
 /// </summary>
@@ -24,23 +24,23 @@ public sealed class TierAllowanceTests
     #region Versions
 
     [TestMethod]
-    public async Task APremiumLambdaMayHaveMoreCode()
+    public async Task ALambdaInProductionMayHaveMoreCode()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 4096 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 4096));
 
         var lambda = await fixture.CreateLambdaAsync();
 
         using (var refused = await SaveAsync(fixture, lambda.PrivateKey, Coding(2000)))
         {
-            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "two thousand bytes of C# is more than a version of a free lambda may come to");
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "two thousand bytes of C# is more than a version of a sandbox lambda may come to");
 
-            var said = await refused.Content.ReadAsStringAsync();
+            var said = (await refused.GetContentAsync<ErrorResponse>()).Message;
 
-            Assert.Contains("1 KB", said);
-            Assert.Contains("premium tier may have 4 KB", said, "and whoever reads it learns there is more");
+            Assert.Contains("1 KB together in the tier 'Free'", said, "the limit, and the tier it is the limit of - as the installation calls it");
+            Assert.Contains("In the tier 'Premium' a version may come to 4 KB", said, "and whoever reads it learns there is more");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Coding(2000)))
         {
@@ -49,14 +49,14 @@ public sealed class TierAllowanceTests
 
         using var beyond = await SaveAsync(fixture, lambda.PrivateKey, Coding(5000));
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, beyond.StatusCode, "and the premium tier has a limit of its own");
-        Assert.DoesNotContain("premium tier may have", await beyond.Content.ReadAsStringAsync(), "with nothing further to point to");
+        Assert.AreEqual(HttpStatusCode.BadRequest, beyond.StatusCode, "and production has a limit of its own");
+        Assert.DoesNotContain("a version may come to", await beyond.Content.ReadAsStringAsync(), "with nothing further to point to");
     }
 
     [TestMethod]
     public async Task TheCodeAndTheResourcesShareTheRoomOfAVersion()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 4096, PremiumBuildBytes = 4096 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 4096, productionBuild: 4096));
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -120,15 +120,15 @@ public sealed class TierAllowanceTests
     }
 
     [TestMethod]
-    public async Task APremiumLambdaMayShipMoreResources()
+    public async Task ALambdaInProductionMayShipMoreResources()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 1024 * 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 1024 * 1024));
 
         var lambda = await fixture.CreateLambdaAsync();
 
         using (var refused = await SaveAsync(fixture, lambda.PrivateKey, Shipping(2048)))
         {
-            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "two kilobytes is more than a version of a free lambda may come to");
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "two kilobytes is more than a version of a sandbox lambda may come to");
 
             var said = await refused.Content.ReadAsStringAsync();
 
@@ -136,7 +136,7 @@ public sealed class TierAllowanceTests
             Assert.Contains("workspace", said, "and says where a large file that is no part of the program belongs");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Shipping(2048)))
         {
@@ -145,7 +145,7 @@ public sealed class TierAllowanceTests
 
         using var beyond = await SaveAsync(fixture, lambda.PrivateKey, Shipping(1024 * 1024 + 1));
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, beyond.StatusCode, "and the premium tier has a limit of its own");
+        Assert.AreEqual(HttpStatusCode.BadRequest, beyond.StatusCode, "and production has a limit of its own");
         Assert.Contains("1 MB", await beyond.Content.ReadAsStringAsync(), "said in the unit it was set in");
     }
 
@@ -154,8 +154,8 @@ public sealed class TierAllowanceTests
     {
         // an archive is refused while it is unpacked, as soon as it holds more
         // than a lambda of the tier could - a megabyte of resources is past
-        // that for a free lambda and well within it for a premium one
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 2 * 1024 * 1024 });
+        // that for a sandbox lambda and well within it for one in production
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 2 * 1024 * 1024));
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -166,7 +166,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await UploadAsync(fixture, lambda.PrivateKey, archive))
         {
@@ -183,14 +183,14 @@ public sealed class TierAllowanceTests
     }
 
     [TestMethod]
-    public async Task ThePremiumTierNeverHasLessThanTheOthers()
+    public async Task ProductionNeverHasLessThanTheSandbox()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024L * 1024 * 1024, DataBytes = 8L * 1024 * 1024 * 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024L * 1024 * 1024, data: 8L * 1024 * 1024 * 1024));
 
-        Assert.AreEqual(1024L * 1024 * 1024, fixture.Limits.BuildOf(LambdaTier.Premium),
-                        "raising what a version of everybody's may come to must not leave premium lambdas below it");
+        Assert.AreEqual(1024L * 1024 * 1024, fixture.Limits.PolicyOf(LambdaTier.Production).MaxVersionBytes,
+                        "raising what a version of a sandbox lambda may come to must not leave production below it");
 
-        Assert.AreEqual(8L * 1024 * 1024 * 1024, fixture.Limits.DataOf(LambdaTier.Premium), "nor what everybody's data may take");
+        Assert.AreEqual(8L * 1024 * 1024 * 1024, fixture.Limits.PolicyOf(LambdaTier.Production).MaxDataBytes, "nor what everybody's data may take");
     }
 
     [TestMethod]
@@ -230,9 +230,9 @@ public sealed class TierAllowanceTests
     #region Workspace
 
     [TestMethod]
-    public async Task APremiumWorkspaceHasMoreRoom()
+    public async Task AWorkspaceInProductionHasMoreRoom()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block, PremiumDataBytes = 16 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 4 * WorkspaceLimits.Block, productionData: 16 * WorkspaceLimits.Block));
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -243,7 +243,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var written = await PutAsync(fixture, lambda.PrivateKey, "big.bin", file))
         {
@@ -268,7 +268,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var first = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
@@ -305,14 +305,14 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("squeezed");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
         using (var _ = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block])) { }
 
         // how a workspace ends up past its quota: filled under a larger one,
-        // which is what leaving the premium tier does to it
+        // which is what leaving production does to it
         var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
 
         await File.WriteAllBytesAsync(Path.Combine(fixture.Options.WorkspaceDirectory, id.ToString(), "x.bin"), new byte[2 * WorkspaceLimits.Block]);
@@ -344,7 +344,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("hoarder");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
@@ -362,7 +362,7 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task ALambdaCannotMakeRoomOutOfNothing()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 4 * WorkspaceLimits.Block));
 
         var lambda = await fixture.CreateLambdaAsync("mason");
 
@@ -397,7 +397,7 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task TextIsCountedInBytes()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 2 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 2 * WorkspaceLimits.Block));
 
         var lambda = await fixture.CreateLambdaAsync("scribe");
 
@@ -418,7 +418,7 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task MovingTheTierMovesTheLimitsOfTheRunningLambda()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block, PremiumDataBytes = 32 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 4 * WorkspaceLimits.Block, productionData: 32 * WorkspaceLimits.Block));
 
         var lambda = await fixture.CreateLambdaAsync("mover");
 
@@ -428,17 +428,17 @@ public sealed class TierAllowanceTests
 
         using (var refused = await fixture.GetAsync($"http://mover.localhost/write?name=big.bin&size={size}"))
         {
-            Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "more than a free lambda may write");
+            Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "more than a sandbox lambda may write");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (var written = await fixture.GetAsync($"http://mover.localhost/write?name=big.bin&size={size}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "promoted, and not deployed again");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Free);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
 
         using var demoted = await fixture.GetAsync($"http://mover.localhost/write?name=other.bin&size={size}");
 
@@ -462,7 +462,7 @@ public sealed class TierAllowanceTests
             """);
 
         // built again on the next request, like every lambda after a restart
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.Deployments.Evict(fixture.Meta.GetId(lambda.PrivateKey)!.Value);
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => fixture.GetAsync("http://crowded.localhost/")));
 
@@ -478,7 +478,7 @@ public sealed class TierAllowanceTests
         var file = await read.GetContentAsync<FileResponse>();
 
         Assert.AreEqual("2", Encoding.UTF8.GetString(Convert.FromBase64String(file.Content)),
-                        "once when it was deployed, and once more for the new tier - not once per request");
+                        "once when it was deployed, and once more after the restart - not once per request");
     }
 
     #endregion
@@ -500,7 +500,7 @@ public sealed class TierAllowanceTests
         Assert.AreEqual(32L * 1024 * 1024, free.Limits.BuildBytes);
         Assert.AreEqual(512L * 1024 * 1024, free.Limits.DataBytes);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         var premium = await SummaryAsync(fixture, lambda.PrivateKey);
 
@@ -513,11 +513,11 @@ public sealed class TierAllowanceTests
     #region Helpers
 
     /// <summary>
-    /// A premium workspace small enough to fill in a test: three blocks - and
-    /// the free one too, which the premium tier never has less than.
+    /// A workspace in production small enough to fill in a test: three blocks -
+    /// and the sandbox's too, which production never has less than.
     /// </summary>
     private static LambdaOptions Small(LambdaOptions options)
-        => options with { DataBytes = 3 * WorkspaceLimits.Block, PremiumDataBytes = 3 * WorkspaceLimits.Block };
+        => options.WithSizes(data: 3 * WorkspaceLimits.Block, productionData: 3 * WorkspaceLimits.Block);
 
     /// <summary>
     /// Writes as many bytes as it is asked for, under the name it is given.

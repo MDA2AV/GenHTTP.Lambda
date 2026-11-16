@@ -27,7 +27,7 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// Every count leaves the demos out: each installation has the same ones.
 /// </remarks>
 public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, IDatabaseVault databaseVault, IWorkspaceVault workspaces,
-                                ITelemetryService telemetry, ISettingsService settings, ServerRegistry server, LambdaOptions options)
+                                ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, ServerRegistry server, LambdaOptions options)
 {
 
     /// <summary>
@@ -63,8 +63,11 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
 
         using var database = databases.CreateDbContext();
 
+        // the demos, which every installation has
+        var demos = limits.TiersWhere(p => p.ReadOnly);
+
         var lambdas = database.Lambdas.AsNoTracking()
-                              .Where(l => l.Tier != LambdaTier.Demo)
+                              .Where(l => !demos.Contains(l.Tier))
                               .Select(l => new Row(l.Id, l.Tier, l.ActiveVersion, l.Blocked, l.Created, l.Modified, l.LastSeen, l.View,
                                                    l.Domain, l.AnalyticsSince, l.Connectivity))
                               .ToList();
@@ -72,7 +75,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
         var ids = lambdas.Select(l => l.Id).ToHashSet();
 
         var stores = database.DataStores.AsNoTracking()
-                             .Where(s => s.Enabled && s.Lambda!.Tier != LambdaTier.Demo)
+                             .Where(s => s.Enabled && !demos.Contains(s.Lambda!.Tier))
                              .Select(s => new { s.LambdaId, s.Kind })
                              .ToList();
 
@@ -80,18 +83,22 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
         var withWorkspace = stores.Where(s => s.Kind == DataKinds.WorkspaceId).Select(s => s.LambdaId).ToHashSet();
         var withSecrets = stores.Count(s => s.Kind == DataKinds.SecretsId);
 
-        var versions = database.Deployments.Count(d => d.Lambda!.Tier != LambdaTier.Demo);
+        var versions = database.Deployments.Count(d => !demos.Contains(d.Lambda!.Tier));
 
-        var features = database.Features.Count(f => f.Lambda!.Tier != LambdaTier.Demo);
+        var features = database.Features.Count(f => !demos.Contains(f.Lambda!.Tier));
 
-        var showcased = database.Showcases.Count(s => s.Lambda!.Tier != LambdaTier.Demo);
+        var showcased = database.Showcases.Count(s => !demos.Contains(s.Lambda!.Tier));
 
-        var published = database.Sources.Count(s => s.Published && s.Lambda!.Tier != LambdaTier.Demo);
+        var published = database.Sources.Count(s => s.Published && !demos.Contains(s.Lambda!.Tier));
 
         var recent = now.AddDays(-RecentDays);
 
+        var tiers = lambdas.GroupBy(l => l.Tier).ToDictionary(g => g.Key, g => g.Count());
+
+        int InTier(LambdaTier tier) => tiers.GetValueOrDefault(tier);
+
         var origins = database.Deployments.AsNoTracking()
-                              .Where(d => d.Created >= recent && d.Lambda!.Tier != LambdaTier.Demo)
+                              .Where(d => d.Created >= recent && !demos.Contains(d.Lambda!.Tier))
                               .GroupBy(d => d.Origin)
                               .Select(g => new { Origin = g.Key, Count = g.Count() })
                               .ToList();
@@ -106,15 +113,20 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             DescribeConfiguration(),
             new UsageLambdas(
                 lambdas.Count,
-                lambdas.Count(l => l.Tier == LambdaTier.Free),
-                lambdas.Count(l => l.Tier == LambdaTier.Premium),
+                // the sandbox and production under what they were called when
+                // the collector learned to read them, which it still does
+                InTier(LambdaTier.Sandbox),
+                InTier(LambdaTier.Production),
                 lambdas.Count(l => l.ActiveVersion != null),
                 lambdas.Count(l => l.Blocked != null),
                 lambdas.Count(l => l.Created >= recent),
                 lambdas.Count(l => l.Modified >= recent || l.LastSeen >= recent),
                 lambdas.Count(l => l.View == EditorView.Simple),
                 versions,
-                features
+                features,
+                InTier(LambdaTier.Sandbox),
+                InTier(LambdaTier.Production),
+                InTier(LambdaTier.System)
             ),
             Measure(withDatabase, withWorkspace),
             new UsageSwitches(

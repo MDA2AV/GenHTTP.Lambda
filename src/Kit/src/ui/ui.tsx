@@ -280,27 +280,30 @@ export function StatusBadge({ version, online }: { version?: number | null; onli
 }
 
 /**
- * The tier a lambda is in. Quiet for the tier everybody starts in, in the
- * colour of the logo for the one somebody was given, and in the link blue for
- * the demos this installation keeps.
+ * The tier a lambda is in, as the installation calls it - its label, or the
+ * tier's own name in the visitor's language. Quiet for the sandbox everybody
+ * starts in, in the colour of the logo for a tier somebody was given, and in
+ * the link blue for the demos this installation keeps.
  */
-export function TierBadge({ tier }: { tier: string }) {
+export function TierBadge({ tier, label }: { tier: string; label?: string | null }) {
   const words = useShared();
-  const premium = tier === 'Premium';
   const demo = isDemo(tier);
+  const given = tier === 'Production' || tier === 'System';
+  const name = label ?? words.tiers[tier] ?? tier;
+  const purpose = words.tierTitles[tier];
 
   return (
     <Badge
       tone={
-        premium
+        given
           ? 'bg-logo-500/15 text-logo-700 dark:text-logo-400'
           : demo
             ? 'bg-accent-500/15 text-accent-700 dark:text-accent-400'
             : 'bg-slate-400/10 text-slate-500'
       }
-      title={premium ? words.premium : demo ? words.demo : words.tier(tier)}
+      title={purpose ? `${name}: ${purpose}` : words.tier(name)}
     >
-      {tier}
+      {name}
     </Badge>
   );
 }

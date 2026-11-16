@@ -18,7 +18,7 @@ import { AgentMark, Ago, Figure, Section, Sparkline } from '@genhttp-lambda/kit/
  *
  * Only what tells them how things stand: is it there and where, is anybody
  * using it, is anything wrong and what changed last - and, while it is not
- * premium, how to have it hosted properly once it matters. Asking for a change, the
+ * in a tier that keeps it online, how to have it hosted properly once it matters. Asking for a change, the
  * drafts and the history have sections of their own, as they do in the full
  * view; the button at the top is the way to the one they come for. Nothing
  * here says version, deployment, file or log: those are the full view's words
@@ -30,7 +30,9 @@ export function SimpleOverview({ control }: { control: Control }) {
   // nothing to offer for what nobody can change: a demo, or an app the
   // operator blocked
   const demo = isDemo(lambda.tier) || lambda.blocked != null;
-  const teaser = !demo && lambda.tier !== 'Premium';
+  // offered while there is a tier above for an app - production, for a
+  // sandbox - and never for the installation's own
+  const teaser = !demo && lambda.tierPolicy.above != null;
   const problems = (control.summary?.recentProblems.length ?? 0) > 0;
 
   // the frame says so above every section while a change is under way
@@ -62,7 +64,7 @@ export function SimpleOverview({ control }: { control: Control }) {
 
         <div className="grid gap-8 lg:grid-cols-2">
           <Latest control={control} wide={!teaser} />
-          {teaser && <Premium control={control} />}
+          {teaser && <Above control={control} />}
         </div>
       </div>
     </Section>
@@ -416,16 +418,21 @@ function Today({ control }: { control: Control }) {
 
 /**
  * The way to having the app hosted properly - a domain of its own, kept
- * online however quiet it gets - for a lambda that is not premium yet.
+ * online however quiet it gets - for a lambda in a tier with one above: the
+ * sandbox, below production. Named as the installation calls that tier
+ * ("Premium" on genhttp.dev), or by its own name.
  *
  * The tier is the operator's to assign, so the tile asks the owner to write
  * rather than offering a switch. The mail names the app by its public
  * address, never by the editor link: the address is all it takes to find
  * the app, and the editor link is the owner's alone.
  */
-function Premium({ control }: { control: Control }) {
-  const said = useEditorT().simple;
+function Above({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.simple;
   const address = absoluteAddress(control.lambda.address);
+  const policy = control.lambda.tierPolicy;
+  const tier = policy.aboveLabel ?? t.shared.tiers[policy.above ?? ''] ?? policy.above ?? '';
 
   const installation = useInstallation();
 
@@ -435,7 +442,7 @@ function Premium({ control }: { control: Control }) {
     return null;
   }
 
-  const mail = `mailto:${installation.contact}?subject=${encodeURIComponent(said.premiumSubject)}&body=${encodeURIComponent(said.premiumBody(address))}`;
+  const mail = `mailto:${installation.contact}?subject=${encodeURIComponent(said.premiumSubject(tier))}&body=${encodeURIComponent(said.premiumBody(address))}`;
 
   return (
     <section className="flex flex-col">
@@ -443,7 +450,7 @@ function Premium({ control }: { control: Control }) {
 
       <div className="mt-3 flex flex-1 flex-col border border-logo-500/40 bg-logo-500/[0.03] p-5 dark:border-logo-400/30 dark:bg-logo-400/[0.04]">
         <span className="chip self-start rounded-full bg-logo-500/10 text-logo-700 dark:bg-logo-400/10 dark:text-logo-400">
-          {said.premiumChip}
+          {tier}
         </span>
         <h3 className="mt-3 text-[17px] font-semibold tracking-tight">{said.premiumTitle}</h3>
         <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{said.premiumText}</p>

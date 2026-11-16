@@ -12,10 +12,12 @@ export const analytics: EditorMessages['analytics'] = {
     '毎日どれくらいの人が訪れるか、どのページを開くか、どのサイトから来るか、どの国から、どのデバイスで来るか。オンにした時点から、日ごとに集計します。',
   offPrivate: 'Cookieも、訪問者が同意する必要のあるバナーもありません',
   offAddresses: 'IPアドレスは保存せず、日ごとの訪問数だけを保存します',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? '1年間保存され、そのすべてを表示します'
-      : `1年間保存されます。表示するのは直近${days}日間で、すべてを見るにはプレミアムが必要です`,
+      : tier
+        ? `1年間保存されます。表示するのは直近${days}日間で、すべてを見るには${tier}が必要です`
+        : `1年間保存されます。表示するのは直近${days}日間です`,
   switchOn: 'アクセス解析をオンにする',
   switchedOn: 'アクセス解析をオンにしました。最初の訪問は数分以内に表示されます。',
   switchOnFailed: 'アクセス解析をオンにできませんでした。',
@@ -24,7 +26,7 @@ export const analytics: EditorMessages['analytics'] = {
   range: '期間',
   days: (days) => (days >= 365 ? '12か月' : `${days}日間`),
   /** On a range the tier does not show, on hover. */
-  premiumRange: 'プレミアムなら最大1年分を表示します',
+  premiumRange: (tier) => `${tier}なら最大1年分を表示します`,
 
   /** The figures at the top; each one picks what the chart below shows. */
   visitors: '訪問者',
@@ -111,9 +113,9 @@ export const analytics: EditorMessages['analytics'] = {
   none: 'まだありません。',
 
   /** For a free app that counted more than it shows. */
-  moreKept: (since) => `${since}から集計しています。プレミアムなら最大1年分をすべて表示します。`,
-  premiumAsk: 'プレミアムについて問い合わせる',
-  premiumSubject: '私のアプリのプレミアムについて',
+  moreKept: (since, tier) => `${since}から集計しています。${tier}なら最大1年分をすべて表示します。`,
+  premiumAsk: (tier) => `${tier}について問い合わせる`,
+  premiumSubject: (tier) => `私のアプリの${tier}について`,
   premiumBody: (address) => `お世話になっております。\n\n私のアプリのアクセス解析をすべて見たいと考えています：${address}\n\n`,
 
   /** At the foot of the page. */

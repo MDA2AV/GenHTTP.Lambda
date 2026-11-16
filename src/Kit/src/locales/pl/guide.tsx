@@ -427,7 +427,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Cała reszta jest dostępna, łącznie z pełnym API modułów GenHTTP. Jeśli coś zostanie odrzucone, dowiesz się, w której linii i dlaczego – a nie tylko, że się nie udało.',
   limitsConnectivity:
-    'Łączenie się z innymi serwerami – wywoływanie API przez HttpClient, otwieranie gniazda, wysyłanie poczty – wymaga zgody: lambda premium ją ma, każda inna prosi o nią w sekcji Łączność w edytorze, podając, z czym się łączy i po co, a decyduje ten, kto prowadzi stronę. Do tego czasu kod, który się łączy, jest odrzucany. To, co twoje strony pobierają w przeglądarce, tego nie wymaga, więc publiczne API wywołuj ze strony tam, gdzie na to pozwala.',
+    'Łączenie się z innymi serwerami – wywoływanie API przez HttpClient, otwieranie gniazda, wysyłanie poczty – wymaga zgody: aplikacja, której plan to obejmuje – zwykle produkcyjna – ją ma, każda inna prosi o nią w sekcji Łączność w edytorze, podając, z czym się łączy i po co, a decyduje ten, kto prowadzi stronę. Do tego czasu kod, który się łączy, jest odrzucany. To, co twoje strony pobierają w przeglądarce, tego nie wymaga, więc publiczne API wywołuj ze strony tam, gdzie na to pozwala.',
   limitsBlocked:
     'Lambdę, która łamie regulamin – phishing, złośliwe oprogramowanie, ataki na innych – może zablokować osoba prowadząca serwis. Lambda przechodzi wtedy w tryb offline i dopóki blokada nie zostanie zdjęta, nie można jej zmieniać ani udostępniać; centrum sterowania informuje o tym u góry i podaje powód. To, co zawiera, nadal można przeczytać i pobrać.',
 
@@ -511,8 +511,9 @@ export const guide: KitMessages['guide'] = {
       adresu, a ze strony, z której ktoś przyszedł, tylko nazwę witryny. Odwiedzający to osoba, która otworzyła stronę,
       liczona raz dziennie: wyszukiwarki, roboty AI i inne programy są liczone osobno, według tego, czym są, a Google,
       Bing, OpenAI, Apple i Perplexity tylko z nazwy, gdy wizyta przyszła z adresu, który publikują – każdy może się za
-      nie podać. Dane są przechowywane przez rok; bezpłatna aplikacja pokazuje z nich ostatnie siedem dni, a
-      {k.b('Premium')} całość, także to, co policzono wcześniej. Wyłączenie analityki usuwa to, co policzono.
+      nie podać. Dane są przechowywane przez rok, a ile z nich widzisz, zależy od planu pokazanego obok nazwy twojej
+      aplikacji: aplikacja do wypróbowania czegoś pokazuje z nich ostatnie siedem dni, aplikacja {k.b('na produkcji')}
+      całość, także to, co policzono wcześniej. Wyłączenie analityki usuwa to, co policzono.
     </>
   ),
   visitorsAside:

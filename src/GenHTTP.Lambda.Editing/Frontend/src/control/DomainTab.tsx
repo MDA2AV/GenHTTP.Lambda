@@ -13,7 +13,7 @@ import { Section } from '@genhttp-lambda/kit/ui/ui';
 /**
  * A domain of the lambda's own.
  *
- * Part of the premium tier, which only the operator assigns - the editor
+ * Part of the tiers with domains of their own - production - which only the operator assigns - the editor
  * only offers this section to a lambda in it. Once a domain is set the page
  * is mostly about DNS - what to set, and whether it has been set - since that
  * is the part only the owner can do.

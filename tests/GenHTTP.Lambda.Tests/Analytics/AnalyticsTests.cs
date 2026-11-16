@@ -423,7 +423,7 @@ public sealed class AnalyticsTests
         Assert.AreEqual(DateOnly.FromDateTime(DateTime.UtcNow), free.Earliest, "but it is kept, and said to be");
         Assert.IsNull(free.Previous, "nor is the week before compared, which a free lambda does not show");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         var premium = analytics.Get(lambda.PrivateKey, 60, later);
 
@@ -439,7 +439,7 @@ public sealed class AnalyticsTests
 
         var lambda = await OnlineAsync(fixture, "aging");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         await EnableAsync(fixture, lambda.PrivateKey);
 

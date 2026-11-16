@@ -22,8 +22,8 @@ namespace GenHTTP.Lambda.Api;
          Counting is the owner's choice and never starts on its own. Once switched on, the visits of a lambda are counted by
          day in UTC: visitors, page views and requests, and the pages, referring sites, countries, devices, browsers, systems
          and crawlers behind them. They are written down every few minutes, so the last minutes are not in an answer yet.
-         A year is kept of every lambda; the tier decides how much of it is shown - a free lambda the last seven days, a
-         premium one all of it, as the operator set it.
+         A year is kept of every lambda; the tier decides how much of it is shown (`tierPolicy.analyticsDays`) - a sandbox
+         lambda the last seven days, one in production all of it, by default.
 
          A **visitor** is a person who opened a page, counted once a day. A **page view** is a page opened, by people or by
          programs - `botViews` are the programs'. Requests count everything. Crawlers are told from people by a maintained

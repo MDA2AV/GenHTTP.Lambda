@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: 'Demander une modification',
 
   premiumHeading: 'Quand ça décolle',
-  premiumChip: 'Premium',
   premiumTitle: 'Hébergez-la professionnellement',
   premiumText:
     'Votre application à une adresse bien à vous, comme votre-app.fr, maintenue en ligne même quand elle est peu visitée, avec plus de place pour tout ce qu’elle enregistre.',
   premiumAsk: 'Écrivez-nous',
-  premiumSubject: 'Hébergement Premium pour mon application',
+  premiumSubject: (tier) => `Hébergement ${tier} pour mon application`,
   premiumBody: (address) => `Bonjour,\n\nje souhaite héberger mon application de manière professionnelle : ${address}\n\n`,
 
   historyHint: 'Toutes les modifications de votre application, de la plus récente à la plus ancienne. Vous pouvez revenir à un état antérieur à tout moment - les données enregistrées par votre application restent inchangées.',

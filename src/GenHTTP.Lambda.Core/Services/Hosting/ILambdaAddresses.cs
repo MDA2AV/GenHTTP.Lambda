@@ -49,4 +49,10 @@ public interface ILambdaAddresses
     /// </summary>
     string Of(string publicKey, LambdaTier tier, string? domain);
 
+    /// <summary>
+    /// Whether a lambda of this tier with this domain answers at it: it has
+    /// one, and its tier lets it.
+    /// </summary>
+    bool Serves(LambdaTier tier, string? domain);
+
 }

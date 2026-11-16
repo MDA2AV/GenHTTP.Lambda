@@ -8,7 +8,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// Opt-in: nothing is counted of a lambda until its owner switches analytics
 /// on, and switching them off deletes what was counted. A year is kept of
 /// every lambda; how much of it the owner is shown depends on the tier
-/// (<c>TierLimits.AnalyticsDays</c>), so a lambda that becomes premium shows
+/// (<c>TierLimits.AnalyticsDays</c>), so a lambda moved to a tier that shows more shows
 /// what was counted before it did.
 ///
 /// Apart from the figures of the overview and the stats, which are counted in

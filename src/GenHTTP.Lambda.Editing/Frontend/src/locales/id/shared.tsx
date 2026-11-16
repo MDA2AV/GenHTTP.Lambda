@@ -35,9 +35,18 @@ export const shared: EditorMessages['shared'] = {
   onlineTitle: (version) => `Online, menyajikan versi ${version}`,
   offline: 'Offline',
   offlineTitle: 'Offline: tidak ada yang disajikan',
-  premium:
-    'Premium: bisa diakses di domain sendiri, punya ruang lebih besar untuk kode, sumber daya, dan data, serta tetap online sesepi apa pun',
-  demo: 'Demo: dijaga tetap online oleh instalasi ini dan hanya bisa dibaca',
+  tiers: {
+    Sandbox: 'Sandbox',
+    Production: 'Produksi',
+    System: 'Sistem',
+    Demo: 'Demo',
+  },
+  tierTitles: {
+    Sandbox: 'Untuk mencoba sesuatu: dimatikan jika beberapa waktu tidak dikunjungi atau diubah siapa pun',
+    Production: 'Aplikasi yang digunakan orang: tetap online sesepi apa pun, bisa diakses di domain sendiri, dan punya ruang lebih besar untuk kode, sumber daya, dan data',
+    System: 'Sesuatu yang menjadi tumpuan instalasi ini: tetap online, tidak pernah diblokir, dan tidak pernah masuk showcase',
+    Demo: 'Dijaga tetap online oleh instalasi ini dan hanya bisa dibaca',
+  },
   tier: (tier) => `Paket ${tier}`,
   entrances: {
     title: 'Diakses lewat',

@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Hosting;
 
@@ -75,10 +76,14 @@ public sealed class LambdaAddresses : ILambdaAddresses
 
     #endregion
 
+    private readonly ILimitsService _limits;
+
     #region Initialization
 
-    public LambdaAddresses(LambdaOptions options)
+    public LambdaAddresses(LambdaOptions options, ILimitsService limits)
     {
+        _limits = limits;
+
         ByPath = options.Addressing == LambdaAddressing.Paths;
 
         var configured = ByPath ? options.PublicUrl ?? $"http://localhost:{options.Port}"
@@ -141,12 +146,7 @@ public sealed class LambdaAddresses : ILambdaAddresses
     /// <summary>
     /// Whether a lambda of this tier with this domain answers at it.
     /// </summary>
-    public static bool Serves(LambdaTier tier, string? domain) => domain != null && tier == LambdaTier.Premium;
-
-    /// <summary>
-    /// The same, for a tier by its name as the models carry it.
-    /// </summary>
-    public static bool Serves(string tier, string? domain) => Enum.TryParse<LambdaTier>(tier, out var parsed) && Serves(parsed, domain);
+    public bool Serves(LambdaTier tier, string? domain) => domain != null && _limits.PolicyOf(tier).OwnDomain;
 
     /// <summary>
     /// Whether the platform answers at a host that is not below the hosting
