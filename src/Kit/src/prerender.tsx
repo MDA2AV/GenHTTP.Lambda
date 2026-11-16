@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 
 import type { ShowcaseEntry, ShowcaseListing } from './api';
+import { BRAND_PLACEHOLDERS, PLATFORM, prerenderBrand, type Brand } from './brand';
 import { loadEverything } from './i18n';
 import { LANGUAGES, inLanguage } from './i18n/languages';
 import { Entry } from './pages/Showcase';
@@ -20,6 +21,11 @@ import { PLACEHOLDERS, prerenderWith } from './site';
  * rendered with a single entry made of placeholders, which the server fills
  * in once for each entry it has - and in one variant for each shape the page
  * can take, since those are more than a value in a sentence.
+ *
+ * A site whose installation may be branded has all of it rendered once more
+ * with a brand made of placeholders (see brand.ts): its operator's name and
+ * picture are other markup than the platform's mark, so the server takes
+ * this rendering for a branded installation and fills them in.
  */
 
 /** A showcase entry made of placeholders, which the server fills in. */
@@ -62,13 +68,24 @@ function render(path: string, content: React.ReactNode): string {
   );
 }
 
-export interface Prerendered {
+/** The public pages of a site as one brand shows them. */
+export interface PrerenderedPages {
   /** Every public page in every language, by the path it has in that language. */
   pages: Record<string, string>;
   /** The showcase by language, and in there by the shape of its first page. */
   showcase: Record<string, Record<string, string>>;
+}
+
+export interface Prerendered extends PrerenderedPages {
   /** One entry of the showcase by language, as it is found in the pages above. */
   entry: Record<string, string>;
+  /** The same pages as a branded installation shows them, where the site may be branded. */
+  branded?: PrerenderedPages;
+}
+
+export interface PrerenderOptions {
+  /** Whether the installation of the site may be branded, so its pages are rendered for a brand as well. */
+  branded?: boolean;
 }
 
 /**
@@ -76,14 +93,28 @@ export interface Prerendered {
  * language yet. A site's src/prerender.tsx exports it as <c>prerender</c>,
  * for its application.
  */
-export const prerendering = (app: () => React.ReactNode) => async function prerender(paths: string[]): Promise<Prerendered> {
+export const prerendering = (app: () => React.ReactNode, options: PrerenderOptions = {}) => async function prerender(paths: string[]): Promise<Prerendered> {
   // every word of every language is there before anything is drawn - a page
   // rendered while its words are on their way would be rendered empty
   await loadEverything();
 
+  const entry: Record<string, string> = {};
+
+  for (const language of LANGUAGES) {
+    entry[language] = render(inLanguage(language, '/showcase'), <Entry entry={ENTRY} index={0} />);
+  }
+
+  const plain = renderAll(app, paths, PLATFORM);
+
+  return options.branded ? { ...plain, entry, branded: renderAll(app, paths, BRAND_PLACEHOLDERS) } : { ...plain, entry };
+};
+
+/** Every page and every shape of the showcase in every language, as the given brand shows them. */
+function renderAll(app: () => React.ReactNode, paths: string[], brand: Brand): PrerenderedPages {
   const pages: Record<string, string> = {};
   const showcase: Record<string, Record<string, string>> = {};
-  const entry: Record<string, string> = {};
+
+  prerenderBrand(brand);
 
   for (const language of LANGUAGES) {
     for (const path of paths) {
@@ -101,9 +132,9 @@ export const prerendering = (app: () => React.ReactNode) => async function prere
       prerenderWith({ ...PLACEHOLDERS, showcase: listing });
       showcase[language][shape] = render(address, app());
     }
-
-    entry[language] = render(address, <Entry entry={ENTRY} index={0} />);
   }
 
-  return { pages, showcase, entry };
-};
+  prerenderBrand(PLATFORM);
+
+  return { pages, showcase };
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
 import { BuildBox } from '@genhttp-lambda/kit/components/BuildBox';
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import {
@@ -33,6 +34,7 @@ export function Landing() {
 
   const said = useT().landing;
   const { origin } = useOrigin();
+  const brand = useBrand();
 
   const build = useRef<HTMLDivElement>(null);
   const agents = useRef<HTMLDivElement>(null);
@@ -67,8 +69,9 @@ export function Landing() {
 
       <section className="relative z-10 px-5 pb-20 pt-16 sm:pt-24">
         <div className="mx-auto w-full max-w-4xl text-center">
+          {/* what this installation is: the platform's edition, or the name its operator gave it */}
           <p className="rise text-balance text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
-            {said.eyebrow}
+            {isOwn(brand) ? brand.name : said.eyebrow}
           </p>
 
           <h1 className="rise mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl" style={{ animationDelay: '60ms' }}>

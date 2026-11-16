@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { BrandLink } from './BrandLink';
 import { Footer } from './Footer';
-import { IconClose, IconGitHub, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
+import { IconClose, IconGitHub, IconLock, IconMenu, IconMoon, IconSun } from './Icons';
 import { LanguageMenu, LanguageSwitch } from './LanguageSwitch';
 import { useT } from '../i18n';
-import { Link, NavLink } from '../i18n/links';
+import { NavLink } from '../i18n/links';
 import { REPOSITORY } from '../installation';
 import type { Theme } from '../theme';
 
@@ -90,17 +91,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed, links = 
           moved || fixed ? 'bg-white/70 backdrop-blur-md dark:bg-ink-950/70' : 'bg-transparent'
         }`}
       >
-        <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-semibold tracking-tight">
-          <IconLogo />
-          {/* the name is the mark plus the letter the thing is named after */}
-          <span>
-            GenHTTP{' '}
-            <span className="text-accent-500" title="Lambda">
-              <span aria-hidden="true" className="text-[1.15em] leading-none">λ</span>
-              <span className="sr-only">Lambda</span>
-            </span>
-          </span>
-        </Link>
+        <BrandLink />
 
         <nav className="ml-auto flex items-center gap-1" aria-label={t.shell.main}>
           {actions}

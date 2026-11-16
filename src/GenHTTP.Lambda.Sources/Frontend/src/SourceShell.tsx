@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
+import { BrandLink } from '@genhttp-lambda/kit/components/BrandLink';
 import { Footer } from '@genhttp-lambda/kit/components/Footer';
-import { IconClose, IconLogo, IconMenu, IconMoon, IconSun } from '@genhttp-lambda/kit/components/Icons';
+import { IconClose, IconMenu, IconMoon, IconSun } from '@genhttp-lambda/kit/components/Icons';
 import { LanguageMenu, LanguageSwitch } from '@genhttp-lambda/kit/components/LanguageSwitch';
 import { useT } from '@genhttp-lambda/kit/i18n';
 import { useSourceT } from './i18n';
@@ -26,6 +28,7 @@ export function SourceShell({ theme, onToggleTheme, children }: {
 }) {
   const t = useT();
   const said = useSourceT();
+  const brand = useBrand();
   const [moved, setMoved] = useState(false);
 
   useEffect(() => {
@@ -46,16 +49,8 @@ export function SourceShell({ theme, onToggleTheme, children }: {
           moved ? 'bg-white/80 backdrop-blur-md dark:bg-ink-950/80' : 'bg-transparent'
         }`}
       >
-        <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-semibold tracking-tight" aria-label={said.shell.home}>
-          <IconLogo />
-          <span className="hidden min-[400px]:inline">
-            GenHTTP{' '}
-            <span className="text-accent-500" title="Lambda">
-              <span aria-hidden="true" className="text-[1.15em] leading-none">λ</span>
-              <span className="sr-only">Lambda</span>
-            </span>
-          </span>
-        </Link>
+        {/* the name leaves the bar on the narrowest phones, so the link says it */}
+        <BrandLink label={isOwn(brand) ? brand.name : said.shell.home} nameClassName="hidden min-[400px]:inline" />
 
         <span aria-hidden="true" className="text-lg font-light text-slate-300 dark:text-ink-700">/</span>
 

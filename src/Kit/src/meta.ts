@@ -1,13 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { useBrand } from './brand';
 import { useLanguage } from './i18n';
 import { LANGUAGES, hreflangsOf, inLanguage, tagOf, withoutLanguage, type Language } from './i18n/languages';
 
-const SITE = 'GenHTTP Lambda';
-
 export interface PageMeta {
-  /** The page's own name, without the site's - that is appended here. */
+  /** The page's own name, without the installation's - that is appended here, as it presents itself (see brand.ts). */
   title: string;
   description?: string;
   /** False for pages that are nobody's business but their owner's, or not there at all. */
@@ -91,9 +90,10 @@ export function usePublicPage(path: PagePath): void {
 export function usePageMeta({ title, description, index = true }: PageMeta): void {
   const { pathname } = useLocation();
   const language = useLanguage();
+  const site = useBrand().name;
 
   useEffect(() => {
-    const full = `${title} - ${SITE}`;
+    const full = `${title} - ${site}`;
 
     document.title = full;
     document.documentElement.lang = tagOf(language);
@@ -121,7 +121,7 @@ export function usePageMeta({ title, description, index = true }: PageMeta): voi
     set('property', 'og:url', index ? address : undefined);
 
     alternates(index ? origin : null, withoutLanguage(pathname));
-  }, [title, description, index, pathname, language]);
+  }, [title, description, index, pathname, language, site]);
 }
 
 /**
