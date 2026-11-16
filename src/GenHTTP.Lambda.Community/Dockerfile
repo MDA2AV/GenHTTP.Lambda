@@ -64,8 +64,12 @@ COPY --from=frontend /repo/src/GenHTTP.Lambda.Community/bundle src/GenHTTP.Lambd
 # it, which is the first thing to try when something asynchronous misbehaves.
 ARG RUNTIME_ASYNC=true
 
+# The version of the release (the workflow passes it), which the server reports
+# as its own; without, it is the one in Directory.Build.props.
+ARG VERSION=
+
 RUN dotnet publish src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj --no-restore -c Release -o /app \
-    -p:RuntimeAsync=$RUNTIME_ASYNC
+    -p:RuntimeAsync=$RUNTIME_ASYNC ${VERSION:+-p:Version=$VERSION}
 
 # What is actually shipped. The ASP.NET Core framework is required because
 # GenHTTP.Full ships the Kestrel engine next to the ioxide one; lambdas are

@@ -77,6 +77,27 @@ together the GenHTTP way, and there are two hosts - two editions:
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
   guide says whichever holds (`platform_guide`, `backlink`).
+- **The community edition sends a usage report once a day - decided by the
+  owner** (`Services/UsageReports`), on by default and switched off with
+  `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
+  pushed: documented like any other feature (the README's Telemetry
+  section, which stays a paragraph, with the details in `docs/telemetry.md`;
+  the reference, a line on startup, the panel's **Usage report** section
+  with the last report as sent), never a banner or a prompt. It says
+  **how an installation runs, never what it runs**: the version, the
+  machine, which options are on, and counts and sums over the lambdas - no
+  key, domain, title, code, record, secret, visitor or address of anybody,
+  and no demo counted. **Not the installation's address either - decided by
+  the owner**: `LAMBDA_PUBLIC_URL` names whoever runs it, and operators would
+  rightly object; options are sent as switches, never their values. A new
+  field keeps to that, is added rather than renamed, and is said in
+  `docs/telemetry.md`. It never delays startup or a request: a background
+  job, one attempt a day with a time limit, a warning once when it does not
+  arrive.
+  The cloud sends none (`FromEnvironment(…, usageReports: true)` is the
+  community host's). The collector is the lambda `telemetry` on genhttp.dev
+  (`telemetry.genhttp.run`): its source is in the lambda, not here, and its
+  front page says what is kept - keep the three saying the same.
 
 The components, each a project with a builder in front (`X.Create(...)`, the
 GenHTTP style), and what they need given to the builder rather than read from

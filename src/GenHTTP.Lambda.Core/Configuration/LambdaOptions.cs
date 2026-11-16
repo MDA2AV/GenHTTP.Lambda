@@ -273,6 +273,31 @@ public sealed record LambdaOptions
     public int TelemetrySamples { get; init; } = 2880;
 
     /// <summary>
+    /// Where the installation sends its usage report once a day, or nothing
+    /// to send none.
+    /// </summary>
+    /// <remarks>
+    /// The report says how the installation is set up and used - its version,
+    /// its address, the machine, counts and switches over its lambdas - and
+    /// never what a lambda is or holds (see <c>UsageReport</c>). Off by
+    /// default: the community edition sets <see cref="DefaultUsageReportUrl"/>
+    /// unless its operator switches it off (<c>LambdaSettings</c>), so a test,
+    /// the cloud and a host of somebody's own send nothing they did not ask to.
+    /// </remarks>
+    public string? UsageReportUrl { get; init; }
+
+    /// <summary>
+    /// Where the community edition sends its usage report: a lambda on
+    /// genhttp.dev, whose front page says what is kept of it.
+    /// </summary>
+    public const string DefaultUsageReportUrl = "https://telemetry.genhttp.run/api/reports";
+
+    /// <summary>
+    /// How often the usage report is sent.
+    /// </summary>
+    public TimeSpan UsageReportInterval { get; init; } = TimeSpan.FromDays(1);
+
+    /// <summary>
     /// How often the visits counted for the owners' analytics are written
     /// down. Visits not yet written are lost when the server stops.
     /// </summary>

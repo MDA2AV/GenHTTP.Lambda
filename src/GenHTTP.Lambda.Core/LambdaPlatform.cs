@@ -21,6 +21,7 @@ using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Services.Visits;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -181,6 +182,10 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<ITelemetryService, TelemetryService>();
 
+        services.AddSingleton<UsageSurvey>();
+        services.AddSingleton<UsageReportSender>();
+        services.AddSingleton<IUsageReportService, UsageReportService>();
+
         services.AddSingleton<AnalyticsStore>();
         services.AddSingleton<IAnalyticsStore>(provider => provider.GetRequiredService<AnalyticsStore>());
         services.AddSingleton<AnalyticsQueue>();
@@ -211,6 +216,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
         services.AddSingleton<IBackgroundJob, CrawlerJob>();
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
+        services.AddSingleton<IBackgroundJob, UsageReportJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();

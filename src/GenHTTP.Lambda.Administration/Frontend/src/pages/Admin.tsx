@@ -13,10 +13,11 @@ import { LimitsSection } from '../console/LimitsSection';
 import { LogSection } from '../console/LogSection';
 import { ServerSection } from '../console/ServerSection';
 import { SettingsSection } from '../console/SettingsSection';
+import { UsageReportSection } from '../console/UsageReportSection';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'server' | 'lambdas' | 'connectivity' | 'blocks' | 'log' | 'settings' | 'limits';
+type SectionId = 'server' | 'lambdas' | 'connectivity' | 'blocks' | 'log' | 'settings' | 'limits' | 'usage';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
@@ -26,6 +27,7 @@ const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
   { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier' },
+  { id: 'usage', title: 'Usage report', note: 'What the installation reports about itself once a day' },
 ];
 
 /**
@@ -162,6 +164,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <SettingsSection access={access} />
           ) : section === 'limits' ? (
             <LimitsSection access={access} />
+          ) : section === 'usage' ? (
+            <UsageReportSection access={access} />
           ) : (
             <ServerSection access={access} />
           )}
