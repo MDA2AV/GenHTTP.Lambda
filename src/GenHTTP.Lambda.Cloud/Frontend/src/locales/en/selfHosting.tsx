@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 /**
  * /self-hosting: genhttp.dev and the community edition side by side. Says
  * that the platform can be run elsewhere and what differs, without
- * preferring either - whoever reads it picks what suits them.
+ * preferring either - whoever reads it picks what suits them. Free and
+ * Premium are what genhttp.dev calls its tiers: names, written as they are in
+ * every language.
  */
 export const selfHosting = {
   /** The page's name in the menu of every page. */
@@ -40,7 +42,7 @@ export const selfHosting = {
     'The REST API',
     'The editor, simple and full',
     'Drafts with test data',
-    'Every version, and a way back',
+    'Versions, and a way back',
     'Records, files, keys and passwords',
     'Analytics without cookies',
     'Domains of their own',
@@ -59,15 +61,15 @@ export const selfHosting = {
     ['What it costs', 'Nothing; Premium apps on request', 'Nothing; the server is yours to pay for'],
     ['Where an app answers', 'At a subdomain of genhttp.run', 'Below your address, or at subdomains of a domain you give it'],
     ['A domain of its own', 'For Premium apps', 'For any app you move to production'],
-    ['Apps nobody uses', `Free apps go offline after ${offline} days without a visit or a change`, 'As you set it'],
+    ['Apps nobody uses', `Offline after ${offline} days without a visit or a change, unless Premium`, 'As you set it'],
     ['Limits and rules', 'Ours, and our terms of service', 'Yours, set in the admin panel'],
     ['The build agent', 'Included, a number of builds a day', 'Optional, with your own Claude subscription'],
-    ['Usage reports', 'None', 'Once a day, counts only, and you can switch it off'],
+    ['Usage reports', 'None', 'Once a day: the version, the machine, the options and counts over the apps - never an app or a person. You can switch it off.'],
   ],
 
   moveTitle: 'Moving between them',
   move:
-    'The same apps run on both. Clone an app with git and push it to an app on the other, and your agent does the rest - or download it as a .NET project that runs anywhere, with its records in a SQLite file.',
+    'The same apps run on both, and your agent moves one with git: it creates the app on the other side, copies the files of the old one over and pushes them. A download is a .NET project that runs anywhere, with its records in a SQLite file.',
 
   pickTitle: 'Which one suits you',
   pickCloud: {

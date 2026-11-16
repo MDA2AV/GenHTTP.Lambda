@@ -56,9 +56,9 @@ const GROUPS: { id: string; features: Key[] }[] = [
  * in a section of its own, with a screenshot of the real editor.
  *
  * Every picture shows one example app, so the page reads as one app's story
- * rather than as a catalogue: a tennis club's court booking, built in the
- * summer and changed since. The pictures were taken from a local
- * installation of the platform - nothing in them is drawn.
+ * rather than as a catalogue: a tennis club's court booking. They are
+ * screenshots of the real editor, taken on an installation run for them;
+ * the app, its records, its visitors and its history were made up for it.
  */
 export function Platform() {
   usePublicPage('/platform');

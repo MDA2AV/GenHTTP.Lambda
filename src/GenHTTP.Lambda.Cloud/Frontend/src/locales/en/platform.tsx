@@ -2,25 +2,27 @@ import type { ReactNode } from 'react';
 
 /**
  * /platform, the features of genhttp.dev: what every app gets beyond being
- * built and changed - for both groups, in the words of the simple view. Every
- * screenshot shows one example app, the court booking of a tennis club.
+ * built and changed - for both groups, in the words of the simple view (a
+ * draft, test data, putting online, records, keys and passwords), with the
+ * developer's words only where a feature is about code. Every screenshot
+ * shows one example app, the court booking of a tennis club that does not
+ * exist.
  */
 export const platform = {
   /** The page's name in the menu of every page. */
   menu: 'Features',
 
   eyebrow: 'Features',
-  title: 'More than an AI app builder.',
+  title: 'Building it takes a minute.',
   titleAccent: 'Everything else is built in.',
   intro:
-    'Building an app here takes a minute. What keeps it useful comes after: its records, every version and what it is for, the people who visit it, a domain of its own. Every app has all of it, in one place opened with the link you get when it is built.',
+    'An app made here is more than the code an AI wrote. What keeps it useful comes after: its records, its versions and what it is for, the people who visit it, a domain of its own. Every app has all of it, in one place opened with the link you get when it is built.',
   build: 'Build something',
   ownAgent: 'Use your own agent',
   free: 'Free. No sign-up, no credit card.',
-  heroAlt: 'The editor of a court booking app: online at the club’s own domain, how many people used it today, and the latest change',
-  /** Under the first picture: every picture on the page shows the same app, which does not exist. */
-  example:
-    'Every picture on this page shows one example app: the court booking of a small tennis club, built here in the summer and changed four times since.',
+  heroAlt: 'The editor of a court booking app: online at the club’s own domain, how many people used it today, and its latest change',
+  /** Under the first picture: every picture on the page shows the same app, an example made up for it. */
+  example: 'Every picture on this page shows the same example app: the court booking of a tennis club.',
 
   /** Above the list of every feature, which leads to their sections. */
   contents: 'On this page',
@@ -51,7 +53,7 @@ export const platform = {
       name: 'Change',
       title: 'Change it by asking',
       text: 'Every app has an editor, opened with the private link you got when it was built. Say what should be different, and the agent changes the app and tells you when to look - or hand the link to your own agent with the next change.',
-      points: ['A sentence is enough', 'Ready to try before it goes online', 'The code stays out of sight unless you want it'],
+      points: ['A sentence is enough', 'Online by itself once it works, or kept for you to try first', 'The code stays out of sight unless you want it'],
       alt: 'The Change section: the club asked for the coach’s lessons, and the agent says the change is ready to try',
     },
     drafts: {
@@ -63,10 +65,10 @@ export const platform = {
     },
     history: {
       name: 'History',
-      title: 'Every version kept, and a way back',
+      title: 'Every change a version, with a way back',
       text: 'Each change becomes a new version, described by what it changed. If one goes wrong, the version before it is one click away - at the same address, with the same records.',
-      points: ['What was asked for, and what it changed', 'Back to any version in one click', 'Records are shared by every version, so going back loses none'],
-      alt: 'The history of the app: five changes over four months, the newest online',
+      points: ['What was asked for, and what it changed', 'Back to an earlier version in one click', 'Records are shared by every version, so going back loses none'],
+      alt: 'The history of the app: its changes, one under the other, the newest online',
     },
     about: {
       name: 'About',
@@ -80,7 +82,7 @@ export const platform = {
       title: 'Records in a database of its own',
       text: 'An app that keeps things - bookings, sign-ups, scores - keeps them in a database of its own, and they stay when the app changes. Read them table by table in the editor, next to the files it saved, such as the weekly list for the noticeboard.',
       points: ['A database for every app that needs one', 'Every table, readable in the editor', 'The files the app saves, listed beside them'],
-      alt: 'The records of the app: 848 bookings and 40 members, read table by table',
+      alt: 'The records of the app: its bookings and its members, read table by table',
     },
     keys: {
       name: 'Keys and passwords',
@@ -93,13 +95,14 @@ export const platform = {
       name: 'Analytics',
       title: 'See who visits, without cookies',
       text: 'Switch on analytics and see how many people opened the app, where they came from, and on which devices - counted on our server, without cookies and without a script in your pages.',
-      points: ['Visitors, page views and where they came from', 'No cookies, no banner, nothing that names a visitor', 'Off until you switch it on'],
-      alt: 'Analytics: 1,877 visitors in thirty days, and the visitors of each day',
+      points: ['Visitors, page views and where they came from', 'No cookies, and nothing that names a visitor', 'Off until you switch it on'],
+      alt: 'Analytics: the visitors of the last thirty days, day by day',
     },
     domain: {
       name: 'Domain',
       title: 'A domain of its own',
       text: 'Every app starts at an address of ours. When it catches on, it can move to a domain you own: the same app and the same editor, at an address people remember. Links to the old address keep working - they lead to the new one.',
+      /** Premium is what genhttp.dev calls the tier above the free one: a name, written as it is in every language. */
       points: ['For Premium apps: write to us', 'The same app, editor and records', 'The old address sends visitors on'],
       alt: 'The address of the app moving from its address on genhttp.run to the club’s own domain',
     },
@@ -121,7 +124,7 @@ export const platform = {
 
   /** On the address bar above the picture of a draft. */
   draftBadge: 'Draft',
-  /** On the address bar above the domain the app moved to. */
+  /** On the address bar above the domain the app moved to: the name of the tier, written as it is in every language. */
   domainOwn: 'Premium',
   domainSubject: 'A domain for my app',
   domainAsk: 'Ask about a domain',

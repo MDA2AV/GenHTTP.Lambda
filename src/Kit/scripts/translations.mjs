@@ -911,6 +911,8 @@ const PAGE_OF_FILE = {
   'cloud/build.tsx': '/build - the page for people who do not code',
   'cloud/ship.tsx': '/ship - the page for developers',
   'cloud/landing.tsx': '/ - the landing page of genhttp.dev',
+  'cloud/platform.tsx': '/platform - the features of every app, for people who do not code as much as for developers: the simple view\'s words (draft, test data, put online, records, keys and passwords), developer words only where a feature is about code',
+  'cloud/selfHosting.tsx': '/self-hosting - genhttp.dev and the community edition compared; strictly neutral, neither is better, and both are said in the same words',
   'cloud/terms.tsx': '/terms - legal',
   'cloud/privacy.tsx': '/privacy - legal',
   'cloud/imprint.tsx': '/imprint - legal',
