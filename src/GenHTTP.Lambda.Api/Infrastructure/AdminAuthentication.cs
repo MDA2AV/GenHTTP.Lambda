@@ -1,11 +1,9 @@
-using System.Security.Cryptography;
-using System.Text;
-
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Content.Authentication;
 using GenHTTP.Api.Content.Documentation.Security;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 
 using GenHTTP.Modules.Authentication;
 
@@ -55,20 +53,16 @@ public static class AdminAuthentication
     /// </summary>
     public static IConcernBuilder Create(LambdaOptions options)
     {
-        var expected = Encoding.UTF8.GetBytes(options.AdminToken ?? throw new InvalidOperationException("No administration token is configured."));
+        if (!options.Administrable)
+        {
+            throw new InvalidOperationException("No administration token is configured.");
+        }
 
+        // compared where every door that lets the operator in compares it
         return ApiKeyAuthentication.Create()
                                    .WithHeader(Header)
                                    .Documentation(Scheme)
-                                   .Authenticator((_, presented) =>
-                                   {
-                                       var actual = Encoding.UTF8.GetBytes(presented);
-
-                                       // the length is not a secret, but which byte differs is
-                                       var allowed = actual.Length == expected.Length && CryptographicOperations.FixedTimeEquals(actual, expected);
-
-                                       return new ValueTask<IUser?>(allowed ? Operator.Instance : null);
-                                   });
+                                   .Authenticator((_, presented) => new ValueTask<IUser?>(OperatorToken.Matches(options, presented) ? Operator.Instance : null));
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Settings;
@@ -71,7 +72,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                 throw LambdaException.Invalid($"The picture must not be larger than {allowed / 1024 / 1024} MB.");
             }
 
-            type = Sniff(draft.Image)
+            type = ImageTypes.Sniff(draft.Image)
                 ?? throw LambdaException.Invalid("The picture has to be a PNG, JPEG, GIF or WebP image.");
         }
 
@@ -272,39 +273,6 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         var trimmed = text?.Replace("\r\n", "\n").Trim();
 
         return string.IsNullOrEmpty(trimmed) ? null : trimmed;
-    }
-
-    /// <summary>
-    /// What an image is, from its first bytes.
-    /// </summary>
-    /// <remarks>
-    /// Never from what the uploader claims: the picture is served from this
-    /// origin, and a type taken on trust is how a page of script gets served
-    /// as if it were one.
-    /// </remarks>
-    internal static string? Sniff(ReadOnlySpan<byte> content)
-    {
-        if (content.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
-        {
-            return "image/png";
-        }
-
-        if (content.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]))
-        {
-            return "image/jpeg";
-        }
-
-        if (content.StartsWith("GIF87a"u8) || content.StartsWith("GIF89a"u8))
-        {
-            return "image/gif";
-        }
-
-        if (content.Length >= 12 && content.StartsWith("RIFF"u8) && content[8..12].SequenceEqual("WEBP"u8))
-        {
-            return "image/webp";
-        }
-
-        return null;
     }
 
     #endregion

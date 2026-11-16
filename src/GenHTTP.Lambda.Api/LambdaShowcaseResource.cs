@@ -94,6 +94,6 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
 
     internal static ShowcaseLimitsResponse Limits(ILimitsService limits)
         => new(ShowcaseLimits.MaxTitle, ShowcaseLimits.MaxDescription, limits.Get().ShowcaseImageBytes,
-               ["image/png", "image/jpeg", "image/gif", "image/webp"], ShowcaseLimits.Tone);
+               ImageTypes.Raster, ShowcaseLimits.Tone);
 
 }
