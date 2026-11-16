@@ -56,7 +56,7 @@ export const ship: Messages['ship'] = {
   domainAsk: 'Zapytaj o domenę',
 
   questionsTitle: 'Zanim opublikujesz',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       'Czy to naprawdę za darmo?',
       <>
@@ -99,6 +99,13 @@ export const ship: Messages['ship'] = {
     [
       'Czy mogę zabrać swój kod?',
       'Tak, jest twój. Pobierz go z edytora, kiedy chcesz, jako projekt, który działa samodzielnie, razem z bazą danych - albo sklonuj go przez git, razem z każdą wersją.',
+    ],
+    [
+      'Czy mogę hostować ją na własnym serwerze?',
+      <>
+        Tak. GenHTTP Lambda jest open source, a jej edycja Community to ta sama platforma jako jeden kontener Dockera,
+        na twój własny serwer i twojego własnego agenta. {selfHosting('Chmura czy self-hosting')} mówi, co się różni.
+      </>,
     ],
     [
       'Kto zobaczy moją aplikację?',

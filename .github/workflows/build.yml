@@ -141,11 +141,15 @@ jobs:
           moved=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost:8080/lambda/citest/)
           test "$moved" = "301 http://citest.localhost:8080/" || { echo "expected a redirect to its address, got '$moved'"; exit 1; }
 
-          # the components serve their own bundles
-          for page in /en /editor/create /admin/ /en/source; do
+          # the components serve their own bundles, and the site its own pages
+          for page in /en /en/platform /en/self-hosting /editor/create /admin/ /en/source; do
             status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/html' "http://localhost:8080$page")
             test "$status" = "200" || { echo "expected $page to be served, got $status"; exit 1; }
           done
+
+          # the guide is gone: an old link to it finds nothing
+          status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/html' http://localhost:8080/en/docs)
+          test "$status" = "404" || { echo "expected /en/docs to be gone, got $status"; exit 1; }
 
           call -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment/stop" > /dev/null
 
@@ -222,10 +226,14 @@ jobs:
           address=$(call "http://localhost:8080/api/v1/lambdas/$private" | jq -r .publicUrl)
           test "$address" = "http://localhost:8080/lambda/citest/" || { echo "expected its address below /lambda/, got '$address'"; exit 1; }
 
-          for page in /en /en/docs /editor/create /admin/ /en/source; do
+          for page in /en /en/showcase /editor/create /admin/ /en/source; do
             status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/html' "http://localhost:8080$page")
             test "$status" = "200" || { echo "expected $page to be served, got $status"; exit 1; }
           done
+
+          # the guide is gone: an old link to it finds nothing
+          status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/html' http://localhost:8080/en/docs)
+          test "$status" = "404" || { echo "expected /en/docs to be gone, got $status"; exit 1; }
 
           echo "created, deployed and served a lambda below /lambda/"
 

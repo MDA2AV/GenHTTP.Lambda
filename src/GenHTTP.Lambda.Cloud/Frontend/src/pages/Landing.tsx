@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
-import { IconChat, IconChevronDown, IconMail } from '@genhttp-lambda/kit/components/Icons';
+import { IconChat, IconChevronDown, IconGitHub, IconLayers, IconMail } from '@genhttp-lambda/kit/components/Icons';
 import { Reveal } from '@genhttp-lambda/kit/components/Reveal';
-import { DISCORD } from '@genhttp-lambda/kit/installation';
+import { DISCORD, REPOSITORY } from '@genhttp-lambda/kit/installation';
 
 import { CONTACT_MAIL } from '../contact';
 import { useT } from '../i18n';
@@ -222,6 +222,17 @@ export function Landing() {
             </div>
           </div>
         </Reveal>
+
+        {/* the rest of what an app keeps, which the features page shows */}
+        <Reveal delay={260}>
+          <p className="mx-auto mt-10 max-w-xl text-center text-sm leading-relaxed text-grey-700 dark:text-grey-300">
+            {said.more((text) => (
+              <Link to="/platform" className="text-accent-600 hover:underline dark:text-accent-400">
+                {text}
+              </Link>
+            ))}
+          </p>
+        </Reveal>
       </div>
 
       {/* ------------------------------------------------------- your own agent */}
@@ -257,6 +268,27 @@ export function Landing() {
               </Link>
             ))}
           </p>
+        </Reveal>
+      </div>
+
+      {/* ----------------------------------------------------------- open source */}
+
+      <div className="snap-stop relative z-10 mx-auto w-full max-w-4xl px-5 pb-24 pt-10">
+        <Reveal>
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">{said.openTitle}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
+            {said.openText}
+          </p>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Link to="/self-hosting" className="btn-ghost px-5 py-3">
+              <IconLayers />
+              {said.openCompare}
+            </Link>
+            <a href={REPOSITORY} target="_blank" rel="noreferrer" className="btn-ghost px-5 py-3">
+              <IconGitHub />
+              {said.openCode}
+            </a>
+          </div>
         </Reveal>
       </div>
 

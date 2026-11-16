@@ -7,8 +7,8 @@ namespace GenHTTP.Lambda.Cloud;
 /// <summary>
 /// The pages of genhttp.dev that are this host's own - the front page, the
 /// pages for whoever has an app built and for whoever builds with their own
-/// agent, the guide, the showcase and the legal pages - at the root of the
-/// host, behind every component that has a path of its own.
+/// agent, the features, self-hosting, the showcase and the legal pages - at
+/// the root of the host, behind every component that has a path of its own.
 /// </summary>
 public static class Website
 {

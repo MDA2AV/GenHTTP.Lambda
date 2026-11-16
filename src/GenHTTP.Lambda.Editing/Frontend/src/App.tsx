@@ -20,7 +20,7 @@ const Editor = lazy(() =>
  * The editor of a lambda, behind its key, and the page that creates one.
  *
  * The same in every installation, so the bar links only to what every site
- * has: its guide and its showcase.
+ * has: its showcase.
  */
 export function App() {
   const [theme, toggleTheme] = useTheme();
@@ -30,7 +30,6 @@ export function App() {
 
   const links: ShellLink[] = [
     { to: '/showcase', label: t.shell.showcase, room: 'sm' },
-    { to: '/docs', label: t.shell.docs, room: 'md' },
   ];
 
   return (

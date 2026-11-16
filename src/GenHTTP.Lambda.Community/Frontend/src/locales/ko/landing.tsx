@@ -50,9 +50,9 @@ export const landing: Messages['landing'] = {
   around: {
     demos: { title: '데모로 시작하기', text: '기록을 다루는 API, 로그인, 실시간 업데이트, 게임 등 복사해서 바꿔 볼 수 있는 완성된 앱이에요.' },
     showcase: { title: '쇼케이스', text: '소유자가 이곳에 보여 주기로 한 앱이에요.' },
-    guide: { title: '가이드', text: '앱이 할 수 있는 것과 방법을 필요한 순서대로 안내해요.' },
     api: { title: 'REST API', text: '도구와 같은 기능을 HTTP로 사용할 수 있고, OpenAPI로 설명돼 있어요.' },
     sources: { title: '공개된 소스', text: '소유자가 코드를 공개한 앱이에요. 읽고 내려받을 수 있어요.' },
     admin: { title: '관리', text: '앱, 한도, 차단, 로그를 관리 토큰으로 보호해 관리해요.' },
+    reference: { title: '레퍼런스', text: '설정, 운영, 모든 경로를 GitHub의 소스와 함께 정리했어요.' },
   },
 };

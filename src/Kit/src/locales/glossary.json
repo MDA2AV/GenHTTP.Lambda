@@ -153,6 +153,21 @@
       "en": "use other services",
       "note": "the simple view's words for an app that fetches from another service on the internet - a weather forecast, an AI - which needs the operator's permission; never connectivity, connections or servers there",
       "id": "menggunakan layanan lain", "de": "andere Dienste nutzen", "es": "usar otros servicios", "fr": "utiliser d’autres services", "it": "usare altri servizi", "nl": "andere diensten gebruiken", "pl": "korzystać z innych usług", "pt": "usar outros serviços", "pt-pt": "usar outros serviços", "tr": "başka hizmetleri kullanmak", "ja": "他のサービスを使う", "ko": "다른 서비스 사용"
+    },
+    {
+      "en": "community edition",
+      "note": "the open source edition anybody runs on a server of their own, the Docker image genhttp/lambda; genhttp.dev is the cloud",
+      "id": "edisi Community", "de": "Community Edition", "es": "edición Community", "fr": "édition Community", "it": "edizione Community", "nl": "community-editie", "pl": "edycja Community", "pt": "edição Community", "pt-pt": "edição Community", "tr": "Community sürümü", "ja": "コミュニティ版", "ko": "커뮤니티 에디션"
+    },
+    {
+      "en": "self-hosting",
+      "note": "running the platform on one's own server; the menu's name of /self-hosting, in the words people search for",
+      "id": "self-hosting", "de": "Self-Hosting", "es": "autoalojamiento", "fr": "auto-hébergement", "it": "self-hosting", "nl": "zelf hosten", "pl": "self-hosting", "pt": "auto-hospedagem", "pt-pt": "alojamento próprio", "tr": "kendi sunucunda barındırma", "ja": "セルフホスト", "ko": "셀프 호스팅"
+    },
+    {
+      "en": "Free, Premium",
+      "note": "the names of genhttp.dev's two tiers, written as they are in every language",
+      "id": "Free, Premium", "de": "Free, Premium", "es": "Free, Premium", "fr": "Free, Premium", "it": "Free, Premium", "nl": "Free, Premium", "pl": "Free, Premium", "pt": "Free, Premium", "pt-pt": "Free, Premium", "tr": "Free, Premium", "ja": "Free、Premium", "ko": "Free, Premium"
     }
   ]
 }

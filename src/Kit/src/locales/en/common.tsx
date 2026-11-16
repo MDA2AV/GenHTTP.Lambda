@@ -6,8 +6,11 @@ export const shell = {
   build: 'Create a website',
   ship: 'Publish',
   showcase: 'Showcase',
-  docs: 'Docs',
   admin: 'Admin',
+  /** The link to the platform's own code on GitHub, in the footer and the phone's menu. */
+  source: 'Source code',
+  /** What the GitHub icon in the bar says it is, to whoever cannot see it. */
+  sourceOnGitHub: 'GenHTTP Lambda on GitHub',
   lightMode: 'Switch to light mode',
   darkMode: 'Switch to dark mode',
   openMenu: 'Open the menu',

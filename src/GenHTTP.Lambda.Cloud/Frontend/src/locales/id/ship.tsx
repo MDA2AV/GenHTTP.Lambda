@@ -57,7 +57,7 @@ export const ship: Messages['ship'] = {
   domainAsk: 'Tanya soal domain',
 
   questionsTitle: 'Sebelum men-deploy',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       'Benar-benar gratis?',
       <>
@@ -101,6 +101,13 @@ export const ship: Messages['ship'] = {
     [
       'Bisakah saya membawa kode saya?',
       'Bisa, kodenya milik Anda. Unduh dari editor kapan saja, sebagai proyek yang bisa berjalan sendiri, lengkap dengan database-nya - atau kloning dengan git, lengkap dengan setiap versinya.',
+    ],
+    [
+      'Bisakah saya menjalankannya di server saya sendiri?',
+      <>
+        Bisa. GenHTTP Lambda adalah open source, dan edisi Community-nya adalah platform yang sama dalam satu container Docker, untuk
+        server dan agen Anda sendiri. {selfHosting('Cloud atau self-hosted')} menjelaskan apa bedanya.
+      </>,
     ],
     [
       'Siapa yang bisa melihat aplikasi saya?',

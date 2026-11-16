@@ -50,9 +50,9 @@ export const landing: Messages['landing'] = {
   around: {
     demos: { title: 'Begin met een demo', text: 'Een API over items, een login, live updates, een spel: elk een complete app om te kopiëren en aan te passen.' },
     showcase: { title: 'Showcase', text: 'De apps die hun eigenaren hier willen laten zien.' },
-    guide: { title: 'Gids', text: 'Wat een app kan en hoe, in de volgorde waarin je het nodig hebt.' },
     api: { title: 'REST API', text: 'Hetzelfde als de tools, via HTTP, beschreven in OpenAPI.' },
     sources: { title: 'Gepubliceerde broncode', text: 'Apps waarvan de eigenaren hun code hebben gepubliceerd, om te lezen en te downloaden.' },
     admin: { title: 'Beheer', text: 'De apps, de limieten, de blokkades en het logboek, achter het admin-token.' },
+    reference: { title: 'Referentie', text: 'Configuratie, beheer en alle routes, naast de broncode op GitHub.' },
   },
 };

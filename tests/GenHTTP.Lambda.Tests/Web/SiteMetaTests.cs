@@ -431,6 +431,9 @@ public sealed class SiteMetaTests
         Assert.AreEqual("1.0", root.GetProperty("specVersion").GetString());
         Assert.AreEqual("GenHTTP Lambda", root.GetProperty("host").GetProperty("displayName").GetString());
 
+        // the description of the API, which every installation has - the site's guide is gone
+        Assert.AreEqual("https://genhttp.dev/api/v1/scalar/", root.GetProperty("host").GetProperty("documentationUrl").GetString());
+
         var entries = root.GetProperty("entries").EnumerateArray().ToList();
 
         Assert.AreEqual("urn:air:genhttp.dev:server:lambda", entries[0].GetProperty("identifier").GetString());

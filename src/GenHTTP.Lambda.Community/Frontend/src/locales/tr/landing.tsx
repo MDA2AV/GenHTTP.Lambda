@@ -50,9 +50,9 @@ export const landing: Messages['landing'] = {
   around: {
     demos: { title: 'Bir demodan başlayın', text: 'Kayıtlar üzerinde bir API, bir giriş, canlı güncellemeler, bir oyun: her biri kopyalanıp değiştirilebilecek bitmiş bir uygulama.' },
     showcase: { title: 'Vitrin', text: 'Sahiplerinin burada göstermeyi seçtiği uygulamalar.' },
-    guide: { title: 'Kılavuz', text: 'Bir uygulamanın neler yapabildiği ve nasıl, ihtiyaç duyacağınız sırayla.' },
     api: { title: 'REST API', text: 'Araçlarla aynısı, HTTP üzerinden, OpenAPI ile tanımlanmış.' },
     sources: { title: 'Yayımlanan kaynaklar', text: 'Sahiplerinin kodunu okunup indirilsin diye yayımladığı uygulamalar.' },
     admin: { title: 'Yönetim', text: 'Uygulamalar, sınırlar, engeller ve günlük; yönetici belirtecinin arkasında.' },
+    reference: { title: 'Başvuru', text: 'Yapılandırma, işletim ve tüm rotalar, GitHub’daki kaynağın yanında.' },
   },
 };

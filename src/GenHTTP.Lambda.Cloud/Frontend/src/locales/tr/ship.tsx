@@ -57,7 +57,7 @@ export const ship: Messages['ship'] = {
   domainAsk: 'Alan adı için bize yazın',
 
   questionsTitle: 'Yayınlamadan önce',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       'Gerçekten ücretsiz mi?',
       <>
@@ -100,6 +100,13 @@ export const ship: Messages['ship'] = {
     [
       'Kodumu alıp götürebilir miyim?',
       'Evet, kod sizin. İstediğiniz zaman editörden, kendi başına çalışan bir proje olarak indirin; veritabanı da dahil. Ya da git ile klonlayın; her sürüm de dahil.',
+    ],
+    [
+      'Bunu bunun yerine kendi sunucumda barındırabilir miyim?',
+      <>
+        Evet. GenHTTP Lambda açık kaynaktır; Community sürümü aynı platformdur, tek bir Docker konteyneri olarak, kendi
+        sunucunuz ve kendi ajanınız için. {selfHosting('Bulut mu, kendi sunucunuz mu')} neyin farklı olduğunu anlatır.
+      </>,
     ],
     [
       'Uygulamamı kimler görebilir?',

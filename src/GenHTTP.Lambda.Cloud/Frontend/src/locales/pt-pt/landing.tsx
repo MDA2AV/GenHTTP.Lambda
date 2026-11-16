@@ -43,6 +43,9 @@ export const landing: Messages['landing'] = {
     'Aqui está o link de edição da minha sondagem do almoço. Às sextas, fecha a votação às 11h e mostra o vencedor lá em cima, por favor.',
   weekAnswer:
     'Feito. A versão 4 já está online, no mesmo endereço, e a versão 3 continua disponível se quiseres voltar atrás.',
+  more: (link) => (
+    <>Cada app guarda também os seus registos e a sua documentação, pode contar os seus visitantes e pode passar para um domínio próprio. {link('Vê tudo o que uma app recebe')}.</>
+  ),
 
   agentsTitle: 'Traz o teu próprio agente: Claude, Codex, Cursor',
   agentsText:
@@ -53,6 +56,11 @@ export const landing: Messages['landing'] = {
   hostIt: (link) => (
     <>Criaste algo que só corre em localhost? {link('Publica aqui a tua app feita com vibe coding')}.</>
   ),
+  openTitle: 'Código aberto, e teu para alojares',
+  openText:
+    'O GenHTTP Lambda é código aberto, sob a licença MIT. Usa-o aqui, ou corre a edição Community num servidor teu - a mesma plataforma, num único contentor Docker.',
+  openCompare: 'Cloud ou alojamento próprio',
+  openCode: 'O código no GitHub',
 
   contactTitle: 'Fala connosco',
   contactText:

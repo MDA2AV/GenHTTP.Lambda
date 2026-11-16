@@ -206,6 +206,75 @@
       }
     }
   },
+  "/platform": {
+    "image": "/social/platform.png",
+    "text": {
+      "en": {
+        "title": "Features: Database, Version History and Analytics",
+        "description": "Every app keeps its records in a database of its own, every version with a way back, its documentation and its visitors - and can get a domain of its own. Free, no sign-up."
+      },
+      "id": {
+        "title": "Fitur: Database, Riwayat Versi, dan Analitik",
+        "description": "Setiap aplikasi menyimpan catatan di database sendiri, punya riwayat versi untuk kembali, dokumentasi, data pengunjung, dan bisa punya domain sendiri. Gratis, tanpa daftar.",
+        "image": "/social/id/platform.jpg"
+      },
+      "de": {
+        "title": "Funktionen: Datenbank, Versionsverlauf und Analyse",
+        "description": "Jede App hat ihre eigene Datenbank, jede Version einen Weg zurück, dazu Dokumentation und Besucherzahlen – und kann eine eigene Domain bekommen. Kostenlos, ohne Anmeldung.",
+        "image": "/social/de/platform.jpg"
+      },
+      "es": {
+        "title": "Funciones: base de datos, historial de versiones y analítica",
+        "description": "Cada app guarda sus registros en una base de datos propia, cada versión con vuelta atrás, su documentación y sus visitas, y puede tener un dominio propio. Gratis, sin registro.",
+        "image": "/social/es/platform.jpg"
+      },
+      "fr": {
+        "title": "Fonctionnalités : base de données, versions et audience",
+        "description": "Chaque app garde ses entrées dans sa propre base de données, chaque version avec un retour possible, sa documentation et ses visiteurs, et peut avoir son domaine. Gratuit, sans inscription.",
+        "image": "/social/fr/platform.jpg"
+      },
+      "it": {
+        "title": "Funzionalità: database, cronologia delle versioni, Analytics",
+        "description": "Ogni app conserva le sue voci in un database tutto suo, ogni versione con la strada per tornare indietro, la sua documentazione e i suoi visitatori, e può avere un dominio proprio. Gratis, senza registrazione.",
+        "image": "/social/it/platform.jpg"
+      },
+      "nl": {
+        "title": "Functies: database, versiegeschiedenis en analytics",
+        "description": "Elke app bewaart zijn items in een eigen database, met elke versie en een weg terug, zijn documentatie en zijn bezoekers - en kan een eigen domein krijgen. Gratis, geen account.",
+        "image": "/social/nl/platform.jpg"
+      },
+      "pl": {
+        "title": "Funkcje: baza danych, historia wersji i analityka",
+        "description": "Każda aplikacja ma własną bazę danych, każdą wersję z drogą powrotną, dokumentację i odwiedzających – i może dostać własną domenę. Za darmo, bez rejestracji.",
+        "image": "/social/pl/platform.jpg"
+      },
+      "pt": {
+        "title": "Recursos: banco de dados, histórico de versões e analytics",
+        "description": "Todo app guarda seus registros em um banco de dados próprio, cada versão com um caminho de volta, a documentação e os visitantes - e pode ter domínio próprio. Grátis, sem cadastro.",
+        "image": "/social/pt/platform.jpg"
+      },
+      "pt-pt": {
+        "title": "Funcionalidades: base de dados, versões e análise de visitas",
+        "description": "Cada app guarda os seus registos numa base de dados própria, cada versão com caminho de volta, a sua documentação e os seus visitantes - e pode ter domínio próprio. Grátis, sem registo.",
+        "image": "/social/pt-pt/platform.jpg"
+      },
+      "tr": {
+        "title": "Özellikler: Veritabanı, Sürüm Geçmişi ve Analitik",
+        "description": "Her uygulama kayıtlarını kendi veritabanında, her sürümü geri dönüş yoluyla, belgelerini ve ziyaretçilerini tutar - ve kendi alan adını alabilir. Ücretsiz, üyeliksiz.",
+        "image": "/social/tr/platform.jpg"
+      },
+      "ja": {
+        "title": "機能：データベース、バージョン履歴、アクセス解析",
+        "description": "どのアプリにも、専用データベースの記録、元に戻せるバージョン、ドキュメント、訪問者の情報がそろい、独自ドメインも設定できます。無料、登録不要。",
+        "image": "/social/ja/platform.jpg"
+      },
+      "ko": {
+        "title": "기능: 데이터베이스, 버전 기록, 방문자 분석",
+        "description": "모든 앱이 자기만의 데이터베이스에 기록을 보관하고, 버전마다 되돌릴 수 있고, 문서와 방문자 분석도 갖춰요. 나만의 도메인도 가능해요. 무료, 가입 필요 없음.",
+        "image": "/social/ko/platform.jpg"
+      }
+    }
+  },
   "/showcase": {
     "image": "/social/showcase.png",
     "text": {
@@ -275,72 +344,72 @@
       }
     }
   },
-  "/docs": {
-    "image": "/social/docs.png",
+  "/self-hosting": {
+    "image": "/social/self-hosting.png",
     "text": {
+      "en": {
+        "title": "Open Source AI App Builder: Self-Hosted or Cloud",
+        "description": "GenHTTP Lambda is open source. Use it free on genhttp.dev, or self-host the community edition on your own server as one Docker container. What is the same, and what differs."
+      },
       "id": {
-        "title": "Cara Kerja dan Dokumentasi",
-        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat HTTPS publik dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya.",
-        "image": "/social/id/docs.jpg"
+        "title": "AI App Builder Open Source: Self-Hosted atau Cloud",
+        "description": "GenHTTP Lambda adalah open source. Pakai gratis di genhttp.dev, atau self-host edisi Community di server sendiri dalam satu container Docker. Apa yang sama dan beda.",
+        "image": "/social/id/self-hosting.jpg"
       },
       "de": {
-        "title": "So funktioniert es",
-        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt.",
-        "image": "/social/de/docs.jpg"
-      },
-      "en": {
-        "title": "How It Works",
-        "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+        "title": "Open-Source-KI-App-Builder: Self-Hosting oder Cloud",
+        "description": "GenHTTP Lambda ist Open Source: kostenlos auf genhttp.dev nutzen oder die Community Edition als Docker-Container selbst hosten. Was gleich ist, was sich unterscheidet.",
+        "image": "/social/de/self-hosting.jpg"
       },
       "es": {
-        "title": "Cómo funciona",
-        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la vas a usar.",
-        "image": "/social/es/docs.jpg"
+        "title": "Creador de apps con IA de código abierto: autoalojado o nube",
+        "description": "GenHTTP Lambda es de código abierto. Úsalo gratis en genhttp.dev o autoaloja la edición Community en tu propio servidor, en un único contenedor Docker. Qué es igual y qué cambia.",
+        "image": "/social/es/self-hosting.jpg"
       },
       "fr": {
-        "title": "Documentation : comment ça marche",
-        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé en HTTPS, à une adresse publique, en quelques secondes. Toute la plateforme, étape par étape.",
-        "image": "/social/fr/docs.jpg"
+        "title": "Créateur d’application IA open source : auto-hébergé ou cloud",
+        "description": "GenHTTP Lambda est open source. Utilisez-la gratuitement sur genhttp.dev, ou auto-hébergez l’édition Community sur votre serveur dans un seul conteneur Docker. Ce qui est identique, et ce qui diffère.",
+        "image": "/social/fr/self-hosting.jpg"
       },
       "it": {
-        "title": "Guida: come funziona",
-        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo.",
-        "image": "/social/it/docs.jpg"
+        "title": "App builder AI open source: self-hosted o cloud",
+        "description": "GenHTTP Lambda è open source. Usala gratis su genhttp.dev, oppure installa l’edizione Community sul tuo server come un solo container Docker. Cosa è uguale e cosa cambia.",
+        "image": "/social/it/self-hosting.jpg"
       },
       "nl": {
-        "title": "Zo werkt het",
-        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een openbaar HTTPS-adres. Het hele platform, in de volgorde waarin je het tegenkomt.",
-        "image": "/social/nl/docs.jpg"
+        "title": "Open source AI-appbouwer: zelf hosten of cloud",
+        "description": "GenHTTP Lambda is open source. Gebruik het gratis op genhttp.dev, of host de community-editie zelf op je eigen server als één Docker-container. Wat gelijk is en wat verschilt.",
+        "image": "/social/nl/self-hosting.jpg"
       },
       "pl": {
-        "title": "Dokumentacja: jak to działa",
-        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod publiczny adres HTTPS. Cała platforma w kolejności, w jakiej ją poznasz.",
-        "image": "/social/pl/docs.jpg"
+        "title": "Open source kreator aplikacji AI: self-hosting lub chmura",
+        "description": "GenHTTP Lambda to open source. Używaj za darmo na genhttp.dev albo uruchom edycję Community na własnym serwerze jako jeden kontener Dockera. Co jest takie samo, a co się różni.",
+        "image": "/social/pl/self-hosting.jpg"
       },
       "pt": {
-        "title": "Documentação: como funciona",
-        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar.",
-        "image": "/social/pt/docs.jpg"
+        "title": "Criador de apps com IA open source: auto-hospedado ou nuvem",
+        "description": "O GenHTTP Lambda é código aberto. Use grátis no genhttp.dev ou hospede a edição Community no seu servidor, em um container Docker. O que é igual e o que muda.",
+        "image": "/social/pt/self-hosting.jpg"
       },
       "pt-pt": {
-        "title": "Documentação: como funciona",
-        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço HTTPS público em segundos. A plataforma toda, pela ordem em que a vais usar.",
-        "image": "/social/pt-pt/docs.jpg"
+        "title": "Criador de apps com IA open source: próprio ou cloud",
+        "description": "O GenHTTP Lambda é código aberto. Usa-o grátis no genhttp.dev ou aloja a edição Community num servidor teu, num só contentor Docker. O que é igual e o que muda.",
+        "image": "/social/pt-pt/self-hosting.jpg"
       },
       "tr": {
-        "title": "Nasıl çalışır",
-        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde herkese açık bir HTTPS adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla.",
-        "image": "/social/tr/docs.jpg"
+        "title": "Açık Kaynak Yapay Zeka Uygulama Oluşturucu: Kendi Sunucunuzda veya Bulutta",
+        "description": "GenHTTP Lambda açık kaynaktır. genhttp.dev'de ücretsiz kullanın ya da Community sürümünü tek bir Docker konteyneri olarak kendi sunucunuzda barındırın. Neler aynı, neler farklı.",
+        "image": "/social/tr/self-hosting.jpg"
       },
       "ja": {
-        "title": "仕組みとドキュメント",
-        "description": "C#のスニペットを書くと、返したものが数秒でHTTPSの公開URLにホストされます。プラットフォームの全体を、実際に使う順に説明します。",
-        "image": "/social/ja/docs.jpg"
+        "title": "オープンソースのAIアプリビルダー：セルフホストかクラウド",
+        "description": "GenHTTP Lambdaはオープンソースです。genhttp.devで無料で使うことも、コミュニティ版をDockerコンテナ1つで自分のサーバーにセルフホストすることもできます。同じ点と違う点を紹介します。",
+        "image": "/social/ja/self-hosting.jpg"
       },
       "ko": {
-        "title": "작동 방식과 개발 문서",
-        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 공개 HTTPS 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요.",
-        "image": "/social/ko/docs.jpg"
+        "title": "오픈 소스 AI 앱 빌더: 셀프 호스팅 또는 클라우드",
+        "description": "GenHTTP Lambda는 오픈 소스예요. genhttp.dev에서 무료로 쓰거나, 커뮤니티 에디션을 Docker 컨테이너 하나로 내 서버에 셀프 호스팅하세요. 같은 점과 다른 점을 정리했어요.",
+        "image": "/social/ko/self-hosting.jpg"
       }
     }
   },

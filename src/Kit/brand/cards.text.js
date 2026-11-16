@@ -55,18 +55,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "A snippet of C#.",
-        "A public address in seconds."
+        "Building it takes a minute.",
+        "Everything else is built in."
       ],
-      "sub": "Whatever the snippet returns is served at its own HTTPS address, ready to share.",
+      "sub": "Records, versions, drafts, documentation and visitors - in one place for every app.",
+      "features": [
+        "Records",
+        "Drafts",
+        "History",
+        "Analytics",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Use it here,",
+        "or self-host it."
+      ],
+      "sub": "Open source under MIT. Use genhttp.dev, or run the community edition as one Docker container.",
       "facts": [
-        "Free",
-        "No account",
-        "Open source"
+        "Open source",
+        "MIT license",
+        "One container"
       ],
-      "deployed": "Deployed. It’s live."
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "id": {
@@ -121,18 +136,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Snippet C#.",
-        "Online dalam hitungan detik."
+        "Membuatnya cuma semenit.",
+        "Selebihnya sudah tersedia."
       ],
-      "sub": "Apa pun yang dikembalikan snippet-nya disajikan di alamat HTTPS sendiri, siap dibagikan.",
+      "sub": "Catatan, versi, draf, dokumentasi, dan pengunjung - di satu tempat untuk setiap aplikasi.",
+      "features": [
+        "Catatan",
+        "Draf",
+        "Riwayat",
+        "Analitik",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Pakai di sini,",
+        "atau self-host sendiri."
+      ],
+      "sub": "Open source dengan lisensi MIT. Pakai genhttp.dev, atau jalankan edisi Community sebagai satu container Docker.",
       "facts": [
-        "Gratis",
-        "Tanpa akun",
-        "Open source"
+        "Open source",
+        "Lisensi MIT",
+        "Satu container"
       ],
-      "deployed": "Deploy selesai. Sudah online."
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "de": {
@@ -187,18 +217,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Ein C#-Snippet.",
-        "In Sekunden online."
+        "Gebaut ist sie in einer Minute.",
+        "Alles andere ist schon eingebaut."
       ],
-      "sub": "Was das Snippet zurückgibt, läuft unter einer eigenen HTTPS-Adresse – bereit zum Teilen.",
+      "sub": "Einträge, Versionen, Entwürfe, Dokumentation und Besucher – an einem Ort für jede App.",
+      "features": [
+        "Einträge",
+        "Entwürfe",
+        "Verlauf",
+        "Analyse",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Nutzen Sie es hier",
+        "oder hosten Sie es selbst."
+      ],
+      "sub": "Open Source unter MIT-Lizenz. Nutzen Sie genhttp.dev oder betreiben Sie die Community Edition als einen Docker-Container.",
       "facts": [
-        "Kostenlos",
-        "Kein Konto",
-        "Open Source"
+        "Open Source",
+        "MIT-Lizenz",
+        "Ein Container"
       ],
-      "deployed": "Deployt. Ist online."
+      "cloud": "Cloud",
+      "own": "Self-Hosting"
     }
   },
   "es": {
@@ -253,18 +298,33 @@ window.CARD_TEXT = {
       ],
       "count": "conectados"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Un fragmento de C#.",
-        "En línea en segundos."
+        "Crearla lleva un minuto.",
+        "Todo lo demás ya viene incluido."
       ],
-      "sub": "Lo que devuelve el fragmento se sirve en su propia dirección HTTPS, listo para compartir.",
+      "sub": "Registros, versiones, borradores, documentación y visitantes: en un solo lugar para cada app.",
+      "features": [
+        "Registros",
+        "Borradores",
+        "Historial",
+        "Analítica",
+        "Dominio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Úsalo aquí,",
+        "o autoalójalo."
+      ],
+      "sub": "Código abierto con licencia MIT. Usa genhttp.dev o ejecuta la edición Community como un solo contenedor Docker.",
       "facts": [
-        "Gratis",
-        "Sin cuenta",
-        "Código abierto"
+        "Código abierto",
+        "Licencia MIT",
+        "Un contenedor"
       ],
-      "deployed": "Desplegado. Ya está en línea."
+      "cloud": "Nube",
+      "own": "Autoalojado"
     }
   },
   "fr": {
@@ -319,18 +379,33 @@ window.CARD_TEXT = {
       ],
       "count": "connectés"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Un snippet C#.",
-        "En ligne en quelques secondes."
+        "La création prend une minute.",
+        "Le reste est déjà intégré."
       ],
-      "sub": "Ce que le snippet renvoie est servi à sa propre adresse HTTPS, prête à partager.",
+      "sub": "Entrées, versions, brouillons, documentation et visiteurs : au même endroit pour chaque app.",
+      "features": [
+        "Entrées",
+        "Brouillons",
+        "Historique",
+        "Audience",
+        "Domaine"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Utilisez-la ici,",
+        "ou hébergez-la vous-même."
+      ],
+      "sub": "Open source sous licence MIT. Utilisez genhttp.dev, ou faites tourner l’édition Community dans un seul conteneur Docker.",
       "facts": [
-        "Gratuit",
-        "Sans compte",
-        "Open source"
+        "Open source",
+        "Licence MIT",
+        "Un conteneur"
       ],
-      "deployed": "Déployé. C’est en ligne."
+      "cloud": "Cloud",
+      "own": "Auto-hébergé"
     }
   },
   "it": {
@@ -385,18 +460,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Uno snippet di C#.",
-        "Online in pochi secondi."
+        "Crearla richiede un minuto.",
+        "Il resto è già incluso."
       ],
-      "sub": "Quello che lo snippet restituisce va online al suo indirizzo HTTPS, pronto da condividere.",
+      "sub": "Voci, versioni, bozze, documentazione e visitatori: in un unico posto per ogni app.",
+      "features": [
+        "Voci",
+        "Bozze",
+        "Cronologia",
+        "Analytics",
+        "Dominio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Usala qui,",
+        "oppure in self-hosting."
+      ],
+      "sub": "Open source con licenza MIT. Usa genhttp.dev oppure esegui l’edizione Community come un unico container Docker.",
       "facts": [
-        "Gratis",
-        "Senza account",
-        "Open source"
+        "Open source",
+        "Licenza MIT",
+        "Un container"
       ],
-      "deployed": "Deploy fatto. È online."
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "nl": {
@@ -451,18 +541,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Een stukje C#.",
-        "Binnen seconden online."
+        "Bouwen duurt een minuut.",
+        "De rest zit er al in."
       ],
-      "sub": "Wat de snippet teruggeeft, draait op een eigen HTTPS-adres, klaar om te delen.",
+      "sub": "Items, versies, concepten, documentatie en bezoekers: op één plek voor elke app.",
+      "features": [
+        "Items",
+        "Concepten",
+        "Geschiedenis",
+        "Analytics",
+        "Domein"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Gebruik het hier,",
+        "of host het zelf."
+      ],
+      "sub": "Open source onder MIT. Gebruik genhttp.dev, of draai de community-editie als één Docker-container.",
       "facts": [
-        "Gratis",
-        "Geen account",
-        "Open source"
+        "Open source",
+        "MIT-licentie",
+        "Eén container"
       ],
-      "deployed": "Gedeployd. Hij staat live."
+      "cloud": "Cloud",
+      "own": "Zelf gehost"
     }
   },
   "pl": {
@@ -517,18 +622,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Snippet w C#.",
-        "Publiczny adres w kilka sekund."
+        "Zbudowanie zajmuje minutę.",
+        "Cała reszta jest już w środku."
       ],
-      "sub": "To, co zwraca snippet, działa pod własnym adresem HTTPS – gotowe do udostępnienia.",
+      "sub": "Wpisy, wersje, szkice, dokumentacja i odwiedzający – w jednym miejscu dla każdej aplikacji.",
+      "features": [
+        "Wpisy",
+        "Szkice",
+        "Historia",
+        "Analityka",
+        "Domena"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Używaj jej tutaj",
+        "albo uruchom u siebie."
+      ],
+      "sub": "Open source na licencji MIT. Korzystaj z genhttp.dev albo uruchom edycję Community jako jeden kontener Dockera.",
       "facts": [
-        "Za darmo",
-        "Bez konta",
-        "Open source"
+        "Open source",
+        "Licencja MIT",
+        "Jeden kontener"
       ],
-      "deployed": "Wdrożono. Działa."
+      "cloud": "Chmura",
+      "own": "Self-hosting"
     }
   },
   "pt": {
@@ -583,18 +703,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Um trecho de C#.",
-        "No ar em segundos."
+        "Criar leva um minuto.",
+        "O resto já vem incluído."
       ],
-      "sub": "O que o trecho retorna fica no seu próprio endereço HTTPS, pronto para compartilhar.",
+      "sub": "Registros, versões, rascunhos, documentação e visitantes: em um só lugar para cada app.",
+      "features": [
+        "Registros",
+        "Rascunhos",
+        "Histórico",
+        "Analytics",
+        "Domínio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Use aqui,",
+        "ou hospede você mesmo."
+      ],
+      "sub": "Código aberto sob a licença MIT. Use o genhttp.dev ou rode a edição Community como um único contêiner Docker.",
       "facts": [
-        "Grátis",
-        "Sem conta",
-        "Open source"
+        "Código aberto",
+        "Licença MIT",
+        "Um contêiner"
       ],
-      "deployed": "Deploy feito. Está no ar."
+      "cloud": "Nuvem",
+      "own": "Auto-hospedado"
     }
   },
   "pt-pt": {
@@ -649,18 +784,33 @@ window.CARD_TEXT = {
       ],
       "count": "online"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Um snippet de C#.",
-        "Online em segundos."
+        "Construir demora um minuto.",
+        "O resto já vem incluído."
       ],
-      "sub": "O que o snippet devolve fica no seu próprio endereço HTTPS, pronto a partilhar.",
+      "sub": "Registos, versões, rascunhos, documentação e visitantes: num só sítio para cada app.",
+      "features": [
+        "Registos",
+        "Rascunhos",
+        "Histórico",
+        "Análise de visitas",
+        "Domínio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Usa-o aqui,",
+        "ou aloja-o tu."
+      ],
+      "sub": "Código aberto sob a licença MIT. Usa o genhttp.dev ou corre a edição Community como um único contentor Docker.",
       "facts": [
-        "Grátis",
-        "Sem conta",
-        "Open source"
+        "Código aberto",
+        "Licença MIT",
+        "Um contentor"
       ],
-      "deployed": "Deploy feito. Está online."
+      "cloud": "Cloud",
+      "own": "Alojamento próprio"
     }
   },
   "tr": {
@@ -715,18 +865,33 @@ window.CARD_TEXT = {
       ],
       "count": "kişi çevrimiçi"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "Bir parça C# kodu.",
-        "Saniyeler içinde yayında."
+        "Yapmak bir dakika sürer.",
+        "Gerisi hazır geliyor."
       ],
-      "sub": "Kodun döndürdüğü şey kendi HTTPS adresinde yayına girer, paylaşmaya hazır.",
+      "sub": "Kayıtlar, sürümler, taslaklar, belgeler ve ziyaretçiler: her uygulama için tek bir yerde.",
+      "features": [
+        "Kayıtlar",
+        "Taslaklar",
+        "Geçmiş",
+        "Analitik",
+        "Alan adı"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Burada kullanın,",
+        "ya da kendiniz barındırın."
+      ],
+      "sub": "MIT lisanslı açık kaynak. genhttp.dev’i kullanın ya da Community sürümünü tek bir Docker konteyneri olarak çalıştırın.",
       "facts": [
-        "Ücretsiz",
-        "Hesap yok",
-        "Açık kaynak"
+        "Açık kaynak",
+        "MIT lisansı",
+        "Tek konteyner"
       ],
-      "deployed": "Yayına alındı. Çalışıyor."
+      "cloud": "Bulut",
+      "own": "Kendi sunucunuzda"
     }
   },
   "ja": {
@@ -781,18 +946,33 @@ window.CARD_TEXT = {
       ],
       "count": "{n}人が閲覧中"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "C#のスニペットが、",
-        "数秒で公開URLに。"
+        "作るのは1分。",
+        "あとは最初からそろっています。"
       ],
-      "sub": "スニペットが返すものは専用のHTTPSのURLで配信され、そのまま共有できます。",
+      "sub": "記録、バージョン、下書き、ドキュメント、アクセス解析。どのアプリも1か所で管理できます。",
+      "features": [
+        "記録",
+        "下書き",
+        "履歴",
+        "アクセス解析",
+        "ドメイン"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "ここで使うか、",
+        "自分で動かすか。"
+      ],
+      "sub": "MITライセンスのオープンソース。genhttp.devを使うか、コミュニティ版を1つのDockerコンテナで動かせます。",
       "facts": [
-        "無料",
-        "アカウント不要",
-        "オープンソース"
+        "オープンソース",
+        "MITライセンス",
+        "コンテナ1つ"
       ],
-      "deployed": "デプロイしました。公開中です。"
+      "cloud": "クラウド",
+      "own": "セルフホスト"
     }
   },
   "ko": {
@@ -847,18 +1027,33 @@ window.CARD_TEXT = {
       ],
       "count": "{n}명 접속 중"
     },
-    "/docs": {
+    "/platform": {
       "title": [
-        "C# 스니펫을 쓰면",
-        "몇 초 만에 공개돼요."
+        "만드는 데는 1분이면 돼요.",
+        "나머지는 모두 갖춰져 있어요."
       ],
-      "sub": "스니펫이 반환하는 것이 바로 공유할 수 있는 전용 HTTPS 주소로 제공돼요.",
+      "sub": "기록, 버전, 초안, 문서, 방문자 분석까지. 모든 앱을 한곳에서 관리하세요.",
+      "features": [
+        "기록",
+        "초안",
+        "변경 기록",
+        "분석",
+        "도메인"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "여기서 쓰거나,",
+        "직접 호스팅하세요."
+      ],
+      "sub": "MIT 라이선스의 오픈 소스예요. genhttp.dev를 쓰거나, 커뮤니티 에디션을 Docker 컨테이너 하나로 실행하세요.",
       "facts": [
-        "무료",
-        "가입 없이",
-        "오픈소스"
+        "오픈 소스",
+        "MIT 라이선스",
+        "컨테이너 하나"
       ],
-      "deployed": "배포 완료. 온라인이에요."
+      "cloud": "클라우드",
+      "own": "셀프 호스팅"
     }
   }
 };

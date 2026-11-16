@@ -42,6 +42,9 @@ export const landing: Messages['landing'] = {
     'Öğle yemeği anketimin editör linki bu. Cuma günleri oylamayı saat 11’de kapat, kazananı da en üstte göster lütfen.',
   weekAnswer:
     'Hallettim. Sürüm 4 aynı adreste yayında. Geri dönmek isterseniz sürüm 3 hâlâ duruyor.',
+  more: (link) => (
+    <>Her uygulama ayrıca kayıtlarını ve belgelerini tutar, ziyaretçilerini sayabilir ve kendi alan adına geçebilir. {link('Bir uygulamanın neler sunduğunun tamamını görün')}.</>
+  ),
 
   agentsTitle: 'Kendi ajanınızla çalışın: Claude, Codex, Cursor',
   agentsText:
@@ -52,6 +55,11 @@ export const landing: Messages['landing'] = {
   hostIt: (link) => (
     <>Yalnızca localhost’ta çalışan bir şey mi yaptınız? {link('Vibe coding projenizi burada yayınlayın')}.</>
   ),
+  openTitle: 'Açık kaynak ve çalıştırması size ait',
+  openText:
+    'GenHTTP Lambda, MIT lisansıyla açık kaynaktır. Burada kullanın ya da Community sürümünü kendi sunucunuzda çalıştırın - aynı platform, tek bir Docker konteyneri olarak.',
+  openCompare: 'Bulut mu, kendi sunucunuz mu',
+  openCode: 'GitHub’daki kod',
 
   contactTitle: 'Konuşalım',
   contactText:

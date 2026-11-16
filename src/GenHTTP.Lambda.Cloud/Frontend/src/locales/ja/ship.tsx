@@ -56,7 +56,7 @@ export const ship: Messages['ship'] = {
   domainAsk: 'ドメインについて問い合わせる',
 
   questionsTitle: '公開する前に',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       '本当に無料ですか？',
       <>
@@ -99,6 +99,12 @@ export const ship: Messages['ship'] = {
     [
       'コードを持ち出せますか？',
       'はい、コードはあなたのものです。いつでもエディターから、単独で動くプロジェクトとしてダウンロードできます。データベースも含まれます。gitでクローンすることもでき、すべてのバージョンが入っています。',
+    ],
+    [
+      '自分のサーバーで動かすこともできますか？',
+      <>
+        はい。GenHTTP Lambdaはオープンソースで、コミュニティ版は同じプラットフォームをDockerコンテナ1つにしたものです。ご自身のサーバーとエージェントで使えます。違いは{selfHosting('クラウドとセルフホストの違い')}をご覧ください。
+      </>,
     ],
     [
       '誰がアプリを見られますか？',

@@ -40,6 +40,9 @@ export const landing: Messages['landing'] = {
   weekLater: '1週間後',
   weekAsk: 'ランチ投票の編集用リンクはこれ。金曜は11時で投票を締め切って、1位のお店をいちばん上に出して。',
   weekAnswer: 'できました。バージョン4を同じURLで公開しています。元に戻したいときのために、バージョン3も残してあります。',
+  more: (link) => (
+    <>どのアプリにも、記録とドキュメントがそろっていて、訪問者数を数えることもでき、独自ドメインに移すこともできます。{link('アプリに付いてくる機能をすべて見る')}。</>
+  ),
 
   agentsTitle: 'いつものエージェントで：Claude、Codex、Cursor',
   agentsText:
@@ -48,6 +51,11 @@ export const landing: Messages['landing'] = {
   hostIt: (link) => (
     <>localhostでしか動かないアプリがありますか？　{link('バイブコーディングで作ったアプリは、ここで公開できます')}。</>
   ),
+  openTitle: 'オープンソースだから、自分で動かすこともできます',
+  openText:
+    'GenHTTP LambdaはMITライセンスのオープンソースです。ここで使うことも、コミュニティ版を自分のサーバーで動かすこともできます。どちらも同じプラットフォームで、Dockerコンテナ1つで動きます。',
+  openCompare: 'クラウドとセルフホストの違い',
+  openCode: 'GitHubのコード',
 
   contactTitle: 'ご相談はこちら',
   contactText:

@@ -437,7 +437,7 @@ public sealed class SiteMeta
         var catalog = new
         {
             specVersion = "1.0",
-            host = new { displayName = Site, documentationUrl = $"{PublicUrl}/en/docs" },
+            host = new { displayName = Site, documentationUrl = $"{PublicUrl}/api/v1/scalar/" },
             entries = new object[]
             {
                 new

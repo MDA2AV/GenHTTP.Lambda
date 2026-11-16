@@ -4,7 +4,7 @@ import { landing } from './landing';
 
 /**
  * The words of the site in English, which every other language translates:
- * the kit's - the shell, the guide, the showcase - and the front page's.
+ * the kit's - the shell, the showcase - and the front page's.
  */
 export const messages = {
   ...kit,

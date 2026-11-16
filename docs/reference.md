@@ -112,13 +112,14 @@ the previews, and the host's site the rest (see
 | `/`                  | the front page: genhttp.dev's (`Website`), or a community installation's (`LandingPage`), which has the text box of `/build` on it |
 | `/build`             | genhttp.dev: the text box for somebody who wants an app built, no code |
 | `/ship`              | genhttp.dev: for developers - connect an agent and publish what it built |
-| `/docs`              | the guide for owners                                      |
+| `/platform`          | genhttp.dev: the features of every app beyond building and changing it, each with a screenshot of one example app |
+| `/self-hosting`      | genhttp.dev: genhttp.dev and the community edition side by side, neither preferred |
 | `/showcase`          | the lambdas their owners chose to show                    |
 | `/source`            | the lambdas whose owners published their code (`SourcePages`) |
 | `/source/:publicKey` | the published code of one: its files, documentation, tests and changes, per version |
 | `/source/:publicKey.git` | the published code as a git repository, read only     |
 | `/terms`, `/privacy`, `/imprint` | genhttp.dev: the legal pages                  |
-| `/robots.txt`, `/sitemap.xml`, `/llms.txt` | what the site says about its host (`SitePages`); genhttp.dev also describes its MCP server and API at `/.well-known/ai-catalog.json` |
+| `/robots.txt`, `/sitemap.xml`, `/llms.txt` | what the site says about its host (`SitePages`); genhttp.dev also describes its MCP server and API at `/.well-known/ai-catalog.json`, with the API's description at `/api/v1/scalar/` as its documentation |
 | `/editor/create`     | the creation assistant (`Editor`)                         |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/editor/:privateKey/:name.git` | the lambda as a git repository, to clone and push to (any name; the editor offers the public key) |
@@ -1420,8 +1421,8 @@ answer by path, and the site.
 The frontends are an npm workspace at the root (`package.json`,
 `tsconfig.base.json`). What they share is source, not a build: `src/Kit`
 (`@genhttp-lambda/kit`) has the shell and the components, the i18n machinery
-and the words several bundles use, the API client, the build box, the guide,
-the showcase, the Tailwind preset, the Vite configuration every bundle is
+and the words several bundles use, the API client, the build box, the
+showcase, the Tailwind preset, the Vite configuration every bundle is
 built with (`vite.ts`) and the scripts that translate and prerender
 (`scripts/translations.mjs`, `scripts/prerender.mjs`). Every component with
 pages has a `Frontend/` folder of its own - Editing, Administration, Sources,

@@ -41,6 +41,9 @@ export const landing: Messages['landing'] = {
   weekAsk:
     'Hier is de editorlink van mijn lunchpoll. Kun je het stemmen elke vrijdag om 11 uur sluiten en de winnaar bovenaan zetten?',
   weekAnswer: 'Klaar! Versie 4 staat live op hetzelfde adres. Wil je terug? Versie 3 is er nog.',
+  more: (link) => (
+    <>Elke app bewaart ook zijn items en zijn documentatie, kan zijn bezoekers tellen en kan verhuizen naar een eigen domein. {link('Bekijk alles wat een app krijgt')}.</>
+  ),
 
   agentsTitle: 'Neem je eigen agent mee: Claude, Codex, Cursor',
   agentsText:
@@ -51,6 +54,11 @@ export const landing: Messages['landing'] = {
   hostIt: (link) => (
     <>Iets gebouwd dat alleen op localhost draait? {link('Zet je vibe-coded app hier online')}.</>
   ),
+  openTitle: 'Open source, en van jou om zelf te draaien',
+  openText:
+    'GenHTTP Lambda is open source onder de MIT-licentie. Gebruik het hier, of draai de community-editie op een eigen server - hetzelfde platform, als één Docker-container.',
+  openCompare: 'Cloud of zelf hosten',
+  openCode: 'De code op GitHub',
 
   contactTitle: 'Laten we praten',
   contactText:
