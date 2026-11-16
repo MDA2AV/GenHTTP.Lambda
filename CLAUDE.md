@@ -119,11 +119,20 @@ together the GenHTTP way, and there are two hosts - two editions:
   every index page on the server (`PageBranding`, `#lambda-brand`) and the
   community site is prerendered once more for a brand, so neither a tab nor
   the first moment of a page shows the platform's; an unbranded installation
-  is sent its pages exactly as built. Where the software is meant, GenHTTP
-  Lambda stays named - the source and Discord links, the API's description,
-  the MCP server, the export and a repository's `AGENTS.md`, the "Made with"
-  line, and sentences of the translations that name the software (the hosting
-  domain's page, what a lambda is on `/source`).
+  is sent its pages exactly as built. **Wherever the pages or an app say what
+  the installation is, they say its name - decided by the owner**: the "Made
+  with" line (see The link back), the sentences of the translations that say
+  what an app was built with (the hosting domain's page, what a lambda is and
+  a source's description on `/source`, as `{platform}` - the glossary tells a
+  translator to write them for any name), and a lambda's repository
+  (`AGENTS.md`, `CLAUDE.md`, `Program.cs`, as the installation is called when
+  a commit is made - a push is compared with the commits it builds on, so a
+  rename refuses none). Where the software is meant, GenHTTP Lambda stays
+  named: the source and Discord links (no answer from the owner to whether a
+  branded installation should say "Powered by" instead), the API's
+  description, the MCP server and the export. The usage report says whether
+  an installation is branded (`branded`, decided by the owner), never as
+  what.
 - **The community edition sends a usage report once a day - decided by the
   owner** (`Services/UsageReports`), on by default and switched off with
   `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
@@ -742,6 +751,14 @@ same.
 
 **Decided by the owner:** agents are asked - not required - to put a small
 "Made with GenHTTP Lambda" line at the foot of the pages they build.
+
+- **The installation's name - decided by the owner.** On an installation its
+  operator branded, the line says that name ("Made with Acme Apps"), since it
+  links to that installation: `platform_guide` (`backlink`), a repository's
+  `AGENTS.md` and the build agent's brief name it as it is called, and the
+  MCP instructions - fixed when the endpoint starts - leave the words to the
+  guide. A line naming the installation otherwise is given its name with the
+  next change to the page, as a link without `rel="nofollow"` is given it.
 
 - **A nofollow link without a domain, plain text with one.** Below the
   hosting domain the line links to the installation's public address

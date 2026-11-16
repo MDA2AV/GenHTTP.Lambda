@@ -155,7 +155,9 @@ The installation presents itself as GenHTTP Lambda until you give it a name
 and a logo of your own: in the administration panel, under *Configuration* →
 *Branding*. They replace GenHTTP Lambda's in the header of every page, in page
 titles and link previews, and as the browser tab icon; without a logo, the
-first letter of the name is shown. The logo may be a PNG, JPEG, GIF, WebP or
+first letter of the name is shown. Apps built on the installation name it in
+the "Made with" line at the foot of their pages, and so do the pages that say
+what an app was built with. The logo may be a PNG, JPEG, GIF, WebP or
 SVG image of up to 512 KB; a square mark works best. Changes apply to the next
 page that is opened, without a restart. An agent that you give the admin token
 can do the same through the REST API (`PUT /api/v1/admin/branding`) or the MCP

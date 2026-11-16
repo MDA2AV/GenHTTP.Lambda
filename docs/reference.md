@@ -1828,7 +1828,9 @@ installation reads. Counts and switches only, and the demos are never counted.
 A report names no lambda, owner or visitor, nor the installation itself: no
 key, domain, title, code, specification, record, file, secret, address or log
 line, and not `LAMBDA_PUBLIC_URL` - the tests check that a report holds none
-of the keys of the lambdas it counts, nor the installation's address. The
+of the keys of the lambdas it counts, nor the installation's address. Whether
+its operator branded it is a switch (`configuration.branded`), never the name
+or the logo. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
 
@@ -2170,10 +2172,11 @@ changed: a poll is a request whether it did or not, on a server every lambda
 shares. The instructions say so in a line, `platform_guide` under
 `liveUpdates`, and the build agent's brief the same.
 
-Agents are asked - not required - to put a small "Made with GenHTTP Lambda"
-line at the foot of the pages they build, linking to `LAMBDA_PUBLIC_URL` (or
-the address the agent called, where it is not set) with `rel="nofollow"`.
-The link's words are the name and nothing else. Every lambda is a site of
+Agents are asked - not required - to put a small "Made with" line naming the
+installation at the foot of the pages they build - "Made with GenHTTP Lambda",
+or the name its operator gave it (see [Branding](#branding)) - linking to
+`LAMBDA_PUBLIC_URL` (or the address the agent called, where it is not set)
+with `rel="nofollow"`. The link's words are the name and nothing else. Every lambda is a site of
 its own below the hosting domain, so the link comes from another site, and
 the same link in the footers of many sites is what search engines count as
 link spam unless it says it is no recommendation - which `nofollow` does; a
@@ -2557,12 +2560,24 @@ panel previews it in both themes, since one drawn for a light background may
 vanish on the dark one. Link previews of the site's own pages show the logo
 where it is a raster image, small beside the words, and no picture otherwise -
 their own pictures have GenHTTP Lambda drawn into them; a lambda's showcase
-picture stays the lambda's. Where the software is meant, GenHTTP Lambda stays
+picture stays the lambda's.
+
+**Wherever the pages or an app say what the installation is, they say its
+name - decided by the owner**: the "Made with" line agents put at the foot of
+the apps they build (`platform_guide`'s `backlink`, a repository's
+`AGENTS.md` and the build agent's brief; the MCP instructions, fixed when the
+endpoint starts, leave the words to the guide), the sentences of the
+translations that say what an app was built with - the hosting domain's page,
+what a lambda is and the description of a published source - which take it as
+`{platform}` (the glossary tells every translator to write them so they read
+right with any name), and a lambda's repository: its `AGENTS.md`, `CLAUDE.md`
+and `Program.cs` name the installation as it is called when a commit is made.
+A commit is kept as it was made and a push is compared with the commits it
+builds on, so a rename changes the platform's files of the commits made after
+it and refuses no push; a line an app already carries is given the name with
+the next change to its page. Where the software is meant, GenHTTP Lambda stays
 named: the link to its source and its community, the API's description, the
-MCP server, a lambda's export and its repository's `AGENTS.md`, the line apps
-built here are asked to carry at their foot, and a few sentences that name the
-software rather than the installation (the hosting domain's page, what a
-lambda is on the pages of the published sources).
+MCP server, and the project a lambda is exported as.
 
 How it reaches a page: every index page a component sends - the site's, the
 editor's, the panel's, the published sources' - is named for the installation
