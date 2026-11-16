@@ -277,6 +277,24 @@ public sealed class TierTests
     }
 
     [TestMethod]
+    public async Task AFullWorkspaceSaysWhichTierHasMoreRoom()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 4 * WorkspaceLimits.Block, productionData: 32 * WorkspaceLimits.Block));
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var refused = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/files/big.bin",
+                                                    new FileRequest(Convert.ToBase64String(new byte[8 * WorkspaceLimits.Block])));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
+
+        var said = (await refused.GetContentAsync<ErrorResponse>()).Message;
+
+        Assert.Contains($"in the tier 'Free'", said, "the limit, and the tier it is the limit of, as the installation calls it");
+        Assert.Contains($"In the tier 'Premium' it may take {32 * WorkspaceLimits.Block} bytes", said, "and the tier that has more room");
+    }
+
+    [TestMethod]
     public async Task ADatabaseBeyondTheRoomOfTheNewTierIsReadButDoesNotGrow()
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 256 * 1024, productionData: 4 * 1024 * 1024));
