@@ -16,10 +16,10 @@
         <!-- serves every lambda as a git repository, see Services/Git -->
         <PackageVersion Include="GenHTTP.Modules.Git" Version="0.1.1" />
 
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
 
-        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0-rc.1.26425.128" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-rc.1.26425.128" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
 
         <PackageVersion Include="Evolve" Version="3.2.0" />
 
@@ -31,8 +31,8 @@
              hundred and fifty megabyte file costs page cache and not heap -->
         <PackageVersion Include="MaxMind.Db" Version="5.2.0" />
 
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
-        <PackageVersion Include="MSTest" Version="4.4.1" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+        <PackageVersion Include="MSTest" Version="4.5.3" />
 
     </ItemGroup>
 
