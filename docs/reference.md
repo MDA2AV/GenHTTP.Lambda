@@ -205,8 +205,9 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
-| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent, where a lambda answers (`lambdaUrl`), and who runs it (`operator`: `contact`, `abuse`, `legal`) |
-| `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
+| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent, where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), and how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them) |
+| `GET /system/logo`                                    | the picture beside the installation's name, where its operator branded it, see [Branding](#branding) |
+| `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation; `/admin/branding` only where the installation may be branded |
 
 Creating a lambda asks what somebody would like to build and offers the demos
 in those words - "Keep track of things", "Let people sign up" - next to an empty
@@ -1347,33 +1348,35 @@ together.
 | Project | What it is |
 |---|---|
 | `GenHTTP.Lambda.Core` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
-| `GenHTTP.Lambda.Web` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages` |
+| `GenHTTP.Lambda.Web` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
 | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
 | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)`, mounted at `/api` |
 | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)`, mounted at `/mcp` |
 | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
-| `GenHTTP.Lambda.Administration` | `AdminPanel.Create()`, mounted at `/admin`: the operator's panel, pages only, over the REST API |
+| `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
 | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
 | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
 | `GenHTTP.Lambda.Cloud` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
-| `GenHTTP.Lambda.Community` | the host of the community edition: `Program.cs`, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
+| `GenHTTP.Lambda.Community` | the host of the community edition: `Program.cs`, which lets its operator brand it, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
 
 A host's `Program.cs` is the whole composition. The community edition's:
 
 ```csharp
 // the LAMBDA_* variables, with the lambdas below /lambda/ on this address
-// unless LAMBDA_HOSTING_URL names a domain for them
-var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths);
+// unless LAMBDA_HOSTING_URL names a domain for them, and the daily usage
+// report on unless LAMBDA_USAGE_REPORTS=false
+var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true);
 
+// whoever runs it may give it a name and a logo of their own, in the panel
 await using var platform = LambdaPlatform.Create()
-                                         .Options(settings.Platform)
+                                         .Options(settings.Platform with { Branding = true })
                                          .Build();
 
 var site = Layout.Create()
                  .Add("api", RestApi.Create(platform))
                  .Add("mcp", McpServer.Create(platform))
                  .Add("editor", Editor.Create(platform))
-                 .Add("admin", AdminPanel.Create())
+                 .Add("admin", AdminPanel.Create(platform))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 
@@ -1383,9 +1386,10 @@ return await LambdaServer.Create(platform)
                          .RunAsync();
 ```
 
-The cloud's reads the environment with the lambdas at subdomains
-(`LambdaSettings.FromEnvironment()`), adds what is its own to the options
-(`CloudInstallation.Of(settings.Platform)`) and has `Website` where this has
+The cloud's reads the environment with the lambdas at subdomains and no
+usage report (`LambdaSettings.FromEnvironment()`), adds what is its own to the
+options (`CloudInstallation.Of(settings.Platform)`) - but not the branding,
+genhttp.dev being GenHTTP Lambda - and has `Website` where this has
 `LandingPage`.
 
 `LambdaPlatform.Create().Options(...).Build()` migrates the database and
@@ -1465,6 +1469,12 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   whose policy says so `TiersWhere`, and a refusal names the tier above with
   `Above`. The demo seeder is the exception, since it is what puts a lambda
   among the demos.
+- **Branding** (`Services/Branding`) - how the installation presents itself:
+  the name and the logo its operator gave it, where its host lets them
+  (`LambdaOptions.Branding`), held in memory as a `Brand` once read.
+  `BrandChecks` says what a name and a logo may be, `Monogram` draws the first
+  letter of a name for an installation named without a logo (see
+  [Branding](#branding)).
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
   file per version. Never in the database.
 - **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on
@@ -1654,7 +1664,9 @@ variables and `LAMBDA_ACME_DIRECTORY`. `LAMBDA_PORT` goes into both, since the
 platform makes addresses on localhost with it. A host adds what is its own:
 genhttp.dev's terms and legal pages, which no variable sets, and its contact
 and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
-(`CloudInstallation`).
+(`CloudInstallation`); the community edition's, that its operator may give it
+a name and a logo of their own - which they do in the panel, not with a
+variable (see [Branding](#branding)).
 
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
@@ -1816,7 +1828,9 @@ installation reads. Counts and switches only, and the demos are never counted.
 A report names no lambda, owner or visitor, nor the installation itself: no
 key, domain, title, code, specification, record, file, secret, address or log
 line, and not `LAMBDA_PUBLIC_URL` - the tests check that a report holds none
-of the keys of the lambdas it counts, nor the installation's address. The
+of the keys of the lambdas it counts, nor the installation's address. Whether
+its operator branded it is a switch (`configuration.branded`), never the name
+or the logo. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
 
@@ -2083,7 +2097,10 @@ data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
 a lambda on the public showcase and `open_source` for publishing its code -
 only when its owner asks for either - `analytics` for reading who visits a
 lambda, and switching that on when the user asks, and
-`list_demos` for reading something that already works. `platform_guide` is the one to call first
+`list_demos` for reading something that already works. Where the installation
+may be branded and has an admin token, `customize_installation` names it and
+gives it a logo, for an agent its operator handed the token (see
+[Branding](#branding)). `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
 has to return, what is imported, what is refused, and the handful of things
 that catch people out.
@@ -2155,10 +2172,11 @@ changed: a poll is a request whether it did or not, on a server every lambda
 shares. The instructions say so in a line, `platform_guide` under
 `liveUpdates`, and the build agent's brief the same.
 
-Agents are asked - not required - to put a small "Made with GenHTTP Lambda"
-line at the foot of the pages they build, linking to `LAMBDA_PUBLIC_URL` (or
-the address the agent called, where it is not set) with `rel="nofollow"`.
-The link's words are the name and nothing else. Every lambda is a site of
+Agents are asked - not required - to put a small "Made with" line naming the
+installation at the foot of the pages they build - "Made with GenHTTP Lambda",
+or the name its operator gave it (see [Branding](#branding)) - linking to
+`LAMBDA_PUBLIC_URL` (or the address the agent called, where it is not set)
+with `rel="nofollow"`. The link's words are the name and nothing else. Every lambda is a site of
 its own below the hosting domain, so the link comes from another site, and
 the same link in the footers of many sites is what search engines count as
 link spam unless it says it is no recommendation - which `nofollow` does; a
@@ -2277,7 +2295,7 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Configuration | **Settings**, **Limits**, **Usage report** | the site's switches, what a lambda may have, and what the installation reports about itself (see [Usage reports](#usage-reports)) |
+| Configuration | **Settings**, **Limits**, **Branding**, **Usage report** | the site's switches, what a lambda may have, the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)) - and what the installation reports about itself (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
@@ -2503,6 +2521,85 @@ save.
 The environment variables that set them before the panel did
 (`LAMBDA_MAX_CODE_LENGTH`, `LAMBDA_RATE_LIMIT`, `LAMBDA_AGENT_BUILDS_PER_DAY`
 and the others) are no longer read.
+
+### Branding
+
+Whoever runs the community edition may give it a name and a logo of their
+own, which its pages show in place of GenHTTP Lambda's - in the panel's
+**Branding** section, or through the API and an MCP tool with the admin
+token. There is no environment variable for either: like the limits, they
+are changed while the server runs, and show from the next page anybody opens.
+Whether an installation may be branded is its host's to decide
+(`LambdaOptions.Branding`): the community edition's host switches it on,
+genhttp.dev's leaves it off - there the routes are not there at all (404) and
+the panel has no such section.
+
+| Route                                    | What it does                                                          |
+|------------------------------------------|-----------------------------------------------------------------------|
+| `GET /admin/branding`                    | the name and the logo the operator gave the installation, where the pages load the picture beside the name from, and what a name and a logo may be |
+| `PUT /admin/branding`                    | names it (`{ "name": … }`): one line of at most 40 characters; empty gives back `GenHTTP Lambda` |
+| `PUT /admin/branding/logo`               | uploads the logo, the body being the picture as it is: PNG, JPEG, GIF, WebP or SVG, at most 512 KB, told apart by its content |
+| `DELETE /admin/branding/logo`            | takes the logo away; the name stays                                    |
+| `DELETE /admin/branding`                 | takes both away: the pages show GenHTTP Lambda again                   |
+| `GET /system/logo`                       | public: the picture beside the name - the logo, or the first letter of the name on a square plate where there is none; cached for good by the versioned address `brand.logo` of `GET /system` names |
+
+An agent the operator handed the token does the same with these routes, or
+with the MCP tool `customize_installation` (`adminToken`, `name`, `logo` - an
+SVG's markup as it is, or a picture base64 encoded). The tool is added to the
+endpoint only where the installation may be branded and has an admin token,
+so no other agent is shown a tool it could not use; the token is an argument,
+compared as the API compares it (`OperatorToken`), and never repeated.
+
+Where it shows: the bar of every page - the front page, the showcase, the
+editor, the published sources, the panel - the end of every title and the name
+a link preview gives the site, the icon of the browser tab and of the site on a
+phone's home screen (`manifest.json` names it too), the heading of
+`llms.txt`, and the eyebrow of the community front page. The picture beside
+the name is drawn at the height of a line; a square mark reads best, and the
+panel previews it in both themes, since one drawn for a light background may
+vanish on the dark one. Link previews of the site's own pages show the logo
+where it is a raster image, small beside the words, and no picture otherwise -
+their own pictures have GenHTTP Lambda drawn into them; a lambda's showcase
+picture stays the lambda's.
+
+**Wherever the pages or an app say what the installation is, they say its
+name - decided by the owner**: the "Made with" line agents put at the foot of
+the apps they build (`platform_guide`'s `backlink`, a repository's
+`AGENTS.md` and the build agent's brief; the MCP instructions, fixed when the
+endpoint starts, leave the words to the guide), the sentences of the
+translations that say what an app was built with - the hosting domain's page,
+what a lambda is and the description of a published source - which take it as
+`{platform}` (the glossary tells every translator to write them so they read
+right with any name), and a lambda's repository: its `AGENTS.md`, `CLAUDE.md`
+and `Program.cs` name the installation as it is called when a commit is made.
+A commit is kept as it was made and a push is compared with the commits it
+builds on, so a rename changes the platform's files of the commits made after
+it and refuses no push; a line an app already carries is given the name with
+the next change to its page. Where the software is meant, GenHTTP Lambda stays
+named: the link to its source and its community, the API's description, the
+MCP server, and the project a lambda is exported as.
+
+How it reaches a page: every index page a component sends - the site's, the
+editor's, the panel's, the published sources' - is named for the installation
+on the server before it is sent (`PageBranding`): its title, the names its link
+preview is given, its icons, and `#lambda-brand`, from which the kit draws the
+bar (`brand.ts`) - so neither a tab nor the first moment of a page shows the
+platform's. An installation nobody branded is sent its pages exactly as they
+were built. The public pages of the community site are prerendered twice,
+once as GenHTTP Lambda and once with the name and the picture as placeholders
+(`branded` in `prerender.json`), since a brand is other markup than the
+platform's mark rather than another value in it; the server takes the second
+for a branded installation and fills it in, and sends a page without content
+for the browser to draw where a build has none.
+
+The name is a setting (`branding.name`), the logo a row of `branding_pictures`
+(V26), both held in memory once read (`Services/Branding`). An SVG is checked
+to be one a browser draws as a picture - well formed, its root in the SVG
+namespace - and is served with `X-Content-Type-Options: nosniff` and a
+`Content-Security-Policy` that runs nothing, should anybody open it on its own;
+as a picture on a page, nothing in it runs anyway. Nothing of it is read where
+the host does not let its operator brand the installation, so a copy of a
+branded installation's data on another host brings nothing of its looks along.
 
 `/logs` is the tail of this run, live. It holds everything the server logged
 and everything a lambda printed while it was serving a request - the two are

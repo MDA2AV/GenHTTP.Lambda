@@ -4,12 +4,13 @@ import type { SourceMessages } from '../en/source';
 export const source: SourceMessages = {
   shell: {
     section: '오픈 소스',
-    home: 'GenHTTP Lambda 첫 페이지',
+    home: (platform) => `${platform} 첫 페이지`,
   },
 
   lambda: {
     label: '람다란?',
-    text: 'GenHTTP Lambda에서 돌아가는 웹앱이에요. 원하는 걸 말하면 AI 에이전트가 C#으로 작성하고, 몇 분 안에 전용 주소에서 온라인이 돼요. 모든 버전이 무엇을 바꿨는지와 함께 남아요.',
+    text: (platform) =>
+      `${platform}에서 돌아가는 웹앱이에요. 원하는 걸 말하면 AI 에이전트가 C#으로 작성하고, 몇 분 안에 전용 주소에서 온라인이 돼요. 모든 버전이 무엇을 바꿨는지와 함께 남아요.`,
     build: '나도 만들어 보기',
   },
 

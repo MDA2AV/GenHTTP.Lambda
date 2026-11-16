@@ -2,6 +2,8 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Content.IO;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Services.Branding;
+
 using GenHTTP.Modules.Files;
 using GenHTTP.Modules.IO;
 
@@ -141,13 +143,31 @@ public sealed class Bundle
                   .Add(CacheControl.Immutable());
 
     /// <summary>
-    /// The index page as an answer, with the status given.
+    /// The index page as an answer, with the status given, as the given brand
+    /// presents it (see <see cref="PageBranding"/>).
     /// </summary>
-    public IResponse Answer(IRequest request, ResponseStatus status = ResponseStatus.Ok)
+    public IResponse Answer(IRequest request, ResponseStatus status = ResponseStatus.Ok, Brand? brand = null)
         => request.Respond()
                   .Status(status)
-                  .Content(Resource.FromString(Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
+                  .Content(Resource.FromString(PageBranding.Apply(Index(), brand ?? Brand.Platform)).Type(new ContentType("text/html; charset=utf-8")).Build())
                   .Build();
+
+    /// <summary>
+    /// The manifest the bundle was built with, if it has one.
+    /// </summary>
+    public string? Manifest()
+    {
+        var file = Path.Combine(Directory, "manifest.json");
+
+        try
+        {
+            return System.IO.File.Exists(file) ? System.IO.File.ReadAllText(file) : null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
 
     private sealed record IndexCopy(DateTime Written, string Markup);
 

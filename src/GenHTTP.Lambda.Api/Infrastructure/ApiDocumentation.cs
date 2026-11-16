@@ -70,6 +70,8 @@ public static class ApiDocumentation
 
     public const string Administration = "Administration";
 
+    public const string Branding = "Branding";
+
     public const string Telemetry = "Telemetry";
 
     public const string ServerLog = "Server log";
@@ -85,7 +87,7 @@ public static class ApiDocumentation
         ("How it is doing", [Monitoring, Analytics]),
         ("Sharing it", [Domain, Showcase, OpenSource]),
         ("The build agent", [Builds, Changes]),
-        ("Operating the installation", [Administration, Telemetry, ServerLog])
+        ("Operating the installation", [Administration, Branding, Telemetry, ServerLog])
     ];
 
     #endregion

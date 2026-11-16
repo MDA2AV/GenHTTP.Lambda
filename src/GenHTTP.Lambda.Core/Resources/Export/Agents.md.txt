@@ -1,6 +1,6 @@
 # {lambda}
 
-This repository is a lambda on GenHTTP Lambda ({home}/): a C# web service
+This repository is a lambda on {platform} ({home}/): a C# web service
 that answers at {address}. It is also an ordinary .NET project - `dotnet run`
 serves it at http://localhost:8080/ - and every commit of `main` is one of
 the lambda's versions.
@@ -245,11 +245,12 @@ nothing more.
 
 ## The link back
 
-We ask for a small "Made with GenHTTP Lambda" line at the foot of the pages
+We ask for a small "Made with {platform}" line at the foot of the pages
 visitors see: a link to {home}/ with `rel="nofollow"` on a lambda without a
 domain of its own, plain text on one with a domain. The name is the whole of
-the link; one written without `rel="nofollow"` is given it with your next
-change to the page. Say that you added it; leave it out or take it out when
+the link; with your next change to the page, a line written without
+`rel="nofollow"` is given it, and one that names this platform otherwise is
+given this name. Say that you added it; leave it out or take it out when
 the user does not want it, and note that in `docs/decisions.md`. Do not add
 one to a lambda that has none unless the user asks.
 

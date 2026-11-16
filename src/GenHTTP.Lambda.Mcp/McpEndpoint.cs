@@ -27,14 +27,20 @@ public static class McpEndpoint
 {
 
     /// <summary>
-    /// The endpoint, answering with the given tools.
+    /// The endpoint, answering with the given tools - and the operator's, where
+    /// there are any for this installation.
     /// </summary>
-    internal static IHandlerBuilder Create(LambdaOptions options, McpTools instance)
+    internal static IHandlerBuilder Create(LambdaOptions options, McpTools instance, InstallationTools? installation = null)
     {
         var tools = Tools.Create()
                          .Server("genhttp-lambda", "1.0.0", "GenHTTP Lambda")
                          .Instructions(InstructionsFor(options))
                          .Add(instance);
+
+        if (installation != null)
+        {
+            tools.Add(installation);
+        }
 
         foreach (var origin in Origins(options))
         {
@@ -111,8 +117,9 @@ public static class McpEndpoint
         "Never poll for changes (fetch on a timer to refresh a page): push them from the server with",
         "server-sent events (demo-live) or a websocket (demo-game) - platform_guide, liveUpdates.",
         "",
-        "We ask for a small \"Made with GenHTTP Lambda\" line at the foot of the pages you build - a nofollow",
-        "link, plain text on a domain of its own - unless the user does not want it: platform_guide, backlink.",
+        "We ask for a small \"Made with\" line naming this platform at the foot of the pages you build - a",
+        "nofollow link, plain text on a domain of its own - unless the user does not want it: platform_guide,",
+        "backlink, has its words.",
         "",
         "API keys and passwords: Secret.Read(\"NAME\") and enable_data 'secrets'; the user enters the value",
         "in the editor.",

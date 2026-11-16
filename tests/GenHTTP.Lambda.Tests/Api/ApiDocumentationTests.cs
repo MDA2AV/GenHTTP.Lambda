@@ -313,11 +313,12 @@ public sealed class ApiDocumentationTests
 
     /// <summary>
     /// The document of an installation with a panel, which describes the
-    /// operator's endpoints as well.
+    /// operator's endpoints as well - those that brand it among them, which
+    /// only a host that lets its operator brand it has.
     /// </summary>
     private static async Task<JsonDocument> ReadAsync()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { Branding = true });
 
         using var response = await fixture.GetAsync("/api/v1/openapi.json");
 

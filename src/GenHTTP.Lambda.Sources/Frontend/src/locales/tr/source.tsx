@@ -7,12 +7,13 @@ const capital = (text: string) => text.charAt(0).toLocaleUpperCase('tr') + text.
 export const source: SourceMessages = {
   shell: {
     section: 'Açık kaynak',
-    home: 'GenHTTP Lambda, ana sayfa',
+    home: (platform) => `${platform}, ana sayfa`,
   },
 
   lambda: {
     label: 'Lambda nedir?',
-    text: 'GenHTTP Lambda’da çalışan bir web uygulaması: biri ne istediğini söyler, bir yapay zekâ ajanı onu C# ile yazar ve uygulama birkaç dakika içinde kendi adresinde yayına girer. Her sürüm, neyi değiştirdiğiyle birlikte saklanır.',
+    text: (platform) =>
+      `${platform} üzerinde çalışan bir web uygulaması: biri ne istediğini söyler, bir yapay zekâ ajanı onu C# ile yazar ve uygulama birkaç dakika içinde kendi adresinde yayına girer. Her sürüm, neyi değiştirdiğiyle birlikte saklanır.`,
     build: 'Kendi uygulamanızı oluşturun',
   },
 

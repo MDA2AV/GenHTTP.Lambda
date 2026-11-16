@@ -5,6 +5,7 @@ using System.Text;
 
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -312,9 +313,10 @@ public static class ProjectPacker
         result.Add(Text("AGENTS.md", Resource("Agents.md").Replace("{lambda}", project.PublicKey)
                                                            .Replace("{project}", name)
                                                            .Replace("{address}", project.Address)
-                                                           .Replace("{home}", project.Home)));
+                                                           .Replace("{home}", project.Home)
+                                                           .Replace("{platform}", project.Installation)));
 
-        result.Add(Text("CLAUDE.md", Resource("Claude.md")));
+        result.Add(Text("CLAUDE.md", Resource("Claude.md").Replace("{platform}", project.Installation)));
 
         return result;
     }
@@ -502,7 +504,7 @@ public static class ProjectPacker
         var tag = name.ToLowerInvariant();
 
         return $"""
-            // This app is a lambda on GenHTTP Lambda ({project.Home}), where you describe
+            // This app is a lambda on {project.Installation} ({project.Home}), where you describe
             // an app - or let your coding agent write it - and it is online at an address
             // of its own a moment later, with every version kept and a way back to each.
             //
@@ -698,7 +700,8 @@ public sealed record ProjectFile(string Path, byte[] Content, string? Name);
 /// <param name="Address">Where it runs</param>
 /// <param name="Home">Where the installation is, which its files link to</param>
 /// <param name="License">The license its source is published under, while it is</param>
-public sealed record RepositoryProject(string PublicKey, string Address, string Home, RepositoryLicense? License);
+/// <param name="Installation">What the installation is called, which its files name: GenHTTP Lambda, or what its operator named it</param>
+public sealed record RepositoryProject(string PublicKey, string Address, string Home, RepositoryLicense? License, string Installation = Brand.PlatformName);
 
 /// <summary>
 /// The license the project of a repository is under, written into its LICENSE.

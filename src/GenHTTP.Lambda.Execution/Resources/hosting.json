@@ -2,56 +2,56 @@
   "hosting:/": {
     "text": {
       "en": {
-        "title": "Apps made with GenHTTP Lambda",
-        "description": "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of your own, go to {site}."
+        "title": "Apps made with {platform}",
+        "description": "The apps on this domain were built with {platform}, each at an address of its own. To build one of your own, go to {site}."
       },
       "id": {
-        "title": "Aplikasi yang dibuat dengan GenHTTP Lambda",
-        "description": "Aplikasi di domain ini dibuat dengan GenHTTP Lambda, masing-masing di alamatnya sendiri. Untuk membuat aplikasi Anda sendiri, buka {site}."
+        "title": "Aplikasi yang dibuat dengan {platform}",
+        "description": "Aplikasi di domain ini dibuat dengan {platform}, masing-masing di alamatnya sendiri. Untuk membuat aplikasi Anda sendiri, buka {site}."
       },
       "de": {
-        "title": "Apps, erstellt mit GenHTTP Lambda",
-        "description": "Die Apps auf dieser Domain wurden mit GenHTTP Lambda erstellt, jede unter einer eigenen Adresse. Wenn Sie eine eigene erstellen möchten, gehen Sie zu {site}."
+        "title": "Apps, erstellt mit {platform}",
+        "description": "Die Apps auf dieser Domain wurden mit {platform} erstellt, jede unter einer eigenen Adresse. Wenn Sie eine eigene erstellen möchten, gehen Sie zu {site}."
       },
       "es": {
-        "title": "Apps creadas con GenHTTP Lambda",
-        "description": "Las apps de este dominio se crearon con GenHTTP Lambda, cada una en su propia dirección. Para crear las tuyas, entra en {site}."
+        "title": "Apps creadas con {platform}",
+        "description": "Las apps de este dominio se crearon con {platform}, cada una en su propia dirección. Para crear las tuyas, entra en {site}."
       },
       "fr": {
-        "title": "Applications créées avec GenHTTP Lambda",
-        "description": "Les applications de ce domaine ont été créées avec GenHTTP Lambda, chacune à sa propre adresse. Pour créer la vôtre, rendez-vous sur {site}."
+        "title": "Applications créées avec {platform}",
+        "description": "Les applications de ce domaine ont été créées avec {platform}, chacune à sa propre adresse. Pour créer la vôtre, rendez-vous sur {site}."
       },
       "it": {
-        "title": "App create con GenHTTP Lambda",
-        "description": "Le app su questo dominio sono state create con GenHTTP Lambda, ognuna a un indirizzo tutto suo. Per creare le tue, vai su {site}."
+        "title": "App create con {platform}",
+        "description": "Le app su questo dominio sono state create con {platform}, ognuna a un indirizzo tutto suo. Per creare le tue, vai su {site}."
       },
       "nl": {
-        "title": "Apps gemaakt met GenHTTP Lambda",
-        "description": "De apps op dit domein zijn gemaakt met GenHTTP Lambda, elk op een eigen adres. Wil je er zelf een bouwen? Ga naar {site}."
+        "title": "Apps gemaakt met {platform}",
+        "description": "De apps op dit domein zijn gemaakt met {platform}, elk op een eigen adres. Wil je er zelf een bouwen? Ga naar {site}."
       },
       "pl": {
-        "title": "Aplikacje stworzone w GenHTTP Lambda",
-        "description": "Aplikacje w tej domenie powstały w GenHTTP Lambda, każda pod własnym adresem. Aby zbudować własną, przejdź na {site}."
+        "title": "Aplikacje z platformy {platform}",
+        "description": "Aplikacje w tej domenie powstały na platformie {platform}, każda pod własnym adresem. Aby zbudować własną, przejdź na {site}."
       },
       "pt": {
-        "title": "Apps criados com o GenHTTP Lambda",
-        "description": "Os apps deste domínio foram criados com o GenHTTP Lambda, cada um em um endereço próprio. Para criar o seu, acesse {site}."
+        "title": "Apps criados com o {platform}",
+        "description": "Os apps deste domínio foram criados com o {platform}, cada um em um endereço próprio. Para criar o seu, acesse {site}."
       },
       "pt-pt": {
-        "title": "Apps feitas com GenHTTP Lambda",
-        "description": "As apps deste domínio foram criadas com o GenHTTP Lambda, cada uma num endereço próprio. Para criares uma tua, vai a {site}."
+        "title": "Apps feitas com {platform}",
+        "description": "As apps deste domínio foram criadas com {platform}, cada uma num endereço próprio. Para criares uma tua, vai a {site}."
       },
       "tr": {
-        "title": "GenHTTP Lambda ile yapılan uygulamalar",
-        "description": "Bu alan adındaki uygulamalar GenHTTP Lambda ile yapıldı ve her biri kendi adresinde yayında. Kendi uygulamanızı yapmak için {site} adresine gidin."
+        "title": "{platform} ile yapılan uygulamalar",
+        "description": "Bu alan adındaki uygulamalar {platform} ile yapıldı ve her biri kendi adresinde yayında. Kendi uygulamanızı yapmak için {site} adresine gidin."
       },
       "ja": {
-        "title": "GenHTTP Lambdaで作られたアプリ",
-        "description": "このドメインのアプリはGenHTTP Lambdaで作られたもので、それぞれ専用のアドレスで動いています。あなたのアプリを作るには{site}へどうぞ。"
+        "title": "{platform}で作られたアプリ",
+        "description": "このドメインのアプリは{platform}で作られたもので、それぞれ専用のアドレスで動いています。あなたのアプリを作るには{site}へどうぞ。"
       },
       "ko": {
-        "title": "GenHTTP Lambda로 만든 앱",
-        "description": "이 도메인의 앱은 모두 GenHTTP Lambda로 만들었고, 각각 전용 주소가 있어요. 나만의 앱을 만들려면 {site}에서 시작하세요."
+        "title": "{platform}에서 만든 앱",
+        "description": "이 도메인의 앱은 모두 {platform}에서 만들었고, 각각 전용 주소가 있어요. 나만의 앱을 만들려면 {site}에서 시작하세요."
       }
     }
   },

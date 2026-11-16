@@ -36,6 +36,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<AddressBlockEntity> AddressBlocks => Set<AddressBlockEntity>();
 
+    public DbSet<BrandingPictureEntity> BrandingPictures => Set<BrandingPictureEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -295,6 +297,17 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         blocks.Property(b => b.Created).HasColumnName("created");
 
         blocks.HasIndex(b => b.Address).IsUnique();
+
+        var pictures = builder.Entity<BrandingPictureEntity>();
+
+        pictures.ToTable("branding_pictures");
+
+        pictures.HasKey(p => p.Purpose);
+
+        pictures.Property(p => p.Purpose).HasColumnName("purpose");
+        pictures.Property(p => p.Type).HasColumnName("type");
+        pictures.Property(p => p.Content).HasColumnName("content");
+        pictures.Property(p => p.Updated).HasColumnName("updated");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

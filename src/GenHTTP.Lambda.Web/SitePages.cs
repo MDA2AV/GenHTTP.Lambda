@@ -3,6 +3,7 @@ using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Showcase;
@@ -27,6 +28,10 @@ namespace GenHTTP.Lambda.Web;
 /// every component mounted at a path of its own. It answers what a site
 /// answers for the host as well: <c>robots.txt</c>, the sitemap of its pages
 /// and of every published source, and <c>llms.txt</c>.
+///
+/// Every page is the installation's as it presents itself (see
+/// <see cref="PageBranding"/>): GenHTTP Lambda, or what its operator named
+/// it - with the manifest naming it too.
 /// </remarks>
 public static class SitePages
 {
@@ -93,7 +98,8 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
             files = Layout.Create().Add("assets", bundle.Assets()).Add(files);
         }
 
-        var pages = new SitePagesHandler(bundle, meta, prerender, services.GetRequiredService<ISourceService>(), files.Build(), _head, _catalog);
+        var pages = new SitePagesHandler(bundle, meta, prerender, services.GetRequiredService<ISourceService>(), services.GetRequiredService<IBrandingService>(),
+                                         files.Build(), _head, _catalog);
 
         return Concerns.Chain(_concerns, pages);
     }
@@ -105,8 +111,8 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
 /// <summary>
 /// Answers the paths of a site.
 /// </summary>
-internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerender prerender, ISourceService sources, IHandler files,
-                                       Func<SitePage, string?>? head, bool catalog) : IHandler
+internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerender prerender, ISourceService sources, IBrandingService branding,
+                                       IHandler files, Func<SitePage, string?>? head, bool catalog) : IHandler
 {
 
     #region Functionality
@@ -122,10 +128,12 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
 
         var path = request.Header.Path.ToString();
 
+        var brand = branding.Current;
+
         switch (path)
         {
             case "/robots.txt":
-                return Answer(request, meta.Robots(), "text/plain; charset=utf-8");
+                return Answer(request, meta.Robots(brand), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
                 var sitemap = meta.Sitemap(sources.ListAddresses());
@@ -135,25 +143,29 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 return sitemap == null ? null : Answer(request, sitemap, "application/xml; charset=utf-8");
 
             case "/llms.txt":
-                return Answer(request, meta.LlmsText(), "text/markdown; charset=utf-8");
+                return Answer(request, meta.LlmsText(brand), "text/markdown; charset=utf-8");
 
             case "/.well-known/ai-catalog.json" when catalog:
-                var described = meta.AiCatalog();
+                var described = meta.AiCatalog(brand);
                 return described == null ? null : Answer(request, described, "application/json; charset=utf-8");
+
+            // the bundle's, naming the installation as its operator did
+            case "/manifest.json" when brand.Own && bundle.Manifest() is { } built && PageBranding.Manifest(built, brand) is { } named:
+                return Answer(request, named, "application/manifest+json; charset=utf-8");
         }
 
         if (meta.Find(path) is { } page)
         {
-            var markup = meta.Render(bundle.Index(), page);
+            var markup = meta.Render(bundle.Index(), page, brand);
 
             if (head?.Invoke(page) is { } more)
             {
                 markup = SiteMeta.InHead(markup, more);
             }
 
-            markup = prerender.Render(markup, page, request);
+            markup = prerender.Render(markup, page, request, brand);
 
-            return Answer(request, markup, "text/html; charset=utf-8");
+            return Answer(request, PageBranding.Apply(markup, brand), "text/html; charset=utf-8");
         }
 
         if (ToLanguage(request, path) is { } redirect)
@@ -164,7 +176,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
         // the root of a site that names no page there - one without a build
         if (path == "/")
         {
-            return Revalidated(bundle.Answer(request));
+            return Revalidated(bundle.Answer(request, brand: brand));
         }
 
         // a file of the bundle
@@ -175,7 +187,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
 
         // a person is shown the application's own page for it, and anything
         // else - a crawler looking for a file, a checker - learns it is not here
-        return PrefersMarkup(request) ? Revalidated(bundle.Answer(request, ResponseStatus.NotFound)) : null;
+        return PrefersMarkup(request) ? Revalidated(bundle.Answer(request, ResponseStatus.NotFound, brand)) : null;
     }
 
     private static bool PrefersMarkup(IRequest request)

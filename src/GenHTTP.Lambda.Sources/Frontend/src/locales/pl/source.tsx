@@ -5,12 +5,13 @@ import { counted } from '@genhttp-lambda/kit/locales/pl/plural';
 export const source: SourceMessages = {
   shell: {
     section: 'Open source',
-    home: 'GenHTTP Lambda – strona główna',
+    home: (platform) => `${platform} – strona główna`,
   },
 
   lambda: {
     label: 'Czym jest lambda?',
-    text: 'Aplikacja webowa na GenHTTP Lambda: ktoś opisuje, czego chce, agent AI pisze ją w C#, a po kilku minutach działa pod własnym adresem – każda wersja jest zachowana razem z tym, co zmieniła.',
+    text: (platform) =>
+      `Aplikacja webowa na platformie ${platform}: ktoś opisuje, czego chce, agent AI pisze ją w C#, a po kilku minutach działa pod własnym adresem – każda wersja jest zachowana razem z tym, co zmieniła.`,
     build: 'Zbuduj własną',
   },
 

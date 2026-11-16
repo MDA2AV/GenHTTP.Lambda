@@ -22,7 +22,7 @@ var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))
                  .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                  .Add(PlatformRoutes.Editor, Editor.Create(platform))
-                 .Add(PlatformRoutes.Admin, AdminPanel.Create())
+                 .Add(PlatformRoutes.Admin, AdminPanel.Create(platform))
                  .Add(SourcePages.Create(platform))
                  .Add(Website.Create(platform));
 

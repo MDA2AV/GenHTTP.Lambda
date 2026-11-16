@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
@@ -73,7 +74,7 @@ public sealed class RunnerBuilder(LambdaPlatform platform) : IHandlerBuilder<Run
 
         var meta = services.GetRequiredService<IMetaService>();
 
-        var pages = new HostingPages(platform.Options);
+        var pages = new HostingPages(platform.Options, services.GetRequiredService<IBrandingService>());
 
         var domains = LambdaRoute.Create(services, new DomainLocator(meta));
 

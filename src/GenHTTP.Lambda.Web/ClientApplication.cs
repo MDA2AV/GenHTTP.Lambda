@@ -2,6 +2,8 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Services.Branding;
+
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.SinglePageApplications;
@@ -17,7 +19,9 @@ namespace GenHTTP.Lambda.Web;
 /// the index page, uncached so a new build is picked up; its scripts and
 /// styles are cached for good. Nothing about such a page is for a search
 /// engine, so none of them is named on the server: the bundle names them in
-/// the browser, and says they are not to be indexed.
+/// the browser, and says they are not to be indexed. Given the installation's
+/// brand, its index page names the installation as its operator did, and
+/// shows their icon (see <see cref="PageBranding"/>).
 /// </remarks>
 public static class ClientApplication
 {
@@ -35,7 +39,19 @@ public sealed class ClientApplicationBuilder(Bundle bundle) : IHandlerBuilder<Cl
 
     private readonly List<(string Name, string Value)> _headers = [];
 
+    private IBrandingService? _branding;
+
     #region Functionality
+
+    /// <summary>
+    /// How the installation presents itself, which the index page follows -
+    /// GenHTTP Lambda's, as it was built, without.
+    /// </summary>
+    public ClientApplicationBuilder Branding(IBrandingService branding)
+    {
+        _branding = branding;
+        return this;
+    }
 
     /// <summary>
     /// A header every page of the bundle is answered with - that it is not to
@@ -63,7 +79,11 @@ public sealed class ClientApplicationBuilder(Bundle bundle) : IHandlerBuilder<Cl
         }
         else
         {
-            var pages = SinglePageApplication.From(bundle.Files())
+            // the index page made again as it is asked for only where the
+            // operator may change what it says; elsewhere it is the file
+            var files = _branding is { Changeable: true } ? new BrandedTree(bundle.Files(), new BrandedIndex(bundle, _branding)) : bundle.Files();
+
+            var pages = SinglePageApplication.From(files)
                                              .ServerSideRouting()
                                              .Add(CacheControl.NoCache());
 

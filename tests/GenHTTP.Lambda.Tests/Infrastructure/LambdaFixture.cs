@@ -139,8 +139,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
     /// <summary>
     /// Creates and starts the community edition: put together the way its
-    /// host does, with the lambdas below /lambda/ and none of what only the
-    /// cloud says about itself - no terms, no contact, no legal pages.
+    /// host does, with the lambdas below /lambda/, a name and a logo its
+    /// operator may give it, and none of what only the cloud says about
+    /// itself - no terms, no contact, no legal pages.
     /// </summary>
     public static Task<LambdaFixture> CreateCommunityAsync(Func<LambdaOptions, LambdaOptions>? configure = null)
         => CreateAsync(Edition.Community, configure, null, false);
@@ -152,7 +153,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         var options = edition == Edition.Cloud
                     ? CloudInstallation.Of(new LambdaOptions { DataDirectory = root })
-                    : new LambdaOptions { DataDirectory = root, Addressing = LambdaAddressing.Paths };
+                    : new LambdaOptions { DataDirectory = root, Addressing = LambdaAddressing.Paths, Branding = true };
 
         if (configure != null)
         {
@@ -187,7 +188,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
                          .Add(PlatformRoutes.Api, RestApi.Create(platform).Compiled(compiled))
                          .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                          .Add(PlatformRoutes.Editor, Editor.Create(platform).Bundle(BundleOf(options, "editor")))
-                         .Add(PlatformRoutes.Admin, AdminPanel.Create().Bundle(BundleOf(options, "admin")))
+                         .Add(PlatformRoutes.Admin, AdminPanel.Create(platform).Bundle(BundleOf(options, "admin")))
                          .Add(SourcePages.Create(platform).Bundle(BundleOf(options, "sources")))
                          .Add(edition == Edition.Cloud
                                   ? Website.Create(platform).Bundle(BundleOf(options, "site"))

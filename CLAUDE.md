@@ -102,6 +102,37 @@ together the GenHTTP way, and there are two hosts - two editions:
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
   guide says whichever holds (`platform_guide`, `backlink`).
+- **The community edition can be branded - decided by the owner**: its
+  operator gives it a name and a logo in the panel's **Branding** section -
+  never with environment variables - and every page shows them in place of
+  GenHTTP Lambda's: the bar, the end of every title, link previews, the tab's
+  icon, the manifest, `llms.txt`, the front page's eyebrow. An agent with the
+  admin token does the same, through `/admin/branding` and the MCP tool
+  `customize_installation`. **The cloud does not offer it**: the host decides
+  (`LambdaOptions.Branding`, switched on by the community host only), and
+  without it the routes, the tool and the section are not there and nothing
+  stored is read. More customizations may join it there later (the owner's
+  words). Chosen with it, open to change: one form with a preview in both
+  themes, the name a setting and the logo a row of its own; a name without a
+  logo is drawn as its first letter on a plate (`Monogram`), so a branded
+  installation never shows the platform's mark; the brand is written into
+  every index page on the server (`PageBranding`, `#lambda-brand`) and the
+  community site is prerendered once more for a brand, so neither a tab nor
+  the first moment of a page shows the platform's; an unbranded installation
+  is sent its pages exactly as built. **Wherever the pages or an app say what
+  the installation is, they say its name - decided by the owner**: the "Made
+  with" line (see The link back), the sentences of the translations that say
+  what an app was built with (the hosting domain's page, what a lambda is and
+  a source's description on `/source`, as `{platform}` - the glossary tells a
+  translator to write them for any name), and a lambda's repository
+  (`AGENTS.md`, `CLAUDE.md`, `Program.cs`, as the installation is called when
+  a commit is made - a push is compared with the commits it builds on, so a
+  rename refuses none). Where the software is meant, GenHTTP Lambda stays
+  named: the source and Discord links (no answer from the owner to whether a
+  branded installation should say "Powered by" instead), the API's
+  description, the MCP server and the export. The usage report says whether
+  an installation is branded (`branded`, decided by the owner), never as
+  what.
 - **The community edition sends a usage report once a day - decided by the
   owner** (`Services/UsageReports`), on by default and switched off with
   `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
@@ -134,7 +165,7 @@ the environment:
 | The REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
 | The MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
 | The editor, the create page, the owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
-| The operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create()` | `/admin` |
+| The operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
 | The published sources, their public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` (no path of its own) |
 | Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
 | Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
@@ -721,6 +752,14 @@ same.
 **Decided by the owner:** agents are asked - not required - to put a small
 "Made with GenHTTP Lambda" line at the foot of the pages they build.
 
+- **The installation's name - decided by the owner.** On an installation its
+  operator branded, the line says that name ("Made with Acme Apps"), since it
+  links to that installation: `platform_guide` (`backlink`), a repository's
+  `AGENTS.md` and the build agent's brief name it as it is called, and the
+  MCP instructions - fixed when the endpoint starts - leave the words to the
+  guide. A line naming the installation otherwise is given its name with the
+  next change to the page, as a link without `rel="nofollow"` is given it.
+
 - **A nofollow link without a domain, plain text with one.** Below the
   hosting domain the line links to the installation's public address
   (`LAMBDA_PUBLIC_URL`, else the address the agent called) with
@@ -916,8 +955,9 @@ how it shows them did.
 - **Sections in groups, as the editor has them** (the kit's `Navigation`):
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Configuration** (Settings, Limits, Usage
-  report). A new section joins the group it belongs to. A mark beside a
+  (Server, Storage, Log); **Configuration** (Settings, Limits, Branding -
+  where the host lets the operator brand the installation - Usage report). A
+  new section joins the group it belongs to. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
 - **What is shown and what is done are kept apart - asked for by the owner.**

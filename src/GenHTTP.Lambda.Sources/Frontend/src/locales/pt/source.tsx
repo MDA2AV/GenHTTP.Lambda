@@ -4,12 +4,13 @@ import type { SourceMessages } from '../en/source';
 export const source: SourceMessages = {
   shell: {
     section: 'Código aberto',
-    home: 'GenHTTP Lambda, a página inicial',
+    home: (platform) => `${platform}, a página inicial`,
   },
 
   lambda: {
     label: 'O que é uma lambda?',
-    text: 'Um app web no GenHTTP Lambda: alguém diz o que quer, um agente de IA escreve o app em C#, e em poucos minutos ele está no ar num endereço próprio – com todas as versões guardadas e o que cada uma mudou.',
+    text: (platform) =>
+      `Um app web no ${platform}: alguém diz o que quer, um agente de IA escreve o app em C#, e em poucos minutos ele está no ar num endereço próprio – com todas as versões guardadas e o que cada uma mudou.`,
     build: 'Criar o seu app',
   },
 

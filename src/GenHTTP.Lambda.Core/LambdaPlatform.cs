@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Blocking;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Data;
@@ -173,6 +174,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ILimitsService, LimitsService>();
+        services.AddSingleton<IBrandingService, BrandingService>();
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<AgentClient>();
         services.AddSingleton<BuildAllowance>();

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Settings;
@@ -26,6 +27,15 @@ namespace GenHTTP.Lambda.Web;
 /// as placeholders, which are filled in here. The same values go along with
 /// the page in <c>#site-facts</c>, so the application draws the same markup in
 /// the browser and takes it over instead of drawing it again.
+///
+/// A site whose installation may be branded has its pages rendered twice: as
+/// GenHTTP Lambda, and with the name and the picture of a brand as
+/// placeholders (<c>branded</c>) - a brand is drawn as other markup than the
+/// platform's mark, not as another value in it. A branded installation's
+/// pages are filled in from the second, which the application draws alike
+/// from the brand the page hands it (<c>#lambda-brand</c>, see
+/// <see cref="PageBranding"/>); where the build has no such rendering, they
+/// are sent without content and drawn by the browser.
 /// </remarks>
 public sealed partial class SitePrerender
 {
@@ -82,11 +92,16 @@ public sealed partial class SitePrerender
     /// The index page with the content of the given page in it, or as it is if
     /// there is none to put there.
     /// </summary>
-    public string Render(string markup, SitePage page, IRequest request)
+    public string Render(string markup, SitePage page, IRequest request, Brand? brand = null)
     {
-        var prerendered = Read();
+        brand ??= Brand.Platform;
 
-        if (prerendered == null || !markup.Contains(Root, StringComparison.Ordinal))
+        var read = Read();
+
+        // the rendering of the pages as this installation presents itself
+        var prerendered = brand.Own ? read?.Branded : read?.Plain;
+
+        if (prerendered == null || read == null || !markup.Contains(Root, StringComparison.Ordinal))
         {
             return markup;
         }
@@ -115,14 +130,14 @@ public sealed partial class SitePrerender
         string content;
 
         // the showcase as it is right now, or as it is drawn while it loads
-        if (page.Path == Showcase && ListShowcase() is { } listing && RenderShowcase(prerendered, page.Language, listing, facts) is { } showcase)
+        if (page.Path == Showcase && ListShowcase() is { } listing && RenderShowcase(prerendered, read.Entry, page.Language, listing, facts, brand) is { } showcase)
         {
             content = showcase;
             facts = facts with { Showcase = listing };
         }
         else if (prerendered.Pages.TryGetValue(SiteLanguages.In(page.Language, page.Path), out var rendered))
         {
-            content = Fill(rendered, facts);
+            content = Fill(rendered, facts, brand);
         }
         else
         {
@@ -145,7 +160,8 @@ public sealed partial class SitePrerender
     /// in other words than several - the words are the build's, and only the
     /// number is written in here.
     /// </remarks>
-    private static string? RenderShowcase(Prerendered prerendered, string language, ShowcaseListing listing, SiteFacts facts)
+    private static string? RenderShowcase(PrerenderedPages prerendered, Dictionary<string, string> entries, string language, ShowcaseListing listing,
+                                          SiteFacts facts, Brand brand)
     {
         var shape = listing.Entries.Count == 0 ? "empty"
                   : listing.Next != null ? "partial"
@@ -153,7 +169,7 @@ public sealed partial class SitePrerender
                   : "complete";
 
         if (!prerendered.Showcase.TryGetValue(language, out var shapes) || !shapes.TryGetValue(shape, out var page)
-            || !prerendered.Entry.TryGetValue(language, out var entry)
+            || !entries.TryGetValue(language, out var entry)
             || (shape != "empty" && !page.Contains(entry, StringComparison.Ordinal)))
         {
             return null;
@@ -161,11 +177,11 @@ public sealed partial class SitePrerender
 
         // the site's own placeholders first, so nothing an owner wrote into an
         // entry is ever taken for one
-        page = Fill(page, facts).Replace(Total, listing.Total.ToString(), StringComparison.Ordinal);
+        page = Fill(page, facts, brand).Replace(Total, listing.Total.ToString(), StringComparison.Ordinal);
 
-        var entries = string.Concat(listing.Entries.Select((item, index) => RenderEntry(entry, item, index)));
+        var rendered = string.Concat(listing.Entries.Select((item, index) => RenderEntry(entry, item, index)));
 
-        return page.Replace(entry, entries, StringComparison.Ordinal);
+        return page.Replace(entry, rendered, StringComparison.Ordinal);
     }
 
     private static string RenderEntry(string template, ShowcaseListingEntry entry, int index)
@@ -183,11 +199,14 @@ public sealed partial class SitePrerender
         });
 
     /// <summary>
-    /// The placeholders of the site itself, in one pass.
+    /// The placeholders of the site itself, in one pass - the brand's among
+    /// them, which only the branded rendering has.
     /// </summary>
-    private static string Fill(string markup, SiteFacts facts)
+    private static string Fill(string markup, SiteFacts facts, Brand brand)
         => Placeholder().Replace(markup, match => match.Value switch
         {
+            "__LAMBDA_BRAND_NAME__" => WebUtility.HtmlEncode(brand.Name),
+            "__LAMBDA_BRAND_LOGO__" => WebUtility.HtmlEncode(brand.PicturePath ?? string.Empty),
             "__LAMBDA_ORIGIN__" => WebUtility.HtmlEncode(facts.Origin),
             "__LAMBDA_HOST__" => WebUtility.HtmlEncode(facts.Host),
             "__LAMBDA_BEFORE__" => WebUtility.HtmlEncode(facts.Before),
@@ -271,12 +290,32 @@ public sealed partial class SitePrerender
 /// What the frontend build rendered: every public page in every language by
 /// the path it has in that language, the showcase by language and by the shape
 /// of its first page, and one entry of the showcase by language, as it appears
-/// in there.
+/// in there - and all of it once more as a branded installation shows it,
+/// where the site may be branded.
 /// </summary>
 public sealed record Prerendered(
     Dictionary<string, string> Pages,
     Dictionary<string, Dictionary<string, string>> Showcase,
-    Dictionary<string, string> Entry
+    Dictionary<string, string> Entry,
+    PrerenderedPages? Branded = null
+)
+{
+
+    /// <summary>
+    /// The pages as GenHTTP Lambda shows them.
+    /// </summary>
+    public PrerenderedPages Plain => new(Pages, Showcase);
+
+}
+
+/// <summary>
+/// The public pages of a site as one brand shows them: every page by its path
+/// in its language, and the showcase by language and by the shape of its
+/// first page.
+/// </summary>
+public sealed record PrerenderedPages(
+    Dictionary<string, string> Pages,
+    Dictionary<string, Dictionary<string, string>> Showcase
 );
 
 /// <summary>

@@ -6,6 +6,7 @@ import { ApiError, api, refusedToken, type AdminOverview } from '@genhttp-lambda
 import { IconLock, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '@genhttp-lambda/kit/components/Navigation';
 import { BlocksSection } from '../console/BlocksSection';
+import { BrandingSection } from '../console/BrandingSection';
 import { diskState, type Access } from '../console/context';
 import { ConnectivitySection } from '../console/ConnectivitySection';
 import { DashboardSection } from '../console/DashboardSection';
@@ -19,9 +20,11 @@ import { StatisticsSection } from '../console/StatisticsSection';
 import { StorageSection } from '../console/StorageSection';
 import { UsageReportSection } from '../console/UsageReportSection';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
+import { askPlatform } from '@genhttp-lambda/kit/site';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'usage';
+type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding'
+  | 'usage';
 
 /*
  * The sections in groups, as the editor has them, because a dozen in one
@@ -31,7 +34,8 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * installation safe from what runs on it: the lambdas that ask to connect
  * out, and the addresses refused. Then how the machine is doing: the
  * process, the room on its volume, and what it logs. Then how the operator
- * set it up: the site's switches, the limits, and the report it sends.
+ * set it up: the site's switches, the limits, the name and logo it shows -
+ * where its host lets them give it some - and the report it sends.
  */
 const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
   { id: 'start', label: null, sections: [
@@ -53,6 +57,7 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
   { id: 'configuration', label: 'Configuration', sections: [
     { id: 'settings', label: 'Settings', note: 'What the site offers, switched without a restart' },
     { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
+    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
     { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
   ] },
 ];
@@ -94,6 +99,16 @@ export function Admin({ theme }: { theme: Theme }) {
    */
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [asked, setAsked] = useState(0);
+
+  // whether the host of this installation lets its operator brand it, which
+  // decides whether there is a section for it
+  const [brandable, setBrandable] = useState(false);
+
+  useEffect(() => {
+    askPlatform()
+      .then((platform) => setBrandable(platform.brand.changeable))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (token === '') {
@@ -141,7 +156,9 @@ export function Admin({ theme }: { theme: Theme }) {
   const groups: NavGroup[] = GROUPS.map((group) => ({
     id: group.id,
     label: group.label,
-    entries: group.sections.map((item) => ({ id: item.id, to: pathOf(item.id), label: item.label, ...mark(item.id, overview) })),
+    entries: group.sections
+      .filter((item) => item.id !== 'branding' || brandable)
+      .map((item) => ({ id: item.id, to: pathOf(item.id), label: item.label, ...mark(item.id, overview) })),
   }));
 
   const opening = (entry: NavEntry) => {
@@ -214,6 +231,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <SettingsSection access={access} />
           ) : section === 'limits' ? (
             <LimitsSection access={access} />
+          ) : section === 'branding' ? (
+            <BrandingSection access={access} />
           ) : section === 'usage' ? (
             <UsageReportSection access={access} />
           ) : (

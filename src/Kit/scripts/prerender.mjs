@@ -30,17 +30,33 @@ const rendered = Object.entries(pages)
 
 const result = await prerender(rendered);
 
-for (const [path, markup] of Object.entries(result.pages)) {
-  if (markup.length === 0) {
-    throw new Error(`The page at ${path} rendered as nothing`);
+// the pages as GenHTTP Lambda shows them, and as a branded installation does
+// where the site may be branded (see the kit's brand.ts)
+const renderings = [['', result], ...(result.branded ? [[' branded', result.branded]] : [])];
+
+for (const [variant, { pages, showcase }] of renderings) {
+  for (const [path, markup] of Object.entries(pages)) {
+    if (markup.length === 0) {
+      throw new Error(`The page at ${path}${variant} rendered as nothing`);
+    }
+  }
+
+  // the showcase is found by the entry the server replaces, so it has to be there
+  for (const [language, shapes] of Object.entries(showcase)) {
+    for (const [shape, markup] of Object.entries(shapes)) {
+      if (shape !== 'empty' && !markup.includes(result.entry[language])) {
+        throw new Error(`The showcase (${language}, ${shape}${variant}) does not contain its entry as it was rendered on its own`);
+      }
+    }
   }
 }
 
-// the showcase is found by the entry the server replaces, so it has to be there
-for (const [language, shapes] of Object.entries(result.showcase)) {
-  for (const [shape, markup] of Object.entries(shapes)) {
-    if (shape !== 'empty' && !markup.includes(result.entry[language])) {
-      throw new Error(`The showcase (${language}, ${shape}) does not contain its entry as it was rendered on its own`);
+// a branded page names its brand, which the server fills in - or it would
+// show the platform's mark under somebody else's name
+if (result.branded) {
+  for (const [path, markup] of Object.entries(result.branded.pages)) {
+    if (!markup.includes('__LAMBDA_BRAND_NAME__')) {
+      throw new Error(`The branded page at ${path} does not name its brand`);
     }
   }
 }
@@ -50,5 +66,5 @@ writeFileSync(path.join(output, 'prerender.json'), JSON.stringify(result));
 rmSync(path.join(site, '.prerender'), { recursive: true, force: true });
 
 console.log(
-  `prerendered ${Object.keys(result.pages).length} pages and the showcase in ${Object.keys(result.showcase).length} languages`,
+  `prerendered ${Object.keys(result.pages).length} pages and the showcase in ${Object.keys(result.showcase).length} languages${result.branded ? ', and again for a brand' : ''}`,
 );

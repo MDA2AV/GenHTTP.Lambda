@@ -629,6 +629,8 @@ export interface Platform {
   defaultTier: TierPolicy;
   /** Every tier the operator assigns, as this installation set it. */
   tiers: TierPolicy[];
+  /** How the installation presents itself on its pages (see brand.ts), and whether its operator may change that here. */
+  brand: { name: string; logo?: string; changeable: boolean };
 }
 
 export interface TelemetrySample {
@@ -1377,6 +1379,19 @@ export interface AdminSettings {
   changeBox: boolean;
 }
 
+/** The name and the logo the operator gave the installation, which its pages show in place of GenHTTP Lambda's. */
+export interface AdminBranding {
+  /** What the operator named it; none where it goes by the platform's own name. */
+  name: string | null;
+  /** The name its pages show. */
+  shown: string;
+  /** The logo the operator uploaded, if any. */
+  logo: { type: string; bytes: number; updated: string } | null;
+  /** Where the pages load the picture beside the name from - the logo, or the first letter of the name; none for the platform's mark. */
+  picture: string | null;
+  limits: { name: number; logoBytes: number; types: string[] };
+}
+
 /** The installation's daily usage report, and how the last one fared. */
 export interface UsageReportStatus {
   /** Whether a report is sent once a day. */
@@ -1490,6 +1505,14 @@ const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) })
 /** A lambda of one file, for the questions that are only ever about one. */
 const single = (code: string): LambdaFile[] => [{ name: 'lambda.cs', code }];
 
+/** The branding as the panel reads it: what the server leaves out where there is none, as none. */
+const branded = (branding: AdminBranding): AdminBranding => ({
+  ...branding,
+  name: branding.name ?? null,
+  logo: branding.logo ?? null,
+  picture: branding.picture ?? null,
+});
+
 /** The panel and the figures behind it are the parts of this API that authenticate. */
 const withToken = (token: string, init: RequestInit = {}) => ({
   ...init,
@@ -1584,6 +1607,23 @@ export const api = {
       request<AdminLimits>('/admin/limits', withToken(token, { method: 'PUT', body: JSON.stringify(limits) })),
 
     usageReport: (token: string) => request<UsageReportStatus>('/admin/usage-report', withToken(token)),
+
+    branding: (token: string) => request<AdminBranding>('/admin/branding', withToken(token)).then(branded),
+
+    rename: (token: string, name: string | null) =>
+      request<AdminBranding>('/admin/branding', withToken(token, { method: 'PUT', body: JSON.stringify({ name }) })).then(branded),
+
+    /** The picture as it is: the server tells what it is from its content. */
+    uploadLogo: (token: string, logo: Blob) =>
+      request<AdminBranding>('/admin/branding/logo', withToken(token, {
+        method: 'PUT',
+        body: logo,
+        headers: { 'Content-Type': logo.type || 'application/octet-stream' },
+      })).then(branded),
+
+    removeLogo: (token: string) => request<void>('/admin/branding/logo', withToken(token, { method: 'DELETE' })),
+
+    resetBranding: (token: string) => request<void>('/admin/branding', withToken(token, { method: 'DELETE' })),
   },
 
   /**

@@ -56,7 +56,18 @@ public static class ApiLayout
         {
             // on the resource itself rather than a layout around it, which
             // would redirect /telemetry to /telemetry/ before asking it
-            version.Add("admin", Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options)))
+            IHandlerBuilder admin = Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options));
+
+            // the installation's name and logo, where its host lets the
+            // operator give it some - and not there at all where it does not
+            if (options.Branding)
+            {
+                admin = Layout.Create()
+                              .Add("branding", Resource<BrandingResource>(mode).Add(AdminAuthentication.Create(options)))
+                              .Add(admin);
+            }
+
+            version.Add("admin", admin)
                    .Add("telemetry", Resource<TelemetryResource>(mode).Add(AdminAuthentication.Create(options)))
                    .Add("logs", Resource<LogResource>(mode).Add(AdminAuthentication.Create(options)));
         }
