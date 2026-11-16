@@ -13,8 +13,9 @@ using GenHTTP.Lambda.Sources;
 using GenHTTP.Modules.Layouting;
 
 // the LAMBDA_* variables, with the lambdas below /lambda/ on this address
-// unless LAMBDA_HOSTING_URL names a domain for them
-var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths);
+// unless LAMBDA_HOSTING_URL names a domain for them, and the daily usage
+// report on unless LAMBDA_USAGE_REPORTS=false
+var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true);
 
 await using var platform = LambdaPlatform.Create()
                                          .Options(settings.Platform)

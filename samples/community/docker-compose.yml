@@ -29,6 +29,8 @@ services:
       # the build agent, where it runs (see the agent profile below)
       LAMBDA_AGENT_URL: ${LAMBDA_AGENT_URL:-}
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      # the daily usage report (see Telemetry in the README); false sends none
+      LAMBDA_USAGE_REPORTS: ${LAMBDA_USAGE_REPORTS:-true}
     volumes:
       - lambda-data:/data
     networks:

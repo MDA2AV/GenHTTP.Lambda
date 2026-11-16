@@ -1202,6 +1202,22 @@ export interface AdminSettings {
   changeBox: boolean;
 }
 
+/** The installation's daily usage report, and how the last one fared. */
+export interface UsageReportStatus {
+  /** Whether a report is sent once a day. */
+  enabled: boolean;
+  /** Where it is sent; absent while none is. */
+  endpoint?: string | null;
+  /** When the last one was made, whether or not it arrived. */
+  attempted?: string | null;
+  /** When the last one arrived. */
+  sent?: string | null;
+  /** Why the last attempt did not arrive. */
+  failure?: string | null;
+  /** The last report made, as the JSON that was sent. */
+  report?: string | null;
+}
+
 /** What a lambda of one tier may have, as the operator set it. */
 export interface TierLimits {
   /** How large a version may be: its code and its resources together. */
@@ -1372,6 +1388,8 @@ export const api = {
 
     saveLimits: (token: string, limits: AdminLimits) =>
       request<AdminLimits>('/admin/limits', withToken(token, { method: 'PUT', body: JSON.stringify(limits) })),
+
+    usageReport: (token: string) => request<UsageReportStatus>('/admin/usage-report', withToken(token)),
   },
 
   /**

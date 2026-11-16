@@ -12,6 +12,7 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.UsageReports;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -44,7 +45,8 @@ namespace GenHTTP.Lambda.Api;
          request on.
          """)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
-                                   IAddressBlocks blocks, IConnectivityService connectivity, LambdaOptions options, ILogger<AdminResource> logger)
+                                   IAddressBlocks blocks, IConnectivityService connectivity, IUsageReportService usageReports,
+                                   LambdaOptions options, ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -396,6 +398,25 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
         logger.LogInformation("Updated settings buildBox {BuildBox} changeBox {ChangeBox} by operator", saved.BuildBox, saved.ChangeBox);
 
         return new SettingsModel(saved.BuildBox, saved.ChangeBox);
+    }
+
+    #endregion
+
+    #region Usage report
+
+    [ResourceMethod("usage-report")]
+    [Summary("Reads the usage report")]
+    [Remarks("""
+             Whether the installation sends its usage report, where to, and the last one exactly as it was sent. Reports are sent
+             once a day, the first shortly after the server starts; switching them on or off is the environment's
+             (`LAMBDA_USAGE_REPORTS`), not a setting here.
+             """)]
+    [return: Summary("The usage report and how the last one fared")]
+    public UsageReportResponse GetUsageReport()
+    {
+        var status = usageReports.Status;
+
+        return new UsageReportResponse(status.Enabled, status.Endpoint, status.Attempted, status.Sent, status.Failure, status.Report);
     }
 
     #endregion

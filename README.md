@@ -140,6 +140,7 @@ docker compose up -d
 | `LAMBDA_CONTACT` | An email address the pages offer for questions, such as requests for premium. |
 | `LAMBDA_ABUSE_CONTACT` | An email address the pages offer for reporting a harmful app. |
 | `LAMBDA_AGENT_URL`, `LAMBDA_AGENT_TOKEN` | The address of the build agent and the secret shared with it (see below). |
+| `LAMBDA_USAGE_REPORTS` | Set to `false` to stop sending the daily usage report (see [Telemetry](#telemetry)). |
 
 Further settings, covering limits, logging, TLS and analytics, are described
 in [the reference](docs/reference.md#configuration).
@@ -235,6 +236,14 @@ docker compose --profile agent up -d
   is neither visited nor changed for 30 days is taken offline, and removed 90
   days after that. Making an app *premium* in the panel exempts it; how long
   free apps last can be changed under *Limits*.
+
+## Telemetry
+
+The community edition sends a usage report once a day to
+`https://telemetry.genhttp.run`: the version, the machine, which options are
+enabled and counts over the apps, never anything about an individual app or
+person. Set `LAMBDA_USAGE_REPORTS=false` to disable it.
+[docs/telemetry.md](docs/telemetry.md) lists what a report contains.
 
 ## For developers
 

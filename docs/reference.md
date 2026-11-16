@@ -1519,6 +1519,12 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   it does. The runner's `DomainRouter` hands a request to a lambda, to the
   page of the hosting domain, to the platform or - for a host nobody has - to
   the page that says nothing is there.
+- **UsageReports** (`Services/UsageReports`) - the daily usage report (see
+  [Usage reports](#usage-reports)). `UsageReportService` makes it, sends it
+  and keeps how the last one fared for the panel, `UsageSurvey` gathers the
+  figures - from the platform's database, the vaults and a few folders of the
+  data directory - `UsageReportSender` posts it, with a time limit, and
+  `UsageReportJob` asks for one a day.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
   resolve the lambda, rate limit per client and cap concurrency. A lambda is
   resolved from memory (`Services/Meta/ResolutionCache.cs`), which every write
@@ -1623,6 +1629,8 @@ and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
+| `LAMBDA_USAGE_REPORTS`              | `true` (community edition) | send the daily usage report; `false`, `0`, `no` or `off` sends none, see [Usage reports](#usage-reports) |
+| `DO_NOT_TRACK`                      | -                | set (`1`), no usage report is sent either   |
 | `LAMBDA_ANALYTICS_INTERVAL_SECONDS` | `300`            | how often the visits counted for the owners' analytics are written down |
 | `LAMBDA_ANALYTICS_CRAWLER_LISTS`    | `true`           | fetch the list of crawlers and the addresses Google, Bing, OpenAI, Apple and Perplexity crawl from |
 | `LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS` | `24`        | how often they are fetched again            |
@@ -1748,6 +1756,39 @@ in the editor, and nobody sees everybody's. What it is for is
 the shape of the memory curve. A managed heap that climbs across gen 2
 collections is a leak; committed bytes climbing while the managed heap stays
 flat is the heap keeping pages it could return, which is not.
+
+## Usage reports
+
+The community edition sends a usage report once a day - the first shortly
+after the server starts - to `https://telemetry.genhttp.run/api/reports`, a
+lambda on genhttp.dev whose front page says what is kept of it. It is what
+tells the project how many installations there are and how they are run. It
+is on by default; `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK=1`) switches
+it off, and then nothing is gathered at all. genhttp.dev sends none, and
+neither does a host of somebody's own unless it asks to
+(`LambdaSettings.FromEnvironment(…, usageReports: true)` sets
+`LambdaOptions.UsageReportUrl`).
+
+A report is one JSON document (`UsageReport`, `schema` 1), and
+[telemetry.md](telemetry.md) says what is in it - the list whoever runs an
+installation reads. Counts and switches only, and the demos are never counted.
+A report names no lambda, owner or visitor: no key, domain, title, code,
+specification, record, file, secret, address or log line - the tests check
+that a report holds none of the keys of the lambdas it counts. The
+installation's identifier is random, made the first time and kept in the
+platform's database (`settings`, key `installation`).
+
+The job (`UsageReportJob`) runs on the background scheduler, which starts its
+jobs once the server answers, each on its own, so a report never holds up the
+start: a firewall that drops the connection costs one attempt of at most 30
+seconds a day. Nothing is retried; the next day's report says the same with
+newer figures. A report that arrived is logged at information level, one that
+did not as a warning once and then only at debug level until one arrives again.
+Startup says it once: `Usage reports are on: …`.
+
+The panel's **Usage report** section (`GET /api/v1/admin/usage-report`) shows
+whether reports are on, where they go, how the last one fared, and the last
+report exactly as it was sent.
 
 ## TLS
 
@@ -2196,7 +2237,9 @@ the token. Its **Lambdas** section lists every lambda, when it was created,
 whether it is online, and what its code says - and takes them offline or
 removes them; its **Connectivity** section the lambdas that ask to connect to other
 servers, and those allowed to; its **Server** section is what the process is
-holding and what the engine is carrying. The token is entered on the panel's own page - no
+holding and what the engine is carrying; its **Usage report** section what
+the installation sends about itself once a day (see [Usage reports](#usage-reports)).
+The token is entered on the panel's own page - no
 other page links there - and kept in the browser's local storage, so every
 tab of that browser is unlocked until **Lock again** is used or the server
 turns the token away. The panel no longer appears inside the editor: what

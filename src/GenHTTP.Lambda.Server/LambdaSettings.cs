@@ -36,7 +36,13 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
     /// subdomains whatever this is, and <c>LAMBDA_ADDRESSING</c> decides
     /// over both.
     /// </param>
-    public static LambdaSettings FromEnvironment(LambdaAddressing addressing = LambdaAddressing.Subdomains)
+    /// <param name="usageReports">
+    /// Whether the installation sends its daily usage report to genhttp.dev
+    /// (<see cref="LambdaOptions.DefaultUsageReportUrl"/>) unless the
+    /// environment says not to - <c>LAMBDA_USAGE_REPORTS=false</c>, or
+    /// <c>DO_NOT_TRACK</c>. Without, it sends none.
+    /// </param>
+    public static LambdaSettings FromEnvironment(LambdaAddressing addressing = LambdaAddressing.Subdomains, bool usageReports = false)
     {
         var defaults = new LambdaOptions();
         var server = new ServerSettings();
@@ -76,6 +82,7 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             AdminToken = ReadOptional("LAMBDA_ADMIN_TOKEN"),
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
+            UsageReportUrl = usageReports && !SwitchedOff("LAMBDA_USAGE_REPORTS") && !DoNotTrack() ? LambdaOptions.DefaultUsageReportUrl : null,
             AnalyticsInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_ANALYTICS_INTERVAL_SECONDS", (int)defaults.AnalyticsInterval.TotalSeconds)),
             CrawlerLists = ReadBool("LAMBDA_ANALYTICS_CRAWLER_LISTS", defaults.CrawlerLists),
             CrawlerRefresh = TimeSpan.FromHours(ReadInt("LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS", (int)defaults.CrawlerRefresh.TotalHours)),
@@ -148,6 +155,12 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
         if (Platform.Addressing == LambdaAddressing.Paths && Platform.PublicUrl == null)
         {
             logger.LogInformation("LAMBDA_PUBLIC_URL is not set, so the addresses of the lambdas read http://localhost:{Port}/lambda/: set it to where the installation is reached, such as https://lambda.example.com", Platform.Port);
+        }
+
+        // said once, where the operator reads what the installation does on its own
+        if (Platform.UsageReportUrl != null)
+        {
+            logger.LogInformation("Usage reports are on: once a day the installation sends {Endpoint} figures about how it is set up and used, never what its lambdas contain. Set LAMBDA_USAGE_REPORTS=false to switch them off", Platform.UsageReportUrl);
         }
     }
 
@@ -249,6 +262,25 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
 
     private static bool ReadBool(string key, bool fallback)
         => bool.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;
+
+    /// <summary>
+    /// Whether a switch that is on by default is switched off: <c>false</c>,
+    /// and the other ways people write it - <c>0</c>, <c>no</c>, <c>off</c>.
+    /// </summary>
+    /// <remarks>
+    /// More forgiving than <see cref="ReadBool"/>, because a switch that is
+    /// on unless somebody turns it off must not stay on because they wrote
+    /// <c>0</c>.
+    /// </remarks>
+    private static bool SwitchedOff(string key)
+        => ReadOptional(key)?.ToLowerInvariant() is "false" or "0" or "no" or "off";
+
+    /// <summary>
+    /// Whether <c>DO_NOT_TRACK</c> is set, the variable a number of tools
+    /// read as "send nothing home" (<c>DO_NOT_TRACK=1</c>).
+    /// </summary>
+    private static bool DoNotTrack()
+        => ReadOptional("DO_NOT_TRACK")?.ToLowerInvariant() is { } value && value is not ("0" or "false");
 
     private static LambdaEngine ReadEngine(string key, LambdaEngine fallback)
         => Enum.TryParse<LambdaEngine>(Environment.GetEnvironmentVariable(key), true, out var value) ? value : fallback;
