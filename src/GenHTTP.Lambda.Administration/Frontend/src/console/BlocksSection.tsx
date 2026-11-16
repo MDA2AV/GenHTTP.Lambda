@@ -7,6 +7,7 @@ import { IconSpinner, IconTrash } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago, Empty, Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
+import { Notice } from './parts';
 
 /**
  * The addresses the server refuses, why, and the way to lift each block.
@@ -78,17 +79,10 @@ export function BlocksSection({ access }: { access: Access }) {
       hint="Refused before anything else, on the platform and at every lambda, for two weeks each. This panel stays reachable from a blocked address. The counts are kept in memory since the server came up."
     >
       {yours && (
-        <div className="surface mb-5 flex flex-wrap items-center gap-3 border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-          <p className="min-w-0 flex-1">
-            <span className="font-medium">Your own address is blocked.</span>{' '}
-            <span className="text-slate-600 dark:text-slate-400">
-              This panel still answers you, nothing else on this server does until you lift the block.
-            </span>
-          </p>
-          <button type="button" onClick={() => lift(yours)} disabled={busy !== null} className="btn-primary !px-3 !py-1.5 text-[13px]">
-            {busy === yours.id && <IconSpinner />}
-            Lift it
-          </button>
+        <div className="mb-5">
+          <Notice tone="problem" title="Your own address is blocked">
+            This panel still answers you; nothing else on this server does until you lift its block, marked below.
+          </Notice>
         </div>
       )}
 

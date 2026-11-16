@@ -1,38 +1,70 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
-import { ApiError, api, refusedToken } from '@genhttp-lambda/kit/api';
+import { ApiError, api, refusedToken, type AdminOverview } from '@genhttp-lambda/kit/api';
 import { IconLock, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '@genhttp-lambda/kit/components/Navigation';
 import { BlocksSection } from '../console/BlocksSection';
-import type { Access } from '../console/context';
+import { diskState, type Access } from '../console/context';
 import { ConnectivitySection } from '../console/ConnectivitySection';
+import { DashboardSection } from '../console/DashboardSection';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LimitsSection } from '../console/LimitsSection';
 import { LogSection } from '../console/LogSection';
 import { ServerSection } from '../console/ServerSection';
 import { SettingsSection } from '../console/SettingsSection';
+import { StatisticsSection } from '../console/StatisticsSection';
+import { StorageSection } from '../console/StorageSection';
 import { UsageReportSection } from '../console/UsageReportSection';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'server' | 'lambdas' | 'connectivity' | 'blocks' | 'log' | 'settings' | 'limits' | 'usage';
+type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'usage';
 
-const SECTIONS: { id: SectionId; title: string; note: string }[] = [
-  { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
-  { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
-  { id: 'connectivity', title: 'Connectivity', note: 'Lambdas asking to connect to other servers' },
-  { id: 'blocks', title: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
-  { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
-  { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
-  { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
-  { id: 'usage', title: 'Usage report', note: 'What the installation reports about itself once a day' },
+/*
+ * The sections in groups, as the editor has them, because a dozen in one
+ * list is a list nobody reads. The dashboard first, under no heading: what
+ * waits and how the installation is doing, where the operator starts. Then
+ * the lambdas - counted, and every one of them. Then what keeps the
+ * installation safe from what runs on it: the lambdas that ask to connect
+ * out, and the addresses refused. Then how the machine is doing: the
+ * process, the room on its volume, and what it logs. Then how the operator
+ * set it up: the site's switches, the limits, and the report it sends.
+ */
+const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
+  { id: 'start', label: null, sections: [
+    { id: 'dashboard', label: 'Dashboard', note: 'What waits for you, and how the installation is doing' },
+  ] },
+  { id: 'lambdas', label: 'Lambdas', sections: [
+    { id: 'statistics', label: 'Statistics', note: 'The lambdas counted: their states, tiers and what they use' },
+    { id: 'lambdas', label: 'All lambdas', note: 'Every lambda on the installation, to narrow and open' },
+  ] },
+  { id: 'security', label: 'Security', sections: [
+    { id: 'connectivity', label: 'Connectivity', note: 'Lambdas asking to connect to other servers' },
+    { id: 'blocks', label: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
+  ] },
+  { id: 'performance', label: 'Performance', sections: [
+    { id: 'server', label: 'Server', note: 'Memory, connections and what the engine is doing' },
+    { id: 'storage', label: 'Storage', note: 'The room left, and what takes it' },
+    { id: 'log', label: 'Log', note: 'What the server and the lambdas are printing, live' },
+  ] },
+  { id: 'configuration', label: 'Configuration', sections: [
+    { id: 'settings', label: 'Settings', note: 'What the site offers, switched without a restart' },
+    { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
+    { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
+  ] },
 ];
+
+const SECTIONS = GROUPS.flatMap((group) => group.sections);
+
+const pathOf = (id: SectionId) => (id === 'dashboard' ? '/admin' : `/admin/${id}`);
 
 /**
  * Everything an operator can see, laid out the way the editor is: the
- * sections down a sidebar, one of them beside it.
+ * sections down a sidebar in their groups - a bar that opens them all on a
+ * phone - and one of them beside it.
  *
  * Nothing is shown before the token is. Every section asks the server for it
  * as well, so this is a door rather than a disguise - hiding the sections
@@ -42,20 +74,25 @@ export function Admin({ theme }: { theme: Theme }) {
   usePageMeta({ title: 'Admin', index: false });
 
   const { '*': rest = '' } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [segment, detail] = rest.split('/');
-  const section: SectionId = SECTIONS.find((s) => s.id === segment)?.id ?? 'server';
+  // the server's figures were what the panel opened on, before there was a dashboard
+  const section: SectionId = SECTIONS.find((s) => s.id === segment)?.id ?? 'dashboard';
 
   const [token, setToken] = useAdminToken();
   const [refused, setRefused] = useState(false);
 
+  const scroller = useRef<HTMLDivElement>(null);
+
   /*
-   * How many requests for connectivity wait for a decision, beside the section
-   * that has them - asked again whenever the operator goes elsewhere in the
-   * panel or decides one, rather than on a timer: the operator is the one
-   * who changes it, apart from owners asking, which the next look shows.
+   * The installation at a glance, read again whenever the operator goes
+   * elsewhere in the panel or decides something, rather than on a timer: the
+   * operator is the one who changes most of it, and what owners and visitors
+   * change the next look shows. It marks the sections that want a look.
    */
-  const [waiting, setWaiting] = useState(0);
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [asked, setAsked] = useState(0);
 
   useEffect(() => {
@@ -65,14 +102,18 @@ export function Admin({ theme }: { theme: Theme }) {
 
     let current = true;
 
-    api.admin.connectivity(token)
-      .then((listing) => current && setWaiting(listing.requested.length))
+    api.admin.overview(token)
+      .then((read) => current && setOverview(read))
       .catch(() => undefined);
 
     return () => {
       current = false;
     };
-  }, [token, segment, detail, asked]);
+  }, [token, location.pathname, asked]);
+
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [segment, detail]);
 
   // a token that stops working - the host restarted with another one - locks
   // the whole panel again rather than leaving each section to say so
@@ -80,6 +121,8 @@ export function Admin({ theme }: { theme: Theme }) {
     setRefused(true);
     setToken('');
   }, [setToken]);
+
+  const changed = useCallback(() => setAsked((n) => n + 1), []);
 
   if (token === '') {
     return (
@@ -93,12 +136,28 @@ export function Admin({ theme }: { theme: Theme }) {
     );
   }
 
-  const access: Access = { token, deny, dark: theme === 'dark', changed: () => setAsked((n) => n + 1) };
+  const access: Access = { token, deny, dark: theme === 'dark', overview, changed };
+
+  const groups: NavGroup[] = GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    entries: group.sections.map((item) => ({ id: item.id, to: pathOf(item.id), label: item.label, ...mark(item.id, overview) })),
+  }));
+
+  const opening = (entry: NavEntry) => {
+    if (entry.id === section && !detail) {
+      // the section already open is read again from the top
+      changed();
+      scroller.current?.scrollTo({ top: 0 });
+    }
+
+    navigate(entry.to);
+  };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6">
-        <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:w-56 md:flex-col md:self-start md:border-b-0">
+        <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:max-h-[calc(100dvh-3.75rem)] md:w-56 md:flex-col md:self-start md:border-b-0">
           <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
@@ -118,46 +177,37 @@ export function Admin({ theme }: { theme: Theme }) {
             </div>
           </div>
 
-          <nav aria-label="Sections" className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-            {SECTIONS.map((item) => {
-              const current = section === item.id;
-
-              return (
-                <Link
-                  key={item.id}
-                  to={item.id === 'server' ? '/admin' : `/admin/${item.id}`}
-                  title={item.note}
-                  aria-current={current ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
-                    current
-                      ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
-                      : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {item.title}
-                  {item.id === 'connectivity' && waiting > 0 && (
-                    <span
-                      className="ml-auto rounded-full bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-400"
-                      title={`${waiting} waiting for a decision`}
-                    >
-                      {waiting}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="hidden min-h-0 flex-1 overflow-y-auto pb-6 [scrollbar-width:thin] md:block">
+            <SideNav label="Sections" groups={groups} current={section} onOpen={opening} />
+          </div>
         </aside>
+
+        {/* on a phone the sections are a bar of their own, which stays at the
+            top of the page as it moves - outside the sidebar, which does not */}
+        <PhoneNav
+          label="Sections"
+          groups={groups}
+          current={section}
+          title={SECTIONS.find((s) => s.id === section)?.label ?? 'Dashboard'}
+          onOpen={opening}
+          scroller={scroller}
+        />
 
         <main className="flex min-w-0 flex-1 flex-col">
           {section === 'lambdas' && detail ? (
             <LambdaDetail key={detail} access={access} publicKey={decodeURIComponent(detail)} />
           ) : section === 'lambdas' ? (
             <LambdasSection access={access} />
+          ) : section === 'statistics' ? (
+            <StatisticsSection access={access} />
           ) : section === 'connectivity' ? (
             <ConnectivitySection access={access} />
           ) : section === 'blocks' ? (
             <BlocksSection access={access} />
+          ) : section === 'server' ? (
+            <ServerSection access={access} />
+          ) : section === 'storage' ? (
+            <StorageSection access={access} />
           ) : section === 'log' ? (
             <LogSection access={access} />
           ) : section === 'settings' ? (
@@ -167,12 +217,61 @@ export function Admin({ theme }: { theme: Theme }) {
           ) : section === 'usage' ? (
             <UsageReportSection access={access} />
           ) : (
-            <ServerSection access={access} />
+            <DashboardSection access={access} />
           )}
         </main>
       </div>
     </div>
   );
+}
+
+/**
+ * What is worth noticing about a section beside its name: what waits there
+ * for the operator, as a count or a dot - the colour of how urgent it is.
+ */
+function mark(id: SectionId, overview: AdminOverview | null): Pick<NavEntry, 'marker' | 'calls'> {
+  if (overview === null) {
+    return {};
+  }
+
+  const { attention, failing } = overview;
+
+  switch (id) {
+    case 'connectivity':
+      return attention.connectivityWaiting > 0
+        ? { calls: 'wanted', marker: <Count tone="wanted" title={`${attention.connectivityWaiting} waiting for a decision`}>{attention.connectivityWaiting}</Count> }
+        : {};
+    case 'blocks':
+      return attention.youAreBlocked
+        ? { calls: 'problem', marker: <Dot tone="problem" title="Your own address is blocked" /> }
+        : attention.addressBlocks > 0 ? { marker: <Count title={`${attention.addressBlocks} blocked`}>{attention.addressBlocks}</Count> } : {};
+    case 'storage': {
+      const state = diskState(overview.disk);
+
+      return state ? { calls: state === 'bad' ? 'problem' : 'wanted', marker: <Dot tone={state === 'bad' ? 'problem' : 'wanted'} title="The volume is running out of room" /> } : {};
+    }
+    case 'usage':
+      return attention.usageReportFailure ? { calls: 'wanted', marker: <Dot tone="wanted" title="The last report did not arrive" /> } : {};
+    case 'log':
+      return failing.length > 0 ? { calls: 'problem', marker: <Dot tone="problem" title="Lambdas answered with server errors in the last hour" /> } : {};
+    default:
+      return {};
+  }
+}
+
+function Count({ tone, title, children }: { tone?: 'wanted'; title: string; children: ReactNode }) {
+  return (
+    <span
+      title={title}
+      className={`rounded-full px-1.5 text-[11px] font-medium tabular-nums ${tone === 'wanted' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : 'text-slate-400'}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Dot({ tone, title }: { tone: 'problem' | 'wanted'; title: string }) {
+  return <span title={title} aria-label={title} className={`h-2 w-2 shrink-0 rounded-full ${tone === 'problem' ? 'bg-red-500' : 'bg-amber-500'}`} />;
 }
 
 /**
@@ -205,7 +304,7 @@ function Unlock({ refused, onUnlocked }: { refused: boolean; onUnlocked: (token:
     setProblem(null);
 
     try {
-      await api.admin.list(token, '', 1);
+      await api.admin.list(token);
       onUnlocked(token);
     } catch (error) {
       setProblem(

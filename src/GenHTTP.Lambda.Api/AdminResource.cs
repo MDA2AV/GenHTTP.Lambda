@@ -216,6 +216,20 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     public async ValueTask<AdminStorageResponse> GetStorage()
         => AdminStorageResponse.Of(await census.StorageAsync());
 
+    [ResourceMethod(Method.Post, "storage/measure")]
+    [Summary("Measures what takes the room again, now")]
+    [Remarks("""
+             Walks over every file of the data directory, as the hourly measurement does, and answers once it is done - which on
+             a large installation takes a moment. Changes nothing; a walk already running is waited for rather than started again.
+             """)]
+    [return: Summary("The room, and what takes it, as measured now")]
+    public async ValueTask<AdminStorageResponse> MeasureStorage()
+    {
+        await census.MeasureAsync();
+
+        return AdminStorageResponse.Of(await census.StorageAsync());
+    }
+
     /// <summary>
     /// How many of the newest lambdas the overview names.
     /// </summary>

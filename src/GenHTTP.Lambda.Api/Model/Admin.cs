@@ -373,7 +373,7 @@ public sealed record AdminStorageResponse(
     AdminDiskResponse? Disk,
     [Summary("When what follows was measured - a walk over every file, done every hour, not on every request")]
     DateTime? Measured,
-    [Summary("What the data directory holds, by part, the largest first: `versions`, `drafts`, `databases`, `workspaces`, `git`, `sources` (packed for `/source`), `compiled` and `resources` (what the lambdas were compiled and unpacked to, made again when missing), `platform` and `analytics` (the platform's two databases), and `other`")]
+    [Summary("What the data directory holds, by part, the largest first: `versions`, `drafts`, `databases`, `workspaces`, `git`, `sources` (packed for `/source`), `compiled` and `resources` (what the lambdas were compiled and unpacked to, made again when missing), `platform` and `analytics` (the platform's two databases), `locations` and `crawlers` (the lists the log and the analytics read, downloaded again when missing), and `other`")]
     IReadOnlyList<StoragePart> Parts,
     [Summary("How many lambdas something was found of")]
     int Lambdas,

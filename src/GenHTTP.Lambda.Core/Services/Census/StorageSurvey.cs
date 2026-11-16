@@ -77,6 +77,9 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             [Name(options.SourceDirectory)] = ("sources", true),
             [Name(options.AssemblyDirectory)] = ("compiled", true),
             [Name(options.ResourceDirectory)] = ("resources", true),
+            // the lists the log and the analytics read, downloaded by their jobs
+            ["geo"] = ("locations", false),
+            ["crawlers"] = ("crawlers", false),
         };
 
         var root = new DirectoryInfo(options.DataDirectory);

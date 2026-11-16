@@ -163,6 +163,36 @@ public sealed class AdminDashboardTests
     }
 
     [TestMethod]
+    public async Task TheStorageCanBeMeasuredAgainAtOnce()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        using (var first = await fixture.GetAsOperatorAsync("/api/v1/admin/storage"))
+        {
+            Assert.IsEmpty((await first.GetContentAsync<AdminStorageResponse>()).Largest);
+        }
+
+        var later = await fixture.CreateLambdaAsync("later");
+
+        await fixture.DeployAsync(later.PrivateKey);
+
+        using (var kept = await fixture.GetAsOperatorAsync("/api/v1/admin/storage"))
+        {
+            Assert.IsEmpty((await kept.GetContentAsync<AdminStorageResponse>()).Largest, "the measurement is kept for the hour");
+        }
+
+        using var request = fixture.Host.GetRequest("/api/v1/admin/storage/measure", HttpMethod.Post);
+
+        request.Headers.Add("X-Admin-Token", LambdaFixture.OperatorToken);
+
+        using var measured = await fixture.Host.GetResponseAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.OK, measured.StatusCode);
+
+        Assert.AreEqual("later", (await measured.GetContentAsync<AdminStorageResponse>()).Largest.Single().PublicKey);
+    }
+
+    [TestMethod]
     public async Task TheStorageIsBehindTheToken()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
@@ -174,6 +204,10 @@ public sealed class AdminDashboardTests
         using var overview = await fixture.SendAsync(HttpMethod.Get, "/api/v1/admin/overview");
 
         Assert.AreEqual(HttpStatusCode.Unauthorized, overview.StatusCode);
+
+        using var measure = await fixture.SendAsync(HttpMethod.Post, "/api/v1/admin/storage/measure");
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, measure.StatusCode);
     }
 
     #endregion

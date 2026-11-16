@@ -6,11 +6,13 @@ import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago } from '@genhttp-lambda/kit/ui/ui';
+import { Action, actionButton } from './parts';
 
 /**
- * Blocking a lambda and lifting the block, for the operator - on the lambda's
- * page in the panel and in the Admin section of its editor alike, so it is
- * one piece rather than two that drift apart.
+ * Blocking a lambda and lifting the block, for the operator: a row of the
+ * Manage card on the lambda's page, which says whether it is blocked and
+ * opens the dialog that does the rest. Why it was blocked is shown with the
+ * lambda, apart from the row.
  *
  * Blocking may block the addresses the lambda was changed from as well. All
  * of them are offered ticked but the operator's own, which is marked: an
@@ -18,7 +20,7 @@ import { Ago } from '@genhttp-lambda/kit/ui/ui';
  *
  * In English, like the panel it is a part of.
  */
-export function BlockControl({ token, detail, onChanged, deny }: {
+export function BlockAction({ token, detail, onChanged, deny }: {
   token: string;
   detail: AdminLambdaDetail;
   onChanged: (detail: AdminLambdaDetail) => void;
@@ -28,6 +30,7 @@ export function BlockControl({ token, detail, onChanged, deny }: {
   const toast = useToast();
 
   const [asking, setAsking] = useState(false);
+  const [lifting, setLifting] = useState(false);
   const [reason, setReason] = useState('');
   const [chosen, setChosen] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -43,6 +46,7 @@ export function BlockControl({ token, detail, onChanged, deny }: {
       onChanged(await action());
       toast(done, 'success');
       setAsking(false);
+      setLifting(false);
     } catch (error) {
       // the platform's own refusals say what kind they are; the token's do not
       if (refusedToken(error) && !(error as ApiError).kind) {
@@ -80,51 +84,53 @@ export function BlockControl({ token, detail, onChanged, deny }: {
 
   if (block) {
     return (
-      <div className="surface border-red-500/30 bg-red-500/5 p-4">
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-medium text-red-700 dark:text-red-400">Blocked <Ago at={block.since} /></h2>
-            <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">
-              {block.reason ? <>“{block.reason}”</> : <span className="text-slate-400">No reason given.</span>}
-            </p>
-            <p className="mt-2 text-[13px] text-slate-500">
-              Offline, and every change is refused - for its owner through every door, for you too. Its owner can still read and
-              download it, and is shown it was blocked, with your reason. You can still delete it.
-            </p>
-          </div>
-          <button type="button" onClick={liftIt} disabled={busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            {busy && <IconSpinner />}
-            Lift the block
-          </button>
-        </div>
-        <p className="mt-3 text-[12px] text-slate-500">
-          Lifting it leaves the lambda offline until it is put online again. Blocked addresses stay blocked - they are lifted
-          under <Link to="/admin/blocks" className="text-accent-500 hover:underline">Blocked addresses</Link>, or by themselves
-          after two weeks.
-        </p>
-      </div>
+      <Action
+        label="Block"
+        state={<span className="text-red-600 dark:text-red-400">Blocked <Ago at={block.since} /></span>}
+        note="Its owner reads your reason in its editor. You can still remove it."
+      >
+        <button type="button" onClick={() => setLifting(true)} disabled={busy} className={`btn-ghost ${actionButton}`}>
+          Lift…
+        </button>
+
+        <Dialog
+          title={`Lift the block of "${lambda.publicKey}"?`}
+          open={lifting}
+          onClose={() => setLifting(false)}
+          footer={
+            <>
+              <button type="button" onClick={() => setLifting(false)} className="btn-ghost">Keep it blocked</button>
+              <button type="button" onClick={liftIt} disabled={busy} className="btn-primary">
+                {busy && <IconSpinner />}
+                Lift the block
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            It can be changed again, and stays offline until it is put online. A sandbox lambda&apos;s time starts again. The
+            addresses blocked with it stay blocked - they are lifted under{' '}
+            <Link to="/admin/blocks" className="text-accent-500 hover:underline">Blocked addresses</Link>, or by themselves after two weeks.
+          </p>
+        </Dialog>
+      </Action>
     );
   }
 
   const demo = isDemo(lambda.tier);
+  const installation = lambda.tierPolicy.installation;
 
   return (
-    <div className="surface p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-medium">Block</h2>
-          <p className="mt-1 text-[13px] text-slate-500">
-            {demo
-              ? 'A demo is the installation’s own: there is nothing to block.'
-              : 'Takes it offline with the previews of its drafts, and refuses every change to it - through the editor, the API, MCP and git - until the block is lifted. The addresses it was changed from can be blocked with it.'}
-          </p>
-        </div>
-        {!demo && (
-          <button type="button" onClick={ask} disabled={busy} className="btn-danger !px-3 !py-1.5 text-[13px]">
-            Block…
-          </button>
-        )}
-      </div>
+    <Action
+      label="Block"
+      state="Not blocked"
+      note={demo ? 'A demo is the installation’s own: there is nothing to block.' : installation ? 'A system lambda is never blocked: move it to another tier first.' : undefined}
+    >
+      {!demo && !installation && (
+        <button type="button" onClick={ask} disabled={busy} className={`btn-danger ${actionButton}`}>
+          Block…
+        </button>
+      )}
 
       <Dialog
         title={`Block "${lambda.publicKey}"?`}
@@ -141,7 +147,8 @@ export function BlockControl({ token, detail, onChanged, deny }: {
         }
       >
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          It goes offline, and nobody can change it until you lift the block. Its owner is told it was blocked, and reads
+          It goes offline with the previews of its drafts, and every change to it is refused - through the editor, the API,
+          MCP and git - until you lift the block. Its owner can still read and download it, is told it was blocked, and reads
           your reason in its editor as you write it.
         </p>
 
@@ -206,6 +213,6 @@ export function BlockControl({ token, detail, onChanged, deny }: {
           </p>
         )}
       </Dialog>
-    </div>
+    </Action>
   );
 }

@@ -108,7 +108,7 @@ public sealed record StorageCensus(
 /// </summary>
 [Summary("A part of what the data directory holds.")]
 public sealed record StoragePart(
-    [Summary("Which part: `versions`, `drafts`, `databases`, `workspaces`, `git`, `sources`, `compiled`, `resources`, `platform`, `analytics` or `other`")]
+    [Summary("Which part: `versions`, `drafts`, `databases`, `workspaces`, `git`, `sources`, `compiled`, `resources`, `platform`, `analytics`, `locations`, `crawlers` or `other`")]
     string Kind,
     [Summary("What its files come to, in bytes")]
     long Bytes,

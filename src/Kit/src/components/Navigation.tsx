@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 
-import { IconChevronDown, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { IconChevronDown, IconSpinner } from './Icons';
 
 /**
  * How much a section asks to be looked at: something went wrong, something

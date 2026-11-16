@@ -2,14 +2,15 @@ import { useState, type ReactNode } from 'react';
 
 import { ApiError, api, isDemo, refusedToken, type AdminLambdaDetail, type Connectivity, type ConnectivityStatus } from '@genhttp-lambda/kit/api';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
-import { IconGlobe, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
-import { Ago } from '@genhttp-lambda/kit/ui/ui';
+import { Action, actionButton } from './parts';
 
 /**
- * Whether a lambda may connect to other servers, on its page in the panel:
- * where its owner's request stands, what they said it is for, whether its
- * code connects at all - and the operator's decision.
+ * Whether a lambda may connect to other servers, as a row of the Manage card
+ * on its page: where it stands, and the decisions the operator can make. What
+ * its owner asked for and what the operator said back are shown with the
+ * lambda, apart from the row.
  *
  * A lambda whose tier connects by default - production, usually - may
  * without asking; what the operator decides about one comes before that
@@ -17,7 +18,7 @@ import { Ago } from '@genhttp-lambda/kit/ui/ui';
  *
  * In English, like the panel it is a part of.
  */
-export function ConnectivityControl({ token, detail, onChanged, deny }: {
+export function ConnectivityAction({ token, detail, onChanged, deny }: {
   token: string;
   detail: AdminLambdaDetail;
   onChanged: (detail: AdminLambdaDetail) => void;
@@ -40,73 +41,22 @@ export function ConnectivityControl({ token, detail, onChanged, deny }: {
     toast(allow ? `"${lambda.publicKey}" may connect to other servers from its next request.` : `"${lambda.publicKey}" may no longer connect to other servers.`, 'success');
   };
 
-  const status = connectivity.status === 'Requested'
-    ? 'Waiting for you'
-    : connectivity.status === 'Allowed'
-      ? 'Allowed'
-      : connectivity.status === 'Declined'
-        ? 'Declined'
-        : connectivity.included
-          ? 'Included with its tier'
-          : 'Not allowed';
-
   return (
-    <div className={`surface p-4 ${connectivity.status === 'Requested' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="flex flex-wrap items-center gap-2 text-sm font-medium">
-            <IconGlobe className="h-4 w-4 text-slate-400" />
-            Connectivity
-            <ConnectivityChip connectivity={connectivity} />
-          </h2>
-
-          <p className="mt-1 text-[13px] text-slate-500">
-            {demo
-              ? 'A demo does not connect to other servers.'
-              : connectivity.included && connectivity.status == null
-                ? 'Its code may connect to other servers - call an API, open a socket, send mail - because its tier does by default. Declining it here comes first.'
-                : connectivity.allowed
-                  ? 'Its code may connect to other servers - call an API, open a socket, send mail.'
-                  : 'Its code may not connect to other servers: code that calls an API, opens a socket or sends mail does not compile.'}
-            {' '}
-            <span className={connects && !connectivity.allowed ? 'text-amber-600 dark:text-amber-400' : ''}>
-              {connects
-                ? connectivity.allowed ? 'Its code connects.' : 'Its code connects, and so does not compile.'
-                : 'Its code does not connect.'}
-            </span>
-          </p>
-        </div>
-
-        {!demo && !blocked && (
-          <div className="flex shrink-0 gap-1.5">
-            {!connectivity.allowed && (
-              <button type="button" onClick={() => setDeciding(true)} className="btn-primary !px-3 !py-1.5 text-[13px]">
-                Allow…
-              </button>
-            )}
-            {(connectivity.status === 'Requested' || connectivity.allowed) && (
-              <button type="button" onClick={() => setDeciding(false)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-                {connectivity.status === 'Allowed' ? 'Take back…' : 'Decline…'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {(connectivity.purpose || connectivity.note) && (
-        <dl className="mt-3 grid gap-3 text-[13px] sm:grid-cols-2">
-          {connectivity.purpose && (
-            <Said label={connectivity.status === 'Requested' ? <>Asked <Ago at={connectivity.changed!} /></> : 'What it was asked for'}>
-              {connectivity.purpose}
-            </Said>
-          )}
-          {connectivity.note && (
-            <Said label={<>{status} <Ago at={connectivity.changed!} /> - the owner reads this</>}>{connectivity.note}</Said>
-          )}
-        </dl>
+    <Action
+      label="Connectivity"
+      state={<span className="inline-flex items-center gap-1.5"><ConnectivityChip connectivity={connectivity} /></span>}
+      note={demo ? 'A demo does not connect to other servers.' : blocked ? 'Nothing about it changes while it is blocked.' : undefined}
+    >
+      {!demo && !blocked && !connectivity.allowed && (
+        <button type="button" onClick={() => setDeciding(true)} className={`btn-primary ${actionButton}`}>
+          Allow…
+        </button>
       )}
-
-      {blocked && !demo && <p className="mt-3 text-[12px] text-slate-500">Nothing about it changes while it is blocked.</p>}
+      {!demo && !blocked && (connectivity.status === 'Requested' || connectivity.allowed) && (
+        <button type="button" onClick={() => setDeciding(false)} className={`btn-ghost ${actionButton}`}>
+          {connectivity.status === 'Allowed' ? 'Take back…' : 'Decline…'}
+        </button>
+      )}
 
       <ConnectivityDecisionDialog
         token={token}
@@ -120,7 +70,7 @@ export function ConnectivityControl({ token, detail, onChanged, deny }: {
         deny={deny}
         failed={(message) => toast(message, 'error')}
       />
-    </div>
+    </Action>
   );
 }
 
@@ -236,42 +186,10 @@ export function ConnectivityChip({ connectivity }: { connectivity: Connectivity 
   }
 }
 
-/**
- * The same, beside the lambda in a list - only where there is something to
- * see: a request waiting, or connectivity allowed. Where its tier includes it,
- * its tier's badge says so already.
- */
-export function ConnectivityBadge({ connectivity }: { connectivity?: Connectivity | null }) {
-  if (!connectivity || (connectivity.included && connectivity.status == null)) {
-    return null;
-  }
-
-  if (connectivity.status === 'Requested') {
-    return <Chip tone="bg-amber-500/15 text-amber-700 dark:text-amber-400" title="Asks to connect to other servers">Asks for connectivity</Chip>;
-  }
-
-  if (connectivity.status === 'Allowed') {
-    return <Chip tone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" title="May connect to other servers">Connectivity</Chip>;
-  }
-
-  return null;
-}
-
 function Chip({ tone, title, children }: { tone: string; title: string; children: ReactNode }) {
   return (
     <span title={title} className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
       {children}
     </span>
-  );
-}
-
-function Said({ label, children }: { label: ReactNode; children: ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="mt-1 whitespace-pre-line break-words border-l-2 border-slate-200 pl-3 text-slate-700 dark:border-ink-700 dark:text-slate-300">
-        {children}
-      </dd>
-    </div>
   );
 }

@@ -882,6 +882,12 @@ export interface LambdaActivity {
   bytesOut: number;
   firstSeen?: string;
   lastSeen?: string;
+  /** Requests in the last hour, and of those the server errors. */
+  hourRequests: number;
+  hourFailed: number;
+  /** Requests in the last day, and of those the server errors. */
+  dayRequests: number;
+  dayFailed: number;
 }
 
 export interface Activity {
@@ -913,6 +919,26 @@ export interface LambdaOverview {
   blocked?: string;
   /** Whether it may connect to other servers, and where its request stands. */
   connectivity?: Connectivity | null;
+  /** Which of the platform's features it uses. */
+  uses?: AdminLambdaUses | null;
+  /** When it was last visited, as the platform writes it down - at most hourly. */
+  visited?: string | null;
+}
+
+/** Which of the platform's features a lambda uses, as far as the platform's database tells. */
+export interface AdminLambdaUses {
+  database: boolean;
+  /** Comes switched on: true unless its owner switched it off. */
+  workspace: boolean;
+  secrets: boolean;
+  /** Since when its visits are counted; absent while they are not. */
+  analyticsSince?: string | null;
+  showcase: boolean;
+  /** Its code is published at /source. */
+  source: boolean;
+  /** Features (drafts) open. */
+  drafts: number;
+  view: 'Full' | 'Simple';
 }
 
 /** One lambda in full, for the page the panel shows it on. */
@@ -930,6 +956,113 @@ export interface AdminLambdaDetail {
   you?: string | null;
   /** Whether the code online, or the newest, connects to other servers, as far as what is written tells. */
   connects: boolean;
+  /** The owner's overview of it, as the editor shows it. */
+  summary?: LambdaSummary | null;
+  uses?: AdminLambdaUses | null;
+  /** Its entry in the showcase, while it has one. */
+  showcase?: ShowcaseEntry | null;
+  /** How its code is published, where its owner ever published it. */
+  source?: SourceSettings | null;
+  /** Its features (drafts), the most recently changed first. */
+  features?: Feature[] | null;
+}
+
+/** The lambdas of the installation, counted - the demos apart and in nothing else. */
+export interface AdminCensus {
+  taken: string;
+  total: number;
+  demos: number;
+  online: number;
+  offline: number;
+  blocked: number;
+  /** By tier name: Sandbox, Production, System, Demo. */
+  tiers: Record<string, number>;
+  createdDay: number;
+  createdWeek: number;
+  createdMonth: number;
+  activeMonth: number;
+  /** Going offline, or removed, within seven days unless used. */
+  goingOffline: number;
+  removed: number;
+  uses: {
+    database: number;
+    workspace: number;
+    secrets: number;
+    analytics: number;
+    showcase: number;
+    source: number;
+    domain: number;
+    drafts: number;
+    connects: number;
+    requested: number;
+  };
+  simple: number;
+  full: number;
+  versions: number;
+  /** Versions saved in the last thirty days, by origin. */
+  saved: Record<string, number>;
+}
+
+/** The volume of the data directory. */
+export interface AdminDisk {
+  size: number;
+  free: number;
+}
+
+/** The installation at a glance, for the operator's dashboards. */
+export interface AdminOverview {
+  lambdas: AdminCensus;
+  attention: {
+    connectivityWaiting: number;
+    connectivityWaitingSince?: string | null;
+    addressBlocks: number;
+    youAreBlocked: boolean;
+    usageReports: boolean;
+    usageReportFailure?: string | null;
+  };
+  disk?: AdminDisk | null;
+  newest: LambdaOverview[];
+  /** Lambdas with server errors in the last hour, the most first. */
+  failing: LambdaActivity[];
+}
+
+/** What one lambda takes of the room. */
+export interface AdminLambdaStorage {
+  publicKey: string;
+  tier: string;
+  dataBytes: number;
+  allowedBytes: number;
+  versionBytes: number;
+  draftBytes: number;
+  otherBytes: number;
+  totalBytes: number;
+}
+
+/** The room the installation has, and what takes it. */
+export interface AdminStorage {
+  directory: string;
+  disk?: AdminDisk | null;
+  /** When the parts were measured; the walk runs hourly. */
+  measured?: string | null;
+  parts: { kind: string; bytes: number; files: number }[];
+  lambdas: number;
+  largest: AdminLambdaStorage[];
+  /** Lambdas whose data is beyond their tier's allowance. */
+  over: AdminLambdaStorage[];
+}
+
+/** What the listing of the lambdas is narrowed to and ordered by. */
+export interface AdminQuery {
+  search?: string;
+  tier?: string;
+  state?: string;
+  /** Every one of these: database, workspace, secrets, analytics, showcase, source, domain, drafts, connects, requested. */
+  uses?: string[];
+  view?: string;
+  /** Created in the last this many days. */
+  created?: number;
+  sort?: string;
+  page?: number;
 }
 
 /** An address a lambda was changed from with its editor key. */
@@ -1373,11 +1506,23 @@ export const api = {
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 
   admin: {
-    list: (token: string, search: string, page: number, tier = '') =>
-      request<AdminListing>(
-        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${tier === '' ? '' : `&tier=${tier}`}`,
-        withToken(token),
-      ),
+    list: (token: string, query: AdminQuery = {}) => {
+      const params = new URLSearchParams({ page: String(query.page ?? 1) });
+
+      for (const [name, value] of Object.entries({ ...query, uses: query.uses?.join(',') })) {
+        if (name !== 'page' && value !== undefined && value !== '' && value !== 0) {
+          params.set(name, String(value));
+        }
+      }
+
+      return request<AdminListing>(`/admin/lambdas?${params}`, withToken(token));
+    },
+
+    overview: (token: string) => request<AdminOverview>('/admin/overview', withToken(token)),
+
+    storage: (token: string) => request<AdminStorage>('/admin/storage', withToken(token)),
+
+    measureStorage: (token: string) => request<AdminStorage>('/admin/storage/measure', withToken(token, { method: 'POST' })),
 
     lambda: (token: string, publicKey: string) =>
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}`, withToken(token)),
@@ -1462,8 +1607,8 @@ export const api = {
   logCallers: (token: string, limit = 500) =>
     request<LogCaller[]>(`/logs/callers?limit=${limit}`, withToken(token)),
 
-  telemetry: (minutes: number, token: string) =>
-    request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),
+  telemetry: (minutes: number, token: string, days = 30) =>
+    request<Telemetry>(`/telemetry?minutes=${minutes}&days=${days}`, withToken(token)),
 
   showcases: (skip = 0, take = 12) => request<ShowcaseListing>(`/showcases/?skip=${skip}&take=${take}`),
 
