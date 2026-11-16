@@ -76,8 +76,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1 bestand' : `${files} bestanden`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `Deze versie komt op ${used} van de ${of} die een versie mag hebben, code en resources samen.`,
-  scope: (data) => (
-    <>Wat de lambda bewaart terwijl hij draait, is voor elke versie hetzelfde en staat onder {data('Data')}.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      Wat de lambda bewaart terwijl hij draait – de {database('database')}, de {workspace('workspace')} en de{' '}
+      {secrets('secrets')} – is voor elke versie hetzelfde.
+    </>
   ),
   download: 'Downloaden',
   newIn: (group) => `Nieuw bestand in ${group}`,

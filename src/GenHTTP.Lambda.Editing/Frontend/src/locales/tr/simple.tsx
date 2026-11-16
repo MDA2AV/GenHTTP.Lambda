@@ -9,7 +9,6 @@ export const simple: EditorMessages['simple'] = {
   simpleNote: 'Uygulamanız ve değişiklik istemek için bir alan.',
   fullNote: 'Kod dahil tüm bölümler.',
   toFull: 'Tüm bölümleri göster',
-  toSimple: 'Sade görünüme geç',
   about: 'Hakkında',
   aboutMore: 'Uygulamanız hakkında daha fazlası',
   outsideTitle: 'Bu bölüm tam görünüme ait',

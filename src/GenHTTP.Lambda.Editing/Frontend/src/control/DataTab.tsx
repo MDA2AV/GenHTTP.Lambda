@@ -5,13 +5,13 @@ import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconAlert, IconDatabase, IconDownload, IconFolder, IconHistory, IconKey, IconLayers, IconSpinner, IconTrash, IconUpload } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { useEditorT } from '../i18n';
-import type { Control } from './context';
+import type { Control, DataKind } from './context';
 import { DatabasePanel } from './DatabasePanel';
 import { GroupList, Tree, Viewer, workspaceOf, type Selection } from './FileBrowser';
 import { bytes } from '@genhttp-lambda/kit/ui/format';
 import { SecretsPanel } from './SecretsPanel';
 import { Exposure } from './SummaryTab';
-import { Ago, Meter, Section, Switch, pill } from '@genhttp-lambda/kit/ui/ui';
+import { Ago, Meter, Section, Switch } from '@genhttp-lambda/kit/ui/ui';
 
 /** No files of a version are shown here; the viewer is handed none. */
 const NO_FILES: LambdaFile[] = [];
@@ -24,47 +24,55 @@ const ICONS: Record<string, (props: { className?: string }) => ReactNode> = {
 };
 
 /**
- * What the lambda keeps, as opposed to what it is.
+ * What a kind of data is called in a view: its own name in the full view,
+ * and in the simple view what it is to somebody who does not know what a
+ * database or a workspace is - records, what the app saved, keys and
+ * passwords. The sidebar names the sections the same way.
+ */
+export function useKindName() {
+  const said = useEditorT().data;
+
+  return (kind: DataKind, simple: boolean) => (simple ? said.simple[kind] : said.kinds[kind]?.name ?? kind);
+}
+
+/**
+ * One kind of what the lambda keeps, as opposed to what it is: its database,
+ * its workspace or its secrets, each a section of its own.
  *
  * A version is the program and is replaced by the next one; data belongs to
- * the lambda, is shared by every version and outlives all of them. The page
- * says that first, in three lines, because it is what decides where anything
- * goes.
+ * the lambda, is shared by every version and outlives all of them. The ⓘ
+ * beside the title says so, and the group the sections are in - the program
+ * and its data - puts them beside the versions that share them.
  *
- * Every kind of data is one view of the same section, picked from a row of
- * pills under its title: each shows what it is, whether it is on and how full
- * it is the same way, and only what it holds is its own - its tables for the
- * database, a tree of files for the workspace, a list of names for the
- * secrets. So a kind added later is found where the others are, and looks
- * like them. Opened without a kind, it shows the first one that is on, so a
- * lambda that never switched its database on opens on what it does keep.
+ * Every kind is drawn the same way - what it is, whether it is on and how
+ * full it is, with its switch - and only what it holds is its own: its
+ * tables for the database, a tree of files for the workspace, a list of
+ * names for the secrets. So a kind added later looks like the others.
  *
  * Opened on a feature, it shows the feature's copy instead - the test data
  * of a draft, to the owner: what the preview reads and writes, taken from
  * the lambda when the feature began and thrown away when it goes online.
- * Which kinds there are is still the lambda's to switch, so there are no
- * switches here - only resetting the copy, for a preview that made a mess.
+ * Which kinds there are is still the lambda's to switch, so there is no
+ * switch here - only resetting the copy, for a preview that made a mess,
+ * which resets every kind of it at once, as it was copied.
  *
- * The simple view shows the section only once there is something in it, and
- * then only the kinds that hold something - its records, what it saved, and
- * the keys it uses - in words that do not assume anybody knows what a
- * database or a workspace is.
+ * The simple view has the section only once the kind holds something, in
+ * words that do not assume anybody knows what a database or a workspace is.
  */
-export function DataTab({ control, kind, onKind }: {
+export function DataTab({ control, kind }: {
   control: Control;
-  /** The kind the address names; the first there is when it names none. */
-  kind?: string;
-  onKind: (kind: string) => void;
+  kind: DataKind;
 }) {
   const t = useEditorT();
   const said = t.data;
   const toast = useToast();
+  const nameOf = useKindName();
 
   const [stores, setStores] = useState<DataStore[] | null>(null);
   const [secrets, setSecrets] = useState<SecretListing | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [switching, setSwitching] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<DataStore | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [recopying, setRecopying] = useState<'asking' | 'busy' | null>(null);
 
   /** Counts every change to what is held, so the views below read again. */
@@ -80,7 +88,8 @@ export function DataTab({ control, kind, onKind }: {
     try {
       const [found, kept] = await Promise.all([
         feature ? api.feature.data(control.privateKey, feature.key) : api.data(control.privateKey),
-        api.secrets.list(control.privateKey, feature?.key),
+        // only the secrets have a list of their own to read beside what the kind is
+        kind === 'secrets' ? api.secrets.list(control.privateKey, feature?.key) : Promise.resolve(null),
       ]);
 
       setStores(found);
@@ -89,7 +98,7 @@ export function DataTab({ control, kind, onKind }: {
     } catch (error) {
       setFailure(error instanceof ApiError ? error.message : said.readFailed);
     }
-  }, [control.privateKey, feature?.key, said]);
+  }, [control.privateKey, feature?.key, kind, said]);
 
   useEffect(() => {
     reload();
@@ -100,35 +109,27 @@ export function DataTab({ control, kind, onKind }: {
     await reload();
   }, [reload]);
 
-  const words = (id: string) => said.kinds[id];
-  const name = (id: string) => words(id)?.name ?? id;
+  const words = said.kinds[kind];
+  const current = stores?.find((store) => store.kind === kind) ?? null;
 
-  // the simple view names only what holds something, or what the app is
-  // waiting for - an empty kind is nothing to look at for somebody who does
-  // not know it exists
-  const shown = (stores ?? []).filter((store) =>
-    !simple || store.items > 0 || (store.kind === 'secrets' && (secrets?.missing.length ?? 0) > 0));
-
-  const current = shown.find((store) => store.kind === kind) ?? shown.find((store) => store.enabled) ?? shown[0] ?? null;
-
-  async function toggle(store: DataStore, on: boolean) {
-    setConfirming(null);
-    setSwitching(store.kind);
+  async function toggle(on: boolean) {
+    setConfirming(false);
+    setSwitching(true);
 
     try {
       if (on) {
-        await api.enableData(control.privateKey, store.kind);
-        toast(words(store.kind)?.switchedOn ?? said.on, 'success');
+        await api.enableData(control.privateKey, kind);
+        toast(words?.switchedOn ?? said.on, 'success');
       } else {
-        await api.disableData(control.privateKey, store.kind);
-        toast(words(store.kind)?.switchedOff ?? said.off);
+        await api.disableData(control.privateKey, kind);
+        toast(words?.switchedOff ?? said.off);
       }
 
       await Promise.all([changed(), control.refresh()]);
     } catch (error) {
       toast(error instanceof ApiError ? error.message : said.switchFailed, 'error');
     } finally {
-      setSwitching(null);
+      setSwitching(false);
     }
   }
 
@@ -154,17 +155,16 @@ export function DataTab({ control, kind, onKind }: {
 
   const storage = control.summary?.storage;
 
-  const missing = secrets?.missing.length ?? 0;
-
-  // the code connects to a database that is switched off - a draft's code included
-  const wantsDatabase = !feature && !!storage?.usesDatabase && !storage.databaseEnabled;
-
-  /** What a kind is called in the simple view, which does not name databases or workspaces. */
-  const plainName = (id: string) => (id === 'secrets' ? said.simple.secrets : id === 'database' ? said.simple.database : said.simple.workspace);
+  /**
+   * The simple view never shows a kind that is off - it has no switches -
+   * but for the secrets, which it switches on when the owner enters one the
+   * app asks for. Come to by a link, it says there is nothing.
+   */
+  const nothing = simple && current !== null && !current.enabled && kind !== 'secrets';
 
   return (
     <Section
-      title={feature ? t.features.views.data : t.frame.sections.data}
+      title={nameOf(kind, simple)}
       hint={feature ? undefined : simple ? said.simple.hint : said.hint}
       actions={feature && !simple && (
         <button
@@ -178,86 +178,44 @@ export function DataTab({ control, kind, onKind }: {
           {said.recopy}
         </button>
       )}
-      pills={shown.length > (simple ? 1 : 0) && (
-        <div role="tablist" aria-label={said.kindsLabel} className="flex flex-wrap gap-1.5">
-          {shown.map((store) => {
-            const Icon = ICONS[store.kind] ?? IconLayers;
-            const active = store.kind === current?.kind;
-            const wanting = (store.kind === 'secrets' && missing > 0) || (store.kind === 'database' && wantsDatabase);
-
-            return (
-              <button
-                key={store.kind}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => onKind(store.kind)}
-                className={pill(active)}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {simple ? plainName(store.kind) : name(store.kind)}
-                {store.enabled ? (
-                  <span className="tabular-nums text-slate-400">{store.items}</span>
-                ) : (
-                  <span className="text-[11px] uppercase tracking-wide text-slate-400">{said.off}</span>
-                )}
-                {wanting && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title={store.kind === 'database' ? said.offDot : said.missingDot} />}
-              </button>
-            );
-          })}
-        </div>
-      )}
     >
       {demo && <p className="-mt-1 mb-4 text-[13px] text-slate-500">{said.demo}</p>}
 
-      {feature ? (
-        <p className="max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.featureHint}</p>
-      ) : !simple && (
-        <dl className="grid gap-4 sm:grid-cols-3">
-          {said.facts.map(([title, text]) => (
-            <div key={title} className="border-l-2 border-accent-500/40 pl-3 dark:border-accent-400/40">
-              <dt className="text-[13px] font-medium">{title}</dt>
-              <dd className="mt-0.5 text-[13px] text-slate-500">{text}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      {feature && <p className="mb-5 max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.featureHint}</p>}
 
-      {failure && <p className="mt-6 text-sm text-red-500">{failure}</p>}
+      {failure && <p className="mb-6 text-sm text-red-500">{failure}</p>}
 
       {stores === null && !failure ? (
-        <div className="mt-6 flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
           <IconSpinner /> {t.files.reading}
         </div>
-      ) : current === null ? (
-        simple && <p className="mt-6 text-sm text-slate-500">{said.simple.nothing}</p>
+      ) : current === null ? null : nothing ? (
+        <p className="surface p-6 text-center text-sm text-slate-500">{kind === 'database' ? said.simple.noRecords : said.simple.nothing}</p>
       ) : (
-        <div className={simple ? 'mt-2' : 'mt-6'}>
+        <>
           {/* which kinds there are is the lambda's to switch, so a draft has no switch */}
           {!feature && !simple && (
             <Store
               store={current}
-              publicly={current.kind === 'workspace' ? !!storage?.servesWorkspace : null}
-              busy={switching === current.kind}
+              publicly={kind === 'workspace' ? !!storage?.servesWorkspace : null}
+              busy={switching}
               readOnly={demo}
-              onToggle={() => (current.enabled ? setConfirming(current) : toggle(current, true))}
+              onToggle={() => (current.enabled ? setConfirming(true) : toggle(true))}
             />
           )}
 
-          <div className={feature || simple ? 'mt-5' : 'mt-8'}>
-            {current.kind === 'secrets' ? (
+          <div className={feature || simple ? '' : 'mt-8'}>
+            {kind === 'secrets' ? (
               <SecretsPanel control={control} listing={secrets} readOnly={demo} onChanged={changed} />
-            ) : current.kind === 'database' ? (
+            ) : kind === 'database' ? (
               <DatabasePanel control={control} enabled={current.enabled} readOnly={demo} generation={generation} onChanged={changed} />
-            ) : current.kind === 'workspace' ? (
-              simple ? (
-                <SavedFiles key={generation} control={control} />
-              ) : (
-                <WorkspaceView key={generation} control={control} store={current} readOnly={demo} onChanged={changed} />
-              )
-            ) : null}
+            ) : simple ? (
+              <SavedFiles key={generation} control={control} />
+            ) : (
+              <WorkspaceView key={generation} control={control} store={current} readOnly={demo} onChanged={changed} />
+            )}
           </div>
-        </div>
+        </>
       )}
 
       <Dialog
@@ -279,34 +237,34 @@ export function DataTab({ control, kind, onKind }: {
       </Dialog>
 
       <Dialog
-        title={confirming ? (words(confirming.kind)?.confirmOff ?? '') : ''}
-        open={confirming !== null}
-        onClose={() => setConfirming(null)}
+        title={words?.confirmOff ?? ''}
+        open={confirming && current !== null}
+        onClose={() => setConfirming(false)}
         footer={
           <>
-            <button type="button" onClick={() => setConfirming(null)} className="btn-ghost">
+            <button type="button" onClick={() => setConfirming(false)} className="btn-ghost">
               {said.keep}
             </button>
-            <button type="button" className="btn-danger" onClick={() => confirming && toggle(confirming, false)}>
+            <button type="button" className="btn-danger" onClick={() => toggle(false)}>
               {said.deleteAndOff}
             </button>
           </>
         }
       >
-        {confirming && (
+        {current && (
           <>
             <p className="text-slate-600 dark:text-slate-400">
-              {confirming.items > 0 || confirming.usedBytes > 0
+              {current.items > 0 || current.usedBytes > 0
                 ? said.confirmText(
-                    [words(confirming.kind)?.count(confirming.items), confirming.usedBytes > 0 ? bytes(confirming.usedBytes) : null]
+                    [words?.count(current.items), current.usedBytes > 0 ? bytes(current.usedBytes) : null]
                       .filter(Boolean)
                       .join(', '),
                   )
                 : said.confirmEmpty}
             </p>
-            {((confirming.kind === 'workspace' && storage?.usesWorkspace)
-              || (confirming.kind === 'database' && storage?.usesDatabase)
-              || (confirming.kind === 'secrets' && (secrets?.used.length ?? 0) > 0))
+            {((kind === 'workspace' && storage?.usesWorkspace)
+              || (kind === 'database' && storage?.usesDatabase)
+              || (kind === 'secrets' && (secrets?.used.length ?? 0) > 0))
               && control.lambda.activeVersion != null && (
               <p className="flex gap-2 text-amber-700 dark:text-amber-400">
                 <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -478,35 +436,38 @@ function SavedFiles({ control }: { control: Control }) {
   const files = [...listing.files].sort((a, b) => b.modified.localeCompare(a.modified));
   const visible = all ? files : files.slice(0, 12);
 
+  // the title of the section names it; what is left to say is what it is
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="flex items-center gap-2 text-[15px] font-medium">
-          <IconFolder className="h-4 w-4 text-accent-500 dark:text-accent-400" />
-          {said.workspace}
-        </h2>
-        <p className="mt-1 max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.workspaceText}</p>
-        <p className="mt-2 text-[13px] text-slate-500">{said.workspaceSize(t.data.kinds.workspace.count(files.length), bytes(listing.usedBytes))}</p>
+        <p className="max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.workspaceText}</p>
+        {files.length > 0 && (
+          <p className="mt-2 text-[13px] text-slate-500">{said.workspaceSize(t.data.kinds.workspace.count(files.length), bytes(listing.usedBytes))}</p>
+        )}
       </div>
 
-      <ul className="surface divide-y divide-slate-200 dark:divide-ink-800">
-        {visible.map((file) => (
-          <li key={file.path} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
-            <span className="min-w-0 flex-1 truncate" title={file.path}>{file.path}</span>
-            <span className="hidden shrink-0 tabular-nums text-slate-500 sm:inline">{bytes(file.size)}</span>
-            <Ago at={file.modified} className="hidden shrink-0 text-slate-500 md:inline" />
-            <a
-              href={workspace.url(file.path)}
-              download
-              className="shrink-0 p-1 text-slate-400 hover:text-accent-500"
-              aria-label={t.files.download}
-              title={t.files.download}
-            >
-              <IconDownload className="h-4 w-4" />
-            </a>
-          </li>
-        ))}
-      </ul>
+      {files.length === 0 ? (
+        <p className="surface p-6 text-center text-sm text-slate-500">{said.nothing}</p>
+      ) : (
+        <ul className="surface divide-y divide-slate-200 dark:divide-ink-800">
+          {visible.map((file) => (
+            <li key={file.path} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+              <span className="min-w-0 flex-1 truncate" title={file.path}>{file.path}</span>
+              <span className="hidden shrink-0 tabular-nums text-slate-500 sm:inline">{bytes(file.size)}</span>
+              <Ago at={file.modified} className="hidden shrink-0 text-slate-500 md:inline" />
+              <a
+                href={workspace.url(file.path)}
+                download
+                className="shrink-0 p-1 text-slate-400 hover:text-accent-500"
+                aria-label={t.files.download}
+                title={t.files.download}
+              >
+                <IconDownload className="h-4 w-4" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {files.length > visible.length && (
         <button type="button" onClick={() => setAll(true)} className="text-[13px] text-accent-500 hover:underline">

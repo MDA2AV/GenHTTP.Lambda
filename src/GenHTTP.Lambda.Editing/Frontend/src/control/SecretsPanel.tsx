@@ -146,15 +146,8 @@ export function SecretsPanel({ control, listing, readOnly, onChanged }: {
   return (
     <div className="space-y-5">
       {simple ? (
-        <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-1">
-            <h2 className="flex items-center gap-2 text-[15px] font-medium">
-              <IconKey className="h-4 w-4 text-accent-500 dark:text-accent-400" />
-              {plain.secrets}
-            </h2>
-            <p className="mt-1 max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{plain.secretsText}</p>
-          </div>
-        </div>
+        // the title of the section names them; what is left to say is what they are
+        <p className="max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{plain.secretsText}</p>
       ) : (
         (stored.length > 0 || listing.missing.length > 0) && (
           <div className="flex min-h-8 flex-wrap items-center justify-between gap-3">

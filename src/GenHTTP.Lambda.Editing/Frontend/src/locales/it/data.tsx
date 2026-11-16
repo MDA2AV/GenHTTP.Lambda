@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'I dati sono quello che la lambda conserva mentre gira. Appartengono alla lambda, non a una versione: tutte le versioni leggono e scrivono gli stessi dati, e niente di quello che fai con le versioni li cambia. Una bozza si prova su una loro copia. Spariscono quando elimini la lambda o quando disattivi quel tipo di dati. Il database e il workspace condividono un unico spazio a disposizione, quindi ciascuno può crescere fin dove l’altro glielo lascia.',
-  facts: [
-    ['Condivisi da tutte le versioni', 'Qualunque versione sia online legge e scrive gli stessi dati.'],
-    ['Restano a ogni deploy', 'Deploy, ripristino o integrazione di una bozza non li toccano mai.'],
-    ['Decidi tu', 'Ogni tipo resta attivo solo finché lo vuoi. Disattivarne uno elimina quello che contiene.'],
-  ],
   featureHint:
     'Una copia dei dati della tua app, solo per questa bozza: la sua anteprima legge e scrive solo in questa copia, quindi le prove fatte qui non toccano mai i dati veri. Sparisce insieme alla bozza.',
   recopy: 'Reimposta i dati di prova',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'I dati di prova sono di nuovo aggiornati.',
   recopyFailed: 'Impossibile reimpostare i dati di prova.',
   copyContents: 'Cosa contiene la copia del workspace',
-  kindsLabel: 'Tipi di dati',
   kinds: {
     database: {
       name: 'Database',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `e altri ${count}`,
     database: 'Voci',
-    databaseTitle: 'Le voci che la tua app conserva',
     databaseText: 'Quello che la tua app conserva mentre la gente la usa, tabella per tabella: iscrizioni, messaggi, voti. Qui non cambia niente quando va online una nuova modifica.',
     records: (count) => (count === 1 ? '1 voce' : `${count.toLocaleString()} voci`),
     noRecords: 'La tua app non ha ancora conservato nessuna voce.',

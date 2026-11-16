@@ -103,8 +103,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Taslaklar', () => <>Yayına alınmadan önce denenen değişiklikler: her biri kendi adresinde ve kendi test verileriyle çalışır. Açıldığında bir taslağın kendi kodu, test verileri ve logları vardır. Bu bölüm, bir taslak olduğunda görünür.</>],
-    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: veritabanı, çalışma alanı ve anahtarlar ve parolalar, her biri kendi sekmesinde. Tablolara ve dosyalara bakın, dosya yükleyin, anahtar ve parola girin ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
+    ['Veritabanı', () => <>Uygulamanın sakladığı kayıtlar, tablo tablo okumak için - basit görünüm bunlara kayıt der. Çalışma alanı ve gizli değerler gibi her sürüm için ortaktır ve kendi bölümünde açılıp kapatılır; basit görünüm bu bölümü uygulama içinde bir şey sakladığında gösterir.</>],
+    ['Çalışma alanı', () => <>Uygulamanın çalışırken kaydettiği dosyalar: gözatın, yükleyin, indirin ve silin - basit görünümde uygulamanızın kaydettikleri.</>],
+    ['Gizli değerler', () => <>Kodun adıyla okuduğu API anahtarları ve parolalar: birini girin ya da değiştirin, ama geri okunamaz - basit görünümde anahtarlar ve parolalar.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
     ['Analitik', () => <>Uygulamanızı kimlerin ziyaret ettiği, açtığınızda: günlük ziyaretçiler, sayfa görüntülemeleri ve istekler, açtıkları sayfalar, onları yönlendiren siteler, ülkeleri ve cihazları, ayrıca uğrayan arama motorları ve yapay zekâlar.</>],
@@ -127,7 +129,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Her bölüm aynı şekilde çalışır: başlığı, onu açıklayan bir {k.b('ⓘ')} simgesi, sağda eylemleri ve birden fazla
       görünümü varsa altında bir sıra sekme. Tam görünüm bölümleri gruplar hâlinde toplar: insanların onu nasıl
-      bulduğu, değişikliğin yapıldığı yer, sürümler ve veriler ve nasıl çalıştığı.
+      bulduğu, değişikliğin yapıldığı yer, sürümler ve veriler ve nasıl çalıştığı. Telefonda üstteki çubuk içinde
+      bulunduğunuz bölümün adını gösterir ve hepsini açar.
     </>
   ),
   editorAside:
@@ -320,7 +323,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Bir lambda dosyaları iki yerde tutar ve editör onları ayrı gösterir: {k.b('Kod')} bir sürümün dosyalarını
-      (programı), {k.b('Veriler')} ise çalışma alanını (programın sakladıklarını) tutar. Fark,{' '}
+      (programı), {k.b('Çalışma alanı')} ise programın sakladıklarını tutar. Fark,{' '}
       {k.em('kime ait olduklarında')} yatar. Bir sürümün dosyaları o sürüme aittir; veriler ise lambdaya aittir ve her
       sürüm onları paylaşır. Her birinin tek bir yer payı vardır: bir sürümün kodu ve kaynakları birini paylaşır,
       lambdanın veritabanı ve çalışma alanı da diğerini.
@@ -343,7 +346,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Kayıtlar (girdiler, hesaplar, siparişler, oylar) {k.b('veritabanına')} aittir: lambdanın kendine ait,{' '}
-      {k.b('Veriler')} altında açılan bir SQLite veritabanı. Kod {k.code('Database.GetConnection()')} ile bir bağlantı
+      {k.b('Veritabanı')} altında açılan bir SQLite veritabanı. Kod {k.code('Database.GetConnection()')} ile bir bağlantı
       açar ve tabloları eşleyen kendi bağlamıyla veritabanını{' '}
       {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')} üzerinden okuyup yazar:
     </>
@@ -359,9 +362,8 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Tüm veriler gibi veritabanı da tüm sürümler için ortaktır; yayına alma ve eski bir sürüme dönme ona dokunmaz, bir
-      taslak ise onun bir kopyası üzerinde çalışır. {k.b('Veriler')} altında tablolarını ve içlerindekileri görürsünüz;
-      basit görünüm bunlara kayıt der. {k.b('.NET projesi olarak indir')} onu düz bir SQLite dosyası olarak
-      birlikte getirir.
+      taslak ise onun bir kopyası üzerinde çalışır. {k.b('Veritabanı')} altında tablolarını ve içlerindekileri
+      görürsünüz; basit görünüm bunlara kayıt der. {k.b('.NET projesi olarak indir')} onu düz bir SQLite dosyası olarak birlikte getirir.
     </>
   ),
   databaseAside: (k) => (
@@ -396,7 +398,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Gizli değerleri {k.b('Veriler')} altında açın ve değeri orada ayarlayın. Kaydedildikten sonra bir daha gösterilmez –
+      Gizli değerleri {k.b('Gizli değerler')} altında açın ve değeri orada ayarlayın. Kaydedildikten sonra bir daha gösterilmez –
       ne size ne de bir ajana; yalnızca değiştirebilirsiniz. Liste, kodun okuduğu ama henüz değeri olmayan adları
       gösterir, genel bakış da bunları ister. {k.code('Secret.Exists')} bir değerin ayarlı olup olmadığını söyler; onsuz
       da çalışan kod için. Tüm veriler gibi gizli değerler de tüm sürümler için ortaktır ve bir taslak bir kopya
@@ -504,7 +506,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Koddaki her şey herkese açık hâle gelir, önceki sürümler de dahil. Bir anahtarın ya da parolanın yeri, Veriler altındaki anahtarlar ve parolalardır; yayımlansın ya da yayımlanmasın, asla kod değildir.',
+    'Koddaki her şey herkese açık hâle gelir, önceki sürümler de dahil. Bir anahtarın ya da parolanın yeri Gizli değerler bölümüdür (basit görünümde anahtarlar ve parolalar); yayımlansın ya da yayımlanmasın, asla kod değildir.',
   visitors: ((k) => (
     <>
       Uygulamanızı kimlerin ziyaret ettiğini görmek için kontrol panelinde {k.b('Analitik')} bölümünü açın ve

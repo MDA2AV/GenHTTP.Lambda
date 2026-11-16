@@ -414,10 +414,14 @@ is off is compiled with one that refuses every call and says why; the database
 and the secrets are off until somebody switches them on. An agent may switch a kind on when what it builds
 needs one; switching off deletes, so only the owner does that. The database
 and the workspace share one allowance of room, a limit of the tier: each may
-grow as far as the other leaves it. The editor has a **Data** section of its
-own, beside **Versions**. Every kind is one view of it, picked from a row of
-pills under its title, and each is shown the same way - what it is, whether it
-is on, how full it is - with only what it holds drawn its own way.
+grow as far as the other leaves it. In the editor each kind is a section of
+its own - **Database**, **Workspace** and **Secrets**, beside **Versions** in
+the group of the program and its data - and each is shown the same way: what it
+is, whether it is on, how full it is and its switch, with only what it holds
+drawn its own way. The simple view names them **Records**, **Saved by your
+app** and **Keys and passwords**, and has each once the app keeps something in
+it, or waits for a key. An address from before, `/data` or `/data/:kind`,
+opens the kind it names, or the first one the lambda keeps.
 
 Deploying picks a version (the latest by default), builds it and makes it live,
 and a lambda has at most one deployment at a time. A deployment that does not
@@ -432,7 +436,8 @@ feature behind the newest version is **out of date**, and the agent is offered
 to bring it up to date. The drafts have a section of their own, shown once
 there is one, and opened on one the editor becomes the draft's: the sidebar
 holds it, with the buttons that try it and put it online, and its views are
-its documentation, its code, its tests, its test data and its preview's log. Showcase, domain, figures and
+its documentation, its code, its tests, its preview's log and - under **Test
+data** - a section for each kind of its copy of the data. Showcase, domain, figures and
 deployments stay with the lambda. A version offers to start a draft from it,
 the save dialog of the code offers to save what was typed as a new draft
 instead of a version, and a change the agent leaves as a draft can be tried
@@ -620,13 +625,20 @@ view opens with the product page's first paragraph. The full one ends with how
 much of its two allowances the lambda uses - its code and resources, and its
 data - each a meter that opens the section it counts.
 
-With fifteen sections and more, the full view's sidebar is in groups: the
+With twenty sections and more, the full view's sidebar is in groups: the
 overview and the documentation on their own, then how people find it and what
 they get to see of it (showcase, open source, domain) - what the lambda is to
 everybody else, right under what it is - then where a change is made, under
 Develop (Change, the drafts, the code, the tests), the program and what it
-keeps (data, versions), and how it runs (deployments, stats, logs). On a phone
-the groups are a rule apart in the row of sections.
+keeps (versions, database, workspace, secrets), and how it runs (deployments,
+connectivity, stats, analytics, logs). Where the window is too short for all
+of them, the sections scroll under the lambda's name. On a phone there is no
+room for a column beside the page, so a bar at its top names the section open
+and stays there as the page moves; it opens every section at once, in the
+same groups, two columns of them, with the switch between the views at the
+foot. What a section has to say for itself - a problem in the log, a key the
+code waits for, a change that ended - is a dot beside its name, and the bar
+shows the most urgent of them while the list is closed.
 
 **Code**, in the full view only, is every file of a version: the code and the
 resources as two trees beside the editor, each with what it comes to and
@@ -730,7 +742,7 @@ their records like this, `demo-crud` the plainest of them.
   as it was at one moment. A preview migrates its copy as it starts, which is
   where a migration is tried first; merging throws the copy away.
 - **Read by the owner, written by the lambda.** The editor shows its tables,
-  their columns and rows under Data (`GET …/database`); `read_database` does
+  their columns and rows under Database (`GET …/database`); `read_database` does
   the same for an agent. Nothing but the lambda writes to it.
 - **Versions share it.** A rollback runs an older version against a schema a
   newer one migrated; Evolve lets a version start whose migrations are fewer
@@ -980,7 +992,7 @@ Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
 when it is created (`POST /lambdas`, `create_lambda`) and changed later
 (`PATCH /lambdas/:privateKey`, `update_lambda`). The build agent creates its
 lambdas `Simple`; everything else defaults to `Full`. That is only the
-default: whoever switches at the foot of the sidebar (in the menu on a phone)
+default: whoever switches at the foot of the sidebar (of the list of sections on a phone)
 has chosen for themselves, for that lambda, which is kept in their browser and
 never sent anywhere - so an operator looking at somebody's lambda in the full
 view leaves it simple for its owner.

@@ -17,7 +17,6 @@ export const simple = {
   simpleNote: 'Your app and a box to ask for changes.',
   fullNote: 'Every section, the code included.',
   toFull: 'Show every section',
-  toSimple: 'Switch to the simple view',
   /** The documentation, in the simple view: what the app is for. */
   about: 'About',
   aboutMore: 'More about your app',

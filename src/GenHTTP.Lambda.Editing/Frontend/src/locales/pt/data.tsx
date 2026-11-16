@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Os dados são o que a lambda guarda enquanto roda. Eles pertencem à lambda, não a uma versão: todas as versões leem e gravam os mesmos dados, e nada do que você faz com as versões mexe neles. Um rascunho é testado numa cópia deles. Eles só somem quando a lambda é excluída, ou quando você desliga esse tipo de dado. O banco de dados e o workspace dividem um mesmo limite de espaço, então cada um pode crescer até onde o outro deixar.',
-  facts: [
-    ['Compartilhados por todas as versões', 'A versão que estiver no ar, seja qual for, lê e grava os mesmos dados.'],
-    ['Mantidos a cada deploy', 'Fazer deploy, voltar uma versão ou mesclar um rascunho nunca mexe neles.'],
-    ['Você decide', 'Cada tipo fica ligado só enquanto você quiser. Desligar um tipo apaga o que ele guarda.'],
-  ],
   featureHint:
     'Uma cópia dos dados do seu app, só para este rascunho: a prévia lê e grava apenas nessa cópia, então testar aqui nunca mexe nos dados reais. Ela some junto com o rascunho.',
   recopy: 'Redefinir os dados de teste',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Os dados de teste foram renovados.',
   recopyFailed: 'Não foi possível redefinir os dados de teste.',
   copyContents: 'O que tem na cópia do workspace',
-  kindsLabel: 'Tipos de dados',
   kinds: {
     database: {
       name: 'Banco de dados',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `e mais ${count}`,
     database: 'Registros',
-    databaseTitle: 'Registros que o seu app guarda',
     databaseText: 'O que o seu app guarda enquanto as pessoas o usam, tabela por tabela: inscrições, entradas, votos. Nada aqui muda quando uma nova mudança vai ao ar.',
     records: (count) => (count === 1 ? '1 registro' : `${count.toLocaleString()} registros`),
     noRecords: 'O seu app ainda não guardou nenhum registro.',

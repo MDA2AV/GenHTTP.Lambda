@@ -40,7 +40,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Il link di modifica',
   ],
   careful:
-    'Tutto quello che c’è nel codice diventa pubblico, anche nei suoi stati precedenti. Una password o una chiave non va mai nel codice: il suo posto è tra le chiavi e password in Dati, che non vengono mai pubblicate.',
+    'Tutto quello che c’è nel codice diventa pubblico, anche nei suoi stati precedenti. Una password o una chiave non va mai nel codice: il suo posto è tra le chiavi e password dell’app, che sono tenute separate dal codice e non vengono mai pubblicate.',
   licenseLabel: 'Licenza',
   licenseHint:
     'Cosa possono fare gli altri con il codice. MIT, la più diffusa, permette a chiunque di farci quasi tutto, purché il tuo nome resti indicato.',

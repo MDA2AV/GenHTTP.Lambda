@@ -77,20 +77,20 @@ public static class DataKinds
     /// log says - read there by the owner, and by an agent reading the logs.
     /// </remarks>
     public const string WorkspaceOff =
-        "The workspace of this lambda is switched off, so it cannot keep files. Its owner can switch it on under Data in the editor (PUT /api/v1/lambdas/{privateKey}/data/workspace).";
+        "The workspace of this lambda is switched off, so it cannot keep files. Its owner can switch it on under Workspace in the editor (PUT /api/v1/lambdas/{privateKey}/data/workspace).";
 
     /// <summary>
     /// What a lambda that reads a secret, or whoever tries to store one, is
     /// told while its secrets are switched off.
     /// </summary>
     public const string SecretsOff =
-        "The secrets of this lambda are switched off, so it has none to read. Switch them on under Data in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/secrets, and store the value there.";
+        "The secrets of this lambda are switched off, so it has none to read. Switch them on under Secrets in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/secrets, and store the value there.";
 
     /// <summary>
     /// What a lambda that asks for a connection is told while its database is
     /// switched off.
     /// </summary>
     public const string DatabaseOff =
-        "The database of this lambda is switched off, so there is nothing to connect to. Switch it on under Data in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/database.";
+        "The database of this lambda is switched off, so there is nothing to connect to. Switch it on under Database in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/database.";
 
 }

@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Um rascunho é experimentado numa cópia deles. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados. A base de dados e o workspace partilham um único espaço, por isso cada um pode crescer até onde o outro o deixar.',
-  facts: [
-    ['Partilhados por todas as versões', 'Seja qual for a versão online, lê e escreve os mesmos dados.'],
-    ['Ficam quando fazes deploy', 'Fazer deploy, reverter ou integrar um rascunho nunca lhes toca.'],
-    ['Decides tu', 'Cada tipo só está ligado enquanto quiseres. Desligar um deles elimina o que guarda.'],
-  ],
   featureHint:
     'Uma cópia dos dados da tua app, só para este rascunho: a pré-visualização lê e escreve apenas nesta cópia, por isso experimentar coisas aqui nunca toca nos dados reais. Desaparece com o rascunho.',
   recopy: 'Repor os dados de teste',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Os dados de teste estão novamente atualizados.',
   recopyFailed: 'Não foi possível repor os dados de teste.',
   copyContents: 'O que a cópia do workspace guarda',
-  kindsLabel: 'Tipos de dados',
   kinds: {
     database: {
       name: 'Base de dados',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `e mais ${count}`,
     database: 'Registos',
-    databaseTitle: 'Registos que a tua app guarda',
     databaseText: 'O que a tua app guarda enquanto as pessoas a usam (inscrições, entradas, votos), tabela a tabela. Nada aqui muda quando uma nova alteração fica online.',
     records: (count) => (count === 1 ? '1 registo' : `${count.toLocaleString()} registos`),
     noRecords: 'A tua app ainda não guardou nenhum registo.',

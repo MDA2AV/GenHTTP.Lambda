@@ -216,12 +216,13 @@ Give both a good experience. Concretely:
   words (getting ready, choosing an address for your website, checking it for
   mistakes). A new tool the agent may call gets a step kind and words on both
   pages.
-- The simple view shows the **Data** section only once the app keeps something
-  (a table, a saved file, a secret) or its code waits for a secret, and then
-  only the kinds that hold something: no switches, no folders, no code, no
-  column types - its records table by table to read, a plain list of what was
-  saved, and the keys to enter or replace. Entering one there switches secrets
-  on.
+- The simple view has a section per kind of data - **Records**, **Saved by
+  your app**, **Keys and passwords** - each only once the app keeps something
+  in it (a table, a saved file, a secret) or, the keys, its code waits for
+  one; an app that keeps nothing has none of them. No switches, no folders, no
+  code, no column types - its records table by table to read, a plain list of
+  what was saved, and the keys to enter or replace. Entering one there
+  switches secrets on.
 - The full view, `/ship`, the API, MCP tools, the guide and the README use the
   precise words (feature, version, merge, base).
 - The view a lambda opens in is a default only (`view`, set at creation and via
@@ -362,10 +363,15 @@ hosting URL. What follows is about subdomains unless it says otherwise.
   the database.
 - Every kind of data is switched on before a lambda can use it. An agent may
   switch one on (`enable_data`) when what it builds needs it; **switching off
-  deletes, so only the owner does it**. All kinds share one **Data** section
-  in the editor, one pill each, drawn the same way; only what a kind holds is
-  shown its own way. A new kind joins `DataKinds` and that section - it does
-  not get a menu entry of its own.
+  deletes, so only the owner does it**. **Each kind is a section of its own
+  in the editor - decided by the owner** (they were pills of one Data section
+  until the sidebar had room for groups), in the group of the program and its
+  data beside the versions, and all are drawn the same way (`DataTab`): what
+  the kind is, whether it is on, how full, its switch - only what it holds is
+  shown its own way. A draft lists the same kinds under **Test data**. A new
+  kind joins `DataKinds`, the editor's `DATA_KINDS` and that group, and gets a
+  section like the others. `/data` and `/data/{kind}`, the addresses from
+  before, open the kind they name or the first one the lambda keeps.
 
 ### Secrets
 
@@ -1140,10 +1146,19 @@ services. The rules that matter:
   address is the live lambda.
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; develop -
-  change, drafts, code, tests; program and data - data, versions; run -
-  deployments, connectivity, stats, analytics, logs). A new
-  section joins the group it belongs to rather
-  than the end of the list.
+  change, drafts, code, tests; program and data - versions, database,
+  workspace, secrets; run - deployments, connectivity, stats, analytics,
+  logs). A new section joins the group it belongs to rather than the end of
+  the list. Where the window is too short, the sections scroll under the
+  lambda's name.
+- **On a phone the sections are a bar, never a row that scrolls sideways -
+  asked for by the owner** once there were twenty: a bar at the top of the
+  page names the section open and stays as the page moves, and opens every
+  section at once in the sidebar's groups, two columns of them, with the view
+  switch at the foot (`control/Navigation.tsx`, which draws the sidebar from
+  the same entries). A dot a section shows beside its name is summed up on
+  the closed bar, the most urgent one, so nothing waits out of sight. A
+  draft's views are listed the same way.
 - **Wired through the container**, not by hand and not in statics. A concern
   that needs nothing but services is an `IDependentConcern`, registered as a
   singleton and added with `Dependent.Concern<T>()`; only a concern built with

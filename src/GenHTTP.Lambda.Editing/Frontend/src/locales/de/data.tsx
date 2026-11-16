@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Daten sind, was das Lambda zur Laufzeit aufbewahrt. Sie gehören dem Lambda, nicht einer Version: Jede Version liest und schreibt dieselben Daten, und nichts, was Sie mit Versionen tun, ändert daran etwas. Ein Entwurf wird mit einer Kopie davon ausprobiert. Gelöscht werden sie erst mit dem Lambda – oder wenn Sie diese Art von Daten ausschalten. Die Datenbank und der Workspace teilen sich ein gemeinsames Platzkontingent, sodass jede so weit wachsen darf, wie die andere es zulässt.',
-  facts: [
-    ['Für alle Versionen dieselben', 'Welche Version auch online ist: Sie liest und schreibt dieselben Daten.'],
-    ['Bleiben beim Deployen', 'Deployen, Zurückrollen oder einen Entwurf übernehmen – nichts davon rührt sie an.'],
-    ['Ihre Entscheidung', 'Jede Art ist nur eingeschaltet, solange Sie das wollen. Schalten Sie eine aus, wird gelöscht, was darin liegt.'],
-  ],
   featureHint:
     'Eine Kopie der Daten Ihrer App, nur für diesen Entwurf: Seine Vorschau liest und schreibt nur diese Kopie, daher rührt das Ausprobieren hier nie die echten Daten an. Sie verschwindet mit dem Entwurf.',
   recopy: 'Testdaten zurücksetzen',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Die Testdaten sind wieder frisch.',
   recopyFailed: 'Die Testdaten konnten nicht zurückgesetzt werden.',
   copyContents: 'Was in der Kopie des Workspace liegt',
-  kindsLabel: 'Arten von Daten',
   kinds: {
     database: {
       name: 'Datenbank',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `und ${count} weitere`,
     database: 'Einträge',
-    databaseTitle: 'Einträge, die Ihre App aufbewahrt',
     databaseText: 'Was Ihre App aufbewahrt, während Leute sie benutzen – Anmeldungen, Beiträge, Stimmen –, Tabelle für Tabelle. Geht eine neue Änderung online, bleibt hier alles, wie es ist.',
     records: (count) => (count === 1 ? '1 Eintrag' : `${count.toLocaleString()} Einträge`),
     noRecords: 'Ihre App hat noch keine Einträge gespeichert.',

@@ -103,8 +103,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Rascunhos', () => <>Alterações a ser experimentadas antes de irem online, cada uma num endereço próprio e com dados de teste próprios. Aberto, um rascunho tem o seu próprio código, dados de teste e logs. A secção existe assim que há um rascunho.</>],
-    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: a base de dados, o workspace e as chaves e palavras-passe, cada um no seu separador. Vê as tabelas e os ficheiros, carrega ficheiros, define chaves e palavras-passe ou liga e desliga um tipo. A vista simples mostra-o assim que a app guarda alguma coisa.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui, ou começa um rascunho a partir de qualquer uma delas.</>],
+    ['Base de dados', () => <>Os registos que a app guarda, tabela a tabela, para ler - a vista simples chama-lhes registos. Tal como o workspace e os segredos, é partilhada por todas as versões e liga-se ou desliga-se na sua própria secção, que a vista simples mostra assim que a app guarda alguma coisa nela.</>],
+    ['Workspace', () => <>Os ficheiros que a app guarda enquanto corre, para consultar, carregar, transferir e apagar - na vista simples, o que foi guardado pela tua app.</>],
+    ['Segredos', () => <>Chaves de API e palavras-passe que o código lê pelo nome: define uma ou substitui-a, mas nunca a podes ler de volta - na vista simples, chaves e palavras-passe.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],
     ['Estatísticas', () => <>Pedidos, falhas, tempos de resposta e os caminhos mais pedidos, na última hora ou nas últimas 24 horas.</>],
     ['Análise de visitas', () => <>Quem visita a app, depois de a ligares: visitantes, visualizações de páginas e pedidos por dia, as páginas que abrem, os sites que os enviam, os países e os dispositivos, e os motores de pesquisa e as IA que passaram por cá.</>],
@@ -127,7 +129,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Todas as secções funcionam da mesma forma: o título, um {k.b('ⓘ')} que a explica, as ações à direita e, quando há
       mais do que uma vista, uma fila de separadores por baixo. A vista completa junta as secções em grupos: como as
-      pessoas encontram a app, onde se faz uma alteração, as versões e os dados, e como corre.
+      pessoas encontram a app, onde se faz uma alteração, as versões e os dados, e como corre. Num telemóvel, a barra no
+      topo mostra o nome da secção em que estás e abre todas.
     </>
   ),
   editorAside:
@@ -315,7 +318,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Uma lambda guarda ficheiros em dois sítios, e o editor mostra-os em separado: {k.b('Código')} tem os ficheiros
-      de uma versão (o programa) e {k.b('Dados')} tem o workspace (o que o programa guarda). A diferença está em{' '}
+      de uma versão (o programa) e {k.b('Workspace')} tem o que o programa guarda. A diferença está em{' '}
       {k.em('a quem pertencem')}. Os ficheiros de uma versão pertencem a essa versão; os dados pertencem à lambda, e
       todas as versões os partilham. Cada um tem o seu espaço: o código e os recursos de uma versão partilham um, e
       a base de dados e o workspace da lambda partilham o outro.
@@ -338,7 +341,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Os registos (entradas, contas, encomendas, votos) pertencem à {k.b('base de dados')}: uma base de dados SQLite só
-      da lambda, ligada em {k.b('Dados')}. O código abre uma ligação com {k.code('Database.GetConnection()')} e lê e
+      da lambda, ligada em {k.b('Base de dados')}. O código abre uma ligação com {k.code('Database.GetConnection()')} e lê e
       escreve nela através do {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, com um
       contexto próprio que mapeia as tabelas:
     </>
@@ -354,7 +357,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Como todos os dados, a base de dados é partilhada por todas as versões, os deploys e as reversões não lhe tocam,
-      e um rascunho trabalha sobre uma cópia dela. Em {k.b('Dados')} vês as tabelas e o que têm; a vista simples
+      e um rascunho trabalha sobre uma cópia dela. Em {k.b('Base de dados')} vês as tabelas e o que têm; a vista simples
       chama-lhes registos. {k.b('Transferir como projeto .NET')} leva-a consigo como um simples ficheiro SQLite.
     </>
   ),
@@ -390,7 +393,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Liga os segredos em {k.b('Dados')} e define lá o valor. Depois de guardado, nunca mais é mostrado – nem a ti, nem
+      Liga os segredos em {k.b('Segredos')} e define lá o valor. Depois de guardado, nunca mais é mostrado – nem a ti, nem
       a um agente; só o podes substituir. A lista mostra que nomes o código lê que ainda não têm valor, e a visão geral
       pede-os. {k.code('Secret.Exists')} diz se um segredo está definido, para código que funciona sem ele. Como todos
       os dados, os segredos são partilhados por todas as versões, e um rascunho trabalha sobre uma cópia.
@@ -498,7 +501,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Tudo o que está no código fica público, incluindo as versões anteriores. Uma chave ou uma palavra-passe fica junto das chaves e palavras-passe em Dados, nunca no código, publicado ou não.',
+    'Tudo o que está no código fica público, incluindo as versões anteriores. Uma chave ou uma palavra-passe fica em Segredos (chaves e palavras-passe, na vista simples), nunca no código, publicado ou não.',
   visitors: ((k) => (
     <>
       Abre {k.b('Análise de visitas')} no painel de controlo e liga-a para ver quem visita a tua app: quantas pessoas

@@ -89,8 +89,12 @@ export const code = {
   groupUsage: (files: string, size: string) => `${files}, ${size}`,
   /** Under the tree: what the version comes to, of what a version may. */
   usage: (used: string, of: string) => `This version comes to ${used} of the ${of} a version may have, its code and its resources together.`,
-  scope: (data: (text: string) => Node) => (
-    <>What the lambda keeps while it runs is the same for every version, and is under {data('Data')}.</>
+  /** Under the tree: each call links to the section of that kind of data - Database, Workspace, Secrets. */
+  scope: (database: (text: string) => Node, workspace: (text: string) => Node, secrets: (text: string) => Node) => (
+    <>
+      What the lambda keeps while it runs - its {database('database')}, its {workspace('workspace')} and its{' '}
+      {secrets('secrets')} - is the same for every version.
+    </>
   ),
   download: 'Download',
   /** The buttons in the header of each group of files. */

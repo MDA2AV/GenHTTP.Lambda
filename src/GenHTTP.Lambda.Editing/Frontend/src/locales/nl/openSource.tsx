@@ -41,7 +41,7 @@ export const openSource: EditorMessages['openSource'] = {
     'De editorlink',
   ],
   careful:
-    'Alles in de code wordt openbaar, ook de eerdere standen ervan. Een wachtwoord of sleutel hoort nooit in de code – die hoort bij de sleutels en wachtwoorden onder Data, en die worden nooit gepubliceerd.',
+    'Alles in de code wordt openbaar, ook de eerdere standen ervan. Een wachtwoord of sleutel hoort nooit in de code – die hoort bij de sleutels en wachtwoorden van de app, die los van de code worden bewaard en nooit worden gepubliceerd.',
   licenseLabel: 'Licentie',
   licenseHint:
     'Wat anderen met de code mogen doen. MIT, de meest gebruikte, laat iedereen er bijna alles mee doen, zolang je naam erbij blijft staan.',

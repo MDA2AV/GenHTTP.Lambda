@@ -12,7 +12,7 @@ import { Ago, pill } from '@genhttp-lambda/kit/ui/ui';
 
 /**
  * The parts the two places files live are browsed with: the files of a
- * version under Code, and the workspace under Data. Built once so that the
+ * version under Code, and the workspace in its own section. Built once so that the
  * two look and behave alike, which is what makes the difference between them
  * - one belongs to a version, the other to the lambda - the only thing to
  * notice.

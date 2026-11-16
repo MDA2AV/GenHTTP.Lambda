@@ -91,7 +91,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
 
             var where = scope.FeatureId == null ? "this lambda" : "the copy of the secrets this feature works on";
 
-            throw new KeyNotFoundException($"There is no secret called '{name}' in {where}. Set it under Data > Secrets in the editor, "
+            throw new KeyNotFoundException($"There is no secret called '{name}' in {where}. Set it under Secrets in the editor, "
                                          + "with set_secret (MCP) or with PUT /api/v1/lambdas/{privateKey}/secrets/{name}. Names are case sensitive.");
         }
 

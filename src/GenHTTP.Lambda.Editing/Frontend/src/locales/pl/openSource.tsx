@@ -41,7 +41,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Link do edytora',
   ],
   careful:
-    'Wszystko, co jest w kodzie, staje się publiczne – także jego wcześniejsze stany. Hasłom i kluczom nie miejsce w kodzie: ich miejsce jest wśród kluczy i haseł w sekcji Dane, których nigdy się nie publikuje.',
+    'Wszystko, co jest w kodzie, staje się publiczne – także jego wcześniejsze stany. Hasłom i kluczom nie miejsce w kodzie: ich miejsce jest wśród kluczy i haseł aplikacji, które są przechowywane osobno od kodu i nigdy nie są publikowane.',
   licenseLabel: 'Licencja',
   licenseHint:
     'Co inni mogą robić z kodem. MIT, najpopularniejsza, pozwala każdemu zrobić z nim prawie wszystko, o ile przy kodzie zostanie twoje nazwisko.',

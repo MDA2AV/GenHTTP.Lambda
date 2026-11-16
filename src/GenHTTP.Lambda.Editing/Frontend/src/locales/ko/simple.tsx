@@ -9,7 +9,6 @@ export const simple: EditorMessages['simple'] = {
   simpleNote: '앱과 수정 요청 입력란을 보여 줘요.',
   fullNote: '코드를 포함한 모든 섹션을 보여 줘요.',
   toFull: '모든 섹션 보기',
-  toSimple: '간단히 보기로 전환',
   about: '앱 소개',
   aboutMore: '앱 소개 더 보기',
   outsideTitle: '이 페이지는 전체 보기에 속해요',

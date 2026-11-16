@@ -75,8 +75,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1 Datei' : `${files} Dateien`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `Diese Version umfasst ${used} der ${of}, die eine Version haben darf – Code und Ressourcen zusammen.`,
-  scope: (data) => (
-    <>Was das Lambda zur Laufzeit aufbewahrt, ist für jede Version dasselbe und steht unter {data('Daten')}.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      Was das Lambda zur Laufzeit aufbewahrt – seine {database('Datenbank')}, sein {workspace('Workspace')} und seine{' '}
+      {secrets('Secrets')} – ist für jede Version dasselbe.
+    </>
   ),
   download: 'Herunterladen',
   newIn: (group) => `Neue Datei in ${group}`,

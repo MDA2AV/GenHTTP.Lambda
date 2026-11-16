@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Draf dicoba dengan salinan data itu. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu. Database dan workspace berbagi satu jatah ruang, jadi masing-masing boleh tumbuh sejauh yang disisakan oleh yang lain.',
-  facts: [
-    ['Dipakai bersama semua versi', 'Versi mana pun yang online membaca dan menulis data yang sama.'],
-    ['Tetap ada saat deploy', 'Deploy, rollback, atau menggabungkan draf tidak pernah menyentuhnya.'],
-    ['Anda yang atur', 'Setiap jenis hanya aktif selama Anda mau. Menonaktifkannya menghapus isinya.'],
-  ],
   featureHint:
     'Salinan data aplikasi Anda, khusus untuk draf ini: pratinjaunya hanya membaca dan menulis salinan ini, jadi mencoba apa pun di sini tidak pernah menyentuh data yang sebenarnya. Salinan ini hilang bersama drafnya.',
   recopy: 'Setel ulang data uji',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Data uji sudah segar kembali.',
   recopyFailed: 'Data uji gagal disetel ulang.',
   copyContents: 'Isi salinan workspace',
-  kindsLabel: 'Jenis data',
   kinds: {
     database: {
       name: 'Database',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `dan ${count} lagi`,
     database: 'Catatan',
-    databaseTitle: 'Catatan yang disimpan aplikasi Anda',
     databaseText: 'Apa yang dicatat aplikasi Anda saat orang memakainya – pendaftaran, entri, hasil voting – dikelompokkan per jenis. Tidak ada yang berubah di sini saat perubahan baru online.',
     records: (count) => `${count.toLocaleString()} catatan`,
     noRecords: 'Aplikasi Anda belum menyimpan catatan apa pun.',

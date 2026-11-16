@@ -4,11 +4,6 @@ import { counted, plural } from '@genhttp-lambda/kit/locales/pl/plural';
 export const data: EditorMessages['data'] = {
   hint:
     'Dane to to, co lambda przechowuje w trakcie działania. Należą do lambdy, a nie do wersji: każda wersja czyta i zapisuje te same dane, a nic, co robisz z wersjami, ich nie zmienia. Szkic wypróbowuje się na ich kopii. Znikają dopiero wtedy, gdy usuniesz lambdę albo wyłączysz dany rodzaj danych. Baza danych i obszar roboczy dzielą jedną pulę miejsca, więc każde z nich może urosnąć tak, jak pozwoli drugie.',
-  facts: [
-    ['Wspólne dla wszystkich wersji', 'Niezależnie od tego, która wersja jest online, czyta i zapisuje te same dane.'],
-    ['Zostają przy wdrożeniu', 'Ani wdrożenie, ani przywrócenie, ani scalenie szkicu nigdy ich nie rusza.'],
-    ['Ty decydujesz', 'Każdy rodzaj jest włączony tylko wtedy, gdy tego chcesz. Wyłączenie go usuwa to, co w nim jest.'],
-  ],
   featureHint:
     'Kopia danych twojej aplikacji tylko dla tego szkicu: jego podgląd czyta i zapisuje wyłącznie tę kopię, więc próby tutaj nigdy nie ruszają prawdziwych danych. Znika razem ze szkicem.',
   recopy: 'Zresetuj dane testowe',
@@ -20,7 +15,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Dane testowe znów są świeże.',
   recopyFailed: 'Nie udało się zresetować danych testowych.',
   copyContents: 'Co jest w kopii obszaru roboczego',
-  kindsLabel: 'Rodzaje danych',
   kinds: {
     database: {
       name: 'Baza danych',
@@ -179,7 +173,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `i jeszcze ${count}`,
     database: 'Wpisy',
-    databaseTitle: 'Wpisy, które przechowuje twoja aplikacja',
     databaseText: 'To, co twoja aplikacja przechowuje, gdy ludzie z niej korzystają – zgłoszenia, komentarze, głosy – tabela po tabeli. Nic tu się nie zmienia, gdy nowa zmiana trafia online.',
     records: (count) => `${count.toLocaleString()} ${plural(count, 'wpis', 'wpisy', 'wpisów')}`,
     noRecords: 'Twoja aplikacja nie przechowuje jeszcze żadnych wpisów.',

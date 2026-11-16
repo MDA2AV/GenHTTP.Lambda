@@ -41,7 +41,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Der Editor-Link',
   ],
   careful:
-    'Alles im Code wird öffentlich, auch seine früheren Stände. Ein Passwort oder Schlüssel gehört nie in den Code – sondern zu den Schlüsseln und Passwörtern unter Daten, die nie veröffentlicht werden.',
+    'Alles im Code wird öffentlich, auch seine früheren Stände. Ein Passwort oder Schlüssel gehört nie in den Code – sondern zu den Schlüsseln und Passwörtern der App, die getrennt vom Code aufbewahrt und nie veröffentlicht werden.',
   licenseLabel: 'Lizenz',
   licenseHint: 'Was andere mit dem Code tun dürfen. MIT, die gängigste, erlaubt jedem fast alles damit, solange Ihr Name dabeibleibt.',
   readLicense: 'Lizenz lesen',

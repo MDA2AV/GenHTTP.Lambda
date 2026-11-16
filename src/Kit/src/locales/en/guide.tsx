@@ -107,8 +107,10 @@ export const guide = {
       ),
     ],
     ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
-    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the database, the workspace and the secrets, each a pill of its own. Look into the tables and files, upload files, set secrets, or switch a kind on or off. The simple view shows it once the app keeps something.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
+    ['Database', () => <>The records the app keeps, table by table, to read - the simple view calls them records. Like the workspace and the secrets, it is shared by every version and switched on or off in its own section, which the simple view shows once the app keeps something in it.</>],
+    ['Workspace', () => <>The files the app saves while it runs, to browse, upload, download and delete - in the simple view, what your app saved.</>],
+    ['Secrets', () => <>API keys and passwords the code reads by name: set one or replace it, but never read it back - in the simple view, keys and passwords.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
     ['Analytics', () => <>Who visits the app, once you switch it on: visitors, page views and requests per day, the pages they open, the sites that send them, their countries and devices, and the search engines and AIs that came by.</>],
@@ -131,7 +133,8 @@ export const guide = {
     <>
       Every section works the same way: its title, an {k.b('ⓘ')} that explains it, its actions on the right, and -
       where it has more than one view - a row of pills underneath. The full view gathers the sections in groups: how
-      people find it, where a change is made, the versions and the data, and how it runs.
+      people find it, where a change is made, the versions and the data, and how it runs. On a phone, the bar at the
+      top names the section you are in and opens all of them.
     </>
   )) as Text,
   editorAside:
@@ -320,7 +323,7 @@ export const guide = {
   storage: ((k) => (
     <>
       A lambda keeps files in two places, and the editor shows them apart: {k.b('Code')} holds the files of a
-      version - the program - and {k.b('Data')} holds the workspace - what the program keeps. The difference is{' '}
+      version - the program - and {k.b('Workspace')} holds what the program keeps. The difference is{' '}
       {k.em('whose they are')}. The files of a version belong to that version; the data belongs to the lambda, and
       every version shares it. Each has one allowance of room: a version's code and resources share one, and the
       lambda's database and workspace share the other.
@@ -343,7 +346,7 @@ export const guide = {
   database: ((k) => (
     <>
       Records - entries, accounts, orders, votes - belong in the {k.b('database')}: a SQLite database of the lambda's
-      own, switched on under {k.b('Data')}. The code opens a connection with {k.code('Database.GetConnection()')} and
+      own, switched on under {k.b('Database')}. The code opens a connection with {k.code('Database.GetConnection()')} and
       reads and writes it through {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, with a
       context of its own that maps the tables:
     </>
@@ -359,7 +362,7 @@ export const guide = {
   database3: ((k) => (
     <>
       Like all data, the database is shared by every version, left alone by deploys and rollbacks, and a draft works
-      on a copy of it. Under {k.b('Data')} you see its tables and what is in them - the simple view calls them records.{' '}
+      on a copy of it. Under {k.b('Database')} you see its tables and what is in them - the simple view calls them records.{' '}
       {k.b('Download')} carries it along as an ordinary SQLite file.
     </>
   )) as Text,
@@ -395,7 +398,7 @@ export const guide = {
   )) as Text,
   secrets2: ((k) => (
     <>
-      Switch secrets on under {k.b('Data')} and set the value there. Once saved, it is never shown again - not to
+      Switch secrets on under {k.b('Secrets')} and set the value there. Once saved, it is never shown again - not to
       you, not to an agent; you can only replace it. The list says which names the code reads that have no value
       yet, and the overview asks for them. {k.code('Secret.Exists')} says whether one is set, for code that works
       without it. Like all data, secrets are shared by every version, and a draft works on a copy of them.
@@ -506,7 +509,7 @@ export const guide = {
     </>
   )) as Text,
   openAside:
-    'Everything in the code becomes public, the earlier versions included. A key or a password belongs with the keys and passwords under Data, never in the code - published or not.',
+    'Everything in the code becomes public, the earlier versions included. A key or a password belongs under Secrets - keys and passwords, in the simple view - never in the code, published or not.',
 
   visitors: ((k) => (
     <>
