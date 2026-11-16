@@ -137,7 +137,7 @@ public sealed class DocumentationTests
     [TestMethod]
     public async Task DocumentationCountsTowardsWhatAVersionMayComeTo()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 1024));
 
         var lambda = await fixture.CreateLambdaAsync();
 

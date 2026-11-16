@@ -192,7 +192,7 @@ public sealed class FeatureTests
     [TestMethod]
     public async Task AFeatureIsHeldToWhatAVersionMayHold()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 100 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 100));
 
         var lambda = await fixture.CreateLambdaAsync();
 

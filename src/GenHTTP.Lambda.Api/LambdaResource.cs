@@ -39,7 +39,7 @@ namespace GenHTTP.Lambda.Api;
          `/lambdas/{privateKey}`. Its versions, deployment, data and everything else about it are below the same path.
 
          Where a lambda answers: `publicUrl` is its public address, named after its public key - a subdomain of the hosting domain, or a path below `/lambda/`.
-         `address` is where to link to it - its own domain while it answers at one (premium only), `publicUrl` otherwise.
+         `address` is where to link to it - its own domain while it answers at one (where its tier has domains), `publicUrl` otherwise.
          """)]
 public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, IDatabaseService databases, LambdaOptions options,
                                    ILogger<LambdaResource> logger)
@@ -137,10 +137,12 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Remarks("""
              Takes it offline and removes everything kept for it: every version, every feature with its preview, its database,
              workspace and secrets, its showcase entry and published source, and what was counted of its visitors. This cannot be
-             undone, and its public key is free for anybody to claim afterwards. `GET …/export` takes a copy first.
+             undone, and its public key is free for anybody to claim afterwards. `GET …/export` takes a copy first. A lambda of the
+             installation's own (`tierPolicy.installation` - a system lambda) is not deleted with its editor key: only the
+             operator deletes it.
              """)]
     [Response(ResponseStatus.NoContent, "The lambda and everything kept for it are gone.")]
-    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is one of the installation's own, which only the operator deletes.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {

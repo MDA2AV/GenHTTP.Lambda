@@ -44,7 +44,7 @@ public sealed class AcmeChallengeTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(\":anything\", (string anything) => \"the lambda\");");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         using (await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("shop.example.com"))) { }
 

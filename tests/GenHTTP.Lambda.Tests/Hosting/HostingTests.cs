@@ -337,7 +337,7 @@ public sealed class HostingTests
 
         var lambda = await fixture.CreateLambdaAsync("greedy");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         foreach (var claimed in new[] { "genhttp.run", "quiz.genhttp.run" })
         {

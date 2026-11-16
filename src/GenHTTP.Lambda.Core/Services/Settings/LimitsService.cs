@@ -12,25 +12,26 @@ using Microsoft.EntityFrameworkCore;
 namespace GenHTTP.Lambda.Services.Settings;
 
 /// <summary>
-/// What a lambda may have and do in its tier, as the operator set it in the
-/// administration panel.
+/// What a lambda may have and do in its tier, and what holds for every
+/// lambda alike, as the operator set it in the administration panel.
 /// </summary>
 /// <remarks>
 /// These are the product's promises rather than the server's configuration,
 /// so they are changed while it runs rather than by restarting it with other
 /// environment variables. They are kept in the same table as the switches of
 /// <see cref="SettingsService"/>, a row each, and a missing row is the default
-/// - which is what <see cref="LambdaOptions"/> says, so the environment
-/// variables that used to set them still do until the operator saves the form.
+/// - which is what <see cref="LambdaOptions"/> says, so what a host sets for
+/// its installation holds until the operator saves the form.
 ///
-/// Read on every request a lambda answers (the workspace it is compiled with,
-/// the rate limit), so the values are held in memory once they were read and
-/// only written through to the database.
+/// Read on every request a lambda answers (the room of its data, the rate
+/// limit), so the values and the policies made of them are held in memory
+/// once they were read and only written through to the database.
 ///
-/// A change applies to what is checked next: a save, an upload, a deploy, a
-/// connection to a database. Nothing a lambda already has is removed for being
-/// over a lowered limit. The room of a lambda's data is compiled into its
-/// workspace, so a changed one compiles each lambda again on its next request.
+/// A change applies to what is checked next: a save, an upload, a write to the
+/// workspace, a connection to a database, the next sweep. Nothing a lambda
+/// already has is removed for being over a lowered limit, and nothing is
+/// compiled again for a changed one - but for whether a tier connects by
+/// default, which is part of what a lambda is compiled with.
 /// </remarks>
 public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options) : ILimitsService
 {
@@ -38,25 +39,68 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
     private readonly Lock _lock = new();
 
-    private ProductLimits? _current;
+    private State? _current;
 
     /// <summary>
-    /// How many days of its analytics a free lambda shows its owner: a week,
-    /// enough to see whether anybody comes.
+    /// The limits and the policy of every tier made of them, replaced together.
     /// </summary>
-    private const int FreeAnalyticsDays = 7;
-
-    /// <summary>
-    /// How many a premium lambda shows: the year that is kept of every lambda.
-    /// </summary>
-    private const int PremiumAnalyticsDays = 365;
+    private sealed record State(ProductLimits Limits, TierPolicy[] Policies);
 
     #region Reading
 
     /// <summary>
     /// The limits as they stand.
     /// </summary>
-    public ProductLimits Get()
+    public ProductLimits Get() => Current().Limits;
+
+    /// <summary>
+    /// What a lambda in the given tier may have and how it is treated.
+    /// </summary>
+    public TierPolicy PolicyOf(LambdaTier tier) => Current().Policies[(int)tier];
+
+    /// <summary>
+    /// The tiers whose policy says so.
+    /// </summary>
+    public IReadOnlyList<LambdaTier> TiersWhere(Func<TierPolicy, bool> predicate)
+        => [.. Current().Policies.Where(predicate).Select(p => p.Tier)];
+
+    /// <summary>
+    /// The tier an app in the given one would be moved to for more, or
+    /// nothing where there is none.
+    /// </summary>
+    public TierPolicy? Above(LambdaTier tier)
+    {
+        var policies = Current().Policies;
+
+        return policies[(int)tier].Installation ? null : policies.Skip((int)tier + 1).FirstOrDefault(p => !p.Installation);
+    }
+
+    /// <summary>
+    /// What a lambda in the given tier may keep in its workspace: the room of
+    /// its data, which its database takes some of.
+    /// </summary>
+    /// <param name="enabled">Whether its owner left the workspace switched on</param>
+    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true) => new(PolicyOf(tier).MaxDataBytes, enabled);
+
+    /// <summary>
+    /// What the limits are where the operator has not set them: what the
+    /// options say, which is the host's or the built in defaults.
+    /// </summary>
+    public static ProductLimits DefaultsOf(LambdaOptions options) => new(
+        options.DefaultTier,
+        options.Sandbox,
+        options.Production,
+        options.System,
+        options.MaxVersions,
+        options.MaxFeatures,
+        options.DeploymentLifetime,
+        options.Retention,
+        options.MaxShowcaseImageBytes,
+        options.RateLimit,
+        options.AgentBuildsPerDay
+    );
+
+    private State Current()
     {
         if (_current is { } current)
         {
@@ -65,67 +109,12 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
         lock (_lock)
         {
-            return _current ??= Read();
+            return _current ??= Resolve(Read());
         }
     }
 
-    /// <summary>
-    /// What a lambda in the given tier may have. A demo is held to what a free
-    /// lambda may have.
-    /// </summary>
-    public TierLimits Of(LambdaTier tier)
-    {
-        var current = Get();
-
-        return tier == LambdaTier.Premium ? current.Premium : current.Free;
-    }
-
-    /// <summary>
-    /// How large a version of a lambda in the given tier may be, its code and
-    /// its resources together.
-    /// </summary>
-    /// <remarks>
-    /// Never less for a premium lambda than for any other, however the two
-    /// were configured: the panel refuses that, the environment did not.
-    /// </remarks>
-    public long BuildOf(LambdaTier tier)
-    {
-        var current = Get();
-
-        return tier == LambdaTier.Premium ? Math.Max(current.Premium.BuildBytes, current.Free.BuildBytes) : current.Free.BuildBytes;
-    }
-
-    /// <summary>
-    /// How much room the data of a lambda in the given tier may take, its
-    /// database and its workspace together.
-    /// </summary>
-    public long DataOf(LambdaTier tier)
-    {
-        var current = Get();
-
-        return tier == LambdaTier.Premium ? Math.Max(current.Premium.DataBytes, current.Free.DataBytes) : current.Free.DataBytes;
-    }
-
-    /// <summary>
-    /// What a lambda in the given tier may keep in its workspace: the room of
-    /// its data, which its database takes some of.
-    /// </summary>
-    /// <param name="enabled">Whether its owner left the workspace switched on</param>
-    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true) => new(DataOf(tier), enabled);
-
-    /// <summary>
-    /// What the limits are where the operator has not set them: what the
-    /// options say, which is the environment or the built in defaults.
-    /// </summary>
-    public static ProductLimits DefaultsOf(LambdaOptions options) => new(
-        new TierLimits(options.BuildBytes, options.DataBytes, options.MaxVersions, options.MaxFeatures, FreeAnalyticsDays),
-        new TierLimits(options.PremiumBuildBytes, options.PremiumDataBytes, options.MaxVersions, options.MaxFeatures, PremiumAnalyticsDays),
-        options.DeploymentLifetime,
-        options.Retention,
-        options.MaxShowcaseImageBytes,
-        options.RateLimit,
-        options.AgentBuildsPerDay
-    );
+    private static State Resolve(ProductLimits limits)
+        => new(limits, [.. TierPolicies.All.Select(t => TierPolicies.Of(t, limits))]);
 
     #endregion
 
@@ -137,47 +126,68 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// <remarks>
     /// Every value is written, not only those that differ from the default:
     /// what the operator saw in the form is what stays, whatever the
-    /// environment or a later release says the default is.
+    /// options or a later release say the default is.
     /// </remarks>
     /// <returns>The limits that were saved, and those they replaced</returns>
     public (ProductLimits Saved, ProductLimits Previous) Save(ProductLimits limits)
     {
+        limits = Tidy(limits);
+
         Validate(limits);
 
         lock (_lock)
         {
-            var previous = _current ?? Read();
+            var previous = _current ?? Resolve(Read());
 
-            using var database = databases.CreateDbContext();
+            // in memory before it is written: the write makes what serving
+            // holds about each lambda stale (DatabaseChanges), and what it
+            // reads again then - whether a tier connects by default - has to
+            // be what was saved, not what it replaces
+            _current = Resolve(limits);
 
-            foreach (var (key, value) in Flatten(limits))
+            try
             {
-                var existing = database.Settings.Find(key);
-
-                if (existing == null)
-                {
-                    database.Settings.Add(new SettingEntity { Key = key, Value = value });
-                }
-                else
-                {
-                    existing.Value = value;
-                }
+                Write(limits);
+            }
+            catch
+            {
+                _current = previous;
+                throw;
             }
 
-            // what the four allowances that became two were saved as, which
-            // the two read until they were saved themselves
-            foreach (var key in Retired.SelectMany(r => new[] { $"{Prefix}free.{r}", $"{Prefix}premium.{r}" }))
-            {
-                if (database.Settings.Find(key) is { } retired)
-                {
-                    database.Settings.Remove(retired);
-                }
-            }
-
-            database.SaveChanges();
-
-            return (_current = limits, previous);
+            return (limits, previous.Limits);
         }
+    }
+
+    private void Write(ProductLimits limits)
+    {
+        using var database = databases.CreateDbContext();
+
+        foreach (var (key, value) in Flatten(limits))
+        {
+            var existing = database.Settings.Find(key);
+
+            if (existing == null)
+            {
+                database.Settings.Add(new SettingEntity { Key = key, Value = value });
+            }
+            else
+            {
+                existing.Value = value;
+            }
+        }
+
+        // what the four allowances that became two were saved as, which
+        // the two read until they were saved themselves
+        foreach (var key in Retired.SelectMany(r => new[] { $"{Prefix}sandbox.{r}", $"{Prefix}production.{r}" }))
+        {
+            if (database.Settings.Find(key) is { } retired)
+            {
+                database.Settings.Remove(retired);
+            }
+        }
+
+        database.SaveChanges();
     }
 
     /// <summary>
@@ -185,15 +195,22 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// </summary>
     public static IEnumerable<(string Key, string Value)> Flatten(ProductLimits limits)
     {
-        foreach (var (tier, values) in new[] { ("free", limits.Free), ("premium", limits.Premium) })
+        yield return ($"{Prefix}default-tier", limits.DefaultTier.ToString());
+
+        foreach (var (tier, values) in Tiers(limits))
         {
             yield return ($"{Prefix}{tier}.build-bytes", Text(values.BuildBytes));
             yield return ($"{Prefix}{tier}.data-bytes", Text(values.DataBytes));
-            yield return ($"{Prefix}{tier}.versions", Text(values.Versions));
-            yield return ($"{Prefix}{tier}.features", Text(values.Features));
             yield return ($"{Prefix}{tier}.analytics-days", Text(values.AnalyticsDays));
+            yield return ($"{Prefix}{tier}.connectivity", values.Connectivity ? "true" : "false");
+
+            // written empty rather than left out, so a label the operator
+            // cleared stays cleared instead of falling back to the host's
+            yield return ($"{Prefix}{tier}.label", values.Label ?? string.Empty);
         }
 
+        yield return ($"{Prefix}versions", Text(limits.Versions));
+        yield return ($"{Prefix}features", Text(limits.Features));
         yield return ($"{Prefix}offline-after-hours", Text(limits.OfflineAfter.TotalHours));
         yield return ($"{Prefix}removed-after-hours", Text(limits.RemovedAfter.TotalHours));
         yield return ($"{Prefix}showcase-image-bytes", Text(limits.ShowcaseImageBytes));
@@ -202,12 +219,34 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     /// <summary>
-    /// Refuses limits a lambda could not live with, or a premium tier that
-    /// promises less than the free one.
+    /// The tiers whose settings the operator sets, by the name they are stored under.
+    /// </summary>
+    private static IEnumerable<(string Tier, TierSettings Values)> Tiers(ProductLimits limits)
+    {
+        yield return ("sandbox", limits.Sandbox);
+        yield return ("production", limits.Production);
+        yield return ("system", limits.System);
+    }
+
+    /// <summary>
+    /// Labels as they are kept: trimmed, and nothing where there was only space.
+    /// </summary>
+    private static ProductLimits Tidy(ProductLimits limits)
+    {
+        static TierSettings Labelled(TierSettings values)
+            => values with { Label = string.IsNullOrWhiteSpace(values.Label) ? null : values.Label.Trim() };
+
+        return limits with { Sandbox = Labelled(limits.Sandbox), Production = Labelled(limits.Production), System = Labelled(limits.System) };
+    }
+
+    /// <summary>
+    /// Refuses limits a lambda could not live with, a tier in production that
+    /// promises less than a sandbox, or a new lambda starting where only the
+    /// installation puts one.
     /// </summary>
     private static void Validate(ProductLimits limits)
     {
-        foreach (var (key, value) in Flatten(limits))
+        foreach (var (key, value) in Flatten(limits).Where(f => !f.Key.EndsWith(".label") && !f.Key.EndsWith(".connectivity") && f.Key != $"{Prefix}default-tier"))
         {
             if (!double.TryParse(value, CultureInfo.InvariantCulture, out var number) || number <= 0)
             {
@@ -215,31 +254,41 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             }
         }
 
-        if (limits.Free.DataBytes < WorkspaceLimits.Block || limits.Premium.DataBytes < WorkspaceLimits.Block)
+        var tiers = Tiers(limits).ToList();
+
+        if (tiers.Any(t => t.Values.DataBytes < WorkspaceLimits.Block))
         {
             throw LambdaException.Invalid($"The data of a lambda needs room for at least one block of {WorkspaceLimits.Block} bytes.");
         }
 
-        if (limits.Free.AnalyticsDays > AnalyticsStore.Kept || limits.Premium.AnalyticsDays > AnalyticsStore.Kept)
+        if (tiers.Any(t => t.Values.AnalyticsDays > AnalyticsStore.Kept))
         {
             throw LambdaException.Invalid($"Analytics are kept for {AnalyticsStore.Kept} days, so no tier can show more of them.");
         }
 
-        var free = limits.Free;
-        var premium = limits.Premium;
+        if (tiers.FirstOrDefault(t => t.Values.Label?.Length > TierSettings.MaxLabel) is { Tier: { } labelled })
+        {
+            throw LambdaException.Invalid($"The label of the tier '{labelled}' must not be longer than {TierSettings.MaxLabel} characters.");
+        }
+
+        if (!Enum.IsDefined(limits.DefaultTier) || TierPolicies.Of(limits.DefaultTier, limits).Installation)
+        {
+            throw LambdaException.Invalid("A new lambda starts in a tier for the apps of the people who use the installation - the sandbox or production - not in one of the installation's own.");
+        }
+
+        var sandbox = limits.Sandbox;
+        var production = limits.Production;
 
         var smaller = new (string Name, bool Smaller)[]
         {
-            ("build bytes", premium.BuildBytes < free.BuildBytes),
-            ("data bytes", premium.DataBytes < free.DataBytes),
-            ("versions", premium.Versions < free.Versions),
-            ("features", premium.Features < free.Features),
-            ("analytics days", premium.AnalyticsDays < free.AnalyticsDays)
+            ("build bytes", production.BuildBytes < sandbox.BuildBytes),
+            ("data bytes", production.DataBytes < sandbox.DataBytes),
+            ("analytics days", production.AnalyticsDays < sandbox.AnalyticsDays)
         }.Where(c => c.Smaller).Select(c => c.Name).ToList();
 
         if (smaller.Count > 0)
         {
-            throw LambdaException.Invalid($"The premium tier must not allow less than the free one: {string.Join(", ", smaller)}.");
+            throw LambdaException.Invalid($"Production must not allow less than the sandbox: {string.Join(", ", smaller)}.");
         }
     }
 
@@ -258,8 +307,12 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
         var defaults = DefaultsOf(options);
 
         return new ProductLimits(
-            ReadTier(stored, "free", defaults.Free),
-            ReadTier(stored, "premium", defaults.Premium),
+            stored.TryGetValue($"{Prefix}default-tier", out var tier) && Enum.TryParse<LambdaTier>(tier, out var parsed) ? parsed : defaults.DefaultTier,
+            ReadTier(stored, "sandbox", defaults.Sandbox),
+            ReadTier(stored, "production", defaults.Production),
+            ReadTier(stored, "system", defaults.System),
+            (int)Number(stored, "versions", defaults.Versions),
+            (int)Number(stored, "features", defaults.Features),
             TimeSpan.FromHours(Number(stored, "offline-after-hours", defaults.OfflineAfter.TotalHours)),
             TimeSpan.FromHours(Number(stored, "removed-after-hours", defaults.RemovedAfter.TotalHours)),
             (int)Number(stored, "showcase-image-bytes", defaults.ShowcaseImageBytes),
@@ -268,12 +321,12 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
         );
     }
 
-    private static TierLimits ReadTier(Dictionary<string, string> stored, string tier, TierLimits defaults) => new(
+    private static TierSettings ReadTier(Dictionary<string, string> stored, string tier, TierSettings defaults) => new(
         (long)Number(stored, $"{tier}.build-bytes", Before(stored, tier, "code-characters", "asset-bytes", defaults.BuildBytes)),
         (long)Number(stored, $"{tier}.data-bytes", Before(stored, tier, "workspace-bytes", "database-bytes", defaults.DataBytes)),
-        (int)Number(stored, $"{tier}.versions", defaults.Versions),
-        (int)Number(stored, $"{tier}.features", defaults.Features),
-        (int)Number(stored, $"{tier}.analytics-days", defaults.AnalyticsDays)
+        (int)Number(stored, $"{tier}.analytics-days", defaults.AnalyticsDays),
+        stored.TryGetValue(Prefix + $"{tier}.connectivity", out var connectivity) && bool.TryParse(connectivity, out var connects) ? connects : defaults.Connectivity,
+        stored.TryGetValue(Prefix + $"{tier}.label", out var label) ? (label.Length > 0 ? label : null) : defaults.Label
     );
 
     /// <summary>
@@ -291,6 +344,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// the room of the database apart from the workspace's: a version may now
     /// come to what both did together, and the data to what both kept. One
     /// that was saved without the other is added to the other's default.
+    /// The system tier came later than they went, so it never has any.
     /// </remarks>
     private static double Before(Dictionary<string, string> stored, string tier, string first, string second, double fallback)
     {
@@ -302,7 +356,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             return fallback;
         }
 
-        double Default(string key) => tier == "premium" ? LambdaOptions.RetiredDefaults[key].Premium : LambdaOptions.RetiredDefaults[key].Free;
+        double Default(string key) => tier == "production" ? LambdaOptions.RetiredDefaults[key].Production : LambdaOptions.RetiredDefaults[key].Sandbox;
 
         return (one ?? Default(first)) + (other ?? Default(second));
     }
@@ -320,36 +374,32 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 }
 
 /// <summary>
-/// What a lambda of one tier may have.
-/// </summary>
-/// <param name="BuildBytes">How large a version may be: its code and its resources together</param>
-/// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
-/// <param name="Versions">How many of its versions are kept</param>
-/// <param name="Features">How many features it may have open at once</param>
-/// <param name="AnalyticsDays">
-/// How many days of its analytics its owner is shown. A year is counted of every lambda whatever its tier, so a lambda
-/// moved to a tier that shows more shows what was counted before as well.
-/// </param>
-public sealed record TierLimits(long BuildBytes, long DataBytes, int Versions, int Features, int AnalyticsDays);
-
-/// <summary>
 /// Every limit of the product.
 /// </summary>
-/// <param name="Free">What a free lambda, or a demo, may have</param>
-/// <param name="Premium">What a premium lambda may have</param>
-/// <param name="OfflineAfter">How long a free lambda may go unused before it is taken offline</param>
-/// <param name="RemovedAfter">How long an unused free lambda is kept before it is removed</param>
+/// <param name="DefaultTier">The tier a new lambda starts in: the sandbox or production</param>
+/// <param name="Sandbox">What a sandbox lambda may have, which a demo is held to as well</param>
+/// <param name="Production">What a lambda in production may have; never less than a sandbox one</param>
+/// <param name="System">What one of the installation's system lambdas may have</param>
+/// <param name="Versions">How many versions of a lambda are kept, whatever its tier</param>
+/// <param name="Features">How many features a lambda may have open at once, whatever its tier</param>
+/// <param name="OfflineAfter">How long a lambda in a tier that is not kept while unused may go unused before it is taken offline</param>
+/// <param name="RemovedAfter">How long such an unused lambda is kept before it is removed</param>
 /// <param name="ShowcaseImageBytes">How large the picture of a showcase entry may be</param>
 /// <param name="RequestsPerSecond">How many requests one client may send to the lambdas in a second</param>
 /// <param name="BuildsPerDay">How many builds and changes one address may ask the build agent for in a day</param>
 /// <remarks>
-/// A premium lambda is never taken offline or removed for not being used, so
-/// the two durations are the free tier's alone. The last three are counted per
-/// caller rather than per lambda, so they have no tier.
+/// The number of versions and of features were the same in every tier, so
+/// they hold for every lambda alike. The two durations are those of whichever
+/// tier is not kept while unused - the sandbox. The last three are counted per
+/// caller rather than per lambda, so they have no tier either.
 /// </remarks>
 public sealed record ProductLimits(
-    TierLimits Free,
-    TierLimits Premium,
+    LambdaTier DefaultTier,
+    TierSettings Sandbox,
+    TierSettings Production,
+    TierSettings System,
+    int Versions,
+    int Features,
     TimeSpan OfflineAfter,
     TimeSpan RemovedAfter,
     int ShowcaseImageBytes,

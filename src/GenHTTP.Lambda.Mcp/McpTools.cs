@@ -240,7 +240,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => Refusing(() => SwitchOn(privateKey, kind));
 
     [Tool("request_connectivity", Title = "Ask to connect to other servers", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a premium lambda may anyway, and read_lambda says connectivity.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
+    [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a lambda whose tier connects by default (production, usually) may anyway, and read_lambda says connectivity.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
     public object RequestConnectivity([Summary(PrivateKey)] string privateKey,
                                 [Summary("What it connects to and why, for the operator who decides: the addresses or services and what the lambda does with them - 'api.stripe.com, to take payments for the shop', not 'HTTP calls'. Needed to ask; left out, it returns where it stands."), MaxLength(ConnectivityRule.MaxPurpose)] string? purpose = null,
                                 [Summary("Take the request back, or give up what was allowed - code that connects then no longer compiles. Only when the user asks.")] bool withdraw = false)
@@ -298,7 +298,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => Refusing(() => ChangeSource(privateKey, license, author, remove, RequestOrigin.Of(request)));
 
     [Tool("analytics", Title = "Read who visits a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.")]
+    [Summary("How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which the lambda's tier decides how much is shown (platform_guide, analytics). Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.")]
     public object Analytics([Summary(PrivateKey)] string privateKey,
                             [Summary("How many days, today included. Left out, as many as the lambda's tier shows, which is also the most.")] int? days = null,
                             [Summary("Switch analytics on, counting from the next request - only when the user asked for it.")] bool enable = false)
@@ -1255,8 +1255,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
          * online says it went online, for anything that reads the answer:
          * onlineUntil is no such signal, since a tier that keeps its lambdas
          * online has no deadline, and the field is then left out. The build
-         * agent's runner read it as one, and told the owner of a premium
-         * lambda that a change it had just put online had not gone online.
+         * agent's runner read it as one, and told the owner of a lambda in
+         * production that a change it had just put online had not gone online.
          */
         return new
         {
@@ -1529,8 +1529,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             // where it is cloned with git, if git is at hand: AGENTS.md in it says how to work there
             gitUrl = $"{origin}{PlatformRoutes.RepositoryOf(lambda.PrivateKey, lambda.PublicKey)}",
             lambda.Tier,
+            // what the installation calls its tier, for whoever the agent tells
+            tierLabel = lambda.Policy.Label,
             lambda.View,
-            limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
+            limits = Limits(lambda),
             // whether its code may connect to other servers, which it does not compile without
             connectivity = Describe(lambda.Connectivity),
             connectivityNote = lambda.Connectivity?.Allowed != true && CodeGuard.Connects(files)
@@ -1740,7 +1742,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// The largest file read_lambda sends when it is asked for one by name.
     /// </summary>
     /// <remarks>
-    /// A premium lambda may ship a hundred megabytes. An answer is built
+    /// A lambda in production may ship a hundred megabytes. An answer is built
     /// whole before any of it is sent, and past a megabyte it is more than an
     /// agent reads in one piece anyway - the zip of the version has every file,
     /// and streams it.
@@ -1748,17 +1750,31 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     private const int ReadFileLimit = 1024 * 1024;
 
     /// <summary>
-    /// What a lambda in the given tier may use, as read_lambda reports it.
+    /// What a lambda may use in its tier, and how it is kept, as read_lambda
+    /// reports it - with the tier above, so an agent that runs into a limit
+    /// can tell the user what would allow more.
     /// </summary>
-    private object Limits(LambdaTier tier) => new
+    private object Limits(LambdaInfo lambda)
     {
-        // a version: its code and its resources together
-        buildBytes = tiers.BuildOf(tier),
-        // its data: the database and the workspace together
-        dataBytes = tiers.DataOf(tier),
-        versions = tiers.Of(tier).Versions,
-        features = tiers.Of(tier).Features
-    };
+        var policy = lambda.Policy;
+        var product = tiers.Get();
+
+        return new
+        {
+            // a version: its code and its resources together
+            buildBytes = policy.MaxVersionBytes,
+            // its data: the database and the workspace together
+            dataBytes = policy.MaxDataBytes,
+            product.Versions,
+            product.Features,
+            analyticsDays = policy.AnalyticsDays,
+            ownDomain = policy.OwnDomain,
+            offlineWhenUnused = policy.ExpiresWhenUnused,
+            above = lambda.Above is { } above
+                ? new { tier = above.Tier.ToString(), label = above.Label, buildBytes = above.MaxVersionBytes, dataBytes = above.MaxDataBytes, ownDomain = above.OwnDomain, offlineWhenUnused = above.ExpiresWhenUnused }
+                : null
+        };
+    }
 
     #endregion
 
@@ -1879,7 +1895,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ok = true,
             analytics = AnalyticsResponse.Of(found),
             note = found.Shown < found.Kept && found.Earliest is { } earliest && earliest < found.From
-                ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: the owner sees all of the year with premium."
+                ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: " + (meta.Get(privateKey)?.Above is { } above && above.AnalyticsDays > found.Shown
+                    ? $"in the tier '{above.Name}', which whoever runs the installation assigns, the owner sees {above.AnalyticsDays} days of it."
+                    : "a tier that shows more shows what was kept as well.")
                 : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, by people and programs alike - botViews are those of programs, so people opened views - botViews; hits are every request; visitors are people who opened a page, counted once a day."
         };
     }
@@ -1976,7 +1994,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// operator installs a certificate for the domain.
     /// </summary>
     private static string? DomainUrl(LambdaInfo lambda)
-        => LambdaAddresses.Serves(lambda.Tier, lambda.Domain) ? lambda.Address : null;
+        => lambda.Domain != null && lambda.Policy.OwnDomain ? lambda.Address : null;
 
     private static IEnumerable<object> Diagnostics(IReadOnlyList<CompilationDiagnostic> diagnostics)
         => diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message });
@@ -2017,7 +2035,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 what = "A version is the program: its code - its .cs files, compiled, in any folder, and every other file it is kept with: what is written about it, its documentation and its tests (see documentationAndTests), and what it is built from where a tool builds some of it (see code) - and its resources: index.html, scripts, styles, icons, the whole front end and the database's migrations, which it reads and serves (see resources). They are saved, deployed and rolled back together, and nothing else is in a version.",
                 immutable = "A version never changes once it is saved. Deploying puts one online at the lambda's address, deploying an older one rolls back, and every version can be read back and put online again exactly as it was.",
-                kept = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions of a free lambda are kept, {tiers.Of(LambdaTier.Premium).Versions} of a premium one; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
+                kept = $"The newest {tiers.Get().Versions} versions of a lambda are kept, whatever its tier; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
             },
             features = new
             {
@@ -2027,7 +2045,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 data = "A feature works on its own copy of the lambda's data, taken when it was created. Its preview can write, break and delete anything there without the lambda noticing. Merging discards the copy: the lambda keeps its own data, so code that changes how data is stored has to keep reading what is already there.",
                 merging = "Merging makes the feature's files the next version. Only a feature based on the newest version is merged, so it cannot undo a version saved after it branched off - by the user, by another agent, or by merging another feature.",
                 rebasing = "When a feature is behind - read_lambda with feature lists the newerVersions - bring what they changed into the feature yourself: read those versions, compare them with the feature's base, and apply the same changes with change_code and feature. Then move the base with update_feature (base: the newest) and merge. Nothing merges or rebases for you, and nothing checks that the changes really are in.",
-                several = $"A lambda may have up to {tiers.Of(LambdaTier.Free).Features} features open, a premium one {tiers.Of(LambdaTier.Premium).Features}. Continue one that fits rather than starting another; read_lambda lists them."
+                several = $"A lambda may have up to {tiers.Get().Features} features open. Continue one that fits rather than starting another; read_lambda lists them."
             },
             data = new
             {
@@ -2051,7 +2069,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             theLambda = new
             {
-                lifetime = $"A free lambda goes offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
+                lifetime = $"How a lambda is kept is its tier's, which says what it is for (see limits): a lambda in {Called(LambdaTier.Sandbox)} - for trying something - goes offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. One in {Called(LambdaTier.Production)} - an app people use - or in {Called(LambdaTier.System)} stays online and is kept. read_lambda says which: limits.offlineWhenUnused.",
                 deleting = "Deleting a lambda deletes its versions, its features and its data together. Nothing else deletes versions one by one.",
                 blocked = "Whoever runs the installation can block a lambda that breaks its rules or does harm. It goes offline with its features' previews, and every change - every tool that writes, deploys or deletes - is refused with a message saying it is blocked, until they lift the block. Reading it still works. Do not try again or work around it: tell the user, whose editor shows the reason they gave."
             }
@@ -2081,7 +2099,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         paths = new
         {
             rule = "Use relative paths for every link, script, stylesheet, image, fetch, form action, websocket and redirect: \"api/items\", \"app.css\", \"./\". No leading slash, and never the full address.",
-            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own in the premium tier; as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview for the platform's own pages, where nothing of the lambda is" + (addresses.ByPath ? " - and the lambda itself, which answers below /lambda/ here -" : "") + $", and the full address is the live lambda - so a feature's page that used it would read and write the real data instead of its copy.",
+            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own where its tier has one (production); as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview for the platform's own pages, where nothing of the lambda is" + (addresses.ByPath ? " - and the lambda itself, which answers below /lambda/ here -" : "") + $", and the full address is the live lambda - so a feature's page that used it would read and write the real data instead of its copy.",
             pages = "A page at the root of the lambda resolves \"api/items\" against the lambda. A page one level deeper needs \"../api/items\" - or keep the pages at the root.",
             websockets = "Build the address from the page: new URL(\"play\", location.href) with the scheme swapped to ws: or wss:.",
             serviceWorkers = "A service worker's scope is the folder of its script: register it relatively (\"sw.js\") and it covers the lambda. Do not send Service-Worker-Allowed to widen it - where the lambda answers on the platform's own address, as a feature's preview does, that answer is refused.",
@@ -2161,8 +2179,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             off = "If the owner switched the workspace off, every Workspace member throws an exception saying so. list_files says whether it is on.",
             limits = new
             {
-                bytes = tiers.DataOf(LambdaTier.Free),
-                premiumBytes = tiers.DataOf(LambdaTier.Premium),
+                bytes = tiers.PolicyOf(LambdaTier.Sandbox).MaxDataBytes,
+                productionBytes = tiers.PolicyOf(LambdaTier.Production).MaxDataBytes,
                 shared = "The workspace and the database share the room of the lambda's data: what one takes, the other cannot.",
                 counted = $"Only the room all files take together: any number of files, each as large as the room allows. Every file takes whole blocks of {WorkspaceLimits.Block} bytes, at least one, and so does every folder.",
                 exact = "list_files answers with the room the workspace may take now, which is what the database leaves of it."
@@ -2215,8 +2233,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             exported = "The export carries the database as database/database.db; Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite, and a project whose code has a DbContext references Entity Framework Core.",
             limits = new
             {
-                bytes = tiers.DataOf(LambdaTier.Free),
-                premiumBytes = tiers.DataOf(LambdaTier.Premium),
+                bytes = tiers.PolicyOf(LambdaTier.Sandbox).MaxDataBytes,
+                productionBytes = tiers.PolicyOf(LambdaTier.Production).MaxDataBytes,
                 shared = "The database and the workspace share the room of the lambda's data: what one takes, the other cannot.",
                 full = "Past its room, a write fails with SQLite's 'database or disk is full'. read_database says how full it is, and how large it may grow now."
             },
@@ -2307,7 +2325,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         importedForYou = ModuleCatalog.Imports,
         connectivity = new
         {
-            what = "Whether the code may connect to other servers: HttpClient, sockets, a WebSocket or mail client, DNS, XML read from an address. Lambdas share one server, and were used as proxies, so it is allowed lambda by lambda: a premium one may, any other once the operator of the installation allowed it. read_lambda says connectivity.allowed.",
+            what = "Whether the code may connect to other servers: HttpClient, sockets, a WebSocket or mail client, DNS, XML read from an address. Lambdas share one server, and were used as proxies, so it is allowed lambda by lambda: where its tier connects by default - on this installation, " + string.Join(" and ", tiers.TiersWhere(p => p.Connectivity && !p.ReadOnly).Select(Called).DefaultIfEmpty("no tier")) + " - unless the operator declined it, and otherwise once the operator allowed it. read_lambda says connectivity.allowed.",
             without = "Code that connects does not compile (LAMBDA0003): the assemblies that would are not there to name, and nothing reaches another server.",
             browserFirst = "Do it in the browser where you can: a public API that browsers may call - open data, weather, maps, most of what needs no key - is fetched with fetch() by the lambda's page, and the server never connects. That needs no asking, and works at once.",
             asking = "Where the server has to make the call - a key that must not reach the browser, an API browsers may not call, a webhook to send - request_connectivity with what it connects to and why: the addresses or services, and what the lambda does with them. The operator decides, which takes a while: tell the user it was asked, build what does not connect meanwhile, and deploy the code that connects once connectivity.allowed is true.",
@@ -2345,7 +2363,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             what = "The owner can have a lambda's visits counted: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers behind them. They read it in the editor, and the analytics tool reads the same.",
             when = "Off until the owner switches it on, in the editor or by asking you (analytics with enable: true). Switching off deletes what was counted, and is theirs to do. A feature's preview is never counted.",
-            how = "Counted by the platform, in front of the lambda, by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Only the host of a referring site is kept, never an address, and a visitor - a person who opened a page, never a program - is told apart for a day by a hash that is never stored. Views count people and programs alike, with those of programs as botViews, so people opened views - botViews; the owner sees the people's and may include the bots. Crawlers are counted by their kind from a maintained list; Google, Bing, OpenAI, Apple and Perplexity by name only where the visit came from an address they publish. The lambda needs no code for it - do not build a counter of your own for what this counts."
+            how = "Counted by the platform, in front of the lambda, by day in UTC and written down every few minutes; a year is kept, of which the tier shows a part - " + string.Join(", ", tiers.TiersWhere(p => !p.ReadOnly).Select(t => $"{Called(t)} {tiers.PolicyOf(t).AnalyticsDays} days")) + " (read_lambda: limits.analyticsDays). Only the host of a referring site is kept, never an address, and a visitor - a person who opened a page, never a program - is told apart for a day by a hash that is never stored. Views count people and programs alike, with those of programs as botViews, so people opened views - botViews; the owner sees the people's and may include the bots. Crawlers are counted by their kind from a maintained list; Google, Bing, OpenAI, Apple and Perplexity by name only where the visit came from an address they publish. The lambda needs no code for it - do not build a counter of your own for what this counts."
         },
         afterDeploying = new
         {
@@ -2397,13 +2415,18 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         },
         limits = new
         {
-            tiers = "What a lambda may use depends on its tier. Every lambda is free unless whoever runs this installation made it premium - its owner cannot choose. read_lambda says which tier a lambda is in and what it may use there; a refusal for size says what the premium tier allows.",
-            free = Allowance(LambdaTier.Free),
-            premium = Allowance(LambdaTier.Premium),
-            versions = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions are kept ({tiers.Of(LambdaTier.Premium).Versions} for a premium lambda), and the one online.",
-            features = $"Up to {tiers.Of(LambdaTier.Free).Features} features open at once ({tiers.Of(LambdaTier.Premium).Features} for a premium lambda); each holds a copy of the files, the workspace and the database, within the same limits.",
-            deployment = $"A free lambda is online while used, and offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits. A premium one stays online. A feature's preview of a free lambda goes offline after as long without being worked on.",
-            retention = $"A free lambda is removed about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium one is kept."
+            tiers = $"What a lambda may use, and how it is kept, depends on its tier - what it is for, which whoever runs this installation assigns; its owner cannot choose. "
+                  + $"{Capital(Called(LambdaTier.Sandbox))} is for trying something: taken offline when unused. {Capital(Called(LambdaTier.Production))} is for an app people use: kept, with more room and a domain of its own. "
+                  + $"{Capital(Called(LambdaTier.System))} is for what the installation itself depends on. A new lambda starts in {Called(tiers.Get().DefaultTier)}. "
+                  + "read_lambda says which tier a lambda is in, what it may use there and what the tier above allows (limits); a refusal for size names the limit and the tier that allows more. "
+                  + "Tell the user what the tier is called here - read_lambda's tierLabel - but name it by its identifier (Sandbox, Production) to the API and the tools.",
+            sandbox = Allowance(LambdaTier.Sandbox),
+            production = Allowance(LambdaTier.Production),
+            versions = $"The newest {tiers.Get().Versions} versions of every lambda are kept, and the one online.",
+            features = $"Up to {tiers.Get().Features} features open at once; each holds a copy of the files, the workspace and the database, within the same limits.",
+            deployment = $"A lambda in {Called(LambdaTier.Sandbox)} is online while used, and offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits; one in production or the system tier stays online. A feature's preview of a sandbox lambda goes offline after as long without being worked on.",
+            retention = $"A lambda in {Called(LambdaTier.Sandbox)} is removed about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either; one in production or the system tier is kept. A lambda moved into the sandbox is given the whole time from the move.",
+            moved = "Moved to another tier, a lambda keeps running as it is: only what it may have changes. Moved to one that allows less, it keeps what it has - its versions can still be put online, its data is still read - and what it saves or writes next is held to the new limits."
         },
         terms = options.Terms
     };
@@ -2412,8 +2435,33 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// What a lambda in the given tier may use, as the guide says it.
     /// </summary>
     private string Allowance(LambdaTier tier)
-        => $"A version: {Size(tiers.BuildOf(tier))} - its code and its resources together, in any number of files. "
-         + $"Its data: {Size(tiers.DataOf(tier))} - its database and its workspace together.";
+    {
+        var policy = tiers.PolicyOf(tier);
+
+        return $"A version: {Size(policy.MaxVersionBytes)} - its code and its resources together, in any number of files. "
+             + $"Its data: {Size(policy.MaxDataBytes)} - its database and its workspace together. "
+             + (policy.OwnDomain ? "A domain of its own. " : "No domain of its own. ")
+             + (policy.ExpiresWhenUnused ? "Taken offline when unused." : "Kept online whether used or not.");
+    }
+
+    /// <summary>
+    /// A tier as the guide names it: by its identifier, and by what the
+    /// installation calls it where that differs - "the sandbox ('Free' here)".
+    /// </summary>
+    private string Called(LambdaTier tier)
+    {
+        var name = tier switch
+        {
+            LambdaTier.Sandbox => "the sandbox",
+            LambdaTier.Production => "production",
+            LambdaTier.System => "the system tier",
+            _ => $"the {tier.ToString().ToLowerInvariant()} tier"
+        };
+
+        return tiers.PolicyOf(tier).Label is { } label ? $"{name} ('{label}' here)" : name;
+    }
+
+    private static string Capital(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     private static string Size(long bytes) => bytes switch
     {

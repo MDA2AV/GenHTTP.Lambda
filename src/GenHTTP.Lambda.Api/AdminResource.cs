@@ -57,12 +57,12 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.BadRequest, "There is no such tier.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("A page of lambdas")]
     public AdminListingResponse GetLambdas([Summary("Only lambdas whose public key or domain contains this")] string? search,
-                                           [Summary("Only lambdas of this tier: `Free`, `Premium` or `Demo`")] string? tier,
+                                           [Summary("Only lambdas of this tier: `Sandbox`, `Production`, `System` or `Demo`")] string? tier,
                                            [Summary("The page, counting from 1")] int page = 1)
     {
         var wanted = Math.Max(1, page);
 
-        var result = meta.List(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : ParseTier(tier));
+        var result = meta.List(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : TierDescription.Parse(tier));
 
         // the counters are held per lambda in memory, so this is a lookup
         // rather than a join - and a lambda nobody has called is simply absent
@@ -76,6 +76,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 l.PublicKey,
                 l.PrivateKey,
                 l.Tier,
+                l.Policy.Label,
                 l.Created,
                 l.Modified,
                 l.ActiveVersion,
@@ -87,7 +88,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 seen?.Failed ?? 0,
                 seen?.LastSeen,
                 l.Domain,
-                LambdaDescription.Serves(l.Tier, l.Domain),
+                l.Domain != null && l.Policy.OwnDomain,
                 l.Blocked,
                 ConnectivityResponse.Of(l.Connectivity)
             );
@@ -130,13 +131,19 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [ResourceMethod(Method.Put, "lambdas/:publicKey/tier")]
     [Summary("Moves a lambda to another tier")]
     [Remarks("""
-             The tier decides the limits of the lambda, whether it may answer at a domain of its own, and whether it is taken
-             offline and deleted when nobody uses it. Leaving the premium tier keeps the domain configured, but stops serving it;
-             what the lambda has beyond the free limits is kept, and only what it saves next is held to them. Nothing is moved
-             into or out of the demo tier by hand.
+             The tier is what the lambda is for, and decides its limits, whether it may answer at a domain of its own, whether it
+             is taken offline and deleted when nobody uses it, and whether it connects to other servers while nothing was decided
+             about it - as `GET /admin/limits` sets each. Only the policy changes: the lambda keeps running, nothing of its data
+             is moved, and it is built again only where the move changes whether it may connect. A tier without domains keeps
+             the domain configured but stops serving it; what the lambda has beyond the new tier's limits is kept and can still
+             be read and put online, and only what it saves or writes next is held to them. Moved to a tier that takes unused
+             lambdas offline, it is given the whole time from the move. A `System` lambda is the installation's own: it cannot be
+             blocked, is never in the showcase and is not deleted with its editor key. Nothing is moved into or out of the demo
+             tier by hand. `Free` and `Premium`, what the sandbox and production were called before, are still read as them.
              """)]
     [Response(ResponseStatus.BadRequest, "There is no such tier.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, "The demo tier is the installation's own. Nothing is moved into or out of it by hand.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The lambda is blocked, and the tier asked for cannot be: the block is lifted first.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
     public AdminLambdaDetail ChangeTier([Summary("The public key of the lambda")] string publicKey, TierRequest body, IRequest request)
@@ -144,7 +151,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var privateKey = meta.RequirePrivateKey(publicKey);
 
-        var changed = meta.ChangeTier(privateKey, ParseTier(body.Tier));
+        var changed = meta.ChangeTier(privateKey, TierDescription.Parse(body.Tier));
 
         logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", changed.PublicKey, changed.Tier);
 
@@ -153,7 +160,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
     [ResourceMethod(Method.Put, "lambdas/:publicKey/domain")]
     [Summary("Sets the domain of a lambda")]
-    [Remarks("Under the same rules as `PUT /lambdas/{privateKey}/domain`: only a premium lambda may have one. Nothing, or an empty domain, removes it.")]
+    [Remarks("Under the same rules as `PUT /lambdas/{privateKey}/domain`: only a lambda whose tier has domains of its own - production or system - may have one. Nothing, or an empty domain, removes it.")]
     [Response(ResponseStatus.BadRequest, "That is not a domain that can be used.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "Another lambda answers at that domain.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
@@ -332,7 +339,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Remarks("""
              The lambdas whose owner asked for their code to connect to other servers and waits for a decision, the longest
              waiting first, with what they said it is for - and the lambdas allowed so far, the most recently allowed first, to
-             be looked at again. A premium lambda may connect without asking, and is not listed unless it asked as well.
+             be looked at again. A lambda whose tier connects by default - production, as the limits set it - may connect without
+             asking, and is not listed unless it asked as well.
              """)]
     [return: Summary("What waits, and what was allowed")]
     public AdminConnectivityListing GetConnectivity()
@@ -346,13 +354,14 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [ResourceMethod(Method.Put, "lambdas/:publicKey/connectivity")]
     [Summary("Decides whether a lambda may connect to other servers")]
     [Remarks("""
-             Allows it - asked for or not - or declines what was asked, which takes back what was allowed as well. The note is
+             Allows it - asked for or not - or declines it, which takes back what was allowed, and what its tier allows by default
+             as well: a decision about the lambda comes before its tier's default. The note is
              shown to the owner as it is written, in the editor and as `connectivity.note` of the lambda; the owner may ask again
              after a decline.
 
              It takes effect from the next request, without a deploy: the lambda and the previews of its features are built
              again under the decision. Taken back, code that connects stops compiling, and the version online answers with an
-             error until it is changed. A premium lambda may connect whatever is decided here, for as long as it is premium.
+             error until it is changed. Moving a lambda to a tier that connects by default forgets a request that waits.
              """)]
     [Response(ResponseStatus.Forbidden, "The lambda is a demo, which does not connect to other servers, or it is blocked, of which nothing changes but its block.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
@@ -425,25 +434,37 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
     [ResourceMethod("limits")]
     [Summary("Reads what a lambda may have and do, per tier")]
-    [Remarks("Where the operator has not saved them yet, these are the defaults - the built in ones, or what the environment variables that used to set them say.")]
+    [Remarks("""
+             Where the operator has not saved them yet, these are the defaults - the built in ones, or what the host of the
+             installation sets (genhttp.dev calls its sandbox `Free` and production `Premium`). What a tier is for is fixed: the
+             sandbox is taken offline once unused, production and system lambdas are kept and may answer at a domain of their
+             own, and system lambdas are the installation's own. What is set here is how much each may have, whether it
+             connects to other servers by default, and what it is called on the pages.
+             """)]
     [return: Summary("The limits of the installation")]
     public LimitsModel GetLimits() => Describe(limits.Get());
 
     [ResourceMethod(Method.Put, "limits")]
     [Summary("Replaces the limits, all of them")]
     [Remarks("""
-             They apply to what is checked next - a save, an upload, a deploy, a connection to a database - and take nothing away
-             that a lambda already has. Every value must be greater than zero, no tier may show more days of analytics than are
-             kept (a year), and the premium tier must not allow less than the free one.
+             They apply to what is checked next - a save, an upload, a write to a workspace, a connection to a database, the next
+             sweep - and take nothing away that a lambda already has; nothing is built again, but where a tier's connectivity
+             default changes. Every number must be greater than zero, no tier may show more days of analytics than are kept (a
+             year), production must not allow less than the sandbox, a label is at most 24 characters, and a new lambda starts in
+             the sandbox or in production. An empty label is the tier's own name, which the pages translate.
              """)]
-    [Response(ResponseStatus.BadRequest, "A value is zero or less, more days of analytics than are kept, or the premium tier would allow less than the free one. Nothing was changed.",
+    [Response(ResponseStatus.BadRequest, "A value is zero or less, more days of analytics than are kept, production would allow less than the sandbox, a label is too long, or new lambdas would start in a tier of the installation's own. Nothing was changed.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The limits, as they were saved")]
     public LimitsModel ChangeLimits(LimitsModel body)
     {
         var (saved, previous) = limits.Save(new ProductLimits(
-            Tier(body.Free),
-            Tier(body.Premium),
+            TierDescription.Parse(body.DefaultTier),
+            Tier(body.Sandbox),
+            Tier(body.Production),
+            Tier(body.System),
+            body.Versions,
+            body.Features,
             TimeSpan.FromHours(body.OfflineAfterHours),
             TimeSpan.FromHours(body.RemovedAfterHours),
             body.ShowcaseImageBytes,
@@ -453,23 +474,23 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var before = LimitsService.Flatten(previous).ToDictionary(l => l.Key, l => l.Value);
 
-        foreach (var (key, value) in LimitsService.Flatten(saved).Where(l => before[l.Key] != l.Value))
+        foreach (var (key, value) in LimitsService.Flatten(saved).Where(l => before.GetValueOrDefault(l.Key) != l.Value))
         {
-            logger.LogInformation("Changed limit {Limit} from {Previous} to {Value} by operator", key, before[key], value);
+            logger.LogInformation("Changed limit {Limit} from {Previous} to {Value} by operator", key, before.GetValueOrDefault(key) ?? "(none)", value);
         }
 
         return Describe(saved);
     }
 
-    private static TierLimits Tier(TierLimitsModel model)
-        => new(model.BuildBytes, model.DataBytes, model.Versions, model.Features, model.AnalyticsDays);
+    private static TierSettings Tier(TierLimitsModel model)
+        => new(model.BuildBytes, model.DataBytes, model.AnalyticsDays, model.Connectivity, model.Label);
 
-    private static TierLimitsModel Describe(TierLimits limits)
-        => new(limits.BuildBytes, limits.DataBytes, limits.Versions, limits.Features, limits.AnalyticsDays);
+    private static TierLimitsModel Describe(TierSettings limits)
+        => new(limits.BuildBytes, limits.DataBytes, limits.AnalyticsDays, limits.Connectivity, limits.Label);
 
     private static LimitsModel Describe(ProductLimits limits)
-        => new(Describe(limits.Free), Describe(limits.Premium), (int)limits.OfflineAfter.TotalHours, (int)limits.RemovedAfter.TotalHours,
-               limits.ShowcaseImageBytes, limits.RequestsPerSecond, limits.BuildsPerDay);
+        => new(limits.DefaultTier.ToString(), Describe(limits.Sandbox), Describe(limits.Production), Describe(limits.System), limits.Versions, limits.Features,
+               (int)limits.OfflineAfter.TotalHours, (int)limits.RemovedAfter.TotalHours, limits.ShowcaseImageBytes, limits.RequestsPerSecond, limits.BuildsPerDay);
 
     #endregion
 
@@ -500,7 +521,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                                                 (long)((a.Ended ?? now) - a.Started).TotalSeconds))],
             // the tiers the operator may move a lambda to, which is every one
             // but the demos': those are the seeder's to hand out
-            [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())],
+            [.. limits.TiersWhere(p => p.Assignable).Select(t => t.ToString())],
             lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
             [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
             You(request),
@@ -515,11 +536,6 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         return new(editor.Address, NetworkAddress.Describe(NetworkAddress.RangeOf(address)), editor.FirstSeen, editor.LastSeen, blocks.Covers(address));
     }
-
-    private static LambdaTier ParseTier(string tier)
-        => Enum.TryParse<LambdaTier>(tier, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed)
-         ? parsed
-         : throw LambdaException.Invalid($"There is no tier called '{tier}'. There are: {string.Join(", ", Enum.GetNames<LambdaTier>())}.");
 
     private static LambdaOverviewResponse Summarize(LambdaInfo lambda)
         => new(lambda.PublicKey, lambda.ActiveVersion, lambda.DeployedUntil);

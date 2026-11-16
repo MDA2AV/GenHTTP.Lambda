@@ -10,11 +10,11 @@ public sealed record PlatformResponse(
     string? Terms,
     [Summary("What a new lambda can start from, in the words of somebody who wants to build something")]
     IReadOnlyList<StarterResponse> Starters,
-    [Summary("What a version of a free lambda may come to, its code and its resources together, in bytes")]
+    [Summary("What a version of a new lambda may come to, its code and its resources together, in bytes - its tier's, `defaultTier`")]
     long BuildBytes,
-    [Summary("How long a free lambda may go without a visit or an edit before it is taken offline, in hours")]
+    [Summary("How long a lambda in a tier that is not kept while unused - the sandbox - may go without a visit or an edit before it is taken offline, in hours")]
     int DeploymentLifetimeHours,
-    [Summary("How long a free lambda may go without a visit or an edit before it is deleted, in days")]
+    [Summary("How long such a lambda may go without a visit or an edit before it is deleted, in days")]
     int RetentionDays,
     [Summary("The namespaces a lambda has imported without saying so")]
     IReadOnlyList<string> Imports,
@@ -25,12 +25,16 @@ public sealed record PlatformResponse(
     [Summary("Where a lambda answers, with `{key}` where its public key goes: `https://{key}.genhttp.run/`, or `http://localhost:8080/lambda/{key}/` where lambdas answer below a path")]
     string LambdaUrl,
     [Summary("Who runs the installation, as far as its pages have to say so")]
-    OperatorResponse Operator
+    OperatorResponse Operator,
+    [Summary("The tier a new lambda starts in, and what it lets it have")]
+    TierResponse DefaultTier,
+    [Summary("Every tier the operator assigns - `Sandbox`, `Production` and `System` - and what each lets a lambda have, as this installation set it")]
+    IReadOnlyList<TierResponse> Tiers
 );
 
 [Summary("Who runs an installation, as far as its pages have to say so.")]
 public sealed record OperatorResponse(
-    [Summary("Where to write to them, about premium for one; absent where they name nobody")]
+    [Summary("Where to write to them, about moving an app to production for one; absent where they name nobody")]
     string? Contact,
     [Summary("Where a lambda that does harm is reported; absent where there is nowhere")]
     string? Abuse,

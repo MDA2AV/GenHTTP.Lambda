@@ -49,7 +49,7 @@ public sealed class UsageReportTests
             Assert.IsTrue(counting.IsSuccessStatusCode);
         }
 
-        fixture.ChangeTier(keeping.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(keeping.PrivateKey, LambdaTier.Production);
 
         // every installation has the demos, so they say nothing about this one
         await fixture.MakeDemoAsync(demo.PublicKey);
@@ -88,8 +88,11 @@ public sealed class UsageReportTests
         var lambdas = root.GetProperty("lambdas");
 
         Assert.AreEqual(2, lambdas.GetProperty("total").GetInt32(), "the demo is not counted");
-        Assert.AreEqual(1, lambdas.GetProperty("free").GetInt32());
-        Assert.AreEqual(1, lambdas.GetProperty("premium").GetInt32());
+        Assert.AreEqual(1, lambdas.GetProperty("free").GetInt32(), "the sandbox, under the name the collector reads");
+        Assert.AreEqual(1, lambdas.GetProperty("premium").GetInt32(), "and production");
+        Assert.AreEqual(1, lambdas.GetProperty("sandbox").GetInt32());
+        Assert.AreEqual(1, lambdas.GetProperty("production").GetInt32());
+        Assert.AreEqual(0, lambdas.GetProperty("system").GetInt32());
         Assert.AreEqual(1, lambdas.GetProperty("online").GetInt32());
         Assert.AreEqual(2, lambdas.GetProperty("created30Days").GetInt32());
 

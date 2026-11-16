@@ -30,8 +30,10 @@ public sealed record AdminLambda(
     string PublicKey,
     [Summary("Its editor key")]
     string PrivateKey,
-    [Summary("`Free`, `Premium` or `Demo`")]
+    [Summary("`Sandbox`, `Production`, `System` or `Demo`")]
     string Tier,
+    [Summary("What the installation calls its tier on its pages; absent where it goes by its own name")]
+    string? TierLabel,
     [Summary("When it was created")]
     DateTime Created,
     [Summary("When something about it last changed")]
@@ -72,7 +74,7 @@ public sealed record AdminLambdaDetail(
     IReadOnlyList<VersionResponse> Versions,
     [Summary("Every stretch of time it was online, newest first")]
     IReadOnlyList<ActivationResponse> Activations,
-    [Summary("The tiers it may be moved to")]
+    [Summary("The tiers it may be moved to: every one but the demos'")]
     IReadOnlyList<string> Tiers,
     [Summary("Its block, while it has one")]
     LambdaBlockResponse? Block = null,
@@ -144,7 +146,7 @@ public sealed record AddressBlockResponse(
 
 [Summary("The tier to move a lambda to.")]
 public sealed record TierRequest(
-    [Summary("`Free` or `Premium`, in any case")]
+    [Summary("`Sandbox`, `Production` or `System`, in any case. `Free` and `Premium`, what the sandbox and production were called before, are read as them.")]
     string Tier
 );
 
@@ -190,13 +192,21 @@ public sealed record UsageReportResponse(
 
 [Summary("What a lambda may have and do, as the operator set it.")]
 public sealed record LimitsModel(
-    [Summary("What a free lambda, or a demo, may have")]
-    TierLimitsModel Free,
-    [Summary("What a premium lambda may have; never less than a free one")]
-    TierLimitsModel Premium,
-    [Summary("How long a free lambda may go without a visit or an edit before it is taken offline, in hours")]
+    [Summary("The tier a new lambda starts in: `Sandbox` or `Production`")]
+    string DefaultTier,
+    [Summary("What a sandbox lambda, or a demo, may have")]
+    TierLimitsModel Sandbox,
+    [Summary("What a lambda in production may have; never less than a sandbox one")]
+    TierLimitsModel Production,
+    [Summary("What a system lambda, one the installation itself depends on, may have")]
+    TierLimitsModel System,
+    [Summary("How many versions of a lambda are kept, whatever its tier; older ones are removed, never the one online")]
+    int Versions,
+    [Summary("How many features a lambda may have open at once, whatever its tier")]
+    int Features,
+    [Summary("How long a sandbox lambda may go without a visit or an edit before it is taken offline, in hours")]
     int OfflineAfterHours,
-    [Summary("How long a free lambda may go without a visit or an edit before it is deleted, in hours")]
+    [Summary("How long a sandbox lambda may go without a visit or an edit before it is deleted, in hours")]
     int RemovedAfterHours,
     [Summary("How large the picture of a showcase entry may be, in bytes")]
     int ShowcaseImageBytes,
@@ -206,16 +216,16 @@ public sealed record LimitsModel(
     int BuildsPerDay
 );
 
-[Summary("What a lambda of one tier may have.")]
+[Summary("What a lambda of one tier may have, and what the tier is called.")]
 public sealed record TierLimitsModel(
     [Summary("What a version may come to, its code and its resources together, in bytes")]
     long BuildBytes,
     [Summary("The room its data may take, its database and its workspace together, in bytes")]
     long DataBytes,
-    [Summary("How many of its versions are kept")]
-    int Versions,
-    [Summary("How many features it may have open at once")]
-    int Features,
     [Summary("How many days of its analytics its owner is shown, of the year that is kept")]
-    int AnalyticsDays
+    int AnalyticsDays,
+    [Summary("Whether a lambda in it may connect to other servers while the operator decided nothing about it. A decision about the lambda - allowed or declined - comes first either way.")]
+    bool Connectivity,
+    [Summary("What the tier is called on the installation's pages, shown as written in every language, up to 24 characters; absent or empty for its own name, which the pages translate")]
+    string? Label = null
 );

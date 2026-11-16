@@ -32,7 +32,7 @@ namespace GenHTTP.Lambda.Execution;
 /// key, the panel and its token. Without the header a worker stays below
 /// the lambda's path, which is all a lambda needs.
 /// </remarks>
-public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimitsService limits, ILogger<LambdaExecutionHandler> logger) : IHandler
+public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILogger<LambdaExecutionHandler> logger) : IHandler
 {
 
     private static readonly byte[] WorkerScope = "Service-Worker-Allowed"u8.ToArray();
@@ -43,9 +43,10 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimi
     {
         var lambda = request.RequireLambda();
 
-        // what it is built with, read on every request: a lambda whose tier,
-        // workspace or connectivity changed is built again on this one
-        var settings = new BuildSettings(limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled), lambda.Connectivity);
+        // what it is built with, read on every request: a lambda whose
+        // workspace or connectivity changed is built again on this one - its
+        // tier is not compiled in, the room of its data is read as it writes
+        var settings = new BuildSettings(lambda.WorkspaceEnabled, lambda.Connectivity);
 
         if (lambda.Feature is not { } feature)
         {

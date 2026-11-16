@@ -120,7 +120,7 @@ public sealed class DatabaseTests
 
         Assert.IsFalse(store.Enabled);
         Assert.IsFalse(store.Default);
-        Assert.AreEqual(fixture.Options.DataBytes, store.QuotaBytes);
+        Assert.AreEqual(fixture.Options.Sandbox.DataBytes, store.QuotaBytes);
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => { using var connection = Database.GetConnection(); return \"connected\"; });");
 
@@ -438,7 +438,7 @@ public sealed class DatabaseTests
     [TestMethod]
     public async Task ADatabaseStopsGrowingAtItsQuota()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 256 * 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(data: 256 * 1024));
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -558,7 +558,7 @@ public sealed class DatabaseTests
 
         Assert.IsTrue(database.Enabled);
         Assert.IsTrue(database.Used, "the code connects to it");
-        Assert.AreEqual(fixture.Options.DataBytes, database.QuotaBytes);
+        Assert.AreEqual(fixture.Options.Sandbox.DataBytes, database.QuotaBytes);
 
         var notes = database.Tables.Single(t => t.Name == "notes");
 

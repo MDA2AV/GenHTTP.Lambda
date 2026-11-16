@@ -78,6 +78,12 @@ public interface IDatabaseVault
     long RoomOf(long lambdaId, long? featureId, LambdaTier tier);
 
     /// <summary>
+    /// What a compiled lambda reads the room of its data with - its database
+    /// and its workspace together, as its tier allows it now.
+    /// </summary>
+    Func<long> DataRoomFor(long lambdaId, long? featureId);
+
+    /// <summary>
     /// Writes the database of a lambda into a file of its own, whole.
     /// </summary>
     /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database</returns>

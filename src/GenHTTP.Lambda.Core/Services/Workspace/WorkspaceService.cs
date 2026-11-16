@@ -378,10 +378,11 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// <remarks>
     /// Asked every time rather than remembered, so a lambda that was just
     /// moved to another tier is held to the limits of the new one - the same
-    /// ones its own code will be compiled with on its next request.
+    /// ones its own code reads as it writes. One that is gone gets the least
+    /// room of any tier.
     /// </remarks>
     private WorkspaceLimits Limits(long lambdaId)
-        => meta.GetWorkspaceLimits(lambdaId) ?? tiers.WorkspaceOf(LambdaTier.Free);
+        => meta.GetWorkspaceLimits(lambdaId) ?? tiers.WorkspaceOf(LambdaTier.Sandbox);
 
     /// <summary>
     /// The limits of a workspace that is switched on, or a refusal saying how

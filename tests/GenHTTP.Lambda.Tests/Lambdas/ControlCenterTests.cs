@@ -425,8 +425,8 @@ public sealed class ControlCenterTests
         Assert.IsTrue(summary.Storage.ServesResources, "the code asks for its resources to be served");
         Assert.IsFalse(summary.Storage.ServesWorkspace);
 
-        Assert.AreEqual(fixture.Options.BuildBytes, summary.Limits.BuildBytes);
-        Assert.AreEqual(fixture.Options.DataBytes, summary.Limits.DataBytes);
+        Assert.AreEqual(fixture.Options.Sandbox.BuildBytes, summary.Limits.BuildBytes);
+        Assert.AreEqual(fixture.Options.Sandbox.DataBytes, summary.Limits.DataBytes);
     }
 
     [TestMethod]

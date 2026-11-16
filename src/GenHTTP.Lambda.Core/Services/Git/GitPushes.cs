@@ -134,7 +134,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             return;
         }
 
-        var allowed = limits.Of(Enum.Parse<LambdaTier>(lambda.Tier)).Versions;
+        var allowed = limits.Get().Versions;
 
         // from the old tip to the new one, one commit after another
         var chain = new List<GitObjectId>();

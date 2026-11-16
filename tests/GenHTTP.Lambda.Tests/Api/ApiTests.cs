@@ -204,7 +204,7 @@ public sealed class ApiTests
         Assert.IsNotEmpty(platform.Starters);
         Assert.IsNotEmpty(platform.Imports);
         Assert.IsNotEmpty(platform.Completions);
-        Assert.AreEqual(fixture.Options.BuildBytes, platform.BuildBytes);
+        Assert.AreEqual(fixture.Options.Sandbox.BuildBytes, platform.BuildBytes);
     }
 
     [TestMethod]

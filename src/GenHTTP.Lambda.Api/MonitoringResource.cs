@@ -74,7 +74,7 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
 
         var traffic = telemetry.DescribeLambda(id);
 
-        var tier = Enum.Parse<LambdaTier>(lambda.Tier);
+        var policy = lambda.Policy;
 
         var product = limits.Get();
 
@@ -110,12 +110,12 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
             [.. problems.Select(Describe)],
             Measure(privateKey, id, measured, known),
             new SummaryLimits(
-                limits.BuildOf(tier),
-                limits.DataOf(tier),
-                limits.Of(tier).Versions,
+                policy.MaxVersionBytes,
+                policy.MaxDataBytes,
+                product.Versions,
                 (int)product.OfflineAfter.TotalHours,
                 (int)product.RemovedAfter.TotalDays,
-                limits.Of(tier).Features
+                product.Features
             ),
             known.Documentation,
             connectivity.Connects(id, live?.Version, latest?.Version)

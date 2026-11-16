@@ -145,7 +145,7 @@ public sealed class MetaService : IMetaService
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
-        LambdaGuard.EnsureEditable(lambda);
+        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier));
 
         if (lambda.View != view)
         {
@@ -201,7 +201,7 @@ public sealed class MetaService : IMetaService
             {
                 PublicKey = key,
                 PrivateKey = LambdaKeys.CreatePrivateKey(),
-                Tier = LambdaTier.Free,
+                Tier = Limits.Get().DefaultTier,
                 View = view,
                 Created = now,
                 Modified = now
@@ -268,9 +268,12 @@ public sealed class MetaService : IMetaService
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
+        var policy = Limits.PolicyOf(lambda.Tier);
+
         // the operator may delete what they blocked, which is one of the two
-        // ways out of a block; a demo stays the installation's either way
-        if (origin == VersionOrigins.Admin && lambda.Tier != LambdaTier.Demo)
+        // ways out of a block, and a system lambda, which nobody else may;
+        // a demo stays the installation's either way
+        if (origin == VersionOrigins.Admin && !policy.ReadOnly)
         {
             Removal.Remove(database, lambda);
 
@@ -279,7 +282,13 @@ public sealed class MetaService : IMetaService
             return;
         }
 
-        LambdaGuard.EnsureEditable(lambda);
+        LambdaGuard.EnsureEditable(lambda, policy);
+
+        if (!policy.DeletedByOwner)
+        {
+            throw LambdaException.Forbidden($"'{lambda.PublicKey}' is one of the installation's own lambdas ({policy.Name}), which the platform depends on: "
+                                          + "it is not deleted with its editor key. Only the operator of the installation can delete it.");
+        }
 
         Removal.Remove(database, lambda);
 
@@ -335,7 +344,7 @@ public sealed class MetaService : IMetaService
         var workspace = DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace);
 
         return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace,
-                                  AnalyticsSince: lambda.AnalyticsSince, Connectivity: ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
+                                  AnalyticsSince: lambda.AnalyticsSince, Connectivity: ConnectivityRule.Allows(Limits.PolicyOf(lambda.Tier), lambda.Connectivity));
     }
 
     public IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey)
@@ -458,7 +467,7 @@ public sealed class MetaService : IMetaService
 
         note ??= new VersionNote(Origin: VersionOrigins.Api);
 
-        LambdaGuard.EnsureEditable(lambda, note.Origin);
+        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), note.Origin);
 
         if (after is { } expected)
         {
@@ -523,7 +532,7 @@ public sealed class MetaService : IMetaService
         {
             var lambda = LambdaGuard.Require(database, privateKey);
 
-            LambdaGuard.EnsureEditable(lambda, origin);
+            LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), origin);
 
             target = version ?? database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                         .Max(d => (int?)d.Version)
@@ -613,7 +622,7 @@ public sealed class MetaService : IMetaService
 
         using var turn = held;
 
-        LambdaGuard.EnsureEditable(lambda, endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
+        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
 
         if (lambda.ActiveVersion != null)
         {
@@ -646,9 +655,16 @@ public sealed class MetaService : IMetaService
 
         using var turn = held;
 
-        if (lambda.Tier == LambdaTier.Demo)
+        var policy = Limits.PolicyOf(lambda.Tier);
+
+        // the installation's own: a demo nobody else can change, a system
+        // lambda the platform depends on - which an operator who means to
+        // stop it moves to another tier first, as a decision of its own
+        if (!policy.Blockable)
         {
-            throw LambdaException.Forbidden($"'{lambda.PublicKey}' is a demo, which the installation keeps and nobody else can change: there is nothing to block.");
+            throw LambdaException.Forbidden(policy.ReadOnly
+                ? $"'{lambda.PublicKey}' is a demo, which the installation keeps and nobody else can change: there is nothing to block."
+                : $"'{lambda.PublicKey}' is in the tier '{policy.Name}', which the platform depends on and which cannot be blocked. Move it to another tier first to block it.");
         }
 
         var now = DateTime.UtcNow;
@@ -748,7 +764,7 @@ public sealed class MetaService : IMetaService
         var lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
                   ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-        LambdaGuard.EnsureEditable(lambda);
+        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier));
 
         Editors.Note(lambda.Id);
 
@@ -812,12 +828,12 @@ public sealed class MetaService : IMetaService
     #region Helpers
 
     /// <summary>
-    /// What the lambda is compiled with: what it may keep in its workspace,
-    /// and whether it may connect to other servers.
+    /// What the lambda is compiled with: whether it has a workspace, and
+    /// whether it may connect to other servers.
     /// </summary>
     private BuildSettings SettingsOf(LambdaDbContext database, LambdaEntity lambda)
-        => new(Limits.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace)),
-               ConnectivityRule.Allows(lambda.Tier, lambda.Connectivity));
+        => new(DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace),
+               ConnectivityRule.Allows(Limits.PolicyOf(lambda.Tier), lambda.Connectivity));
 
     /// <summary>
     /// The lambda of the key, read once it is its turn to change (see <see cref="_turns" />).

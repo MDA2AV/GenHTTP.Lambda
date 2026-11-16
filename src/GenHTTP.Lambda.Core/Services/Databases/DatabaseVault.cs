@@ -139,7 +139,9 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
                            .Select(l => (LambdaTier?)l.Tier)
                            .FirstOrDefault();
 
-        return new Snapshot(generation, enabled && tier != null, tier ?? LambdaTier.Free);
+        // a lambda that is gone has no database, and the least room of any
+        // tier until whatever still holds it lets go
+        return new Snapshot(generation, enabled && tier != null, tier ?? LambdaTier.Sandbox);
     }
 
     #endregion
@@ -309,7 +311,21 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Never below nothing. A database already larger than this stays as it
     /// is and is read as before; SQLite refuses only what would make it grow.
     /// </remarks>
-    public long RoomOf(long lambdaId, long? featureId, LambdaTier tier) => Math.Max(0, limits.DataOf(tier) - workspaces.SizeOf(lambdaId, featureId));
+    public long RoomOf(long lambdaId, long? featureId, LambdaTier tier) => Math.Max(0, limits.PolicyOf(tier).MaxDataBytes - workspaces.SizeOf(lambdaId, featureId));
+
+    /// <summary>
+    /// What a compiled lambda reads the room of its data with, its database
+    /// and its workspace together - asked on every write to its workspace.
+    /// </summary>
+    /// <remarks>
+    /// Read through the tier the lambda has now rather than compiled in, so a
+    /// lambda moved to another tier, or one whose tier the operator gives more
+    /// room, keeps running as it is and writes into the new room from the next
+    /// write on. The tier is the one the connections read (see
+    /// <see cref="Invalidate"/>), held in memory.
+    /// </remarks>
+    public Func<long> DataRoomFor(long lambdaId, long? featureId)
+        => () => limits.PolicyOf(Current(new Scope(lambdaId, featureId)).Tier).MaxDataBytes;
 
     /// <summary>
     /// Writes the database of a lambda into a file of its own, whole - what

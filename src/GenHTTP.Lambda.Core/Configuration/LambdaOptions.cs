@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 
 using GenHTTP.Api.Infrastructure;
+using GenHTTP.Lambda.Data.Entities;
 
 namespace GenHTTP.Lambda.Configuration;
 
@@ -74,7 +75,8 @@ public sealed record LambdaOptions
     public string DataDirectory { get; init; } = Path.Combine(AppContext.BaseDirectory, "data");
 
     /// <summary>
-    /// How long a free tier lambda may go unused before it is taken offline.
+    /// How long a lambda in a tier that is not kept while unused - a sandbox -
+    /// may go unused before it is taken offline.
     /// </summary>
     /// <remarks>
     /// Unused, not undeployed. This used to be the age of the deployment: a
@@ -88,7 +90,7 @@ public sealed record LambdaOptions
     public TimeSpan DeploymentLifetime { get; init; } = TimeSpan.FromDays(30);
 
     /// <summary>
-    /// How long an unused free tier lambda is kept before it is removed.
+    /// How long such an unused lambda is kept before it is removed.
     /// </summary>
     /// <remarks>
     /// Measured the same way and from the same moment, but further out, and
@@ -106,42 +108,57 @@ public sealed record LambdaOptions
     public TimeSpan MaintenanceInterval { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// How large a version of a lambda outside the premium tier may be: its
-    /// code and its resources together.
+    /// What a sandbox lambda may have: a version of 32 MB, its code and its
+    /// resources together, and 512 MB of data, its database and its workspace
+    /// together; a week of its analytics; no connections unless the operator
+    /// allows them.
     /// </summary>
     /// <remarks>
-    /// Mind what it costs: every version keeps its own copy of all of it, as
-    /// base64 in JSON for what is not text, so a version saved at the limit
-    /// takes nearly half as much again on disk, <see cref="MaxVersions"/> of
-    /// them are kept, and a version is read and written whole, in memory.
+    /// Mind what a version costs: every version keeps its own copy of all of
+    /// it, as base64 in JSON for what is not text, so a version saved at the
+    /// limit takes nearly half as much again on disk, <see cref="MaxVersions"/>
+    /// of them are kept, and a version is read and written whole, in memory.
+    /// One allowance for the data rather than one per kind, so a lambda that
+    /// keeps everything in its database has all of it there, and one that
+    /// keeps files has all of it for them. Each feature's copy of the data is
+    /// held to it on its own.
     /// </remarks>
-    public long BuildBytes { get; init; } = 32L * 1024 * 1024;
+    public TierSettings Sandbox { get; init; } = new(32L * 1024 * 1024, 512L * 1024 * 1024, 7, Connectivity: false);
 
     /// <summary>
-    /// How large a version of a premium lambda may be.
+    /// What a lambda in production may have: room for pictures, recordings
+    /// and data rather than a stylesheet and a logo, all of the analytics
+    /// that are kept, and connections to other servers.
     /// </summary>
     /// <remarks>
-    /// Room for pictures, recordings and data rather than a stylesheet and a
-    /// logo. Never less than what every other lambda may have, however the
-    /// two are set.
+    /// Connecting is on by default, as it was in the premium tier everywhere:
+    /// off, code that connects in a lambda that already does would stop
+    /// compiling with the next release. Never less than a sandbox lambda may
+    /// have, however the two are set.
     /// </remarks>
-    public long PremiumBuildBytes { get; init; } = 128L * 1024 * 1024;
+    public TierSettings Production { get; init; } = new(128L * 1024 * 1024, 4096L * 1024 * 1024, 365, Connectivity: true);
 
     /// <summary>
-    /// How much room the data of a lambda outside the premium tier may take:
-    /// its database and its workspace together.
+    /// What a system lambda may have: the same as one in production, since
+    /// it is something the platform depends on rather than something that
+    /// needs more.
     /// </summary>
     /// <remarks>
-    /// One allowance for both, so a lambda that keeps everything in its
-    /// database has all of it there, and one that keeps files has all of it
-    /// for them. Each feature's copy of the data is held to it on its own.
+    /// Limits nonetheless: the installation's own lambdas run in the same
+    /// process and on the same disk as everybody else's.
     /// </remarks>
-    public long DataBytes { get; init; } = 512L * 1024 * 1024;
+    public TierSettings System { get; init; } = new(128L * 1024 * 1024, 4096L * 1024 * 1024, 365, Connectivity: true);
 
     /// <summary>
-    /// How much room the data of a premium lambda may take.
+    /// The tier a new lambda starts in.
     /// </summary>
-    public long PremiumDataBytes { get; init; } = 4096L * 1024 * 1024;
+    /// <remarks>
+    /// A sandbox, on every installation by default: whoever creates a lambda
+    /// is not known to the installation, and one that nobody uses should not
+    /// be kept for ever. An installation run for a team rather than for
+    /// strangers may start them in production instead.
+    /// </remarks>
+    public LambdaTier DefaultTier { get; init; } = LambdaTier.Sandbox;
 
     /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.
@@ -173,7 +190,7 @@ public sealed record LambdaOptions
     /// <remarks>
     /// A published source is packed into a project once per version and kept,
     /// so that it is not packed again for every visitor. Anybody may ask for
-    /// any version of it, though, and a premium lambda may ship a hundred
+    /// any version of it, though, and a lambda in production may ship a hundred
     /// megabytes of resources fifty times over - so the cache is held to this,
     /// and the version read least recently is packed again should somebody
     /// ask for it once more.
@@ -189,7 +206,7 @@ public sealed record LambdaOptions
     /// atomic - so this protects the process, like a buffer, rather than
     /// being a promise of a tier: what a version may hold is checked after
     /// it was unpacked, against the tier of the lambda. Room for the first
-    /// push of a premium lambda that ships all the resources it may.
+    /// push of a lambda in production that ships all the resources it may.
     /// </remarks>
     public long GitMaxPushBytes { get; init; } = 256L * 1024 * 1024;
 
@@ -237,7 +254,7 @@ public sealed record LambdaOptions
     public string? Terms { get; init; }
 
     /// <summary>
-    /// Where to write to whoever runs this installation - about premium, for
+    /// Where to write to whoever runs this installation - about production, for
     /// one, which only they assign. Without, the pages offer nobody to write to.
     /// </summary>
     public string? Contact { get; init; }
@@ -593,11 +610,11 @@ public sealed record LambdaOptions
     #region Functionality
 
     /// <summary>
-    /// What the four allowances that became two were by default, in the free
-    /// tier and the premium one - what a value set for only one of a pair is
-    /// added to.
+    /// What the four allowances that became two were by default, in the
+    /// sandbox and in production (then the free and the premium tier) - what a
+    /// value set for only one of a pair is added to.
     /// </summary>
-    public static IReadOnlyDictionary<string, (long Free, long Premium)> RetiredDefaults { get; } = new Dictionary<string, (long, long)>
+    public static IReadOnlyDictionary<string, (long Sandbox, long Production)> RetiredDefaults { get; } = new Dictionary<string, (long, long)>
     {
         ["code-characters"] = (1024 * 1024, 10 * 1024 * 1024),
         ["asset-bytes"] = (32L * 1024 * 1024, 128L * 1024 * 1024),

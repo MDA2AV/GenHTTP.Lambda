@@ -173,7 +173,7 @@ public sealed class DemoTests
         await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Demo),
                                                          "the seeder would delete it on the next start");
 
-        await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.ChangeTier("demo-crud", LambdaTier.Free),
+        await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.ChangeTier("demo-crud", LambdaTier.Sandbox),
                                                          "and it would be anybody's to change");
     }
 
@@ -209,7 +209,7 @@ public sealed class DemoTests
 
         var copy = await fixture.CreateLambdaAsync(template: "demo-crud");
 
-        Assert.AreEqual(nameof(LambdaTier.Free), copy.Tier);
+        Assert.AreEqual(nameof(LambdaTier.Sandbox), copy.Tier);
 
         await fixture.DeployAsync(copy.PrivateKey);
 

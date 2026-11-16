@@ -79,6 +79,11 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         var lambda = RequireEditable(database, privateKey);
 
+        if (!limits.PolicyOf(lambda.Tier).Showcased)
+        {
+            throw LambdaException.Forbidden($"'{lambda.PublicKey}' is in the tier '{limits.PolicyOf(lambda.Tier).Name}', the installation's own, which is never listed in the showcase.");
+        }
+
         var entry = database.Showcases.FirstOrDefault(s => s.LambdaId == lambda.Id);
 
         var now = DateTime.UtcNow;
@@ -145,8 +150,12 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         // every online entry at once: they are ranked by figures that live
         // partly in memory, so the database cannot do the ordering - and a
-        // row without its picture is a few hundred bytes
-        var entries = Entries(database.Showcases.Where(s => s.Lambda!.ActiveVersion != null))
+        // row without its picture is a few hundred bytes. Not of a lambda
+        // moved to a tier that is never listed: kept, and back once it is
+        // moved out again
+        var listed = limits.TiersWhere(p => p.Showcased);
+
+        var entries = Entries(database.Showcases.Where(s => s.Lambda!.ActiveVersion != null && listed.Contains(s.Lambda.Tier)))
                             .ToList();
 
         var now = DateTime.UtcNow;
@@ -243,13 +252,13 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     /// A demo's key is announced, so holding it says nothing about being the
     /// one who decides what the showcase says about it.
     /// </remarks>
-    private static LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
     {
         var lambda = Require(database, privateKey);
 
         LambdaGuard.EnsureUnblocked(lambda);
 
-        return lambda.Tier == LambdaTier.Demo
+        return limits.PolicyOf(lambda.Tier).ReadOnly
              ? throw LambdaException.Forbidden(LambdaGuard.ReadOnly(lambda.PublicKey))
              : lambda;
     }

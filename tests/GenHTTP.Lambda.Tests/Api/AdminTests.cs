@@ -188,9 +188,9 @@ public sealed class AdminTests
 
         var detail = await response.GetContentAsync<AdminLambdaDetail>();
 
-        Assert.AreEqual("Premium", detail.Lambda.Tier);
+        Assert.AreEqual("Production", detail.Lambda.Tier, "premium, what production was called before, is read as it still");
         Assert.IsNull(detail.Lambda.KeptUntil, "the tier keeps it");
-        CollectionAssert.AreEqual(new[] { "Free", "Premium" }, detail.Tiers.ToArray());
+        CollectionAssert.AreEqual(new[] { "Sandbox", "Production", "System" }, detail.Tiers.ToArray());
     }
 
     [TestMethod]

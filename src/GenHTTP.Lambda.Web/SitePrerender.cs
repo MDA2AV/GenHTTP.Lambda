@@ -108,7 +108,8 @@ public sealed partial class SitePrerender
             after,
             lifetimeHours,
             (int)Math.Round(lifetimeHours / 24.0, MidpointRounding.AwayFromZero),
-            (int)limits.RemovedAfter.TotalDays
+            (int)limits.RemovedAfter.TotalDays,
+            Limits.PolicyOf(limits.DefaultTier).ExpiresWhenUnused
         );
 
         string content;
@@ -283,5 +284,6 @@ public sealed record Prerendered(
 /// </summary>
 /// <param name="Before">What a lambda's address is shown with before its key: "", or "localhost:8080/lambda/"</param>
 /// <param name="After">And after it: ".genhttp.run", or ""</param>
+/// <param name="Expires">Whether a new lambda is taken offline when unused - it starts in the sandbox - so the pages say how long it is kept</param>
 public sealed record SiteFacts(string Origin, string Host, string Before, string After, int LifetimeHours, int OfflineDays, int RetentionDays,
-                               ShowcaseListing? Showcase = null);
+                               bool Expires = true, ShowcaseListing? Showcase = null);

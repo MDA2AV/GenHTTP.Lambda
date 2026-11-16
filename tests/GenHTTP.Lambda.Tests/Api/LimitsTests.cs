@@ -27,45 +27,49 @@ public sealed class LimitsTests
     [TestMethod]
     public async Task TheLimitsAreTheConfiguredDefaultsUntilTheOperatorSavesThem()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { BuildBytes = 1234 * 1024, DeploymentLifetime = TimeSpan.FromHours(36) });
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o).WithSizes(build: 1234 * 1024) with { DeploymentLifetime = TimeSpan.FromHours(36) });
 
         var limits = await ReadAsync(fixture);
 
-        Assert.AreEqual(1234 * 1024, limits.Free.BuildBytes, "what the environment said is the default");
-        Assert.AreEqual(fixture.Options.PremiumBuildBytes, limits.Premium.BuildBytes);
-        Assert.AreEqual(fixture.Options.PremiumDataBytes, limits.Premium.DataBytes);
+        Assert.AreEqual(1234 * 1024, limits.Sandbox.BuildBytes, "what the host said is the default");
+        Assert.AreEqual(fixture.Options.Production.BuildBytes, limits.Production.BuildBytes);
+        Assert.AreEqual(fixture.Options.Production.DataBytes, limits.Production.DataBytes);
+        Assert.AreEqual(fixture.Options.System.DataBytes, limits.System.DataBytes);
+        Assert.AreEqual("Sandbox", limits.DefaultTier);
+        Assert.IsTrue(limits.Production.Connectivity, "production connects by default, as the premium tier did");
+        Assert.IsFalse(limits.Sandbox.Connectivity);
         Assert.AreEqual(36, limits.OfflineAfterHours);
         Assert.AreEqual(fixture.Options.RateLimit, limits.RequestsPerSecond);
     }
 
     [TestMethod]
-    public async Task AnOperatorLowersTheFreeBuildAllowanceAndALargerSaveIsRefused()
+    public async Task AnOperatorLowersTheSandboxBuildAllowanceAndALargerSaveIsRefused()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
-        var free = await fixture.CreateLambdaAsync();
-        var premium = await fixture.CreateLambdaAsync();
+        var sandbox = await fixture.CreateLambdaAsync();
+        var production = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(premium.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(production.PrivateKey, LambdaTier.Production);
 
-        using (var before = await SaveAsync(fixture, free.PrivateKey, Coding(2000)))
+        using (var before = await SaveAsync(fixture, sandbox.PrivateKey, Coding(2000)))
         {
             Assert.AreEqual(HttpStatusCode.Created, before.StatusCode, "two thousand bytes fit before");
         }
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { BuildBytes = 1024 } });
+        await ChangeAsync(fixture, current with { Sandbox = current.Sandbox with { BuildBytes = 1024 } });
 
-        using (var refused = await SaveAsync(fixture, free.PrivateKey, Coding(2000)))
+        using (var refused = await SaveAsync(fixture, sandbox.PrivateKey, Coding(2000)))
         {
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "and not once the operator lowered it, without a restart");
             Assert.Contains("1 KB", await refused.Content.ReadAsStringAsync());
         }
 
-        using var unaffected = await SaveAsync(fixture, premium.PrivateKey, Coding(2000));
+        using var unaffected = await SaveAsync(fixture, production.PrivateKey, Coding(2000));
 
-        Assert.AreEqual(HttpStatusCode.Created, unaffected.StatusCode, "a premium lambda is held to its own tier's");
+        Assert.AreEqual(HttpStatusCode.Created, unaffected.StatusCode, "a lambda in production is held to its own tier's");
     }
 
     [TestMethod]
@@ -76,15 +80,16 @@ public sealed class LimitsTests
         await using (var first = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory }))
         {
             // what a panel saved while code and assets, the workspace and the
-            // database had an allowance each - the free database's left as it was
+            // database had an allowance each - under the names the migration to
+            // the purpose tiers gave them; the sandbox database's left as it was
             await using var connection = new SqliteConnection($"Data Source={first.Options.DatabaseFile};Pooling=false");
 
             await connection.OpenAsync();
 
             await using var command = connection.CreateCommand();
 
-            command.CommandText = "INSERT INTO settings (key, value) VALUES ('limits.free.code-characters', '1000'), ('limits.free.asset-bytes', '2048'), "
-                                + "('limits.free.workspace-bytes', '8192'), ('limits.premium.asset-bytes', '4096')";
+            command.CommandText = "INSERT INTO settings (key, value) VALUES ('limits.sandbox.code-characters', '1000'), ('limits.sandbox.asset-bytes', '2048'), "
+                                + "('limits.sandbox.workspace-bytes', '8192'), ('limits.production.asset-bytes', '4096')";
 
             await command.ExecuteNonQueryAsync();
         }
@@ -95,10 +100,10 @@ public sealed class LimitsTests
 
         var limits = await ReadAsync(second);
 
-        Assert.AreEqual(3048, limits.Free.BuildBytes, "code and assets together, as a version may now come to");
-        Assert.AreEqual(8192 + LambdaOptions.RetiredDefaults["database-bytes"].Free, limits.Free.DataBytes, "the workspace and the database's default together");
-        Assert.AreEqual(4096 + LambdaOptions.RetiredDefaults["code-characters"].Premium, limits.Premium.BuildBytes, "and an allowance saved alone with the other's default");
-        Assert.AreEqual(second.Options.PremiumDataBytes, limits.Premium.DataBytes, "what was never saved is the default");
+        Assert.AreEqual(3048, limits.Sandbox.BuildBytes, "code and assets together, as a version may now come to");
+        Assert.AreEqual(8192 + LambdaOptions.RetiredDefaults["database-bytes"].Sandbox, limits.Sandbox.DataBytes, "the workspace and the database's default together");
+        Assert.AreEqual(4096 + LambdaOptions.RetiredDefaults["code-characters"].Production, limits.Production.BuildBytes, "and an allowance saved alone with the other's default");
+        Assert.AreEqual(second.Options.Production.DataBytes, limits.Production.DataBytes, "what was never saved is the default");
 
         await ChangeAsync(second, limits);
 
@@ -122,7 +127,7 @@ public sealed class LimitsTests
         {
             var current = await ReadAsync(first);
 
-            await ChangeAsync(first, current with { Free = current.Free with { BuildBytes = 4096 }, BuildsPerDay = 3 });
+            await ChangeAsync(first, current with { Sandbox = current.Sandbox with { BuildBytes = 4096, Label = "Free" }, BuildsPerDay = 3, Versions = 7 });
         }
 
         SqliteConnection.ClearAllPools();
@@ -131,8 +136,10 @@ public sealed class LimitsTests
 
         var kept = await ReadAsync(second);
 
-        Assert.AreEqual(4096, kept.Free.BuildBytes);
+        Assert.AreEqual(4096, kept.Sandbox.BuildBytes);
+        Assert.AreEqual("Free", kept.Sandbox.Label);
         Assert.AreEqual(3, kept.BuildsPerDay);
+        Assert.AreEqual(7, kept.Versions);
     }
 
     [TestMethod]
@@ -144,28 +151,28 @@ public sealed class LimitsTests
         {
             var current = await ReadAsync(first);
 
-            await ChangeAsync(first, current with { Free = current.Free with { BuildBytes = 4096 } });
+            await ChangeAsync(first, current with { Sandbox = current.Sandbox with { BuildBytes = 4096 } });
         }
 
         SqliteConnection.ClearAllPools();
 
         // what a host restarted with another default looks like
-        await using var second = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory, BuildBytes = 9000 });
+        await using var second = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o).WithSizes(build: 9000) with { DataDirectory = directory });
 
-        Assert.AreEqual(4096, (await ReadAsync(second)).Free.BuildBytes);
+        Assert.AreEqual(4096, (await ReadAsync(second)).Sandbox.BuildBytes);
     }
 
     [TestMethod]
-    public async Task ThePremiumTierMayNotAllowLessThanTheFreeOne()
+    public async Task ProductionMayNotAllowLessThanTheSandbox()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         var current = await ReadAsync(fixture);
 
-        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { Premium = current.Premium with { Versions = current.Free.Versions - 1 } });
+        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { Production = current.Production with { BuildBytes = current.Sandbox.BuildBytes - 1 } });
 
         Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
-        Assert.Contains("versions", await refused.Content.ReadAsStringAsync());
+        Assert.Contains("build bytes", await refused.Content.ReadAsStringAsync());
 
         Assert.AreEqual(current, await ReadAsync(fixture), "and nothing of it was saved");
     }
@@ -177,16 +184,17 @@ public sealed class LimitsTests
 
         var current = await ReadAsync(fixture);
 
-        Assert.AreEqual(7, current.Free.AnalyticsDays);
-        Assert.AreEqual(365, current.Premium.AnalyticsDays);
+        Assert.AreEqual(7, current.Sandbox.AnalyticsDays);
+        Assert.AreEqual(365, current.Production.AnalyticsDays);
+        Assert.AreEqual(365, current.System.AnalyticsDays);
 
-        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { Premium = current.Premium with { AnalyticsDays = 400 } });
+        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { Production = current.Production with { AnalyticsDays = 400 } });
 
         Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "a year is all that is kept");
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { AnalyticsDays = 30 } });
+        await ChangeAsync(fixture, current with { Sandbox = current.Sandbox with { AnalyticsDays = 30 } });
 
-        Assert.AreEqual(30, (await ReadAsync(fixture)).Free.AnalyticsDays);
+        Assert.AreEqual(30, (await ReadAsync(fixture)).Sandbox.AnalyticsDays);
     }
 
     [TestMethod]
@@ -226,7 +234,7 @@ public sealed class LimitsTests
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { BuildBytes = 4321 * 1024 }, OfflineAfterHours = 48, RemovedAfterHours = 24 * 10 });
+        await ChangeAsync(fixture, current with { Sandbox = current.Sandbox with { BuildBytes = 4321 * 1024 }, OfflineAfterHours = 48, RemovedAfterHours = 24 * 10 });
 
         using var response = await fixture.GetAsync("/api/v1/system");
 
@@ -273,9 +281,97 @@ public sealed class LimitsTests
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { DataBytes = 256 * 1024 } });
+        await ChangeAsync(fixture, current with { Sandbox = current.Sandbox with { DataBytes = 256 * 1024 } });
 
         StringAssert.Contains(await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"), "full", "the records it has are kept; it grows no further");
+    }
+
+    [TestMethod]
+    public async Task NewLambdasStartInTheTierTheOperatorChose()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        Assert.AreEqual(nameof(LambdaTier.Sandbox), (await fixture.CreateLambdaAsync()).Tier, "the sandbox, by default");
+
+        var current = await ReadAsync(fixture);
+
+        await ChangeAsync(fixture, current with { DefaultTier = "Production" });
+
+        var created = await fixture.CreateLambdaAsync();
+
+        Assert.AreEqual(nameof(LambdaTier.Production), created.Tier);
+        Assert.IsNull(created.KeptUntil, "and is kept, as production is");
+
+        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { DefaultTier = "System" });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "a system lambda is the installation's own, which nobody starts by creating one");
+    }
+
+    [TestMethod]
+    public async Task ALabelIsWhatThePagesCallATierAndTheApiStillNamesItByPurpose()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        Assert.AreEqual("Free", lambda.TierPolicy.Label, "what genhttp.dev calls the sandbox");
+        Assert.AreEqual(nameof(LambdaTier.Production), lambda.TierPolicy.Above);
+
+        var current = await ReadAsync(fixture);
+
+        using (var saved = await SendAsync(fixture, HttpMethod.Put, current with { Sandbox = current.Sandbox with { Label = "  Trying " }, Production = current.Production with { Label = "Business" } }))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, saved.StatusCode, await saved.Content.ReadAsStringAsync());
+        }
+
+        Assert.AreEqual("Trying", (await ReadAsync(fixture)).Sandbox.Label, "trimmed");
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}");
+
+        var labelled = await read.GetContentAsync<LambdaResponse>();
+
+        Assert.AreEqual(nameof(LambdaTier.Sandbox), labelled.Tier, "the identifier, never the label");
+        Assert.AreEqual("Trying", labelled.TierPolicy.Label);
+        Assert.AreEqual("Business", labelled.TierPolicy.AboveLabel);
+
+        using (var cleared = await SendAsync(fixture, HttpMethod.Put, (await ReadAsync(fixture)) with { Sandbox = current.Sandbox with { Label = "" } }))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, cleared.StatusCode);
+        }
+
+        Assert.IsNull((await ReadAsync(fixture)).Sandbox.Label, "an empty label is the tier's own name again");
+
+        using var tooLong = await SendAsync(fixture, HttpMethod.Put, current with { Sandbox = current.Sandbox with { Label = new string('x', 25) } });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, tooLong.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task VersionsAndFeaturesAreTheSameForEveryTier()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        var current = await ReadAsync(fixture);
+
+        Assert.AreEqual(fixture.Options.MaxVersions, current.Versions);
+        Assert.AreEqual(fixture.Options.MaxFeatures, current.Features);
+
+        await ChangeAsync(fixture, current with { Features = 1 });
+
+        var production = await fixture.CreateLambdaAsync();
+
+        fixture.ChangeTier(production.PrivateKey, LambdaTier.Production);
+
+        await fixture.DeployAsync(production.PrivateKey, "return Content.From(Resource.FromString(\"x\"));");
+
+        using (var first = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{production.PrivateKey}/features", new CreateFeatureRequest("one")))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, first.StatusCode, await first.Content.ReadAsStringAsync());
+        }
+
+        using var second = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{production.PrivateKey}/features", new CreateFeatureRequest("two"));
+
+        Assert.AreEqual(HttpStatusCode.Conflict, second.StatusCode, "production has no more of them than the sandbox");
     }
 
     #region Helpers

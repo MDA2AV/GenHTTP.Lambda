@@ -178,7 +178,7 @@ public sealed class BranchTests
 
         var limits = fixture.Limits.Get();
 
-        fixture.Limits.Save(limits with { Free = limits.Free with { BuildBytes = 1024 } });
+        fixture.Limits.Save(limits with { Sandbox = limits.Sandbox with { BuildBytes = 1024 } });
 
         var lambda = await fixture.CreateLambdaAsync("toolarge");
 

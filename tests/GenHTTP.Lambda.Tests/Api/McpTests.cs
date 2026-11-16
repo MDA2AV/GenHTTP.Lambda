@@ -983,13 +983,13 @@ public sealed class McpTests
     }
 
     [TestMethod]
-    public async Task APremiumLambdaIsSaidToGoOnlineThoughItHasNoDeadline()
+    public async Task ALambdaInProductionIsSaidToGoOnlineThoughItHasNoDeadline()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
         var deployed = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
         {
@@ -1327,7 +1327,7 @@ public sealed class McpTests
 
         var own = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = copy["privateKey"]!.GetValue<string>() }));
 
-        Assert.AreEqual("Free", own["tier"]!.GetValue<string>(), "a copy of a demo is an ordinary lambda of one's own");
+        Assert.AreEqual("Sandbox", own["tier"]!.GetValue<string>(), "a copy of a demo is an ordinary lambda of one's own");
     }
 
     [TestMethod]
@@ -1392,17 +1392,46 @@ public sealed class McpTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var free = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
+        var sandbox = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Limits.BuildOf(LambdaTier.Free), free["buildBytes"]!.GetValue<long>());
-        Assert.AreEqual(fixture.Limits.DataOf(LambdaTier.Free), free["dataBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Sandbox).MaxVersionBytes, sandbox["buildBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Sandbox).MaxDataBytes, sandbox["dataBytes"]!.GetValue<long>());
+        Assert.IsTrue(sandbox["offlineWhenUnused"]!.GetValue<bool>());
+        Assert.IsFalse(sandbox["ownDomain"]!.GetValue<bool>());
+        Assert.AreEqual("Production", sandbox["above"]!["tier"]!.GetValue<string>(), "and what the tier above allows");
+        Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Production).MaxVersionBytes, sandbox["above"]!["buildBytes"]!.GetValue<long>());
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
-        var premium = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
+        var production = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Limits.BuildOf(LambdaTier.Premium), premium["buildBytes"]!.GetValue<long>());
-        Assert.AreEqual(fixture.Limits.DataOf(LambdaTier.Premium), premium["dataBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Production).MaxVersionBytes, production["buildBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Production).MaxDataBytes, production["dataBytes"]!.GetValue<long>());
+        Assert.IsFalse(production["offlineWhenUnused"]!.GetValue<bool>());
+        Assert.IsNull(production["above"], "nothing beyond production for an app");
+    }
+
+    [TestMethod]
+    public async Task TheGuideCallsTheTiersWhatTheInstallationCallsThem()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with
+        {
+            Sandbox = o.Sandbox with { Label = "Free" },
+            Production = o.Production with { Label = "Premium" }
+        });
+
+        var limits = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()))["limits"]!;
+
+        Assert.Contains("the sandbox ('Free' here)", limits["tiers"]!.GetValue<string>());
+        Assert.Contains("Production ('Premium' here)", limits["tiers"]!.GetValue<string>());
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
+
+        Assert.AreEqual("Sandbox", read["tier"]!.GetValue<string>(), "named by its purpose");
+        Assert.AreEqual("Free", read["tierLabel"]!.GetValue<string>(), "and told what it is called here");
+        Assert.AreEqual("Premium", read["limits"]!["above"]!["label"]!.GetValue<string>());
     }
 
     [TestMethod]
@@ -1414,16 +1443,21 @@ public sealed class McpTests
 
         var limits = guide["limits"]!;
 
-        Assert.Contains("premium", limits["tiers"]!.GetValue<string>(), "which tier a lambda is in, and who decides it");
+        var tiers = limits["tiers"]!.GetValue<string>();
 
-        var free = limits["free"]!.GetValue<string>();
-        var premium = limits["premium"]!.GetValue<string>();
+        Assert.Contains("Production", tiers, "which tier a lambda is in, and who decides it");
+        Assert.Contains("A new lambda starts in the sandbox", tiers);
 
-        Assert.Contains("A version: 32 MB - its code and its resources together", free);
-        Assert.Contains("Its data: 512 MB - its database and its workspace together", free);
+        var sandbox = limits["sandbox"]!.GetValue<string>();
+        var production = limits["production"]!.GetValue<string>();
 
-        Assert.Contains("A version: 128 MB", premium);
-        Assert.Contains("Its data: 4 GB", premium);
+        Assert.Contains("A version: 32 MB - its code and its resources together", sandbox);
+        Assert.Contains("Its data: 512 MB - its database and its workspace together", sandbox);
+        Assert.Contains("Taken offline when unused", sandbox);
+
+        Assert.Contains("A version: 128 MB", production);
+        Assert.Contains("Its data: 4 GB", production);
+        Assert.Contains("A domain of its own", production);
 
         Assert.IsNull(guide["code"]!["limit"], "nothing counts the files of the code");
         Assert.IsNull(guide["limits"]!["code"], "nor the characters of the C#");

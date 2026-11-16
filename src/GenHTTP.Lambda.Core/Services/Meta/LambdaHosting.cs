@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// answered, and the limits its database is opened with.
 /// </remarks>
 public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, LambdaDescriber describer, IDatabaseVault databaseVault,
-                                  IDomainRegistry domains, LambdaOptions options, ILogger<LambdaHosting> logger)
+                                  IDomainRegistry domains, ILimitsService limits, LambdaOptions options, ILogger<LambdaHosting> logger)
 {
 
     #region Keys
@@ -72,7 +73,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
-        LambdaGuard.EnsureEditable(lambda);
+        LambdaGuard.EnsureEditable(lambda, limits.PolicyOf(lambda.Tier));
 
         if (lambda.PublicKey == normalized)
         {
@@ -128,7 +129,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
-        LambdaGuard.EnsureEditable(lambda);
+        LambdaGuard.EnsureEditable(lambda, limits.PolicyOf(lambda.Tier));
 
         if (lambda.Domain == normalized)
         {
@@ -137,9 +138,9 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
 
         if (normalized != null)
         {
-            if (lambda.Tier != LambdaTier.Premium)
+            if (!limits.PolicyOf(lambda.Tier).OwnDomain)
             {
-                throw LambdaException.Forbidden("A domain of its own is part of the premium tier, which this lambda is not in.");
+                throw LambdaException.Forbidden(NoDomain(lambda.Tier));
             }
 
             if (database.Lambdas.Any(l => l.Domain == normalized && l.Id != lambda.Id))
@@ -178,13 +179,27 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// Moves the lambda to another tier. Only ever done by an administrator.
     /// </summary>
+    /// <remarks>
+    /// Only the policy changes: nothing is compiled again and nothing of its
+    /// data is moved. What it may have is checked from then on - a version
+    /// larger than the new tier allows stays and can still be put online, a
+    /// database fuller than its new room is read as before and refuses what
+    /// would make it grow - and its domain is served or not. Moved to a tier
+    /// that takes unused lambdas offline, it is measured from now on: what came
+    /// before, when nothing would have taken it offline, does not count.
+    /// Whether it connects is compiled in, so where the new tier's default
+    /// changes that, it is built again on its next request.
+    /// </remarks>
     public LambdaInfo ChangeTier(string privateKey, LambdaTier tier)
     {
         using var database = databases.CreateDbContext();
 
         var lambda = LambdaGuard.Require(database, privateKey);
 
-        if (lambda.Tier != tier && (tier == LambdaTier.Demo || lambda.Tier == LambdaTier.Demo))
+        var current = limits.PolicyOf(lambda.Tier);
+        var wanted = limits.PolicyOf(tier);
+
+        if (lambda.Tier != tier && (!wanted.Assignable || !current.Assignable))
         {
             // the seeder retires every demo it no longer knows, so a lambda
             // moved in by hand would be deleted on the next start; one moved
@@ -192,17 +207,35 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Forbidden("The demo tier belongs to the installation's own demos. Nothing is moved into it or out of it by hand.");
         }
 
+        if (lambda.Tier != tier && !wanted.Blockable && lambda.Blocked != null)
+        {
+            // it would be blocked and could not be unblocked, as nothing in
+            // that tier is
+            throw LambdaException.Conflict($"'{lambda.PublicKey}' is blocked, and a lambda in the tier '{wanted.Name}' cannot be: lift the block first.");
+        }
+
         if (lambda.Tier != tier)
         {
             var previous = lambda.Tier;
+            var now = DateTime.UtcNow;
 
             lambda.Tier = tier;
-            lambda.Modified = DateTime.UtcNow;
+            lambda.TierChanged = now;
+            lambda.Modified = now;
+
+            // a request that waits for what the new tier allows by default
+            // has nothing left to wait for (see ConnectivityRule.Allows)
+            if (lambda.Connectivity == ConnectivityStatus.Requested && wanted.Connectivity)
+            {
+                lambda.Connectivity = null;
+                lambda.ConnectivityChanged = null;
+            }
 
             database.SaveChanges();
 
-            // how large its database may grow is its tier's to say, from the
-            // next connection on
+            // how large its database may grow, and how much its workspace
+            // may write, is its tier's to say, from the next connection and
+            // the next write on
             databaseVault.Invalidate(lambda.Id);
 
             // a domain is served or not by the tier, so the tier moving can
@@ -214,6 +247,21 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
         }
 
         return describer.Describe(database, lambda);
+    }
+
+    /// <summary>
+    /// What an owner is told who asks for a domain where the tier of their
+    /// lambda has none: which tier has, as the installation calls it.
+    /// </summary>
+    private string NoDomain(LambdaTier tier)
+    {
+        var current = limits.PolicyOf(tier);
+
+        var with = limits.Above(tier) is { OwnDomain: true } above ? above : null;
+
+        return with == null
+            ? $"A domain of its own is not part of the tier '{current.Name}', which this lambda is in."
+            : $"A domain of its own is part of the tier '{with.Name}', which this lambda is not in: its tier is '{current.Name}'. Whoever runs this installation decides the tier.";
     }
 
     #endregion

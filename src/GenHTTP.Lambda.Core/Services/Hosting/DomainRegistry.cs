@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -23,10 +24,11 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// The database stays the only record. Whatever changes a domain, a tier or
 /// the key of a lambda with a domain reloads this afterwards rather than
 /// editing it in place, so there is no second copy of the rules about which
-/// lambdas are served where - only premium lambdas with a domain are, and
-/// that is decided in the one query below.
+/// lambdas are served where - only lambdas with a domain in a tier that has
+/// domains of its own are, and that is decided in the one query below.
 /// </remarks>
-public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases, LambdaAddresses addresses, ILogger<DomainRegistry> logger)
+public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases, LambdaAddresses addresses, ILimitsService limits,
+                                   ILogger<DomainRegistry> logger)
     : IDomainRegistry
 {
     private volatile Served _served = new(FrozenDictionary<string, long>.Empty, FrozenDictionary<string, string>.Empty, FrozenDictionary<string, string>.Empty);
@@ -81,8 +83,10 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
             using var database = databases.CreateDbContext();
 
             // LambdaAddresses.Serves, as the database is asked it
+            var tiers = limits.TiersWhere(p => p.OwnDomain);
+
             var served = database.Lambdas.AsNoTracking()
-                                 .Where(l => l.Tier == LambdaTier.Premium && l.Domain != null)
+                                 .Where(l => tiers.Contains(l.Tier) && l.Domain != null)
                                  .Select(l => new { l.Id, l.PublicKey, Domain = l.Domain! })
                                  .ToList();
 

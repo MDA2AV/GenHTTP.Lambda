@@ -121,7 +121,7 @@ public sealed class DataAllowanceTests
 
     #region Helpers
 
-    private static Configuration.LambdaOptions Small(Configuration.LambdaOptions options) => options with { DataBytes = Room, PremiumDataBytes = Room };
+    private static Configuration.LambdaOptions Small(Configuration.LambdaOptions options) => options.WithSizes(data: Room, productionData: Room);
 
     private static async Task<LambdaResponse> PrepareAsync(LambdaFixture fixture, string publicKey)
     {

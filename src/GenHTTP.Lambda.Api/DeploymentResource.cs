@@ -28,7 +28,8 @@ namespace GenHTTP.Lambda.Api;
          was online stays online. Deploying an older version is how a lambda is rolled back. Neither deploying nor rolling
          back touches the data.
 
-         A free lambda that nobody visits or edits for a while is taken offline by the platform (`deployedUntil` says when),
+         A lambda in a tier that is not kept while unused - the sandbox - is taken offline by the platform once nobody visits or
+         edits it for a while (`deployedUntil` says when),
          and can be deployed again at any time.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]

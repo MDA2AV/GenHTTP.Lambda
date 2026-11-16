@@ -206,7 +206,7 @@ public sealed class CodeTests
     [TestMethod]
     public async Task TheCodeCountsTowardsWhatAVersionMayComeTo()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 1024));
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -466,7 +466,7 @@ public sealed class CodeTests
     [TestMethod]
     public async Task AZipWithWhatABuildInstalledIsRefusedAsItIsSent()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 4096, PremiumBuildBytes = 4096 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 4096, productionBuild: 4096));
 
         var lambda = await fixture.CreateLambdaAsync();
 

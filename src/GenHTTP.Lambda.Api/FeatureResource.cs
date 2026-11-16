@@ -53,10 +53,11 @@ namespace GenHTTP.Lambda.Api;
          started. Where one was, its changes are brought into the feature's files first, then the feature's `base` is moved
          to it (`PATCH`), and then it merges. The platform does not merge files itself.
 
-         A free lambda's preview goes offline, like the lambda, when nobody changes the feature for a while.
+         In a tier that takes unused lambdas offline - the sandbox - a preview goes offline too, like the lambda, when nobody
+         changes the feature for a while.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoFeature, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, ILogBook book, LambdaOptions options, ILimitsService limits,
+public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, ILogBook book, LambdaOptions options,
                                      ILogger<FeatureResource> logger)
 {
 
@@ -79,12 +80,12 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
              touched.
 
              It is given a `key`, which every call about it takes, and a `branch`, which is where it is in the lambda's git
-             repository. Only so many features may be open at once, as the tier of the lambda allows.
+             repository. Only so many features may be open at once, as the installation's limits say.
              """)]
     [Response(ResponseStatus.Created, "The feature was started.")]
     [Response(ResponseStatus.BadRequest, "The name is missing, too long (80 characters at most) or more than one line, or the lambda has no version yet.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [Response(ResponseStatus.Conflict, "The lambda has as many features open as its tier allows. Merge or delete one first.",
+    [Response(ResponseStatus.Conflict, "The lambda has as many features open as the installation allows. Merge or delete one first.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version to start from.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
@@ -234,9 +235,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         // read depends on the tier - and a key that names nothing needs none
         var lambda = meta.Require(privateKey);
 
-        var tier = Enum.Parse<LambdaTier>(lambda.Tier);
-
-        var files = await VersionResource.UnpackAsync(body, limits.BuildOf(tier), laid,
+        var files = await VersionResource.UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid,
                                                       LambdaSource.Parse(features.Get(privateKey, feature).Code));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);

@@ -41,7 +41,7 @@ namespace GenHTTP.Lambda.Api;
          feature can be tried at its own address first.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class VersionResource(IMetaService meta, ILimitsService limits, ILogger<VersionResource> logger)
+public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> logger)
 {
 
     [ResourceMethod("lambdas/:privateKey/versions")]
@@ -131,9 +131,7 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
         // read depends on the tier - and a key that names nothing needs none
         var lambda = meta.Require(privateKey);
 
-        var tier = Enum.Parse<LambdaTier>(lambda.Tier);
-
-        var files = await UnpackAsync(body, limits.BuildOf(tier), laid, meta.LatestFiles(privateKey));
+        var files = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, meta.LatestFiles(privateKey));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }

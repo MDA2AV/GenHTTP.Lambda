@@ -23,8 +23,9 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
     [ResourceMethod]
     [Summary("Describes this installation")]
     [Remarks("""
-             Its terms, which creating a lambda accepts where it has any; the limits of a free lambda; what a new lambda can
-             start from; whether the build agent is on offer; where a lambda answers (`lambdaUrl`); who runs it, as far as its
+             Its terms, which creating a lambda accepts where it has any; the tier a new lambda starts in and what every tier
+             lets a lambda have (`defaultTier`, `tiers`), with what the installation calls each; what a new lambda can start
+             from; whether the build agent is on offer; where a lambda answers (`lambdaUrl`); who runs it, as far as its
              pages have to say so (`operator`); and what the editor suggests while code is written - the namespaces a lambda
              has imported and the types and snippets it may use.
              """)]
@@ -36,14 +37,16 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
         return new(
             options.Terms,
             Describe(),
-            current.Free.BuildBytes,
+            limits.PolicyOf(current.DefaultTier).MaxVersionBytes,
             (int)current.OfflineAfter.TotalHours,
             (int)current.RemovedAfter.TotalDays,
             ModuleCatalog.Imports,
             CompletionCatalog.Items,
             new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
             addresses.Template,
-            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage)
+            new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage),
+            TierDescription.Of(limits, current.DefaultTier),
+            [.. limits.TiersWhere(p => p.Assignable).Select(t => TierDescription.Of(limits, t))]
         );
     }
 

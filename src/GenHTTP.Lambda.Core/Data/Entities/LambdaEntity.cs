@@ -21,6 +21,18 @@ public sealed class LambdaEntity
     public LambdaTier Tier { get; set; }
 
     /// <summary>
+    /// When the operator last moved it to another tier, or nothing while it
+    /// is in the one it started in.
+    /// </summary>
+    /// <remarks>
+    /// The earliest the sweeps may measure from: a lambda moved to a tier
+    /// that takes unused lambdas offline - it and the previews of its
+    /// features - gets the whole time from the move, not from a visit long
+    /// before it, when nothing would have taken it offline.
+    /// </remarks>
+    public DateTime? TierChanged { get; set; }
+
+    /// <summary>
     /// The domain the lambda answers at instead of its subdomain of the
     /// hosting domain, such as <c>shop.example.com</c>.
     /// </summary>

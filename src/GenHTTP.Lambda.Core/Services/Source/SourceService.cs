@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
 
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// Keeps whether a lambda's source is published, and serves it packed.
 /// </summary>
 public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, SourceCache cache, ILambdaAddresses addresses,
-                                  StarGuard stars, LambdaOptions options, ILogger<SourceService> logger) : ISourceService
+                                  StarGuard stars, ILimitsService limits, LambdaOptions options, ILogger<SourceService> logger) : ISourceService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -496,13 +497,13 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     /// one who decides under which license its code is given away - the
     /// installation publishes its demos itself.
     /// </remarks>
-    private static LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
     {
         var lambda = Require(database, privateKey);
 
         LambdaGuard.EnsureUnblocked(lambda);
 
-        return lambda.Tier == LambdaTier.Demo
+        return limits.PolicyOf(lambda.Tier).ReadOnly
              ? throw LambdaException.Forbidden(LambdaGuard.ReadOnly(lambda.PublicKey))
              : lambda;
     }
