@@ -40,12 +40,20 @@ export const landing: Messages['landing'] = {
   weekLater: '일주일 뒤',
   weekAsk: '점심 투표 에디터 링크야. 금요일마다 11시에 투표 마감하고, 1등 메뉴를 맨 위에 보여 줘.',
   weekAnswer: '반영했어요. 버전 4가 같은 주소에 올라갔고, 되돌리고 싶으면 버전 3도 그대로 남아 있어요.',
+  more: (link) => (
+    <>모든 앱은 기록, 문서, 방문자 정보도 함께 보관하고, 나만의 도메인도 가질 수 있어요. {link('앱이 갖는 모든 기능 보기')}.</>
+  ),
 
   agentsTitle: '쓰던 에이전트 그대로: Claude, Codex, Cursor',
   agentsText:
     '이미 Claude Code, Codex, Cursor 같은 AI 어시스턴트로 바이브 코딩을 하고 있나요? 이 주소에 연결하세요. 원격 MCP 서버라 키도 필요 없어요. 지금 열려 있는 대화에서 바로 여기에 앱을 만들고, 배포하고, 업데이트할 수 있어요.',
   thenAsk: (em) => <>그다음엔 이렇게 말하기만 하면 돼요. “{em('팀 행사 참가 신청 페이지 만들어서 배포해 줘')}”</>,
   hostIt: (link) => <>localhost에서만 돌아가는 앱이 있나요? {link('바이브 코딩으로 만든 앱, 여기에 배포하세요')}.</>,
+  openTitle: '오픈 소스이고, 직접 운영할 수도 있어요',
+  openText:
+    'GenHTTP Lambda는 MIT 라이선스의 오픈 소스예요. 여기서 바로 쓰셔도 되고, 커뮤니티 에디션을 내 서버에서 운영하셔도 돼요. 같은 플랫폼이 Docker 컨테이너 하나로 돌아가요.',
+  openCompare: '클라우드 또는 셀프 호스팅',
+  openCode: 'GitHub의 코드',
 
   contactTitle: '문의하기',
   contactText:

@@ -3,8 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BuildBox } from '@genhttp-lambda/kit/components/BuildBox';
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import {
-  IconBook, IconBranch, IconChevronDown, IconCode, IconDatabase, IconDraft, IconEye, IconFolder, IconGlobe, IconKey, IconLayers, IconLock,
-  IconSpark, IconStar,
+  IconBook, IconBranch, IconChevronDown, IconCode, IconDatabase, IconDraft, IconEye, IconFolder, IconGitHub, IconGlobe, IconKey, IconLayers,
+  IconLock, IconSpark, IconStar,
 } from '@genhttp-lambda/kit/components/Icons';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { REPOSITORY } from '@genhttp-lambda/kit/installation';
@@ -179,7 +179,7 @@ export function Landing() {
           </dl>
 
           <a href={REPOSITORY} target="_blank" rel="noreferrer" className="btn-ghost mt-8 inline-flex">
-            <IconBranch className="h-4 w-4" />
+            <IconGitHub className="h-4 w-4" />
             {said.repository}
           </a>
         </div>
@@ -216,7 +216,9 @@ function Heading({ children, icon }: { children: ReactNode; icon?: ReactNode }) 
 type CardProps = { icon: ReactNode; title: string; text: string } & ({ to: string; href?: never } | { href: string; to?: never });
 
 /** A page of this installation to look at next, or - with href - one elsewhere. */
-function Card({ to, href, icon, title, text }: CardProps) {
+function Card(props: CardProps) {
+  const { icon, title, text } = props;
+
   const inside = (
     <>
       <span className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
@@ -229,12 +231,12 @@ function Card({ to, href, icon, title, text }: CardProps) {
 
   const look = 'surface group flex h-full flex-col p-4 transition hover:border-accent-500/50';
 
-  return href ? (
-    <a href={href} target="_blank" rel="noreferrer" className={look}>
+  return props.href !== undefined ? (
+    <a href={props.href} target="_blank" rel="noreferrer" className={look}>
       {inside}
     </a>
   ) : (
-    <Link to={to} className={look}>
+    <Link to={props.to} className={look}>
       {inside}
     </Link>
   );

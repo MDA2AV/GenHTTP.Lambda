@@ -24,7 +24,7 @@ const out = join(here, '..', 'public');
 /** Where the previews of the pages only the cloud has go. */
 const cloud = join(here, '..', '..', 'GenHTTP.Lambda.Cloud', 'Frontend', 'public');
 
-const CLOUD_PAGES = ['/build', '/ship'];
+const CLOUD_PAGES = ['/build', '/ship', '/platform', '/self-hosting'];
 
 const CHROMES = [
   process.env.CHROME,

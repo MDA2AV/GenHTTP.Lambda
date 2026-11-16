@@ -57,7 +57,7 @@ export const ship: Messages['ship'] = {
   domainAsk: 'Parlons de votre domaine',
 
   questionsTitle: 'Avant la mise en ligne',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       'C’est vraiment gratuit ?',
       <>
@@ -101,6 +101,14 @@ export const ship: Messages['ship'] = {
     [
       'Puis-je emporter mon code ?',
       'Oui, il vous appartient. Téléchargez-le depuis l’éditeur quand vous voulez, sous forme de projet autonome, base de données comprise – ou clonez-le avec git, chaque version comprise.',
+    ],
+    [
+      'Puis-je plutôt l’héberger sur mon propre serveur ?',
+      <>
+        Oui. GenHTTP Lambda est open source, et son édition Community est la même plateforme dans un seul conteneur
+        Docker, pour votre propre serveur et votre propre agent. {selfHosting('Cloud ou auto-hébergement')} explique ce
+        qui diffère.
+      </>,
     ],
     [
       'Qui peut voir mon app ?',

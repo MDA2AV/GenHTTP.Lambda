@@ -50,9 +50,9 @@ export const landing: Messages['landing'] = {
   around: {
     demos: { title: 'Mulai dari demo', text: 'API di atas catatan, login, pembaruan langsung, sebuah game: masing-masing aplikasi jadi untuk disalin dan diubah.' },
     showcase: { title: 'Showcase', text: 'Aplikasi yang dipilih pemiliknya untuk ditampilkan di sini.' },
-    guide: { title: 'Panduan', text: 'Apa yang bisa dilakukan aplikasi dan caranya, berurutan sesuai kebutuhan Anda.' },
     api: { title: 'REST API', text: 'Sama seperti alat-alatnya, lewat HTTP, dijelaskan dalam OpenAPI.' },
     sources: { title: 'Kode sumber terpublikasi', text: 'Aplikasi yang pemiliknya mempublikasikan kodenya, untuk dibaca dan diunduh.' },
     admin: { title: 'Administrasi', text: 'Aplikasi, batasan, pemblokiran, dan log, di balik token admin.' },
+    reference: { title: 'Referensi', text: 'Konfigurasi, operasional, dan setiap route, di samping source di GitHub.' },
   },
 };

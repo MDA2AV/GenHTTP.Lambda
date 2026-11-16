@@ -38,10 +38,10 @@ export function App() {
     // on the narrowest phones this one moves into the menu, the next stays
     { to: '/build', label: t.shell.build, room: 'xs' },
     { to: '/ship', label: t.shell.ship, room: 'always' },
-    { to: '/platform', label: t.platform.menu, room: 'sm' },
-    // these join the bar a step later than their width in English would
-    // allow: the same words in Polish or Japanese take half as much room again
+    // these join the bar later than their width in English would allow: the
+    // same words in German or Portuguese take half as much room again
     { to: '/showcase', label: t.shell.showcase, room: 'md' },
+    { to: '/platform', label: t.platform.menu, room: 'lg' },
     { to: '/self-hosting', label: t.selfHosting.menu, room: 'lg' },
     { to: '/admin', label: t.shell.admin, room: 'lg', locked: true },
   ];

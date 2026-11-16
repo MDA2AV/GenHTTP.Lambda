@@ -54,6 +54,34 @@ window.CARD_TEXT = {
         "Book club guestbook"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Building it takes a minute.",
+        "Everything else is built in."
+      ],
+      "sub": "Records, versions, drafts, documentation and visitors - in every app from the first minute.",
+      "features": [
+        "Records",
+        "Drafts",
+        "History",
+        "Analytics",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Use it here,",
+        "or self-host it."
+      ],
+      "sub": "Open source under MIT. Use genhttp.dev, or run the community edition as one Docker container.",
+      "facts": [
+        "Open source",
+        "MIT license",
+        "One container"
+      ],
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "id": {
@@ -107,6 +135,34 @@ window.CARD_TEXT = {
         "Buku tamu klub buku"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Membuatnya cuma semenit.",
+        "Selebihnya sudah tersedia."
+      ],
+      "sub": "Catatan, versi, draf, dokumentasi, dan pengunjung - ada di setiap aplikasi sejak menit pertama.",
+      "features": [
+        "Catatan",
+        "Draf",
+        "Riwayat",
+        "Analitik",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Pakai di sini,",
+        "atau self-host sendiri."
+      ],
+      "sub": "Open source dengan lisensi MIT. Pakai genhttp.dev, atau jalankan edisi Community sebagai satu container Docker.",
+      "facts": [
+        "Open source",
+        "Lisensi MIT",
+        "Satu container"
+      ],
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "de": {
@@ -160,6 +216,34 @@ window.CARD_TEXT = {
         "Buchclub-Gästebuch"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Gebaut ist sie in einer Minute.",
+        "Alles andere ist schon eingebaut."
+      ],
+      "sub": "Einträge, Versionen, Entwürfe, Dokumentation und Besucher – in jeder App ab der ersten Minute.",
+      "features": [
+        "Einträge",
+        "Entwürfe",
+        "Verlauf",
+        "Analyse",
+        "Domain"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Nutzen Sie es hier",
+        "oder hosten Sie es selbst."
+      ],
+      "sub": "Open Source unter MIT-Lizenz. Nutzen Sie genhttp.dev oder betreiben Sie die Community Edition als einen Docker-Container.",
+      "facts": [
+        "Open Source",
+        "MIT-Lizenz",
+        "Ein Container"
+      ],
+      "cloud": "Cloud",
+      "own": "Self-Hosting"
     }
   },
   "es": {
@@ -213,6 +297,34 @@ window.CARD_TEXT = {
         "Libro de visitas del club"
       ],
       "count": "conectados"
+    },
+    "/platform": {
+      "title": [
+        "Crearla lleva un minuto.",
+        "Todo lo demás ya viene incluido."
+      ],
+      "sub": "Registros, versiones, borradores, documentación y visitantes: en cada app desde el primer minuto.",
+      "features": [
+        "Registros",
+        "Borradores",
+        "Historial",
+        "Analítica",
+        "Dominio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Úsalo aquí,",
+        "o autoalójalo."
+      ],
+      "sub": "Código abierto con licencia MIT. Usa genhttp.dev o ejecuta la edición Community como un solo contenedor Docker.",
+      "facts": [
+        "Código abierto",
+        "Licencia MIT",
+        "Un contenedor"
+      ],
+      "cloud": "Nube",
+      "own": "Autoalojado"
     }
   },
   "fr": {
@@ -266,6 +378,34 @@ window.CARD_TEXT = {
         "Livre d’or du club de lecture"
       ],
       "count": "connectés"
+    },
+    "/platform": {
+      "title": [
+        "La création prend une minute.",
+        "Le reste est déjà intégré."
+      ],
+      "sub": "Entrées, versions, brouillons, documentation et visiteurs : dans chaque app dès la première minute.",
+      "features": [
+        "Entrées",
+        "Brouillons",
+        "Historique",
+        "Audience",
+        "Domaine"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Utilisez-la ici,",
+        "ou hébergez-la vous-même."
+      ],
+      "sub": "Open source sous licence MIT. Utilisez genhttp.dev, ou faites tourner l’édition Community dans un seul conteneur Docker.",
+      "facts": [
+        "Open source",
+        "Licence MIT",
+        "Un conteneur"
+      ],
+      "cloud": "Cloud",
+      "own": "Auto-hébergé"
     }
   },
   "it": {
@@ -319,6 +459,34 @@ window.CARD_TEXT = {
         "Guestbook del club del libro"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Crearla richiede un minuto.",
+        "Il resto è già incluso."
+      ],
+      "sub": "Voci, versioni, bozze, documentazione e visitatori: in ogni app fin dal primo minuto.",
+      "features": [
+        "Voci",
+        "Bozze",
+        "Cronologia",
+        "Analytics",
+        "Dominio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Usala qui,",
+        "oppure in self-hosting."
+      ],
+      "sub": "Open source con licenza MIT. Usa genhttp.dev oppure esegui l’edizione Community come un unico container Docker.",
+      "facts": [
+        "Open source",
+        "Licenza MIT",
+        "Un container"
+      ],
+      "cloud": "Cloud",
+      "own": "Self-hosted"
     }
   },
   "nl": {
@@ -372,6 +540,34 @@ window.CARD_TEXT = {
         "Gastenboek van de leesclub"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Bouwen duurt een minuut.",
+        "De rest zit er al in."
+      ],
+      "sub": "Items, versies, concepten, documentatie en bezoekers: in elke app vanaf de eerste minuut.",
+      "features": [
+        "Items",
+        "Concepten",
+        "Geschiedenis",
+        "Analytics",
+        "Domein"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Gebruik het hier,",
+        "of host het zelf."
+      ],
+      "sub": "Open source onder MIT. Gebruik genhttp.dev, of draai de community-editie als één Docker-container.",
+      "facts": [
+        "Open source",
+        "MIT-licentie",
+        "Eén container"
+      ],
+      "cloud": "Cloud",
+      "own": "Zelf gehost"
     }
   },
   "pl": {
@@ -425,6 +621,34 @@ window.CARD_TEXT = {
         "Księga gości klubu książki"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Zbudowanie zajmuje minutę.",
+        "Cała reszta jest już w środku."
+      ],
+      "sub": "Wpisy, wersje, szkice, dokumentacja i odwiedzający – w każdej aplikacji od pierwszej minuty.",
+      "features": [
+        "Wpisy",
+        "Szkice",
+        "Historia",
+        "Analityka",
+        "Domena"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Używaj jej tutaj",
+        "albo uruchom u siebie."
+      ],
+      "sub": "Open source na licencji MIT. Korzystaj z genhttp.dev albo uruchom edycję Community jako jeden kontener Dockera.",
+      "facts": [
+        "Open source",
+        "Licencja MIT",
+        "Jeden kontener"
+      ],
+      "cloud": "Chmura",
+      "own": "Self-hosting"
     }
   },
   "pt": {
@@ -478,6 +702,34 @@ window.CARD_TEXT = {
         "Recados do clube do livro"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Criar leva um minuto.",
+        "O resto já vem incluído."
+      ],
+      "sub": "Registros, versões, rascunhos, documentação e visitantes: em todo app desde o primeiro minuto.",
+      "features": [
+        "Registros",
+        "Rascunhos",
+        "Histórico",
+        "Analytics",
+        "Domínio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Use aqui,",
+        "ou hospede você mesmo."
+      ],
+      "sub": "Código aberto sob a licença MIT. Use o genhttp.dev ou rode a edição Community como um único contêiner Docker.",
+      "facts": [
+        "Código aberto",
+        "Licença MIT",
+        "Um contêiner"
+      ],
+      "cloud": "Nuvem",
+      "own": "Auto-hospedado"
     }
   },
   "pt-pt": {
@@ -531,6 +783,34 @@ window.CARD_TEXT = {
         "Recados do clube do livro"
       ],
       "count": "online"
+    },
+    "/platform": {
+      "title": [
+        "Construir demora um minuto.",
+        "O resto já vem incluído."
+      ],
+      "sub": "Registos, versões, rascunhos, documentação e visitantes: em todas as apps desde o primeiro minuto.",
+      "features": [
+        "Registos",
+        "Rascunhos",
+        "Histórico",
+        "Análise de visitas",
+        "Domínio"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Usa-o aqui,",
+        "ou aloja-o tu."
+      ],
+      "sub": "Código aberto sob a licença MIT. Usa o genhttp.dev ou corre a edição Community como um único contentor Docker.",
+      "facts": [
+        "Código aberto",
+        "Licença MIT",
+        "Um contentor"
+      ],
+      "cloud": "Cloud",
+      "own": "Alojamento próprio"
     }
   },
   "tr": {
@@ -584,6 +864,34 @@ window.CARD_TEXT = {
         "Kitap kulübü defteri"
       ],
       "count": "kişi çevrimiçi"
+    },
+    "/platform": {
+      "title": [
+        "Yapmak bir dakika sürer.",
+        "Gerisi hazır geliyor."
+      ],
+      "sub": "Kayıtlar, sürümler, taslaklar, belgeler ve ziyaretçiler: her uygulamada ilk dakikadan itibaren.",
+      "features": [
+        "Kayıtlar",
+        "Taslaklar",
+        "Geçmiş",
+        "Analitik",
+        "Alan adı"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "Burada kullanın,",
+        "ya da kendiniz barındırın."
+      ],
+      "sub": "MIT lisanslı açık kaynak. genhttp.dev’i kullanın ya da Community sürümünü tek bir Docker konteyneri olarak çalıştırın.",
+      "facts": [
+        "Açık kaynak",
+        "MIT lisansı",
+        "Tek konteyner"
+      ],
+      "cloud": "Bulut",
+      "own": "Kendi sunucunuzda"
     }
   },
   "ja": {
@@ -637,6 +945,34 @@ window.CARD_TEXT = {
         "読書会のゲストブック"
       ],
       "count": "{n}人が閲覧中"
+    },
+    "/platform": {
+      "title": [
+        "作るのは1分。",
+        "あとは最初からそろっています。"
+      ],
+      "sub": "記録、バージョン、下書き、ドキュメント、アクセス解析。どのアプリにも最初からそろっています。",
+      "features": [
+        "記録",
+        "下書き",
+        "履歴",
+        "アクセス解析",
+        "ドメイン"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "ここで使うか、",
+        "自分で動かすか。"
+      ],
+      "sub": "MITライセンスのオープンソース。genhttp.devを使うか、コミュニティ版を1つのDockerコンテナで動かせます。",
+      "facts": [
+        "オープンソース",
+        "MITライセンス",
+        "コンテナ1つ"
+      ],
+      "cloud": "クラウド",
+      "own": "セルフホスト"
     }
   },
   "ko": {
@@ -690,6 +1026,34 @@ window.CARD_TEXT = {
         "독서 모임 방명록"
       ],
       "count": "{n}명 접속 중"
+    },
+    "/platform": {
+      "title": [
+        "만드는 데는 1분이면 돼요.",
+        "나머지는 모두 갖춰져 있어요."
+      ],
+      "sub": "기록, 버전, 초안, 문서, 방문자 분석까지. 모든 앱에 처음부터 갖춰져 있어요.",
+      "features": [
+        "기록",
+        "초안",
+        "기록 보기",
+        "분석",
+        "도메인"
+      ]
+    },
+    "/self-hosting": {
+      "title": [
+        "여기서 쓰거나,",
+        "직접 호스팅하세요."
+      ],
+      "sub": "MIT 라이선스의 오픈 소스예요. genhttp.dev를 쓰거나, 커뮤니티 에디션을 Docker 컨테이너 하나로 실행하세요.",
+      "facts": [
+        "오픈 소스",
+        "MIT 라이선스",
+        "컨테이너 하나"
+      ],
+      "cloud": "클라우드",
+      "own": "셀프 호스팅"
     }
   }
 };

@@ -40,13 +40,13 @@ export function Screen({ name, single, width, height, alt, address, badge, zoom,
   const light = `${MEDIA}/${name}${single ? '' : '-light'}.webp`;
   const dark = `${MEDIA}/${name}${single ? '' : '-dark'}.webp`;
 
-  const pictures = (className: string, lazy: boolean) =>
+  const pictures = (className: string) =>
     single ? (
-      <img src={light} alt={alt} width={width} height={height} loading={lazy ? 'lazy' : undefined} decoding="async" className={className} />
+      <img src={light} alt={alt} width={width} height={height} loading="lazy" decoding="async" className={className} />
     ) : (
       <>
-        <img src={light} alt={alt} width={width} height={height} loading={lazy ? 'lazy' : undefined} decoding="async" className={`${className} dark:hidden`} />
-        <img src={dark} alt={alt} width={width} height={height} loading={lazy ? 'lazy' : undefined} decoding="async" className={`${className} hidden dark:block`} />
+        <img src={light} alt={alt} width={width} height={height} loading="lazy" decoding="async" className={`${className} dark:hidden`} />
+        <img src={dark} alt={alt} width={width} height={height} loading="lazy" decoding="async" className={`${className} hidden dark:block`} />
       </>
     );
 
@@ -66,10 +66,21 @@ export function Screen({ name, single, width, height, alt, address, badge, zoom,
       </div>
 
       <button type="button" onClick={() => setOpen(true)} className="block w-full cursor-zoom-in" aria-label={`${zoom}: ${alt}`}>
-        {pictures('block h-auto w-full', true)}
+        {pictures('block h-auto w-full')}
       </button>
 
-      {open && <Larger onClose={() => setOpen(false)} close={close}>{pictures('mx-auto block h-auto max-h-[90vh] w-auto max-w-full', false)}</Larger>}
+      {/* only opened in a browser, which knows the theme: the larger one is the picture of that one alone */}
+      {open && (
+        <Larger onClose={() => setOpen(false)} close={close}>
+          <img
+            src={single || !document.documentElement.classList.contains('dark') ? light : dark}
+            alt={alt}
+            width={width}
+            height={height}
+            className="mx-auto block h-auto max-h-[90vh] w-auto max-w-full"
+          />
+        </Larger>
+      )}
     </figure>
   );
 }

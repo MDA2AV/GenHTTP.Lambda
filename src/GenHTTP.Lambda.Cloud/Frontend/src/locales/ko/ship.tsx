@@ -54,7 +54,7 @@ export const ship: Messages['ship'] = {
   domainAsk: '도메인 문의하기',
 
   questionsTitle: '배포하기 전에',
-  questions: (offline, removed, showcase, terms) => [
+  questions: (offline, removed, showcase, terms, selfHosting) => [
     [
       '정말 무료인가요?',
       <>
@@ -97,6 +97,13 @@ export const ship: Messages['ship'] = {
     [
       '코드를 가져갈 수 있나요?',
       '네, 코드는 내 거예요. 언제든 에디터에서 따로 실행되는 프로젝트로 내려받을 수 있어요. 데이터베이스도 함께요. git으로 클론하면 모든 버전도 함께 가져가요.',
+    ],
+    [
+      '내 서버에서 직접 호스팅할 수도 있나요?',
+      <>
+        네. GenHTTP Lambda는 오픈 소스이고, 커뮤니티 에디션은 같은 플랫폼을 Docker 컨테이너 하나로 만든 거라 내 서버와 내
+        에이전트로 쓸 수 있어요. 무엇이 다른지는 {selfHosting('클라우드 또는 셀프 호스팅')}에서 확인하세요.
+      </>,
     ],
     [
       '내 앱은 누가 볼 수 있나요?',

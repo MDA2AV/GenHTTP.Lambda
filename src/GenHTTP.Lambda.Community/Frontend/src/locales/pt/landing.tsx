@@ -50,9 +50,9 @@ export const landing: Messages['landing'] = {
   around: {
     demos: { title: 'Comece por uma demo', text: 'Uma API sobre registros, um login, atualizações ao vivo, um jogo: cada um um app pronto para copiar e mudar.' },
     showcase: { title: 'Vitrine', text: 'Os apps que seus donos escolheram mostrar aqui.' },
-    guide: { title: 'Guia', text: 'O que um app pode fazer e como, na ordem em que você precisa.' },
     api: { title: 'API REST', text: 'O mesmo que as ferramentas, via HTTP, descrito em OpenAPI.' },
     sources: { title: 'Códigos-fonte publicados', text: 'Apps cujos donos publicaram o código, para ler e baixar.' },
     admin: { title: 'Administração', text: 'Os apps, os limites, os bloqueios e o log, protegidos pelo token de administrador.' },
+    reference: { title: 'Referência', text: 'Configuração, operação e todas as rotas, junto ao código-fonte no GitHub.' },
   },
 };

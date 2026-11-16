@@ -47,14 +47,15 @@ together the GenHTTP way, and there are two hosts - two editions:
 
 - **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at
   subdomains of the hosting domain, the marketing site (landing, `/build`,
-  `/ship`), the legal pages, its terms of use, its contact and abuse mailbox
+  `/ship`, the features at `/platform`, the comparison with the community
+  edition at `/self-hosting`), the legal pages, its terms of use, its contact and abuse mailbox
   and its description of itself to search engines (`CloudInstallation`,
   `CloudStructuredData`). There is no page of prices any more.
 - **Community** (`src/GenHTTP.Lambda.Community`) is what anybody runs on
   their own server, published as the Docker image `genhttp/lambda`: every
   feature of the cloud, the build agent included, behind a simpler front page
   for developers (`LandingPage`: what it does, the build box, connecting an
-  agent, what every app gets, how it runs) with the guide and the showcase -
+  agent, what every app gets, how it runs) with the showcase -
   translated like everything else, crisp, and selling nothing. No terms, no
   legal pages, no imprint, no organization behind it; what its operator names
   (`LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`) is shown, and nothing else.
@@ -74,6 +75,26 @@ together the GenHTTP way, and there are two hosts - two editions:
   server resolves its own public name, `DomainResponse.Target`), the page
   with the build box (`LambdaOptions.StartPage`: `/build` on the cloud, `/`
   elsewhere) - is asked of the installation, never written into a bundle.
+- **The cloud has a page of features and one about self-hosting - decided
+  by the owner.** `/platform` shows what every app gets beyond being built
+  and changed (drafts, history, documentation, records, keys and passwords,
+  analytics, a domain, the code, publishing), a section each with a
+  screenshot of the real editor - all of one example app, the court booking
+  of a tennis club that does not exist, taken on a local installation with
+  the app, its records, visitors and history made up for it, in both themes.
+  `/self-hosting` sets genhttp.dev and the community edition side by side to
+  say that the platform can be run elsewhere: **neither is preferred** -
+  both drawn alike, in the same order, with the same weight of button, and
+  every row a fact of each, taken from the code and the README rather than
+  from memory. Its name in the menu, "Self-hosting", says the one thing a
+  visitor would not otherwise know. The community edition has neither page:
+  it sells nothing and does not name the cloud.
+- **Every page links to the platform's source - decided by the owner.**
+  `REPOSITORY` in the kit's `installation.ts`, beside Discord: the footer of
+  every page, the GitHub mark in the bar where it has room (from `xl`, the
+  menu below `lg`), the cloud's front page, its `/ship` and `/self-hosting`,
+  and the community's front page. `/build` has the footer's link only: it
+  speaks to people who do not write code.
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
   guide says whichever holds (`platform_guide`, `backlink`).
@@ -144,7 +165,7 @@ the environment:
   builder's `.Bundle(directory)` overrides it). No component serves another's
   bundle and there is no shared folder of pages. What they share is source,
   not a build: the kit (`src/Kit`, `@genhttp-lambda/kit`) - the shell, the
-  components, the i18n machinery, the API client, the build box, the guide,
+  components, the i18n machinery, the API client, the build box,
   the showcase, the Tailwind preset and the Vite helper. A link into another
   bundle loads it (`claim`, `owns`).
 - **What only one installation says is the host's**: terms, contact, abuse
@@ -245,6 +266,14 @@ page has words of its own, so they do not compete:
   Cursor, from **localhost**, with a database and multiplayer built in. "Ship"
   is nobody's search word, and "publish an app" means the app stores, so the
   verb comes with "web" or "online".
+- `/platform` - the features: a **database**, **version history** and
+  **analytics** for every app, which is what it has and the others' pages do
+  not say. "AI app builder" is the front page's, so it stays out of this
+  page's title and H1.
+- `/self-hosting` - an **open source AI app builder**, **self-hosted** or in
+  the cloud, in the phrase each language searches for ("créateur
+  d'application IA", "app builder AI open source", "yapay zeka uygulama
+  oluşturucu").
 - What nobody should need - a server, a hosting plan, a domain, a sign-up, a
   credit card - is said as **not their concern**: "hosting included", "no
   sign-up", and the questions people ask ("Do I need a server?") answered in
@@ -519,7 +548,7 @@ build machinery for compatibility that nobody needs.
   the simple view or on `/build`.
 - This is said in the MCP instructions (a line), `platform_guide` (`code`,
   `resources`), the tool descriptions, a clone's `AGENTS.md`, the build
-  agent's brief, the README and `/docs` - keep them the same.
+  agent's brief and the README - keep them the same.
 
 ### Documentation and tests
 
@@ -566,7 +595,7 @@ Graph), what the page is about in the HTML as served rather than only in what
 a script renders, and the domain as canonical where the lambda has one. A tool
 for a few people gets a title and nothing more. This is said in the MCP
 instructions (one line), `platform_guide` (`beingFound`), the build agent's
-brief, a repository's `AGENTS.md`, the README and `/docs` - keep them the same.
+brief, a repository's `AGENTS.md` and the README - keep them the same.
 The platform writes none
 of it into a lambda's pages; the agent does.
 
@@ -668,9 +697,9 @@ section.
   heading, requests (what was requested, crawlers) under another: the two can
   be far apart, and a card counting one beside a card counting the other
   read as figures that did not add up.
-- This is said in the README (Analytics), `/docs` (Who visits it),
-  `platform_guide` (`analytics`), the tool's description and the privacy
-  page - keep them the same.
+- This is said in the README (Analytics), `platform_guide` (`analytics`),
+  the tool's description, the privacy page and the features page (`/platform`,
+  See who visits) - keep them the same.
 
 ### Pushing, not polling
 
@@ -680,8 +709,8 @@ server - server-sent events where the page only listens (`demo-live`), a
 websocket where it talks back (`demo-game`). A poll is a request whether
 anything changed or not, on a server every lambda shares. This is said in the
 MCP instructions (one line), `platform_guide` (`liveUpdates`), the build
-agent's brief, a repository's `AGENTS.md`, the README and `/docs` - keep them
-the same.
+agent's brief, a repository's `AGENTS.md` and the README - keep them the
+same.
 
 ### The link back
 
@@ -709,8 +738,8 @@ the same.
   script, nothing hidden.
 - The platform never writes it into a lambda, and nothing checks for it.
 - This is said in the MCP instructions (one line), `platform_guide`
-  (`backlink`), the build agent's brief, a repository's `AGENTS.md`, the README
-  and `/docs` - keep them the same.
+  (`backlink`), the build agent's brief, a repository's `AGENTS.md` and the
+  README - keep them the same.
 
 ### Features ("Drafts")
 
@@ -981,8 +1010,8 @@ panel.
 - The panel's **Blocked addresses** section lists the blocks with why, the
   lambda, until when and what each refused, marks the operator's own and lifts
   them. This is said in the reference (Blocking), `platform_guide`
-  (`theLambda.blocked`), the API's introduction, `/docs` (What it will not let
-  you do), the terms and the privacy page - keep them the same.
+  (`theLambda.blocked`), the API's introduction, the terms and the privacy
+  page - keep them the same.
 
 ### Connectivity
 
@@ -1035,8 +1064,8 @@ the pages.
   the call (a key, an API that refuses browsers). This is said in the MCP
   instructions (one line), `platform_guide` (`connectivity`), the tool descriptions,
   the build agent's briefs (`SERVICES`) and `AGENTS.md`, a repository's
-  `AGENTS.md`, the README, `/docs` (`limitsConnectivity`), the API's introduction and
-  the reference - keep them the same.
+  `AGENTS.md`, the README, the API's introduction and the reference - keep
+  them the same.
 - **The words.** The API, MCP, the full view and the panel say *connectivity*; the
   simple view never does: there an app wants to **use other services**, and
   the owner asks for **permission**. The full view has a **Connectivity** section
@@ -1387,13 +1416,14 @@ with `LAMBDA_ENGINE=Kestrel`.
   languages, except the admin panel** (`/admin`, its bundle in
   `src/GenHTTP.Lambda.Administration/Frontend`), which is English only; the
   shell around it reads the kit's words. That includes both sites (the cloud's
-  landing, `/build`, `/ship` and legal pages; the community's front page), the
-  guide, the showcase, the published sources, the create page, the editor, the
-  runner's hosting pages and the page metadata in every table of pages.
+  landing, `/build`, `/ship`, `/platform`, `/self-hosting` and legal pages; the
+  community's front page), the showcase, the published sources, the create
+  page, the editor, the runner's hosting pages, the page metadata in every
+  table of pages and the words of the link previews (`cards.text.js`).
 - **Every bundle has its own catalog** (`<component>/Frontend/src/locales/<language>/`),
   and the kit's (`src/Kit/src/locales`) holds what several share: the shell,
-  what is said in many places, connecting an agent, the build box, the guide,
-  the showcase and the licenses. A bundle's site catalog is the kit's words
+  what is said in many places, connecting an agent, the build box, the
+  showcase and the licenses. A bundle's site catalog is the kit's words
   with its own (`defineSite`); the kit's components read the kit's part.
 - Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Kit/src/i18n/languages.ts`,
   mirrored in `GenHTTP.Lambda.Web/SiteLanguages.cs`). English is the source;
@@ -1478,7 +1508,7 @@ translator only what changed, and puts the answers back:
 ## Documentation
 
 **The documentation must contain every feature and be kept up to date in the
-same change that changes the feature.** There are five places, and a feature
+same change that changes the feature.** There are four places, and a feature
 touches all that apply:
 
 1. `docs/reference.md` - routes, API, configuration, operations, how it fits
@@ -1494,14 +1524,19 @@ touches all that apply:
    strangers build there. Not a reference: it links to one. Its tone is that
    of a professional project README - decided by the owner - plain technical
    English, not the style of this file.
-3. `/docs` (`src/Kit/src/locales/*/guide.tsx`) - for owners, in the
-   vocabulary of the simple view, translated.
-4. `platform_guide`, the MCP instructions and the tool descriptions
+3. `platform_guide`, the MCP instructions and the tool descriptions
    (`GenHTTP.Lambda.Mcp`) - for agents; and `AGENTS.md` in every lambda's
    repository (`Resources/Export/Agents.md.txt`) for an agent working in a
    clone.
-5. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
+4. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
    see below.
+
+**There is no guide on the sites any more - decided by the owner.** `/docs`
+described what agents use, and they have `platform_guide`; an owner has the
+editor, in the words of the simple view. A link to `/docs` from before finds
+nothing, as `/enterprise` did. The cloud's features page (`/platform`) says
+*what* an app gets, not how: when a feature an owner would notice is added, or
+the editor's look changes, its section and its picture change with it.
 
 The same rule is worded the same way in all of them. Where an older rule
 here says "the README" for a feature, it means the reference.
@@ -1562,4 +1597,4 @@ GenHTTP's documentation attributes beside the code they describe.
   and looking at it; type checks and tests are not proof that a UI works.
 - PR screenshots go through the `pr-screenshots` skill - uploaded to
   pr-screenshots.genhttp.run and embedded in the PR body - decided by the
-  owner; the `pr-assets` branch is no longer used.
+  owner; the `pr-assets` branch was deleted.

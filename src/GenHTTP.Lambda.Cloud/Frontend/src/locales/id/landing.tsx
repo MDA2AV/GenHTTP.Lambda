@@ -42,6 +42,9 @@ export const landing: Messages['landing'] = {
     'Ini link editor polling makan siang saya. Tolong tutup voting tiap Jumat jam 11, dan tampilkan pemenangnya di paling atas.',
   weekAnswer:
     'Beres. Versi 4 sudah online di alamat yang sama. Versi 3 masih ada kalau Anda mau kembali.',
+  more: (link) => (
+    <>Setiap aplikasi juga menyimpan catatan, dokumentasi, dan pengunjungnya, serta bisa punya domain sendiri. {link('Lihat semua yang didapat sebuah aplikasi')}.</>
+  ),
 
   agentsTitle: 'Bawa agen Anda sendiri: Claude, Codex, Cursor',
   agentsText:
@@ -52,6 +55,11 @@ export const landing: Messages['landing'] = {
   hostIt: (link) => (
     <>Aplikasi Anda baru jalan di localhost? {link('Deploy aplikasi hasil vibe coding Anda di sini')}.</>
   ),
+  openTitle: 'Open source, dan bisa Anda jalankan sendiri',
+  openText:
+    'GenHTTP Lambda adalah open source dengan lisensi MIT. Pakai di sini, atau jalankan edisi Community di server Anda sendiri - platform yang sama, dalam satu container Docker.',
+  openCompare: 'Cloud atau self-hosted',
+  openCode: 'Kode di GitHub',
 
   contactTitle: 'Hubungi kami',
   contactText:
