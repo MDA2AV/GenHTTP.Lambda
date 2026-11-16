@@ -11,8 +11,9 @@ import { Ago } from '@genhttp-lambda/kit/ui/ui';
  * where its owner's request stands, what they said it is for, whether its
  * code connects at all - and the operator's decision.
  *
- * A premium lambda may without asking; what the operator decides for one
- * holds once it leaves the tier.
+ * A lambda whose tier connects by default - production, usually - may
+ * without asking; what the operator decides about one comes before that
+ * default, either way, and holds whatever tier it moves to.
  *
  * In English, like the panel it is a part of.
  */
@@ -39,18 +40,18 @@ export function ConnectivityControl({ token, detail, onChanged, deny }: {
     toast(allow ? `"${lambda.publicKey}" may connect to other servers from its next request.` : `"${lambda.publicKey}" may no longer connect to other servers.`, 'success');
   };
 
-  const status = connectivity.included
-    ? 'Included with premium'
-    : connectivity.status === 'Requested'
-      ? 'Waiting for you'
-      : connectivity.status === 'Allowed'
-        ? 'Allowed'
-        : connectivity.status === 'Declined'
-          ? 'Declined'
+  const status = connectivity.status === 'Requested'
+    ? 'Waiting for you'
+    : connectivity.status === 'Allowed'
+      ? 'Allowed'
+      : connectivity.status === 'Declined'
+        ? 'Declined'
+        : connectivity.included
+          ? 'Included with its tier'
           : 'Not allowed';
 
   return (
-    <div className={`surface p-4 ${connectivity.status === 'Requested' && !connectivity.included ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
+    <div className={`surface p-4 ${connectivity.status === 'Requested' ? 'border-amber-500/40 bg-amber-500/5' : ''}`}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -62,8 +63,8 @@ export function ConnectivityControl({ token, detail, onChanged, deny }: {
           <p className="mt-1 text-[13px] text-slate-500">
             {demo
               ? 'A demo does not connect to other servers.'
-              : connectivity.included
-                ? 'Its code may connect to other servers - call an API, open a socket, send mail - because premium includes it.'
+              : connectivity.included && connectivity.status == null
+                ? 'Its code may connect to other servers - call an API, open a socket, send mail - because its tier does by default. Declining it here comes first.'
                 : connectivity.allowed
                   ? 'Its code may connect to other servers - call an API, open a socket, send mail.'
                   : 'Its code may not connect to other servers: code that calls an API, opens a socket or sends mail does not compile.'}
@@ -78,12 +79,12 @@ export function ConnectivityControl({ token, detail, onChanged, deny }: {
 
         {!demo && !blocked && (
           <div className="flex shrink-0 gap-1.5">
-            {connectivity.status !== 'Allowed' && (
+            {!connectivity.allowed && (
               <button type="button" onClick={() => setDeciding(true)} className="btn-primary !px-3 !py-1.5 text-[13px]">
                 Allow…
               </button>
             )}
-            {(connectivity.status === 'Requested' || connectivity.status === 'Allowed') && (
+            {(connectivity.status === 'Requested' || connectivity.allowed) && (
               <button type="button" onClick={() => setDeciding(false)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
                 {connectivity.status === 'Allowed' ? 'Take back…' : 'Decline…'}
               </button>
@@ -219,8 +220,8 @@ export function ConnectivityDecisionDialog({ token, publicKey, purpose, current,
 
 /** Where a lambda's connectivity stands, as a chip beside its name. */
 export function ConnectivityChip({ connectivity }: { connectivity: Connectivity }) {
-  if (connectivity.included) {
-    return <Chip tone="bg-logo-500/10 text-logo-700 dark:text-logo-400" title="Premium includes it">Included</Chip>;
+  if (connectivity.included && connectivity.status == null) {
+    return <Chip tone="bg-logo-500/10 text-logo-700 dark:text-logo-400" title="Its tier connects by default">Included</Chip>;
   }
 
   switch (connectivity.status) {
@@ -237,11 +238,11 @@ export function ConnectivityChip({ connectivity }: { connectivity: Connectivity 
 
 /**
  * The same, beside the lambda in a list - only where there is something to
- * see: a request waiting, or connectivity allowed. Premium includes it, and its
- * badge says premium already.
+ * see: a request waiting, or connectivity allowed. Where its tier includes it,
+ * its tier's badge says so already.
  */
 export function ConnectivityBadge({ connectivity }: { connectivity?: Connectivity | null }) {
-  if (!connectivity || connectivity.included) {
+  if (!connectivity || (connectivity.included && connectivity.status == null)) {
     return null;
   }
 

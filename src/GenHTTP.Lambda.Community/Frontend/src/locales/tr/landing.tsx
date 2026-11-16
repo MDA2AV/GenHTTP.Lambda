@@ -21,7 +21,7 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Her uygulamanın sahip olduğu her şey',
   features: [
-    { title: 'Bir adres', text: 'Bu sunucuda, anahtarına göre adlandırılmış kendi adresi var - premium yapıldığında ise kendi alan adı da.' },
+    { title: 'Bir adres', text: 'Bu sunucuda, anahtarına göre adlandırılmış kendi adresi var - üretime taşındığında ise kendi alan adı da.' },
     { title: 'Kayıtlar', text: 'Kendine ait bir SQLite veritabanı; tabloları migrasyonlarla oluşturulur, Entity Framework Core ile okunur ve yazılır.' },
     { title: 'Dosyalar', text: 'Uygulamanın kaydettikleri için bir klasör: yüklemeler, dışa aktarımlar, kayıt olmayan her şey.' },
     { title: 'Anahtarlar ve parolalar', text: 'Sunucuda mühürlü saklanır. Ajan hangilerine ihtiyaç duyduğunu söyler, siz girersiniz ve kimse bunları geri okuyamaz.' },

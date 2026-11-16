@@ -35,9 +35,18 @@ export const shared: EditorMessages['shared'] = {
   onlineTitle: (version) => `Yayında, sürüm ${version} sunuluyor`,
   offline: 'Yayında değil',
   offlineTitle: 'Yayında değil: hiçbir şey sunulmuyor',
-  premium:
-    'Premium: kendi alan adında yanıt verebilir, kod, kaynaklar ve veriler için daha fazla yeri vardır ve ne kadar az kullanılırsa kullanılsın yayında kalır',
-  demo: 'Demo: bu kurulum tarafından yayında tutulur ve salt okunurdur',
+  tiers: {
+    Sandbox: 'Deneme',
+    Production: 'Üretim',
+    System: 'Sistem',
+    Demo: 'Demo',
+  },
+  tierTitles: {
+    Sandbox: 'Bir şeyi denemek için: bir süre kimse ziyaret etmez veya değiştirmezse yayından kaldırılır',
+    Production: 'İnsanların kullandığı bir uygulama: ne kadar sakin olursa olsun yayında kalır, kendi alan adında yanıt verebilir ve kod, kaynaklar ve veriler için daha fazla yeri vardır',
+    System: 'Bu kurulumun bağlı olduğu bir şey: yayında kalır, hiçbir zaman engellenmez ve vitrinde yer almaz',
+    Demo: 'Bu kurulum tarafından yayında tutulur ve salt okunurdur',
+  },
   tier: (tier) => `Plan: ${tier}`,
   entrances: {
     title: 'Erişim yolu',

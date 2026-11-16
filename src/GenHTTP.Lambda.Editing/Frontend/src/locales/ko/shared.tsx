@@ -35,9 +35,18 @@ export const shared: EditorMessages['shared'] = {
   onlineTitle: (version) => `온라인, 버전 ${version} 실행 중`,
   offline: '오프라인',
   offlineTitle: '오프라인: 제공 중인 것이 없어요',
-  premium:
-    '프리미엄: 전용 도메인을 쓸 수 있고, 코드·리소스·데이터 공간이 더 넉넉하고, 방문이 뜸해도 계속 온라인이에요',
-  demo: '데모: 이 서버가 온라인으로 유지하는 읽기 전용 람다',
+  tiers: {
+    Sandbox: '샌드박스',
+    Production: '프로덕션',
+    System: '시스템',
+    Demo: '데모',
+  },
+  tierTitles: {
+    Sandbox: '무언가를 시험해 보는 용도: 한동안 아무도 방문하거나 변경하지 않으면 오프라인으로 전환돼요',
+    Production: '사람들이 쓰는 앱: 아무리 조용해도 온라인을 유지하고, 전용 도메인에서 응답할 수 있으며, 코드와 리소스와 데이터를 위한 공간이 더 넉넉해요',
+    System: '이 설치 환경이 의존하는 것: 온라인을 유지하고, 차단되지 않으며, 쇼케이스에는 나오지 않아요',
+    Demo: '이 설치 환경이 온라인으로 유지하며 읽기 전용이에요',
+  },
   tier: (tier) => `${tier} 플랜`,
   entrances: {
     title: '접속 경로',

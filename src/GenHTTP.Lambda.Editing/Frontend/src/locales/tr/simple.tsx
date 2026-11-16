@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: 'Değişiklik iste',
 
   premiumHeading: 'Uygulamanız tutunca',
-  premiumChip: 'Premium',
   premiumTitle: 'Profesyonel olarak barındırın',
   premiumText:
     'Uygulamanız kendi adresinizde, örneğin uygulamaniz.com - az ziyaret edildiğinde bile yayında ve kaydettiği her şey için daha fazla alanla.',
   premiumAsk: 'Bize yazın',
-  premiumSubject: 'Uygulamam için Premium barındırma',
+  premiumSubject: (tier) => `Uygulamam için ${tier} barındırma`,
   premiumBody: (address) => `Merhaba,\n\nuygulamamı profesyonel olarak barındırmak istiyorum: ${address}\n\n`,
 
   historyHint: 'Uygulamanızdaki tüm değişiklikler, en yenisi başta. Dilediğiniz zaman önceki bir duruma dönebilirsiniz - uygulamanızın kaydettiği veriler olduğu gibi kalır.',

@@ -116,7 +116,7 @@ interface Props {
 export function BuildBox({ points, questions, own = true }: Props) {
   const t = useT();
   const said = t.buildBox;
-  const { offlineDays, retentionDays } = useLifetimes();
+  const { offlineDays, retentionDays, expires } = useLifetimes();
 
   const [prompt, setPrompt] = useState('');
   const { origin } = useOrigin();
@@ -386,7 +386,8 @@ export function BuildBox({ points, questions, own = true }: Props) {
             </button>
           </div>
 
-          <p className="text-sm text-slate-500">{said.lifetime(offlineDays, retentionDays)}</p>
+          {/* said only where a new lambda starts in a tier that is not kept while unused */}
+          {expires && <p className="text-sm text-slate-500">{said.lifetime(offlineDays, retentionDays)}</p>}
 
           <div className="flex flex-wrap gap-3">
             <a

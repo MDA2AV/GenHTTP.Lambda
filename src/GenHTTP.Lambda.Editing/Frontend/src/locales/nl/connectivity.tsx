@@ -2,11 +2,11 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'Of de code met andere servers mag verbinden: een API aanroepen, een socket openen, mail versturen. Lambdas delen één server, dus dat wordt per lambda toegestaan - een premium lambda mag het, elke andere zodra de operator van deze site het heeft toegestaan.',
+    'Of de code met andere servers mag verbinden: een API aanroepen, een socket openen, mail versturen. Lambdas delen één server, dus dat wordt per lambda toegestaan: als het pakket het bevat en de operator van deze site het niet heeft geweigerd, of zodra de operator het heeft toegestaan.',
 
   /** The state, as the heading of the card at the top of the section. */
-  included: 'Inbegrepen bij premium',
-  includedText: 'De code mag met andere servers verbinden: premium bevat dat.',
+  included: (tier) => `Inbegrepen bij ${tier}`,
+  includedText: (tier) => `De code mag met andere servers verbinden: ${tier} bevat dat.`,
   allowed: 'Toegestaan',
   /** `ago` is a relative time, such as "3 days ago". */
   allowedText: (ago) => <>De operator van deze site heeft het {ago} toegestaan. De code mag met andere servers verbinden.</>,

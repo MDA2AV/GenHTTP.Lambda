@@ -434,7 +434,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Todo o resto está disponível, incluindo a API de módulos do GenHTTP inteira. Se algo for recusado, você fica sabendo a linha e o motivo, e não só que falhou.',
   limitsConnectivity:
-    'Conectar-se a outros servidores - chamar uma API com HttpClient, abrir um socket, enviar e-mail - exige permissão: uma lambda premium já a tem, qualquer outra pede em Conectividade no editor, dizendo a que se conecta e por quê, e quem administra o site decide. Até lá, o código que se conecta é recusado. O que suas páginas buscam no navegador não precisa de nada disso, então chame uma API pública a partir da página quando ela permitir.',
+    'Conectar-se a outros servidores - chamar uma API com HttpClient, abrir um socket, enviar e-mail - exige permissão: um app cujo plano inclui isso - em produção, em geral - já a tem, qualquer outro pede em Conectividade no editor, dizendo a que se conecta e por quê, e quem administra o site decide. Até lá, o código que se conecta é recusado. O que suas páginas buscam no navegador não precisa de nada disso, então chame uma API pública a partir da página quando ela permitir.',
   limitsBlocked:
     'Uma lambda que viola os termos (phishing, malware, ataques a outras pessoas) pode ser bloqueada por quem administra o site. Ela sai do ar, e nada nela pode ser mudado nem colocado no ar até o bloqueio ser retirado; o painel de controle avisa isso no topo, com o motivo informado. O que ela tem ainda pode ser lido e baixado.',
 
@@ -511,17 +511,18 @@ export const guide: KitMessages['guide'] = {
       outros programas.
     </>
   )),
-  visitors2: ((k) => (
+  visitors2: (k) => (
     <>
       A contagem é feita pela plataforma, na frente do seu app, então ele não precisa de nada para isso: sem cookies,
       sem script, sem banner para os seus visitantes aceitarem. Só as contagens por dia são guardadas - nunca um
       endereço, e da página de onde alguém veio, apenas o site. Um visitante é uma pessoa que abriu uma página, contada
       uma vez por dia: mecanismos de busca, rastreadores de IA e outros programas são contados à parte, conforme o que
       são, e Google, Bing, OpenAI, Apple e Perplexity só pelo nome quando a visita veio de um endereço que eles
-      publicam - qualquer um pode dizer que é eles. Um ano fica guardado; um app gratuito mostra os últimos sete dias
-      dele e o {k.b('Premium')} mostra tudo, inclusive o que foi contado antes. Desativar apaga o que foi contado.
+      publicam - qualquer um pode dizer que é eles. Um ano fica guardado, e quanto dele você vê depende do plano
+      mostrado ao lado do nome do seu app: um app para experimentar mostra os últimos sete dias dele, um app {k.b('em produção')} mostra
+      tudo, inclusive o que foi contado antes. Desativar apaga o que foi contado.
     </>
-  )),
+  ),
   visitorsAside:
     'Os números são registrados a cada poucos minutos, então as últimas visitas aparecem um pouco depois. Um rascunho nunca é contado: testar uma mudança não é uma visita.',
 

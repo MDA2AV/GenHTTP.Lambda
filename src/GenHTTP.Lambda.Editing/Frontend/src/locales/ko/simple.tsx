@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: '수정 요청하기',
 
   premiumHeading: '반응이 좋다면',
-  premiumChip: '프리미엄',
   premiumTitle: '전문적으로 호스팅하기',
   premiumText:
     'yourapp.com 같은 나만의 주소로, 방문이 적을 때도 계속 온라인으로 두고, 저장 공간도 더 넉넉하게 쓸 수 있어요.',
   premiumAsk: '문의하기',
-  premiumSubject: '내 앱의 프리미엄 호스팅 문의',
+  premiumSubject: (tier) => `내 앱의 ${tier} 호스팅 문의`,
   premiumBody: (address) => `안녕하세요.\n\n제 앱을 전문적으로 호스팅하고 싶습니다: ${address}\n\n`,
 
   historyHint: '앱에 적용된 모든 수정 사항이에요(최신순). 언제든 이전 상태로 돌아갈 수 있고, 앱에 저장된 데이터는 그대로 유지돼요.',

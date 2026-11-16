@@ -432,7 +432,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Todo lo demás está disponible, incluida toda la API de módulos de GenHTTP. Si algo se rechaza, te decimos en qué línea y por qué, no solo que falló.',
   limitsConnectivity:
-    'Conectarse a otros servidores (llamar a una API con HttpClient, abrir un socket, enviar correo) necesita permiso: una lambda premium lo tiene, cualquier otra lo pide en Conectividad en el editor, indicando a qué se conecta y por qué, y decide quien gestiona el sitio. Hasta entonces, el código que se conecta se rechaza. Lo que tus páginas obtienen en el navegador no necesita nada de esto, así que llama a una API pública desde la página cuando lo permita.',
+    'Conectarse a otros servidores (llamar a una API con HttpClient, abrir un socket, enviar correo) necesita permiso: una app cuyo plan lo incluye (normalmente producción) lo tiene, cualquier otra lo pide en Conectividad en el editor, indicando a qué se conecta y por qué, y decide quien gestiona el sitio. Hasta entonces, el código que se conecta se rechaza. Lo que tus páginas obtienen en el navegador no necesita nada de esto, así que llama a una API pública desde la página cuando lo permita.',
   limitsBlocked:
     'Una lambda que incumple las condiciones (phishing, malware, ataques a otros) puede ser bloqueada por quien gestiona el sitio. Se desconecta, y no se puede cambiar ni poner en línea nada de ella hasta que se levante el bloqueo; el centro de control lo indica arriba del todo, con el motivo indicado. Lo que tiene se puede seguir leyendo y descargando.',
 
@@ -516,8 +516,9 @@ export const guide: KitMessages['guide'] = {
       y de la página de la que alguien viene solo se guarda el sitio. Un visitante es una persona que abrió una página,
       contada una vez al día: los buscadores, los rastreadores de IA y otros programas se cuentan aparte, según lo que
       son, y Google, Bing, OpenAI, Apple y Perplexity solo se nombran cuando la visita llegó desde una dirección que
-      ellos publican: cualquiera puede decir que es uno de ellos. Se guarda un año: una app gratuita muestra los últimos
-      siete días y {k.b('Premium')} todo, incluido lo contado antes. Al desactivarla se borra lo contado.
+      ellos publican: cualquiera puede decir que es uno de ellos. Se guarda un año, y cuánto de él ves depende del plan
+      que se muestra junto al nombre de tu app: una app para probar algo muestra los últimos siete días, una {k.b('en producción')} todo,
+      incluido lo contado antes. Al desactivarla se borra lo contado.
     </>
   ),
   visitorsAside:

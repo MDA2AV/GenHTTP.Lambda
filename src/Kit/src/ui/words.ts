@@ -50,9 +50,23 @@ export const SHARED = {
   onlineTitle: (version: number) => `Online, serving version ${version}`,
   offline: 'Offline',
   offlineTitle: 'Offline: nothing is being served',
-  premium:
-    'Premium: may answer at a domain of its own, has more room for code, resources and data, and is kept online however quiet it gets',
-  demo: 'Demo: kept online by this installation and read only',
+  /**
+   * What each tier is called on a badge where the installation gives it no
+   * label of its own - named by what it is for.
+   */
+  tiers: {
+    Sandbox: 'Sandbox',
+    Production: 'Production',
+    System: 'System',
+    Demo: 'Demo',
+  } as Record<string, string>,
+  /** What each tier is for, shown when the badge is pointed at. */
+  tierTitles: {
+    Sandbox: 'For trying something: taken offline when nobody visits or changes it for a while',
+    Production: 'An app people use: kept online however quiet it gets, may answer at a domain of its own, and has more room for code, resources and data',
+    System: 'Something this installation depends on: kept online, never blocked and never in the showcase',
+    Demo: 'Kept online by this installation and read only',
+  } as Record<string, string>,
   tier: (tier: string) => `${tier} tier`,
 
   /** Which way visitors came in, which the console shows as well. */

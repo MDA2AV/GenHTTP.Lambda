@@ -1129,9 +1129,9 @@ function refused(content) {
  * Whether a tool's answer says a version went online. online: true says it,
  * in the answers of a deploy and of a save or a merge with deploy: true -
  * only those, because read_lambda and read_logs say online about the lambda
- * as it is. onlineUntil was read as the signal before, and a premium lambda
- * has none, its tier keeping it online: its changes went online and the page
- * said they had not. It still counts, for a server from before online.
+ * as it is. onlineUntil was read as the signal before, and a lambda in
+ * production has none, its tier keeping it online: its changes went online
+ * and the page said they had not. It still counts, for a server from before online.
  */
 const DEPLOYING = ['write_code', 'change_code', 'deploy', 'merge_feature'];
 

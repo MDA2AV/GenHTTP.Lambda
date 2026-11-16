@@ -6,7 +6,6 @@ import { useInstallation } from '@genhttp-lambda/kit/installation';
 import {
   ApiError,
   CONNECTIVITY_REFUSED,
-  allowsDomain,
   api,
   isActive,
   isDemo,
@@ -483,11 +482,11 @@ export function Editor({ theme }: Props) {
   );
 
   /*
-   * A domain of its own is part of the premium tier, so the section is not
-   * there for any other: a link to it, or a lambda moved out of the tier
-   * while it was open, lands on the overview instead.
+   * A domain of its own is part of some tiers only - production - so the
+   * section is not there for any other: a link to it, or a lambda moved out
+   * of such a tier while it was open, lands on the overview instead.
    */
-  const hidden = lambda != null && !allowsDomain(lambda.tier);
+  const hidden = lambda != null && !lambda.tierPolicy.ownDomain;
 
   // a demo is read by anybody holding its announced key, and changed by nobody
   const demo = lambda != null && isDemo(lambda.tier);
@@ -792,7 +791,7 @@ export function Editor({ theme }: Props) {
                   up with the name above and the addresses below */}
               <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1.5">
                 <StatusBadge version={lambda.activeVersion} online={simple ? t.simple.badge : undefined} />
-                <TierBadge tier={lambda.tier} />
+                <TierBadge tier={lambda.tier} label={lambda.tierPolicy.label} />
               </div>
             </div>
 

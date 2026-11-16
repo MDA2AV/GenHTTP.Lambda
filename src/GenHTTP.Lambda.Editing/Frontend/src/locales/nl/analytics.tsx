@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Hoeveel mensen er per dag komen, welke pagina’s ze openen, welke sites hen sturen, uit welke landen en op welke apparaten – dag voor dag geteld, vanaf het moment dat je het aanzet.',
   offPrivate: 'Geen cookies en geen banner die je bezoekers moeten accepteren',
   offAddresses: 'Er worden geen adressen bewaard – alleen hoeveel bezoeken er per dag waren',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Een jaar bewaard en alles wordt aan jou getoond'
-      : `Een jaar bewaard – de laatste ${days} dagen worden getoond, alles met Premium`,
+      : tier
+        ? `Een jaar bewaard – de laatste ${days} dagen worden getoond, alles met ${tier}`
+        : `Een jaar bewaard – de laatste ${days} dagen worden getoond`,
   switchOn: 'Analytics aanzetten',
   switchedOn: 'Analytics staat aan. De eerste bezoeken verschijnen binnen een paar minuten.',
   switchOnFailed: 'Analytics kon niet worden aangezet.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Periode',
   days: (days) => (days >= 365 ? '12 maanden' : `${days} dagen`),
-  premiumRange: 'Premium toont tot een jaar',
+  premiumRange: (tier) => `${tier} toont tot een jaar`,
 
   visitors: 'Bezoekers',
   visitorsHint: 'Verschillende mensen die een pagina hebben geopend, elk één keer per dag geteld. Zoekmachines en andere programma’s zijn geen bezoekers.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} van ${whole}`,
   none: 'Nog niets.',
 
-  moreKept: (since) => `Geteld sinds ${since} – Premium toont alles, tot een jaar.`,
-  premiumAsk: 'Vraag naar Premium',
-  premiumSubject: 'Premium voor mijn app',
+  moreKept: (since, tier) => `Geteld sinds ${since} – ${tier} toont alles, tot een jaar.`,
+  premiumAsk: (tier) => `Vraag naar ${tier}`,
+  premiumSubject: (tier) => `${tier} voor mijn app`,
   premiumBody: (address) => `Hallo,\n\nIk wil graag alle analytics van mijn app zien: ${address}\n\n`,
 
   footer: (minutes) =>

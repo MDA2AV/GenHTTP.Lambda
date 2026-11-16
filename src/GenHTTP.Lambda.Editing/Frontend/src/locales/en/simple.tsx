@@ -93,14 +93,18 @@ export const simple = {
   allChanges: 'All changes',
   askCta: 'Ask for a change',
 
-  /** The tile that offers hosting it professionally, while the app is not premium. */
+  /**
+   * The tile that offers hosting it professionally, while the app is in a tier
+   * with one above it. Its chip is that tier's name, as the installation calls
+   * it - "Premium" on genhttp.dev.
+   */
   premiumHeading: 'When it catches on',
-  premiumChip: 'Premium',
   premiumTitle: 'Host it professionally',
   premiumText:
     'Your app at an address of your own, like yourapp.com - kept online however quiet it gets, with more room for everything it stores.',
   premiumAsk: 'Write to us',
-  premiumSubject: 'Premium hosting for my app',
+  /** The subject of the mail, with the name of the tier the app would move to - "Premium" on genhttp.dev. */
+  premiumSubject: (tier: string) => `${tier} hosting for my app`,
   premiumBody: (address: string) => `Hello,\n\nI would like to host my app professionally: ${address}\n\n`,
 
   historyHint: 'Every change your app went through, newest first. Go back to an earlier one whenever you like - what your app has stored stays as it is.',

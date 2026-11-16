@@ -78,7 +78,7 @@ tested in a draft before it goes live.
 ## What every app gets
 
 - **An address** below `/lambda/` on your server or at a subdomain of its own,
-  and a custom domain once the app is made *premium* in the panel.
+  and a custom domain once the app is moved to *production* in the panel.
 - **Data that is independent of versions**: a SQLite database for records, a
   folder for saved files, and secrets for the API keys and passwords of the
   services it uses. Secret values are entered in the editor; the agent only
@@ -137,7 +137,7 @@ docker compose up -d
 | `LAMBDA_PUBLIC_URL` | The address at which people and agents reach the installation, such as `https://lambda.example.com` - a host name or an IPv4 address. The apps' addresses are derived from it, and once it is set the server answers only at that name and at `localhost`. If it is not set, the server answers at any name and the addresses use `http://localhost:8080`. |
 | `LAMBDA_ADMIN_TOKEN` | The password for the administration panel at `/admin`. If it is not set, the panel is disabled. |
 | `LAMBDA_HOSTING_URL` | A domain for the apps, such as `https://apps.example.com`. Each app then answers at its own subdomain (`https://my-app.apps.example.com/`) instead of below `/lambda/`. Requires a wildcard DNS record and a wildcard certificate. |
-| `LAMBDA_CONTACT` | An email address the pages offer for questions, such as requests for premium. |
+| `LAMBDA_CONTACT` | An email address the pages offer for questions, such as requests to move an app to production. |
 | `LAMBDA_ABUSE_CONTACT` | An email address the pages offer for reporting a harmful app. |
 | `LAMBDA_AGENT_URL`, `LAMBDA_AGENT_TOKEN` | The address of the build agent and the secret shared with it (see below). |
 | `LAMBDA_USAGE_REPORTS` | Set to `false` to stop sending the daily usage report (see [Telemetry](#telemetry)). |
@@ -227,15 +227,19 @@ docker compose --profile agent up -d
 - **Connecting to other servers requires approval.** An app's code may connect
   to other servers, for example to call an API, open a socket or send email,
   only once you have allowed it in the panel's *Connectivity* section, where
-  its owner's request is listed together with its purpose. *Premium* apps may
-  connect without approval. Without this rule, anybody could route their
+  its owner's request is listed together with its purpose. Apps in
+  *production* may connect without approval, unless you decline it; this
+  default is set per tier under *Limits*. Without this rule, anybody could route their
   traffic through your server with an app that fetches whatever address it is
   given. Pages that fetch from other sites in the browser need no approval,
   and agents are instructed to use that approach wherever possible.
-- **Unused apps are taken offline.** A new app is *free*: by default, one that
-  is neither visited nor changed for 30 days is taken offline, and removed 90
-  days after that. Making an app *premium* in the panel exempts it; how long
-  free apps last can be changed under *Limits*.
+- **Unused apps are taken offline.** A new app starts in the *sandbox*: by
+  default, one that is neither visited nor changed for 30 days is taken
+  offline, and removed 90 days after that. Moving an app to *production* in the
+  panel (*Lambdas*, the app's page, *Tier*) keeps it online, with more room and
+  a custom domain. On an installation run for a team rather than for
+  strangers, set *New lambdas start in* to *Production* under *Limits*; how
+  long sandbox apps last is set there as well.
 
 ## Telemetry
 

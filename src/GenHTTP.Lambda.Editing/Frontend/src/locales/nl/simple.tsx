@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: 'Wijziging vragen',
 
   premiumHeading: 'Als het aanslaat',
-  premiumChip: 'Premium',
   premiumTitle: 'Professioneel hosten',
   premiumText:
     'Uw app op een eigen adres, zoals uwapp.nl, altijd online, ook als het rustig is, en met meer ruimte voor alles wat hij bewaart.',
   premiumAsk: 'Mail ons',
-  premiumSubject: 'Premium-hosting voor mijn app',
+  premiumSubject: (tier) => `${tier}-hosting voor mijn app`,
   premiumBody: (address) => `Hallo,\n\nik wil mijn app professioneel laten hosten: ${address}\n\n`,
 
   historyHint: 'Alle wijzigingen aan uw app, de nieuwste eerst. U kunt op elk moment terug naar een eerdere stand - wat uw app heeft opgeslagen, blijft zoals het is.',

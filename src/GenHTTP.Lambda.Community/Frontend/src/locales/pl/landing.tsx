@@ -21,7 +21,7 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Co dostaje każda aplikacja',
   features: [
-    { title: 'Adres', text: 'Własny adres na tym serwerze, nazwany od klucza aplikacji – a po przejściu na premium także własna domena.' },
+    { title: 'Adres', text: 'Własny adres na tym serwerze, nazwany od klucza aplikacji – a po przeniesieniu na produkcję także własna domena.' },
     { title: 'Wpisy', text: 'Własna baza SQLite, tabele tworzone przez migracje, odczyt i zapis przez Entity Framework Core.' },
     { title: 'Pliki', text: 'Folder na to, co aplikacja zapisuje: przesłane pliki, eksporty, wszystko, co nie jest wpisem.' },
     { title: 'Klucze i hasła', text: 'Przechowywane na serwerze w zaszyfrowanej postaci. Agent mówi, których potrzebuje, ty je wpisujesz i nikt ich nie odczyta z powrotem.' },

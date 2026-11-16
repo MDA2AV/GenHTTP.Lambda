@@ -32,6 +32,8 @@ export interface SiteFacts {
   offlineDays: number;
   /** How long an unused lambda is kept before it is removed. */
   retentionDays: number;
+  /** Whether a new lambda is taken offline when unused at all - it starts in the sandbox. */
+  expires?: boolean;
   /** The first page of the showcase, on the showcase only. */
   showcase?: ShowcaseListing | null;
 }
@@ -133,6 +135,8 @@ export interface Lifetimes {
   lifetimeHours: number;
   offlineDays: number;
   retentionDays: number;
+  /** Whether a new lambda is taken offline when unused - where it starts in the sandbox - or kept. */
+  expires: boolean;
 }
 
 /**
@@ -155,17 +159,19 @@ export function useLifetimes(): Lifetimes {
           lifetimeHours: platform.deploymentLifetimeHours,
           offlineDays: Math.round(platform.deploymentLifetimeHours / 24),
           retentionDays: platform.retentionDays,
+          expires: platform.defaultTier.expiresWhenUnused,
         }),
       )
       .catch(() => undefined);
   }, [facts]);
 
   return (
-    facts ??
+    (facts && { ...facts, expires: facts.expires ?? true }) ??
     asked ?? {
       lifetimeHours: DEFAULT_LIFETIME_HOURS,
       offlineDays: Math.round(DEFAULT_LIFETIME_HOURS / 24),
       retentionDays: DEFAULT_RETENTION_DAYS,
+      expires: true,
     }
   );
 }

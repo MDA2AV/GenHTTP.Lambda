@@ -2,10 +2,10 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'Se il codice può connettersi ad altri server: chiamare un’API, aprire un socket, inviare e-mail. Le lambda condividono un unico server, quindi il permesso si dà lambda per lambda: una premium può, ogni altra solo dopo che l’operatore di questo sito l’ha consentito.',
+    'Se il codice può connettersi ad altri server: chiamare un’API, aprire un socket, inviare e-mail. Le lambda condividono un unico server, quindi il permesso si dà lambda per lambda: dove il suo piano lo include e l’operatore di questo sito non l’ha negato, oppure dopo che l’operatore l’ha consentito.',
 
-  included: 'Incluso nel premium',
-  includedText: 'Il codice può connettersi ad altri server: il premium lo include.',
+  included: (tier) => `Incluso in ${tier}`,
+  includedText: (tier) => `Il codice può connettersi ad altri server: ${tier} lo include.`,
   allowed: 'Consentito',
   allowedText: (ago) => <>L’operatore di questo sito l’ha consentito {ago}. Il codice può connettersi ad altri server.</>,
   requested: 'In attesa dell’operatore',

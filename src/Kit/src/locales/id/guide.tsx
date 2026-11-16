@@ -440,7 +440,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Semua yang lain tersedia, termasuk seluruh API modul GenHTTP. Kalau ada yang ditolak, Anda diberi tahu baris mana dan alasannya, bukan sekadar pesan gagal.',
   limitsConnectivity:
-    'Terhubung ke server lain - memanggil API dengan HttpClient, membuka socket, mengirim email - memerlukan izin: lambda premium sudah memilikinya, lambda lain memintanya di bagian Konektivitas di editor dengan menyebutkan ke mana ia terhubung dan alasannya, lalu pengelola situs yang memutuskan. Sampai saat itu, kode yang terhubung ditolak. Apa yang diambil halaman Anda di browser tidak memerlukan semua ini, jadi panggil API publik dari halaman bila memungkinkan.',
+    'Terhubung ke server lain - memanggil API dengan HttpClient, membuka socket, mengirim email - memerlukan izin: aplikasi yang paketnya mencakup hal itu - biasanya produksi - sudah memilikinya, aplikasi lain memintanya di bagian Konektivitas di editor dengan menyebutkan ke mana ia terhubung dan alasannya, lalu pengelola situs yang memutuskan. Sampai saat itu, kode yang terhubung ditolak. Apa yang diambil halaman Anda di browser tidak memerlukan semua ini, jadi panggil API publik dari halaman bila memungkinkan.',
   limitsBlocked:
     'Lambda yang melanggar ketentuan - phishing, malware, serangan terhadap pihak lain - bisa diblokir oleh pengelola situs. Lambda itu menjadi offline, dan tidak ada yang bisa diubah atau dijadikan online sampai blokirnya dicabut; pusat kontrol menyatakannya di bagian atas, beserta alasan yang diberikan. Isinya tetap bisa dibaca dan diunduh.',
 
@@ -519,18 +519,18 @@ export const guide: KitMessages['guide'] = {
       menghitung tayangan dari mesin pencari, crawler AI, dan program lain.
     </>
   )),
-  visitors2: ((k) => (
+  visitors2: (k) => (
     <>
       Penghitungan dilakukan oleh platform, di depan aplikasi Anda, sehingga aplikasi Anda tidak memerlukan apa pun
       untuk itu: tanpa cookie, tanpa skrip, tanpa banner yang harus disetujui pengunjung Anda. Hanya jumlah per hari
       yang disimpan - tidak pernah alamat, dan dari halaman asal seorang pengunjung hanya situsnya. Pengunjung adalah
       seseorang yang membuka sebuah halaman, dihitung sekali sehari: mesin pencari, crawler AI, dan program lain dihitung terpisah menurut
       jenisnya, dan Google, Bing, OpenAI, Apple, dan Perplexity hanya disebut namanya jika kunjungan berasal dari
-      alamat yang mereka publikasikan - siapa pun bisa mengaku sebagai mereka. Data disimpan selama setahun; aplikasi
-      gratis menampilkan tujuh hari terakhir darinya dan {k.b('Premium')} menampilkan semuanya, termasuk yang dihitung
-      sebelumnya. Menonaktifkannya menghapus apa yang telah dihitung.
+      alamat yang mereka publikasikan - siapa pun bisa mengaku sebagai mereka. Data disimpan selama setahun, dan berapa banyak
+      yang Anda lihat bergantung pada paket yang ditampilkan di samping nama aplikasi Anda: aplikasi untuk mencoba sesuatu menampilkan tujuh hari
+      terakhirnya, aplikasi {k.b('produksi')} menampilkan semuanya, termasuk yang dihitung sebelumnya. Menonaktifkannya menghapus apa yang telah dihitung.
     </>
-  )),
+  ),
   visitorsAside:
     'Angka-angkanya dicatat setiap beberapa menit, jadi kunjungan terakhir muncul sedikit lebih lambat. Draf tidak pernah dihitung: mencoba perubahan bukanlah kunjungan.',
 

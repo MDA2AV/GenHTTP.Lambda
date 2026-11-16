@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Wie viele Personen jeden Tag kommen, welche Seiten sie öffnen, welche Websites sie schicken, aus welchen Ländern und auf welchen Geräten – tageweise gezählt, ab dem Moment, in dem Sie es einschalten.',
   offPrivate: 'Keine Cookies und kein Banner, das Ihre Besucher akzeptieren müssen',
   offAddresses: 'Es werden keine Adressen gespeichert – nur, wie viele Besuche es pro Tag gab',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Ein Jahr lang gespeichert, und Sie sehen alles davon'
-      : `Ein Jahr lang gespeichert – angezeigt werden die letzten ${days} Tage, mit Premium alles`,
+      : tier
+        ? `Ein Jahr lang gespeichert – angezeigt werden die letzten ${days} Tage, mit ${tier} alles`
+        : `Ein Jahr lang gespeichert – angezeigt werden die letzten ${days} Tage`,
   switchOn: 'Analyse einschalten',
   switchedOn: 'Die Analyse ist eingeschaltet. Die ersten Besuche erscheinen innerhalb weniger Minuten.',
   switchOnFailed: 'Die Analyse konnte nicht eingeschaltet werden.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Zeitraum',
   days: (days) => (days >= 365 ? '12 Monate' : `${days} Tage`),
-  premiumRange: 'Premium zeigt bis zu einem Jahr',
+  premiumRange: (tier) => `${tier} zeigt bis zu einem Jahr`,
 
   visitors: 'Besucher',
   visitorsHint: 'Verschiedene Personen, die eine Seite geöffnet haben, jede einmal pro Tag gezählt. Suchmaschinen und andere Programme sind keine Besucher.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} von ${whole}`,
   none: 'Noch nichts.',
 
-  moreKept: (since) => `Gezählt seit ${since} – Premium zeigt alles davon, bis zu einem Jahr.`,
-  premiumAsk: 'Nach Premium fragen',
-  premiumSubject: 'Premium für meine App',
+  moreKept: (since, tier) => `Gezählt seit ${since} – ${tier} zeigt alles davon, bis zu einem Jahr.`,
+  premiumAsk: (tier) => `Nach ${tier} fragen`,
+  premiumSubject: (tier) => `${tier} für meine App`,
   premiumBody: (address) => `Guten Tag,\n\nich möchte die gesamte Analyse meiner App sehen: ${address}\n\n`,
 
   footer: (minutes) =>

@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Berapa banyak orang yang datang setiap hari, halaman apa yang mereka buka, situs mana yang mengarahkan mereka, dari negara mana dan dengan perangkat apa - dihitung per hari, sejak Anda mengaktifkannya.',
   offPrivate: 'Tanpa cookie, dan tanpa banner yang harus disetujui pengunjung Anda',
   offAddresses: 'Tidak ada alamat yang disimpan - hanya jumlah kunjungan setiap hari',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Disimpan selama setahun, dan semuanya ditampilkan kepada Anda'
-      : `Disimpan selama setahun - ${days} hari terakhir ditampilkan, semuanya dengan Premium`,
+      : tier
+        ? `Disimpan selama setahun - ${days} hari terakhir ditampilkan, semuanya dengan ${tier}`
+        : `Disimpan selama setahun - ${days} hari terakhir ditampilkan`,
   switchOn: 'Aktifkan analitik',
   switchedOn: 'Analitik aktif. Kunjungan pertama muncul dalam beberapa menit.',
   switchOnFailed: 'Analitik tidak dapat diaktifkan.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Rentang waktu',
   days: (days) => (days >= 365 ? '12 bulan' : `${days} hari`),
-  premiumRange: 'Premium menampilkan hingga setahun',
+  premiumRange: (tier) => `${tier} menampilkan hingga setahun`,
 
   visitors: 'Pengunjung',
   visitorsHint: 'Orang yang berbeda yang membuka sebuah halaman, masing-masing dihitung sekali sehari. Mesin pencari dan program lain bukan pengunjung.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} dari ${whole}`,
   none: 'Belum ada.',
 
-  moreKept: (since) => `Dihitung sejak ${since} - Premium menampilkan semuanya, hingga setahun.`,
-  premiumAsk: 'Tanya soal Premium',
-  premiumSubject: 'Premium untuk aplikasi saya',
+  moreKept: (since, tier) => `Dihitung sejak ${since} - ${tier} menampilkan semuanya, hingga setahun.`,
+  premiumAsk: (tier) => `Tanya soal ${tier}`,
+  premiumSubject: (tier) => `${tier} untuk aplikasi saya`,
   premiumBody: (address) => `Halo,\n\nSaya ingin melihat semua analitik aplikasi saya: ${address}\n\n`,
 
   footer: (minutes) =>

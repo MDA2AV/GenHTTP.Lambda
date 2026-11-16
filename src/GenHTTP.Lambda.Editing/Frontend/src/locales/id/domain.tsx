@@ -6,7 +6,7 @@ export const domain: EditorMessages['domain'] = {
   saveFailed: 'Domain gagal disimpan.',
   removed: 'Domain sudah dihapus. Lambda kembali bisa diakses di alamatnya di sini.',
   removeFailed: 'Domain gagal dihapus.',
-  hint: 'Lambda premium bisa diakses di domain sendiri (seluruhnya, mulai dari root). Arahkan domain ke server ini terlebih dahulu, lalu masukkan di sini: sejak itu request ke domain itu akan sampai ke lambda, dan alamatnya di sini mengarahkan pengunjung ke domain tersebut.',
+  hint: 'Paket lambda ini memungkinkannya diakses di domain sendiri (seluruhnya, mulai dari root). Arahkan domain ke server ini terlebih dahulu, lalu masukkan di sini: sejak itu request ke domain itu akan sampai ke lambda, dan alamatnya di sini mengarahkan pengunjung ke domain tersebut.',
   loading: 'Memuat…',
   example: 'domain-anda.com',
   open: (domain) => `Buka ${domain}`,

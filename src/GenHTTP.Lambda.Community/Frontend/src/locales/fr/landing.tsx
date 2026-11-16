@@ -21,7 +21,7 @@ export const landing: Messages['landing'] = {
 
   featuresTitle: 'Ce que reçoit chaque application',
   features: [
-    { title: 'Une adresse', text: 'Une adresse à elle sur ce serveur, nommée d’après sa clé – et un domaine à elle une fois passée en premium.' },
+    { title: 'Une adresse', text: 'Une adresse à elle sur ce serveur, nommée d’après sa clé – et un domaine à elle une fois passée en production.' },
     { title: 'Entrées', text: 'Une base de données SQLite à elle, ses tables créées par des migrations, lues et écrites avec Entity Framework Core.' },
     { title: 'Fichiers', text: 'Un dossier pour ce que l’application enregistre : téléversements, exports, tout ce qui n’est pas une entrée.' },
     { title: 'Clés et mots de passe', text: 'Conservés sous scellés sur le serveur. L’agent indique ceux dont il a besoin, vous les saisissez, et personne ne peut les relire.' },

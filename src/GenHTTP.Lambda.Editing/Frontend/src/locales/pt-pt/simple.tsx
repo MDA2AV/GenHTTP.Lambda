@@ -69,12 +69,11 @@ export const simple: EditorMessages['simple'] = {
   askCta: 'Pedir uma alteração',
 
   premiumHeading: 'Quando fizer sucesso',
-  premiumChip: 'Premium',
   premiumTitle: 'Alojá-la de forma profissional',
   premiumText:
     'A sua aplicação num endereço próprio, como a-sua-app.pt, sempre online mesmo com pouco movimento, e com mais espaço para tudo o que guarda.',
   premiumAsk: 'Escreva-nos',
-  premiumSubject: 'Alojamento Premium para a minha aplicação',
+  premiumSubject: (tier) => `Alojamento ${tier} para a minha aplicação`,
   premiumBody: (address) => `Olá,\n\ngostaria de alojar a minha aplicação de forma profissional: ${address}\n\n`,
 
   historyHint: 'Todas as alterações da sua aplicação, da mais recente para a mais antiga. Pode voltar a um estado anterior quando quiser - os dados guardados pela aplicação mantêm-se.',

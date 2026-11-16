@@ -2,10 +2,10 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'Czy kod może łączyć się z innymi serwerami: wywoływać API, otwierać gniazdo, wysyłać pocztę. Lambdy współdzielą jeden serwer, dlatego zgoda dotyczy każdej lambdy osobno – lambda premium ją ma, każda inna dopiero po zgodzie operatora tej strony.',
+    'Czy kod może łączyć się z innymi serwerami: wywoływać API, otwierać gniazdo, wysyłać pocztę. Lambdy współdzielą jeden serwer, dlatego zgoda dotyczy każdej lambdy osobno: tam, gdzie jej plan to obejmuje, a operator tej strony tego nie odrzucił, albo gdy wyraził na to zgodę.',
 
-  included: 'W cenie premium',
-  includedText: 'Kod może łączyć się z innymi serwerami: premium to obejmuje.',
+  included: (tier) => `W cenie planu ${tier}`,
+  includedText: (tier) => `Kod może łączyć się z innymi serwerami: plan ${tier} to obejmuje.`,
   allowed: 'Dozwolone',
   allowedText: (ago) => <>Operator tej strony zezwolił na to {ago}. Kod może łączyć się z innymi serwerami.</>,
   requested: 'Czeka na operatora',

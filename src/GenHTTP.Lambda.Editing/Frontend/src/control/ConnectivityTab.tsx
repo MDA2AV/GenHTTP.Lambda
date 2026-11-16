@@ -64,14 +64,19 @@ export function ConnectivityTab({ control }: { control: Control }) {
     act(() => api.requestConnectivity(privateKey, purpose.trim()), said.asked);
   };
 
-  const state = connectivity.included
-    ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.included, text: said.includedText }
-    : connectivity.status === 'Allowed'
-      ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.allowed, text: said.allowedText(<Ago at={connectivity.changed!} />) }
-      : connectivity.status === 'Requested'
-        ? { tone: 'wait', icon: <IconSpinner className="h-4 w-4 motion-reduce:animate-none" />, heading: said.requested, text: said.requestedText(<Ago at={connectivity.changed!} />) }
-        : connectivity.status === 'Declined'
-          ? { tone: 'bad', icon: <IconClose className="h-4 w-4" />, heading: said.declined, text: said.declinedText(<Ago at={connectivity.changed!} />) }
+  // the tier as the installation calls it - "Premium" on genhttp.dev
+  const tier = lambda.tierPolicy.label ?? t.shared.tiers[lambda.tier] ?? lambda.tier;
+
+  // what the operator decided about the lambda comes before what its tier
+  // allows while nothing was decided
+  const state = connectivity.status === 'Declined'
+    ? { tone: 'bad', icon: <IconClose className="h-4 w-4" />, heading: said.declined, text: said.declinedText(<Ago at={connectivity.changed!} />) }
+    : connectivity.status === 'Requested'
+      ? { tone: 'wait', icon: <IconSpinner className="h-4 w-4 motion-reduce:animate-none" />, heading: said.requested, text: said.requestedText(<Ago at={connectivity.changed!} />) }
+      : connectivity.status === 'Allowed'
+        ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.allowed, text: said.allowedText(<Ago at={connectivity.changed!} />) }
+        : connectivity.included
+          ? { tone: 'good', icon: <IconCheck className="h-4 w-4" />, heading: said.included(tier), text: said.includedText(tier) }
           : { tone: 'none', icon: <IconGlobe className="h-4 w-4" />, heading: said.none, text: said.noneText };
 
   const tones: Record<string, string> = {

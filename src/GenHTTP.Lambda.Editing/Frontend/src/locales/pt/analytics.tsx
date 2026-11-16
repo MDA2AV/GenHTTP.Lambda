@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Quantas pessoas chegam por dia, quais páginas abrem, quais sites as enviam, de quais países e em quais dispositivos - contado dia a dia, a partir do momento em que você ativa.',
   offPrivate: 'Sem cookies e sem banner para os seus visitantes aceitarem',
   offAddresses: 'Nenhum endereço é guardado, apenas quantas visitas houve por dia',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Guardado por um ano, e tudo é mostrado para você'
-      : `Guardado por um ano - os últimos ${days} dias são mostrados, tudo com o Premium`,
+      : tier
+        ? `Guardado por um ano - os últimos ${days} dias são mostrados, tudo com ${tier}`
+        : `Guardado por um ano - os últimos ${days} dias são mostrados`,
   switchOn: 'Ativar o analytics',
   switchedOn: 'O analytics está ativado. As primeiras visitas aparecem em alguns minutos.',
   switchOnFailed: 'Não foi possível ativar o analytics.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Período',
   days: (days) => (days >= 365 ? '12 meses' : `${days} dias`),
-  premiumRange: 'O Premium mostra até um ano',
+  premiumRange: (tier) => `Com ${tier}, mostra até um ano`,
 
   visitors: 'Visitantes',
   visitorsHint: 'Pessoas diferentes que abriram uma página, cada uma contada uma vez por dia. Mecanismos de busca e outros programas não são visitantes.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} de ${whole}`,
   none: 'Nada ainda.',
 
-  moreKept: (since) => `Contado desde ${since} - o Premium mostra tudo, até um ano.`,
-  premiumAsk: 'Perguntar sobre o Premium',
-  premiumSubject: 'Premium para o meu app',
+  moreKept: (since, tier) => `Contado desde ${since} - com ${tier}, mostra tudo, até um ano.`,
+  premiumAsk: (tier) => `Perguntar sobre ${tier}`,
+  premiumSubject: (tier) => `${tier} para o meu app`,
   premiumBody: (address) => `Olá,\n\nGostaria de ver todas as análises do meu app: ${address}\n\n`,
 
   footer: (minutes) =>

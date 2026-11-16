@@ -23,9 +23,11 @@ on next.
   subdomain), a hosting domain, the build agent and its input boxes, the
   administration panel, terms, contact addresses, legal pages, the number of
   MCP origins, and the logging options;
-- the number of apps by tier (free, premium), online, blocked, created and
-  active in the last 30 days, and opening in the simple view, together with
-  the total number of their versions and drafts;
+- the number of apps by tier (`sandbox`, `production`, `system` - and `free`
+  and `premium`, the sandbox and production under the names they had before,
+  which older collectors read), online, blocked, created and active in the
+  last 30 days, and opening in the simple view, together with the total number
+  of their versions and drafts;
 - the total size of the apps' databases, workspaces, versions and drafts, and
   the size of the largest app's data;
 - the number of apps that use each feature: database, workspace, secrets,

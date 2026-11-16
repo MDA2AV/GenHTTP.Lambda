@@ -2,10 +2,10 @@ import type { EditorMessages } from '../en';
 
 export const connectivity: EditorMessages['connectivity'] = {
   hint:
-    'コードが他のサーバーに接続できるかどうかです。APIの呼び出し、ソケットの接続、メール送信などが対象です。lambdaは1台のサーバーを共有しているため、lambdaごとに許可します。プレミアムのlambdaは接続でき、それ以外はこのサイトの運営者が許可した場合に接続できます。',
+    'コードが他のサーバーに接続できるかどうかです。APIの呼び出し、ソケットの接続、メール送信などが対象です。lambdaは1台のサーバーを共有しているため、lambdaごとに許可します。プランに含まれていて、このサイトの運営者が拒否していない場合、または運営者が許可した場合に接続できます。',
 
-  included: 'プレミアムに含まれます',
-  includedText: 'コードは他のサーバーに接続できます。プレミアムに含まれています。',
+  included: (tier) => `${tier}に含まれます`,
+  includedText: (tier) => `コードは他のサーバーに接続できます。${tier}に含まれています。`,
   allowed: '許可済み',
   allowedText: (ago) => <>このサイトの運営者が{ago}に許可しました。コードは他のサーバーに接続できます。</>,
   requested: '運営者の確認待ち',

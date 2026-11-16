@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Quante persone arrivano ogni giorno, quali pagine aprono, da quali siti arrivano, da quali paesi e con quali dispositivi: contati giorno per giorno, dal momento in cui lo attivi.',
   offPrivate: 'Niente cookie e nessun banner che i visitatori debbano accettare',
   offAddresses: 'Non si conserva nessun indirizzo, solo quante visite ci sono state ogni giorno',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Conservati per un anno e mostrati per intero'
-      : `Conservati per un anno: vengono mostrati gli ultimi ${days} giorni, tutto con Premium`,
+      : tier
+        ? `Conservati per un anno: vengono mostrati gli ultimi ${days} giorni, tutto con ${tier}`
+        : `Conservati per un anno: vengono mostrati gli ultimi ${days} giorni`,
   switchOn: 'Attiva Analytics',
   switchedOn: 'Analytics è attivo. Le prime visite compaiono entro pochi minuti.',
   switchOnFailed: 'Non è stato possibile attivare Analytics.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Intervallo di tempo',
   days: (days) => (days >= 365 ? '12 mesi' : `${days} giorni`),
-  premiumRange: 'Premium mostra fino a un anno',
+  premiumRange: (tier) => `${tier} mostra fino a un anno`,
 
   visitors: 'Visitatori',
   visitorsHint: 'Persone diverse che hanno aperto una pagina, ognuna contata una volta al giorno. I motori di ricerca e gli altri programmi non sono visitatori.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} su ${whole}`,
   none: 'Ancora niente.',
 
-  moreKept: (since) => `Contate dal ${since}: con Premium vedi tutto, fino a un anno.`,
-  premiumAsk: 'Chiedi di Premium',
-  premiumSubject: 'Premium per la mia app',
+  moreKept: (since, tier) => `Contate dal ${since}: con ${tier} vedi tutto, fino a un anno.`,
+  premiumAsk: (tier) => `Chiedi di ${tier}`,
+  premiumSubject: (tier) => `${tier} per la mia app`,
   premiumBody: (address) => `Ciao,\n\nvorrei vedere tutte le analisi della mia app: ${address}\n\n`,
 
   footer: (minutes) =>

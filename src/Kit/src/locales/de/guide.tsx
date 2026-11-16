@@ -440,7 +440,7 @@ export const guide: KitMessages['guide'] = {
   limits2:
     'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
   limitsConnectivity:
-    'Verbindungen zu anderen Servern – eine API mit HttpClient aufrufen, einen Socket öffnen, E-Mails senden – brauchen eine Erlaubnis: Ein Premium-Lambda hat sie, jedes andere fragt sie im Editor unter „Konnektivität“ an und gibt an, womit es sich verbindet und warum; wer die Website betreibt, entscheidet. Bis dahin wird Code, der sich verbindet, abgelehnt. Was Ihre Seiten im Browser abrufen, braucht das alles nicht – rufen Sie daher eine öffentliche API von der Seite aus auf, wo sie das erlaubt.',
+    'Verbindungen zu anderen Servern – eine API mit HttpClient aufrufen, einen Socket öffnen, E-Mails senden – brauchen eine Erlaubnis: Eine App, deren Tarif das einschließt – meist Produktion –, hat sie, jede andere fragt sie im Editor unter „Konnektivität“ an und gibt an, womit sie sich verbindet und warum; wer die Website betreibt, entscheidet. Bis dahin wird Code, der sich verbindet, abgelehnt. Was Ihre Seiten im Browser abrufen, braucht das alles nicht – rufen Sie daher eine öffentliche API von der Seite aus auf, wo sie das erlaubt.',
   limitsBlocked:
     'Ein Lambda, das gegen die Bedingungen verstößt – Phishing, Schadsoftware, Angriffe auf andere –, kann vom Betreiber der Seite gesperrt werden. Es geht offline, und bis die Sperre aufgehoben ist, lässt sich nichts daran ändern oder online stellen; das Kontrollzentrum weist oben darauf hin und nennt den angegebenen Grund. Was es enthält, lässt sich weiterhin lesen und herunterladen.',
 
@@ -527,8 +527,8 @@ export const guide: KitMessages['guide'] = {
       der jemand kam, nur die Website. Ein Besucher ist eine Person, die eine Seite geöffnet hat, einmal pro Tag gezählt: Suchmaschinen, KI-Crawler und
       andere Programme werden getrennt gezählt, nach Art, und Google, Bing, OpenAI, Apple und Perplexity nur dann mit Namen,
       wenn der Besuch von einer Adresse kam, die sie veröffentlichen – jeder kann behaupten, sie zu sein. Ein Jahr wird
-      aufbewahrt; eine kostenlose App zeigt davon die letzten sieben Tage und {k.b('Premium')} alles, auch was vorher gezählt
-      wurde. Wer die Analyse ausschaltet, löscht, was gezählt wurde.
+      aufbewahrt, und wie viel davon Sie sehen, hängt vom Tarif ab, der neben dem Namen Ihrer App steht: Eine App zum Ausprobieren zeigt davon die letzten sieben Tage,
+      eine App {k.b('in Produktion')} alles, auch was vorher gezählt wurde. Wer die Analyse ausschaltet, löscht, was gezählt wurde.
     </>
   )),
   visitorsAside:

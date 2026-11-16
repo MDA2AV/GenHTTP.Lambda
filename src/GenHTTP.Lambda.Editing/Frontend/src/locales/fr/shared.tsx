@@ -35,9 +35,18 @@ export const shared: EditorMessages['shared'] = {
   onlineTitle: (version) => `En ligne, sert la version ${version}`,
   offline: 'Hors ligne',
   offlineTitle: 'Hors ligne : rien n’est servi',
-  premium:
-    'Premium : peut répondre sur son propre domaine, a plus de place pour le code, les ressources et les données, et reste en ligne même sans aucune activité',
-  demo: 'Démo : gardée en ligne par cette installation, en lecture seule',
+  tiers: {
+    Sandbox: 'Bac à sable',
+    Production: 'Production',
+    System: 'Système',
+    Demo: 'Démo',
+  },
+  tierTitles: {
+    Sandbox: 'Pour essayer quelque chose : mise hors ligne si personne ne la visite ni ne la modifie pendant un moment',
+    Production: 'Une application utilisée par des gens : toujours en ligne, même très peu visitée, peut répondre sur son propre domaine et dispose de plus de place pour le code, les ressources et les données',
+    System: 'Quelque chose dont cette installation dépend : toujours en ligne, jamais bloquée et jamais dans la vitrine',
+    Demo: 'Maintenue en ligne par cette installation, en lecture seule',
+  },
   tier: (tier) => `Offre ${tier}`,
   entrances: {
     title: 'Accès via',

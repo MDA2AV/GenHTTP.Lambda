@@ -6,7 +6,10 @@
 export interface Lambda {
   publicKey: string;
   privateKey: string;
+  /** What it is for - Sandbox, Production, System or Demo - by its identifier; never shown as it is (see tierName). */
   tier: string;
+  /** What its tier lets it have and how it is kept, as the installation set it. */
+  tierPolicy: TierPolicy;
   created: string;
   modified: string;
   activeVersion?: number;
@@ -46,13 +49,37 @@ export interface Lambda {
 }
 
 /**
- * Whether a lambda's code may connect to other servers - its connectivity: its tier
- * includes it, or the operator allowed what its owner asked for. Without it,
- * code that connects does not compile.
+ * What a tier lets a lambda have and how it keeps it, as the installation set
+ * it - with what the installation calls the tier, and the tier above.
+ */
+export interface TierPolicy {
+  /** Sandbox, Production, System or Demo. */
+  tier: string;
+  /** What the installation calls the tier on its pages, shown as written in every language; absent for its own name. */
+  label?: string | null;
+  versionBytes: number;
+  dataBytes: number;
+  analyticsDays: number;
+  /** Whether it connects to other servers while the operator decided nothing about the lambda. */
+  connectivity: boolean;
+  ownDomain: boolean;
+  /** Whether it is taken offline once unused, and removed later; otherwise it is kept. */
+  expiresWhenUnused: boolean;
+  /** Whether it is the installation's own: never blocked, never in the showcase, not deleted with the editor key. */
+  installation: boolean;
+  /** The tier an app in it would be moved to for more; absent where there is none. */
+  above?: string | null;
+  aboveLabel?: string | null;
+}
+
+/**
+ * Whether a lambda's code may connect to other servers - its connectivity: the
+ * operator allowed it, or its tier does by default and the operator did not
+ * decline it. Without it, code that connects does not compile.
  */
 export interface Connectivity {
   allowed: boolean;
-  /** Whether its tier includes it, whatever was asked: premium does. */
+  /** Whether its tier allows it while nothing was decided about the lambda - production, usually. */
   included: boolean;
   /** Where the request stands; absent while nobody asked. */
   status?: ConnectivityStatus | null;
@@ -87,14 +114,18 @@ export interface ConnectivityListing {
   allowed: ConnectivityEntry[];
 }
 
-/** The tiers there are. Only an administrator moves a lambda between them. */
-export const TIERS = ['Free', 'Premium', 'Demo'] as const;
+/**
+ * The tiers there are, by purpose. Only an administrator moves a lambda
+ * between them, and only the installation puts one among the demos.
+ */
+export const TIERS = ['Sandbox', 'Production', 'System', 'Demo'] as const;
 
-/** Whether a lambda is one of the installation's demos, which nobody can change. */
+/**
+ * Whether a lambda is one of the installation's demos, which nobody can change.
+ * The tier is the demo's identity rather than a policy: a demo is what the
+ * seeder made one.
+ */
 export const isDemo = (tier: string) => tier === 'Demo';
-
-/** Whether a tier includes a domain of its own. */
-export const allowsDomain = (tier: string) => tier === 'Premium';
 
 /** The domain of a lambda, as its owner sees it. */
 export interface DomainState {
@@ -583,8 +614,9 @@ export interface Platform {
   /** Who runs the installation, as far as a page has to say so (see installation.ts). */
   operator: { contact: string | null; abuse: string | null; legal: boolean; start: string };
   starters: Starter[];
-  /** How large a version of a free lambda may be, its code and its resources together. */
+  /** How large a version of a new lambda may be, its code and its resources together. */
   buildBytes: number;
+  /** How long a sandbox lambda may go unused before it is taken offline, and removed. */
   deploymentLifetimeHours: number;
   retentionDays: number;
   imports: string[];
@@ -593,6 +625,10 @@ export interface Platform {
   build: { available: boolean; perDay: number; secondModel: boolean };
   /** Where a lambda answers, with {key} where its public key goes: https://{key}.genhttp.run/. See address.ts. */
   lambdaUrl: string;
+  /** The tier a new lambda starts in. */
+  defaultTier: TierPolicy;
+  /** Every tier the operator assigns, as this installation set it. */
+  tiers: TierPolicy[];
 }
 
 export interface TelemetrySample {
@@ -862,6 +898,8 @@ export interface LambdaOverview {
   failed: number;
   lastSeen?: string;
   tier: string;
+  /** What the installation calls its tier; absent for its own name. */
+  tierLabel?: string | null;
   created: string;
   modified: string;
   activeVersion?: number;
@@ -1218,26 +1256,33 @@ export interface UsageReportStatus {
   report?: string | null;
 }
 
-/** What a lambda of one tier may have, as the operator set it. */
+/** What a lambda of one tier may have, and what the tier is called, as the operator set it. */
 export interface TierLimits {
   /** How large a version may be: its code and its resources together. */
   buildBytes: number;
   /** The room its data may take: its database and its workspace together. */
   dataBytes: number;
-  /** How many of its versions are kept. */
-  versions: number;
-  /** How many features it may have open at once. */
-  features: number;
   /** How many days of its analytics its owner is shown, of the year that is kept. */
   analyticsDays: number;
+  /** Whether it connects to other servers while the operator decided nothing about a lambda. */
+  connectivity: boolean;
+  /** What the pages call the tier, as written in every language; empty for its own name. */
+  label?: string | null;
 }
 
 /** Every limit of the product, which the panel edits. */
 export interface AdminLimits {
-  free: TierLimits;
-  /** Never less than the free tier's; the server refuses that. */
-  premium: TierLimits;
-  /** A free lambda nobody visits or edits for this long is taken offline. */
+  /** Where a new lambda starts: Sandbox or Production. */
+  defaultTier: string;
+  sandbox: TierLimits;
+  /** Never less than the sandbox's; the server refuses that. */
+  production: TierLimits;
+  system: TierLimits;
+  /** How many versions of every lambda are kept. */
+  versions: number;
+  /** How many features every lambda may have open at once. */
+  features: number;
+  /** A sandbox lambda nobody visits or edits for this long is taken offline. */
   offlineAfterHours: number;
   /** And removed after this long. */
   removedAfterHours: number;

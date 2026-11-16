@@ -24,7 +24,7 @@ export const landing = {
 
   featuresTitle: 'What every app gets',
   features: [
-    { title: 'An address', text: 'An address of its own on this server, named after its key - and a domain of its own once it is made premium.' },
+    { title: 'An address', text: 'An address of its own on this server, named after its key - and a domain of its own once it is moved to production.' },
     { title: 'Records', text: 'A SQLite database of its own, its tables made by migrations, read and written with Entity Framework Core.' },
     { title: 'Files', text: 'A folder for what the app saves: uploads, exports, anything that is not a record.' },
     { title: 'Keys and passwords', text: 'Kept sealed on the server. The agent says which it needs, you enter them, and nobody reads them back.' },

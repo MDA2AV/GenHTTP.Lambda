@@ -26,7 +26,7 @@ const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'blocks', title: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
-  { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier' },
+  { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
   { id: 'usage', title: 'Usage report', note: 'What the installation reports about itself once a day' },
 ];
 

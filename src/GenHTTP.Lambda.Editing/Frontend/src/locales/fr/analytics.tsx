@@ -10,10 +10,12 @@ export const analytics: EditorMessages['analytics'] = {
     'Combien de personnes viennent chaque jour, quelles pages elles ouvrent, quels sites les envoient, de quels pays et sur quels appareils - comptés jour par jour, dès que vous l’activez.',
   offPrivate: 'Aucun cookie, et aucune bannière à faire accepter à vos visiteurs',
   offAddresses: 'Aucune adresse n’est conservée - seulement le nombre de visites de chaque jour',
-  offKept: (days) =>
+  offKept: (days, tier) =>
     days >= 365
       ? 'Conservé un an, et tout vous est montré'
-      : `Conservé un an - les ${days} derniers jours sont affichés, tout avec Premium`,
+      : tier
+        ? `Conservé un an - les ${days} derniers jours sont affichés, tout avec ${tier}`
+        : `Conservé un an - les ${days} derniers jours sont affichés`,
   switchOn: 'Activer la mesure d’audience',
   switchedOn: 'La mesure d’audience est activée. Les premières visites apparaissent d’ici quelques minutes.',
   switchOnFailed: 'La mesure d’audience n’a pas pu être activée.',
@@ -21,7 +23,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   range: 'Période',
   days: (days) => (days >= 365 ? '12 mois' : `${days} jours`),
-  premiumRange: 'Premium affiche jusqu’à un an',
+  premiumRange: (tier) => `${tier} affiche jusqu’à un an`,
 
   visitors: 'Visiteurs',
   visitorsHint: 'Personnes différentes ayant ouvert une page, chacune comptée une fois par jour. Les moteurs de recherche et les autres programmes ne sont pas des visiteurs.',
@@ -101,9 +103,9 @@ export const analytics: EditorMessages['analytics'] = {
   share: (part, whole) => `${part} sur ${whole}`,
   none: 'Rien pour l’instant.',
 
-  moreKept: (since) => `Décompte depuis le ${since} - Premium affiche tout, jusqu’à un an.`,
-  premiumAsk: 'Se renseigner sur Premium',
-  premiumSubject: 'Premium pour mon application',
+  moreKept: (since, tier) => `Décompte depuis le ${since} - ${tier} affiche tout, jusqu’à un an.`,
+  premiumAsk: (tier) => `Se renseigner sur ${tier}`,
+  premiumSubject: (tier) => `${tier} pour mon application`,
   premiumBody: (address) => `Bonjour,\n\nJe voudrais voir toutes les statistiques d’audience de mon application : ${address}\n\n`,
 
   footer: (minutes) =>
