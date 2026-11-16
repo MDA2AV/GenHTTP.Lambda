@@ -58,7 +58,7 @@ export function DashboardSection({ access }: { access: Access }) {
           <Tile label="New this week" value={count(lambdas.createdWeek)} to={lambdasWhere({ created: '7' })}
                 detail={`${count(lambdas.createdDay)} today`} />
           <Tile label="Requests, last hour" value={requests === null ? '…' : count(requests)} to="/admin/server"
-                detail={failures > 0 ? `${count(failures)} server errors` : 'no server errors'} tone={failures > 0 ? 'bad' : undefined}>
+                detail={failures > 0 ? <span className="text-red-600 dark:text-red-400">{count(failures)} server errors</span> : 'no server errors'}>
             {telemetry && <Sparkline values={telemetry.samples.map((s) => s.requests)} label="Requests per interval over the last hour" />}
           </Tile>
           <Tile label="Free storage" value={disk ? bytes(disk.free) : 'unknown'} to="/admin/storage"
@@ -233,9 +233,9 @@ function needs(overview: AdminOverview, storage: AdminStorage | null): ReactNode
     );
   }
 
-  if (lambdas.goingOffline > 0 || lambdas.removed > 0) {
+  if (lambdas.expiring > 0) {
     info.push(
-      <Notice key="expiring" tone="info" title="Unused lambdas expire this week" to={lambdasWhere({ state: 'expiring' })} action="Show them">
+      <Notice key="expiring" tone="info" title={`${plural(lambdas.expiring, 'unused lambda expires', 'unused lambdas expire')} this week`} to={lambdasWhere({ state: 'expiring' })} action="Show them">
         {[
           lambdas.goingOffline > 0 && `${plural(lambdas.goingOffline, 'goes', 'go')} offline`,
           lambdas.removed > 0 && `${plural(lambdas.removed, 'is', 'are')} removed`,

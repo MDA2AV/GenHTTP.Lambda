@@ -10,7 +10,7 @@ namespace GenHTTP.Lambda.Api.Model;
 public sealed record AdminListingResponse(
     [Summary("The lambdas of this page")]
     IReadOnlyList<AdminLambda> Lambdas,
-    [Summary("How many lambdas there are")]
+    [Summary("How many lambdas there are - the demos left out, unless they were asked for")]
     int Total,
     [Summary("How many of them are online")]
     int Deployed,
@@ -320,6 +320,8 @@ public sealed record AdminCensusResponse(
     int GoingOffline,
     [Summary("How many are removed within seven days unless they are used")]
     int Removed,
+    [Summary("How many do either, each counted once - what `GET /admin/lambdas?state=expiring` lists")]
+    int Expiring,
     [Summary("How many use each of the platform's features")]
     CensusUses Uses,
     [Summary("How many open in the simple view, for an owner who does not write code")]
@@ -336,7 +338,7 @@ public sealed record AdminCensusResponse(
     public static AdminCensusResponse Of(LambdaCensus census) => new(
         census.Taken, census.Lambdas, census.Demos, census.Online, census.Offline, census.Blocked,
         census.Tiers.ToDictionary(t => t.Key.ToString(), t => t.Value),
-        census.CreatedDay, census.CreatedWeek, census.CreatedMonth, census.ActiveMonth, census.GoingOffline, census.Removed,
+        census.CreatedDay, census.CreatedWeek, census.CreatedMonth, census.ActiveMonth, census.GoingOffline, census.Removed, census.Expiring,
         census.Uses, census.Simple, census.Full, census.Versions, census.Saved);
 
 }

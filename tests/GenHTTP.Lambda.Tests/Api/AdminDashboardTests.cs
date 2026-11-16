@@ -105,6 +105,116 @@ public sealed class AdminDashboardTests
         Assert.AreEqual(1, failing.DayRequests);
     }
 
+    [TestMethod]
+    public async Task EveryCountLeadsToTheLambdasItCounts()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        await fixture.SeedDemosAsync();
+
+        var online = await fixture.CreateLambdaAsync("online");
+        var keeping = await fixture.CreateLambdaAsync("keeping");
+        var plain = await fixture.CreateLambdaAsync("plain");
+
+        await fixture.DeployAsync(online.PrivateKey);
+
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{keeping.PrivateKey}/data/database")) { }
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{keeping.PrivateKey}/data/secrets")) { }
+        using (var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{plain.PrivateKey}/data/workspace")) { }
+
+        var counted = (await OverviewAsync(fixture)).Lambdas;
+
+        // what the dashboards link to, with what they say it holds
+        var links = new (string Query, int Count)[]
+        {
+            ("", counted.Total),
+            ("state=online", counted.Online),
+            ("state=offline", counted.Offline),
+            ("state=blocked", counted.Blocked),
+            ("tier=Sandbox", counted.Tiers["Sandbox"]),
+            ("tier=Demo", counted.Demos),
+            ("uses=database", counted.Uses.Database),
+            ("uses=workspace", counted.Uses.Workspace),
+            ("uses=secrets", counted.Uses.Secrets),
+            ("uses=connects", counted.Uses.Connects),
+            ("view=full", counted.Full),
+            ("view=simple", counted.Simple),
+            ("created=1", counted.CreatedDay),
+            ("state=expiring", counted.Expiring),
+        };
+
+        foreach (var (query, expected) in links)
+        {
+            using var response = await fixture.GetAsOperatorAsync($"/api/v1/admin/lambdas?{query}");
+
+            Assert.AreEqual(expected, (await response.GetContentAsync<AdminListingResponse>()).Matched, query);
+        }
+    }
+
+    [TestMethod]
+    public async Task TheListingLeavesTheDemosOutUnlessTheyAreAskedFor()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        await fixture.SeedDemosAsync();
+
+        await fixture.CreateLambdaAsync("mine");
+
+        async Task<AdminListingResponse> List(string query)
+        {
+            using var response = await fixture.GetAsOperatorAsync($"/api/v1/admin/lambdas?{query}");
+
+            return await response.GetContentAsync<AdminListingResponse>();
+        }
+
+        var plain = await List("");
+
+        Assert.AreEqual("mine", plain.Lambdas.Single().PublicKey);
+        Assert.AreEqual(1, plain.Total);
+
+        var demos = await List("tier=Demo");
+
+        Assert.IsTrue(demos.Lambdas.All(l => l.Tier == "Demo"));
+        Assert.IsGreaterThan(0, demos.Matched);
+
+        var every = await List("demos=true");
+
+        Assert.AreEqual(demos.Matched + 1, every.Total);
+    }
+
+    [TestMethod]
+    public async Task TheLambdasThatExpireThisWeekAreFound()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        // a sandbox that removes what is unused within two days, and takes it
+        // offline within one
+        var limits = fixture.Limits.Get();
+
+        fixture.Limits.Save(limits with { OfflineAfter = TimeSpan.FromHours(24), RemovedAfter = TimeSpan.FromHours(48) });
+
+        var online = await fixture.CreateLambdaAsync("online");
+        await fixture.CreateLambdaAsync("offline");
+
+        await fixture.DeployAsync(online.PrivateKey);
+
+        fixture.ChangeTier(online.PrivateKey, Data.Entities.LambdaTier.Production);
+
+        await fixture.CreateLambdaAsync("going");
+
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/admin/lambdas?state=expiring&sort=key");
+
+        var listed = (await response.GetContentAsync<AdminListingResponse>()).Lambdas.Select(l => l.PublicKey).ToArray();
+
+        CollectionAssert.AreEqual(new[] { "going", "offline" }, listed, "a lambda in production is kept");
+
+        var counted = (await OverviewAsync(fixture)).Lambdas;
+
+        Assert.AreEqual(2, counted.Removed);
+        Assert.AreEqual(0, counted.GoingOffline, "neither is online");
+        Assert.AreEqual(2, counted.Expiring);
+    }
+
     #endregion
 
     #region Storage

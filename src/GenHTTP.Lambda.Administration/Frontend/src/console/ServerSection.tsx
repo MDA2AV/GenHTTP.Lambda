@@ -6,6 +6,7 @@ import { Chart, type Series } from '@genhttp-lambda/kit/components/Chart';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { Pills, Section } from '@genhttp-lambda/kit/ui/ui';
 import { lambdaPage, type Access } from './context';
+import { Tile, Tiles, bytes, count, duration } from './parts';
 
 const WINDOWS = [
   { minutes: 15, label: '15m' },
@@ -134,7 +135,7 @@ export function ServerSection({ access }: { access: Access }) {
     >
       {error !== null && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+      <Tiles>
         <Tile label="Uptime" value={duration(server.uptimeSeconds)} />
         <Tile label="Managed heap" value={bytes(latest.managedBytes)} />
         <Tile label="Working set" value={bytes(latest.workingSetBytes)} />
@@ -142,24 +143,26 @@ export function ServerSection({ access }: { access: Access }) {
         <Tile label="Requests" value={latest ? count(traffic.requests) : '—'} />
         <Tile label="Server errors" value={count(traffic.failed)} tone={traffic.failed > 0 ? 'bad' : undefined} />
         <Tile label="Open sockets" value={count(traffic.openSockets)} />
-        <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} />
-      </div>
+        <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} to="/admin/statistics" detail="online, of all" />
+      </Tiles>
 
       {/* absent rather than zeroed where the kernel does not offer them */}
       {latest.residentBytes > 0 && (
-        <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+        <div className="mt-px">
+        <Tiles>
           <Tile label="Connections open" value={count(latest.openConnections)} />
           <Tile
             label="Connections accepted"
             value={count(latest.acceptedConnections)}
-            note="Every inbound connection since the container started, counted by the kernel. Unlike the graph below, this one includes the health check's own connections over loopback."
+            title="Every inbound connection since the container started, counted by the kernel. Unlike the graph below, this one includes the health check's own connections over loopback."
           />
           <Tile label="File descriptors" value={count(latest.fileDescriptors)} />
           <Tile
             label="io_uring rings"
             value={count(latest.ringDescriptors)}
-            note="A fixed handful for the lifetime of the process. If this climbs with traffic, the engine is opening a ring per connection and not closing it."
+            title="A fixed handful for the lifetime of the process. If this climbs with traffic, the engine is opening a ring per connection and not closing it."
           />
+        </Tiles>
         </div>
       )}
 
@@ -344,15 +347,6 @@ export function ServerSection({ access }: { access: Access }) {
   );
 }
 
-function Tile({ label, value, tone, note }: { label: string; value: string; tone?: 'bad'; note?: string }) {
-  return (
-    <div className="bg-white px-4 py-3.5 dark:bg-ink-900" title={note}>
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className={`mt-1 text-xl font-semibold tabular-nums ${tone === 'bad' ? 'text-red-500' : ''}`}>{value}</div>
-    </div>
-  );
-}
-
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3 border-b border-slate-200 py-1.5 dark:border-ink-800">
@@ -360,33 +354,6 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className="truncate font-mono text-xs">{value}</dd>
     </div>
   );
-}
-
-const units = ['B', 'kB', 'MB', 'GB', 'TB'];
-
-function bytes(value: number): string {
-  let size = value;
-  let unit = 0;
-
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit++;
-  }
-
-  return `${size.toFixed(size >= 100 || unit === 0 ? 0 : 1)} ${units[unit]}`;
-}
-
-const count = (value: number) => value.toLocaleString('en-US');
-
-function duration(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-
-  return `${minutes}m`;
 }
 
 /** How long ago, in the coarsest unit that still says something. */

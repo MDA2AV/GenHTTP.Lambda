@@ -82,6 +82,10 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
 
         bool Expires(Row lambda) => limits.PolicyOf(lambda.Tier).ExpiresWhenUnused && lambda.Blocked == null;
 
+        bool GoingOffline(Row lambda) => Expires(lambda) && lambda.ActiveVersion != null && lambda.Quiet + product.OfflineAfter <= horizon;
+
+        bool Removed(Row lambda) => Expires(lambda) && lambda.Quiet + product.RemovedAfter <= horizon;
+
         return new LambdaCensus(
             now,
             lambdas.Count,
@@ -94,8 +98,9 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
             lambdas.Count(l => l.Created >= now.AddDays(-7)),
             lambdas.Count(l => l.Created >= recent),
             lambdas.Count(l => l.Modified >= recent || l.LastSeen >= recent),
-            lambdas.Count(l => Expires(l) && l.ActiveVersion != null && l.Quiet + product.OfflineAfter <= horizon),
-            lambdas.Count(l => Expires(l) && l.Quiet + product.RemovedAfter <= horizon),
+            lambdas.Count(l => GoingOffline(l)),
+            lambdas.Count(l => Removed(l)),
+            lambdas.Count(l => GoingOffline(l) || Removed(l)),
             new CensusUses(
                 Keeping(DataKinds.Database),
                 Keeping(DataKinds.Workspace),

@@ -30,6 +30,15 @@ public sealed class LambdaListing(IDbContextFactory<LambdaDbContext> databases, 
 
         var all = database.Lambdas.AsNoTracking();
 
+        // the demos are every installation's, so they are counted apart - and
+        // listed only where they are asked for
+        var demos = limits.TiersWhere(p => p.ReadOnly);
+
+        if (!query.Demos && !(query.Tier is { } tier && demos.Contains(tier)))
+        {
+            all = all.Where(l => !demos.Contains(l.Tier));
+        }
+
         var total = all.Count();
 
         var deployed = all.Count(l => l.ActiveVersion != null);

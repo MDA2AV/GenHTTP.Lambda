@@ -235,6 +235,11 @@ public sealed record LambdaUses(
 /// <param name="Uses">Only lambdas that use every one of these</param>
 /// <param name="View">Only lambdas whose editor opens in this view</param>
 /// <param name="CreatedWithin">Only lambdas created in this time, up to now</param>
+/// <param name="Demos">
+/// Whether the installation's demos are listed - and counted - with the rest;
+/// they are where the tier asked for is theirs. Left out otherwise, as every
+/// count of the panel leaves them out.
+/// </param>
 public sealed record LambdaQuery(
     string? Search = null,
     LambdaTier? Tier = null,
@@ -242,7 +247,8 @@ public sealed record LambdaQuery(
     IReadOnlyCollection<LambdaFeature>? Uses = null,
     EditorView? View = null,
     TimeSpan? CreatedWithin = null,
-    LambdaOrder Order = LambdaOrder.Newest
+    LambdaOrder Order = LambdaOrder.Newest,
+    bool Demos = false
 )
 {
 

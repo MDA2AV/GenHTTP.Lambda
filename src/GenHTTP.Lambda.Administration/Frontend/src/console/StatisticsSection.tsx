@@ -226,8 +226,9 @@ export function StatisticsSection({ access }: { access: Access }) {
           )}
         </Card>
 
-        <Card title="Expiring" hint="Lambdas of a tier that is not kept while unused - the sandbox - that go within seven days unless they are visited or changed.">
-          {lambdas.goingOffline === 0 && lambdas.removed === 0 ? (
+        <Card title="Expiring" hint="Lambdas of a tier that is not kept while unused - the sandbox - that go within seven days unless they are visited or changed."
+              more={lambdas.expiring > 0 ? { to: lambdasWhere({ state: 'expiring' }), label: `All ${count(lambdas.expiring)}` } : undefined}>
+          {lambdas.expiring === 0 ? (
             <p className="py-3 text-[13px] text-slate-500">Nothing expires this week.</p>
           ) : (
             <Ranked

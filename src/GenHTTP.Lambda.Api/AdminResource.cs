@@ -66,7 +66,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [ResourceMethod("lambdas")]
     [Summary("Lists every lambda")]
     [Remarks("""
-             Twenty to a page, the newest first unless `sort` says otherwise, with which of the platform's features each uses and
+             Twenty to a page, the newest first unless `sort` says otherwise, the installation's demos left out unless they are asked
+             for, with which of the platform's features each uses and
              what it has been doing since the server came up, which is counted in memory. Every filter narrows what the others
              left: `uses=database,showcase` lists the lambdas that use both. Only what the platform keeps narrows it - the requests
              and errors are not filters, since they are counted in memory.
@@ -80,6 +81,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                            [Summary("Only lambdas whose editor opens in this view: `simple` or `full`")] string? view,
                                            [Summary("Only lambdas created in the last this many days")] int? created,
                                            [Summary("The order: `newest` (the default), `oldest`, `changed`, `visited` or `key`")] string? sort,
+                                           [Summary("Whether the installation's demos are listed and counted with the rest; they are left out unless this or `tier=Demo` asks for them, as the overview's counts leave them out")] bool demos = false,
                                            [Summary("The page, counting from 1")] int page = 1)
     {
         var wanted = Math.Max(1, page);
@@ -91,7 +93,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             string.IsNullOrWhiteSpace(uses) ? null : [.. uses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(u => Parse<LambdaFeature>(u, "feature")!.Value)],
             Parse<EditorView>(view, "view"),
             created is > 0 ? TimeSpan.FromDays(created.Value) : null,
-            Parse<LambdaOrder>(sort, "order") ?? LambdaOrder.Newest
+            Parse<LambdaOrder>(sort, "order") ?? LambdaOrder.Newest,
+            demos
         );
 
         var result = meta.List(query, (wanted - 1) * PageSize, PageSize);

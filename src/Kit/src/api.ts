@@ -984,6 +984,8 @@ export interface AdminCensus {
   /** Going offline, or removed, within seven days unless used. */
   goingOffline: number;
   removed: number;
+  /** Either, each counted once: what the listing's expiring state lists. */
+  expiring: number;
   uses: {
     database: number;
     workspace: number;
@@ -1062,6 +1064,8 @@ export interface AdminQuery {
   /** Created in the last this many days. */
   created?: number;
   sort?: string;
+  /** The installation's demos as well; they are left out unless this or the Demo tier asks for them. */
+  demos?: boolean;
   page?: number;
 }
 
@@ -1510,7 +1514,7 @@ export const api = {
       const params = new URLSearchParams({ page: String(query.page ?? 1) });
 
       for (const [name, value] of Object.entries({ ...query, uses: query.uses?.join(',') })) {
-        if (name !== 'page' && value !== undefined && value !== '' && value !== 0) {
+        if (name !== 'page' && value !== undefined && value !== '' && value !== 0 && value !== false) {
           params.set(name, String(value));
         }
       }

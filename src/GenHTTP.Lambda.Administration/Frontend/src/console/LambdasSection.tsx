@@ -124,6 +124,14 @@ export function LambdasSection({ access }: { access: Access }) {
     }, { replace: true });
   }, [setParams]);
 
+  // the address changed by other means - the sidebar, a link - says what is
+  // searched for, and the box follows it rather than putting back its own
+  const searched = params.get('search') ?? '';
+
+  useEffect(() => {
+    setTyped((now) => (now.trim() === searched ? now : searched));
+  }, [searched]);
+
   // a search that asked the server on every keystroke would ask it five times
   // for a key somebody pasted in one go
   useEffect(() => {
@@ -220,6 +228,15 @@ export function LambdasSection({ access }: { access: Access }) {
           <span>
             {narrowed ? `${count(listing.matched)} of ${count(listing.total)}` : count(listing.total)} lambda{listing.total === 1 ? '' : 's'}
             {!narrowed && <> · {count(listing.deployed)} online</>}
+            {/* the demos are counted apart everywhere in the panel, and listed apart too */}
+            {read('tier') !== 'Demo' && (access.overview?.lambdas.demos ?? 0) > 0 && (
+              <>
+                {' · '}
+                <button type="button" onClick={() => narrow('tier', 'Demo')} className="text-accent-600 hover:underline dark:text-accent-400">
+                  {count(access.overview!.lambdas.demos)} demos apart
+                </button>
+              </>
+            )}
           </span>
         )}
 
