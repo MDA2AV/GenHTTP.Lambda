@@ -112,7 +112,7 @@ public static class CodeGuard
     /// </summary>
     internal const string ConnectivityMessage =
         "which this lambda may not do. Its owner can ask for that - request_connectivity, PUT /api/v1/lambdas/{privateKey}/connectivity " +
-        "or Connectivity in the editor - saying what it connects to and why, and the operator of the installation decides; a premium lambda may. " +
+        "or Connectivity in the editor - saying what it connects to and why, and the operator of the installation decides; a lambda whose tier connects by default - production, usually - may. " +
         "A public API that browsers may call can be called from the lambda's page instead (platform_guide, connectivity).";
 
     /// <summary>

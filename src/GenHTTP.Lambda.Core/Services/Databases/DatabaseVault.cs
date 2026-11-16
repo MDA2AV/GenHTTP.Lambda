@@ -192,7 +192,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         if (Load(lambdaId, 0).Enabled)
         {
-            // a whole database, a gigabyte in the premium tier (see Offload)
+            // a whole database, a gigabyte in production (see Offload)
             await Offload.Run(() => Backup(storage.GetDatabase(lambdaId), target), cancellation);
         }
 

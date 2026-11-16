@@ -227,7 +227,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         database.Features.Add(entity);
 
-        // being worked on is being used: a free lambda somebody is changing
+        // being worked on is being used: a sandbox lambda somebody is changing
         // is not left to expire while they do
         lambda.Modified = now;
 

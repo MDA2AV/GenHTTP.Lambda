@@ -196,7 +196,7 @@ public sealed class FileSystemStorageService : IStorageService
 
         var source = GetWorkspaceDirectory(lambdaId);
 
-        // a whole workspace, gigabytes in the premium tier: copied away from the
+        // a whole workspace, gigabytes in production: copied away from the
         // reactor (see Offload)
         await Offload.Run(() =>
         {

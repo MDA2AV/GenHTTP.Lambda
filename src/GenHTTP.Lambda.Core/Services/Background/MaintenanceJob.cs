@@ -5,7 +5,7 @@ using GenHTTP.Lambda.Services.Meta;
 namespace GenHTTP.Lambda.Services.Background;
 
 /// <summary>
-/// Retires what the free tier no longer covers: deployments are taken down a day
+/// Retires what the sandbox no longer covers: deployments are taken down a day
 /// after they went live, and lambdas nobody touched for a month are removed.
 /// The previews of features follow the same rule as the lambdas they belong to.
 /// </summary>

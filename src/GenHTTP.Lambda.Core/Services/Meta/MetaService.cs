@@ -712,7 +712,7 @@ public sealed class MetaService : IMetaService
             lambda.Blocked = null;
             lambda.BlockReason = null;
 
-            // the time it was blocked does not count against a free lambda:
+            // the time it was blocked does not count against a sandbox lambda:
             // it gets the whole of its time again from here
             lambda.Modified = DateTime.UtcNow;
 
@@ -778,6 +778,16 @@ public sealed class MetaService : IMetaService
         return database.Lambdas.AsNoTracking()
                        .Where(l => l.PrivateKey == privateKey)
                        .Select(l => (long?)l.Id)
+                       .FirstOrDefault();
+    }
+
+    public LambdaTier? GetTier(long lambdaId)
+    {
+        using var database = Databases.CreateDbContext();
+
+        return database.Lambdas.AsNoTracking()
+                       .Where(l => l.Id == lambdaId)
+                       .Select(l => (LambdaTier?)l.Tier)
                        .FirstOrDefault();
     }
 

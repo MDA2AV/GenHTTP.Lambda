@@ -9,7 +9,7 @@ public sealed record AnalyticsResponse(
     bool Enabled,
     [Summary("When counting was switched on")]
     DateTime? Since,
-    [Summary("`Free`, `Premium` or `Demo` - which decides how many days are shown")]
+    [Summary("`Sandbox`, `Production`, `System` or `Demo` - which decides how many days are shown")]
     string Tier,
     [Summary("How many days this answer covers, today included")]
     int Days,

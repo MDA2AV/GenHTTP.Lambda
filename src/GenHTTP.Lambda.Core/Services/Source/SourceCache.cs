@@ -18,7 +18,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// this server. So a project is named by its version and a fingerprint of all
 /// of that, and packing a version again throws the one packed before away.
 ///
-/// Packing reads a whole version and compresses it, which for a premium lambda
+/// Packing reads a whole version and compresses it, which for a lambda in production
 /// is a hundred megabytes, so it happens once per version however many ask at
 /// the same moment, and only two at a time for the whole server. What the
 /// cache holds is kept to <see cref="LambdaOptions.SourceCacheBytes" /> by

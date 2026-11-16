@@ -38,7 +38,7 @@ public sealed class LambdaEntity
     /// </summary>
     /// <remarks>
     /// Kept in the form it is matched in (see <c>DomainNames</c>) and only
-    /// honoured in the premium tier - a lambda demoted keeps it, unserved,
+    /// honoured in a tier with domains of its own - a lambda moved out keeps it, unserved,
     /// until it is promoted again.
     /// </remarks>
     public string? Domain { get; set; }
@@ -121,7 +121,7 @@ public sealed class LambdaEntity
     /// <remarks>
     /// Without it, its code is compiled without the means to connect -
     /// HttpClient, sockets, a WebSocket client, mail - and refused where it
-    /// reaches for them (see <c>CodeGuard</c>). A premium lambda may connect
+    /// reaches for them (see <c>CodeGuard</c>). A lambda whose tier connects by default may connect
     /// whatever this says (see <c>ConnectivityRule</c>).
     /// </remarks>
     public ConnectivityStatus? Connectivity { get; set; }

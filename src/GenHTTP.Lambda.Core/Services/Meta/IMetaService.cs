@@ -126,7 +126,7 @@ public interface IMetaService
     /// Sets the domain the lambda answers at, or removes it when nothing is given.
     /// </summary>
     /// <remarks>
-    /// Only a premium lambda may be given one. Removing one is always allowed,
+    /// Only a lambda in a tier with domains of its own may be given one. Removing one is always allowed,
     /// so a lambda that dropped out of the tier can still let go of it.
     /// </remarks>
     LambdaInfo ChangeDomain(string privateKey, string? domain);
@@ -184,6 +184,12 @@ public interface IMetaService
     /// when there is no such lambda.
     /// </summary>
     WorkspaceLimits? GetWorkspaceLimits(long lambdaId);
+
+    /// <summary>
+    /// The tier of the lambda filed under the given identity, or nothing when
+    /// there is no such lambda.
+    /// </summary>
+    LambdaTier? GetTier(long lambdaId);
 
     /// <summary>
     /// The identity of a lambda its owner may change, for the services that

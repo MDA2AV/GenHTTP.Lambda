@@ -103,7 +103,7 @@ public interface IFeatureService
     ResolvedLambda? ResolvePreview(string key);
 
     /// <summary>
-    /// Takes the previews of free lambdas offline once their feature was left
+    /// Takes the previews of sandbox lambdas offline once their feature was left
     /// alone for as long as a deployment of the lambda itself would be.
     /// </summary>
     int RunMaintenance(DateTime now);

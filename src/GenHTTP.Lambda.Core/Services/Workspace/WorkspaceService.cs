@@ -162,7 +162,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
             await using (var target = File.Create(staging))
             {
-                received = await CopyAsync(content, target, limits, room, cancellation);
+                received = await CopyAsync(content, target, () => Full(limits, lambdaId), room, cancellation);
             }
 
             // a connection the engine dropped looks like a body that ended -
@@ -245,7 +245,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         if (!Directory.Exists(resolved)
          && WorkspaceVault.Measure(root) + (Missing(root, resolved).Count + 1) * WorkspaceLimits.Block > Room(limits, lambdaId, featureId))
         {
-            throw Full(limits);
+            throw Full(limits, lambdaId);
         }
 
         Directory.CreateDirectory(resolved);
@@ -297,8 +297,9 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// lambda would be allowed to write itself.
     /// </summary>
     /// <param name="room">How large the file may grow before the workspace is past its quota</param>
+    /// <param name="full">What it is refused with</param>
     /// <returns>How many bytes arrived</returns>
-    private static async ValueTask<long> CopyAsync(Stream content, Stream target, WorkspaceLimits limits, long room, CancellationToken cancellation)
+    private static async ValueTask<long> CopyAsync(Stream content, Stream target, Func<LambdaException> full, long room, CancellationToken cancellation)
     {
         var buffer = new byte[81920];
 
@@ -312,7 +313,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
             if (WorkspaceLimits.Footprint(total) > room)
             {
-                throw Full(limits);
+                throw full();
             }
 
             await target.WriteAsync(buffer.AsMemory(0, read), cancellation);
@@ -321,7 +322,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         // an empty file still takes a block
         if (WorkspaceLimits.Footprint(total) > room)
         {
-            throw Full(limits);
+            throw full();
         }
 
         return total;
@@ -333,8 +334,23 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// </summary>
     private long Room(WorkspaceLimits limits, long lambdaId, long? featureId) => Math.Max(0, limits.Quota - databases.SizeOf(lambdaId, featureId));
 
-    private static LambdaException Full(WorkspaceLimits limits)
-        => LambdaException.Invalid($"The data of a lambda - its workspace and its database together - must not take more than {limits.Quota} bytes.");
+    /// <summary>
+    /// What a write past the room of the lambda's data is refused with: the
+    /// limit, its tier, and the tier that allows more, as the installation
+    /// calls them.
+    /// </summary>
+    private LambdaException Full(WorkspaceLimits limits, long lambdaId)
+    {
+        var tier = meta.GetTier(lambdaId);
+
+        var named = tier is { } known ? $" in the tier '{tiers.PolicyOf(known).Name}'" : string.Empty;
+
+        var beyond = tier is { } current && tiers.Above(current) is { } above && above.MaxDataBytes > limits.Quota
+            ? $" In the tier '{above.Name}' it may take {above.MaxDataBytes} bytes; whoever runs this installation decides the tier."
+            : string.Empty;
+
+        return LambdaException.Invalid($"The data of a lambda{named} - its workspace and its database together - must not take more than {limits.Quota} bytes.{beyond}");
+    }
 
     /// <summary>
     /// The folders between the root and a path that are not there yet,

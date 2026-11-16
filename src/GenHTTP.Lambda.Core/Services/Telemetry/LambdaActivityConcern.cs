@@ -28,7 +28,7 @@ public sealed class LambdaActivityConcern(LambdaTelemetry telemetry) : IDependen
         finally
         {
             // a preview is somebody trying a change: counting it would make
-            // the lambda look used, and keep a free one online, while nobody
+            // the lambda look used, and keep a sandbox one online, while nobody
             // visits it
             if (request.GetVisit() is { Preview: false } visit)
             {

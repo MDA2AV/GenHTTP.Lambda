@@ -187,7 +187,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// </summary>
     /// <remarks>
     /// The days before are summed for a comparison only where the tier shows
-    /// those as well - a free lambda's week is not compared with the week
+    /// those as well - a sandbox lambda's week is not compared with the week
     /// before, which it does not show.
     /// </remarks>
     private LambdaAnalytics Describe(LambdaEntity lambda, int? days, DateTime now)

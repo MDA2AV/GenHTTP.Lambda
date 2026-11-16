@@ -48,7 +48,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [ResourceMethod(Method.Post, "lambdas")]
     [Summary("Creates a lambda")]
     [Remarks("""
-             The new lambda is in the free tier and has one version: a copy of the `template`, or a snippet that says hello if
+             The new lambda is in the tier the installation starts lambdas in - the sandbox, unless it says otherwise (`defaultTier` of `GET /system`) - and has one version: a copy of the `template`, or a snippet that says hello if
              none is given. Nothing is online until a version is deployed (`POST /lambdas/{privateKey}/deployment/start`, or a
              save with `?deploy=true`). A copy of a demo that keeps records starts with an empty database of its own, switched on;
              the demo's records are not copied.
