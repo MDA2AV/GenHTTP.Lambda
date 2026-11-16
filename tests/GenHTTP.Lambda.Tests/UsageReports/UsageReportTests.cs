@@ -71,7 +71,9 @@ public sealed class UsageReportTests
 
         Assert.AreEqual(1, root.GetProperty("schema").GetInt32());
         Assert.MatchesRegex("^[0-9a-f]{32}$", root.GetProperty("installation").GetString()!);
-        Assert.AreEqual("https://lambda.example.com", root.GetProperty("url").GetString());
+        // nor where the installation is reached, which names whoever runs it
+        Assert.IsFalse(root.TryGetProperty("url", out _));
+        Assert.DoesNotContain("lambda.example.com", received.Body);
         Assert.AreEqual(UsageSurvey.PlatformVersion, root.GetProperty("version").GetString());
 
         var system = root.GetProperty("system");

@@ -60,10 +60,10 @@ export function UsageReportSection({ access }: { access: Access }) {
                 </p>
 
                 <p className="mt-3">
-                  It says how the installation is set up and used: its version and address, the machine it runs on, which
-                  options are on, and counts over the lambdas - how many, in which state, how much room they take and which
-                  of the platform’s features they use. It never says what a lambda is or holds: no keys, names, domains,
-                  code, records, secrets or visitors.
+                  It says how the installation is set up and used: its version, the machine it runs on, which options are
+                  on, and counts over the lambdas - how many, in which state, how much room they take and which of the
+                  platform’s features they use. It never says where the installation is reached, nor what a lambda is or
+                  holds: no keys, names, domains, code, records, secrets or visitors.
                 </p>
 
                 <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-slate-500">

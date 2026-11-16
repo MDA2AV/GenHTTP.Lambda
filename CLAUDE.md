@@ -84,12 +84,16 @@ together the GenHTTP way, and there are two hosts - two editions:
   section, which stays a paragraph, with the details in `docs/telemetry.md`;
   the reference, a line on startup, the panel's **Usage report** section
   with the last report as sent), never a banner or a prompt. It says
-  **how an installation runs, never what it runs**: the version, its
-  `LAMBDA_PUBLIC_URL`, the machine, which options are on, and counts and
-  sums over the lambdas - no key, domain, title, code, record, secret,
-  visitor or address of anybody, and no demo counted. A new field keeps to
-  that, is added rather than renamed, and is said in `docs/telemetry.md`. It never delays startup or a request: a background job, one
-  attempt a day with a time limit, a warning once when it does not arrive.
+  **how an installation runs, never what it runs**: the version, the
+  machine, which options are on, and counts and sums over the lambdas - no
+  key, domain, title, code, record, secret, visitor or address of anybody,
+  and no demo counted. **Not the installation's address either - decided by
+  the owner**: `LAMBDA_PUBLIC_URL` names whoever runs it, and operators would
+  rightly object; options are sent as switches, never their values. A new
+  field keeps to that, is added rather than renamed, and is said in
+  `docs/telemetry.md`. It never delays startup or a request: a background
+  job, one attempt a day with a time limit, a warning once when it does not
+  arrive.
   The cloud sends none (`FromEnvironment(…, usageReports: true)` is the
   community host's). The collector is the lambda `telemetry` on genhttp.dev
   (`telemetry.genhttp.run`): its source is in the lambda, not here, and its

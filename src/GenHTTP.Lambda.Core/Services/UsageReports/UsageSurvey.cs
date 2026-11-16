@@ -100,7 +100,6 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             UsageReport.CurrentSchema,
             Installation(database),
             PlatformVersion,
-            options.PublicUrl,
             now,
             DescribeSystem(),
             DescribeServer(now),

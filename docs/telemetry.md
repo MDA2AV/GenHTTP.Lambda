@@ -11,7 +11,7 @@ on next.
 - a random installation ID, created on first use and stored in the
   installation's database, so that the reports of one installation can be
   told apart from those of another;
-- the version of GenHTTP Lambda and the value of `LAMBDA_PUBLIC_URL`, if set;
+- the version of GenHTTP Lambda;
 - the operating system, processor architecture and .NET version, whether the
   server runs in a container, the number of processors, the memory (the
   machine's, or the container's limit if lower), and the size and free space
@@ -38,10 +38,11 @@ The demo apps, which every installation has, are not counted.
 
 ## What a report never contains
 
-Nothing about an individual app or person: no app names, keys or domains, no
-code, descriptions, records, files or secrets, no visitor data, no log lines
-and no IP addresses. The collecting endpoint does not store the address a
-report came from.
+Nothing that identifies the installation, an app or a person: not the address
+the installation is reached at (`LAMBDA_PUBLIC_URL`) or any other of its
+settings' values, no app names, keys or domains, no code, descriptions,
+records, files or secrets, no visitor data, no log lines and no IP addresses.
+The collecting endpoint does not store the address a report came from.
 
 ## Seeing what is sent
 

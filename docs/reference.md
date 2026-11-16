@@ -1772,9 +1772,10 @@ neither does a host of somebody's own unless it asks to
 A report is one JSON document (`UsageReport`, `schema` 1), and
 [telemetry.md](telemetry.md) says what is in it - the list whoever runs an
 installation reads. Counts and switches only, and the demos are never counted.
-A report names no lambda, owner or visitor: no key, domain, title, code,
-specification, record, file, secret, address or log line - the tests check
-that a report holds none of the keys of the lambdas it counts. The
+A report names no lambda, owner or visitor, nor the installation itself: no
+key, domain, title, code, specification, record, file, secret, address or log
+line, and not `LAMBDA_PUBLIC_URL` - the tests check that a report holds none
+of the keys of the lambdas it counts, nor the installation's address. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
 

@@ -10,9 +10,9 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// Counts and switches only. Nothing in here names a lambda, an owner or a
 /// visitor - no key, no domain, no title, no code, no record, no address -
 /// and nothing that is not about the installation as a whole, apart from the
-/// size of the largest lambda's data. The address the installation is
-/// reached at is the one exception, because it is what tells an installation
-/// somebody uses from one that was tried once.
+/// size of the largest lambda's data. Not even the address the installation
+/// is reached at: it names whoever runs it, which is more than a count of how
+/// installations are run needs (decided by the owner).
 ///
 /// This is the wire shape: the receiver reads it by its field names, so a
 /// field is added rather than renamed, and <see cref="Schema"/> goes up when
@@ -21,7 +21,6 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// <param name="Schema">The version of this shape</param>
 /// <param name="Installation">A random identifier made once per installation and kept in its database, so the reports of one installation can be told from another's</param>
 /// <param name="Version">The version of GenHTTP Lambda running</param>
-/// <param name="Url">Where the installation is reached (<c>LAMBDA_PUBLIC_URL</c>), if it says</param>
 /// <param name="Sent">When the report was made</param>
 /// <param name="System">The machine it runs on</param>
 /// <param name="Server">How it serves</param>
@@ -34,7 +33,6 @@ public sealed record UsageReport(
     int Schema,
     string Installation,
     string Version,
-    string? Url,
     DateTime Sent,
     UsageSystem System,
     UsageServer Server,
