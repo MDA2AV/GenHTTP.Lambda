@@ -6,6 +6,7 @@ using System.Text.Json;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -256,6 +257,28 @@ public sealed class UsageReportTests
     }
 
     #region Helpers
+
+    [TestMethod]
+    public async Task AReportSaysThatTheInstallationIsBrandedButNotAsWhat()
+    {
+        await using var collector = FakeCollector.Start();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { UsageReportUrl = collector.Url });
+
+        await Reports(fixture).SendAsync();
+
+        var branding = fixture.Platform.Services.GetRequiredService<IBrandingService>();
+
+        branding.Rename("Tidewell Apps");
+        branding.ChangeLogo(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="));
+
+        await Reports(fixture).SendAsync();
+
+        var branded = collector.Reports.Select(r => JsonDocument.Parse(r.Body).RootElement.GetProperty("configuration").GetProperty("branded").GetBoolean()).ToList();
+
+        CollectionAssert.AreEqual(new[] { false, true }, branded, "a switch, as every other option is sent");
+        Assert.DoesNotContain("Tidewell", collector.Reports.Last().Body, "never the name it was given, nor its logo");
+    }
 
     private static IUsageReportService Reports(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IUsageReportService>();
 

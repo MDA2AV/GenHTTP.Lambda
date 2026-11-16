@@ -88,9 +88,10 @@ public sealed record UsageServer(string? Engine, [property: JsonPropertyName("ge
 /// <param name="LambdaOutput">Whether what lambdas print is kept</param>
 /// <param name="CrawlerLists">Whether the lists of crawlers are fetched for the analytics</param>
 /// <param name="Development">Whether the server runs in development mode</param>
+/// <param name="Branded">Whether its operator gave it a name or a logo of its own - never the name or the logo</param>
 public sealed record UsageConfiguration(string Addressing, bool HostingDomain, bool BuildAgent, bool BuildBox, bool ChangeBox, bool AdminPanel,
                                         bool Terms, bool Contact, bool AbuseContact, bool LegalPages, int McpOrigins, bool ClientAddresses,
-                                        bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development);
+                                        bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development, bool Branded);
 
 /// <remarks>
 /// None of the counts includes the demos, which every installation has.

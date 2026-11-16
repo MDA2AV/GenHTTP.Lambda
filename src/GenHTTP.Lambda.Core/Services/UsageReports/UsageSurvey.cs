@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Settings;
@@ -27,7 +28,8 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// Every count leaves the demos out: each installation has the same ones.
 /// </remarks>
 public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, IDatabaseVault databaseVault, IWorkspaceVault workspaces,
-                                ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, ServerRegistry server, LambdaOptions options)
+                                ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, IBrandingService branding, ServerRegistry server,
+                                LambdaOptions options)
 {
 
     /// <summary>
@@ -302,7 +304,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             options.GeoPlaces,
             options.CaptureLambdaOutput,
             options.CrawlerLists,
-            options.Development
+            options.Development,
+            branding.Current.Own
         );
     }
 
