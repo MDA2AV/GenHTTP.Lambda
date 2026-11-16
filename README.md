@@ -41,14 +41,18 @@ Then open <http://localhost:8080>.
 
 ## Use cases
 
-GenHTTP Lambda is designed for small apps that often go unhosted because
-deploying them takes more effort than writing them:
+GenHTTP Lambda is designed for small internal tools that often go unhosted
+because deploying them takes more effort than writing them:
 
-- a chore list for a family, a booking page for a club, a sign-up sheet for a
-  team;
-- a dashboard for an API you use, a webhook receiver for your automations, a
-  small API for your scripts;
-- an event page, a guestbook, a poll, a multiplayer game.
+- **In a company**, the tools that replace a shared spreadsheet: an inventory
+  of devices and licenses, a vacation or on-call planner, a tracker for
+  orders, approvals or support requests, a form that collects requests and
+  lists them for whoever handles them. Each gets a database instead of a file
+  on a shared drive, a version history, and an address the whole team opens.
+- **At home**, the pieces around your home automation: a dashboard for your
+  sensors, a webhook receiver that records what your devices report, a small
+  API for your scripts and automations, a page that shows the household the
+  heating schedule or the meter readings.
 
 A request such as *"Build a shared task list for the team"* produces an app
 that is online. A follow-up such as *"Give every task the day it is due"* is
