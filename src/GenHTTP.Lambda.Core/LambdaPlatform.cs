@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -153,6 +154,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<LambdaRemoval>();
         services.AddSingleton<LambdaLifetime>();
         services.AddSingleton<LambdaDescriber>();
+        services.AddSingleton<LambdaListing>();
         services.AddSingleton<LambdaHosting>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
@@ -177,6 +179,9 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<ModelGate>();
         services.AddSingleton<IBuildService, BuildService>();
         services.AddSingleton<EventReader>();
+        services.AddSingleton<LambdaTally>();
+        services.AddSingleton<StorageSurvey>();
+        services.AddSingleton<ICensusService, CensusService>();
         services.AddSingleton<VersionFactsCache>();
 
         services.AddSingleton<LambdaTelemetry>();
@@ -217,6 +222,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, CrawlerJob>();
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
         services.AddSingleton<IBackgroundJob, UsageReportJob>();
+        services.AddSingleton<IBackgroundJob, StorageCensusJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();

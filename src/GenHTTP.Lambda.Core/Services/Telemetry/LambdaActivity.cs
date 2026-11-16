@@ -29,5 +29,13 @@ public sealed record LambdaActivity(
     [Summary("When the first request arrived")]
     DateTime? FirstSeen,
     [Summary("When the last request arrived")]
-    DateTime? LastSeen
+    DateTime? LastSeen,
+    [Summary("Requests it answered in the last hour")]
+    long HourRequests = 0,
+    [Summary("Of those, answered with a server error")]
+    long HourFailed = 0,
+    [Summary("Requests it answered in the last day")]
+    long DayRequests = 0,
+    [Summary("Of those, answered with a server error")]
+    long DayFailed = 0
 );

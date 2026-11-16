@@ -226,7 +226,11 @@ public sealed class LambdaTelemetry
         Math.Round(counters.SlowestMillis, 2),
         counters.Bytes,
         counters.FirstSeen,
-        counters.LastSeen
+        counters.LastSeen,
+        counters.Minutes.Sum(DateTime.UtcNow, b => b.Requests),
+        counters.Minutes.Sum(DateTime.UtcNow, b => b.Failed),
+        counters.Quarters.Sum(DateTime.UtcNow, b => b.Requests),
+        counters.Quarters.Sum(DateTime.UtcNow, b => b.Failed)
     );
 
     private static readonly (int Length, TimeSpan Width) MinuteRing = (60, TimeSpan.FromMinutes(1));
@@ -332,10 +336,31 @@ public sealed class LambdaTelemetry
             return points;
         }
 
+        /// <summary>
+        /// What the ring holds of one count, over the intervals that are not
+        /// left over from the last time round.
+        /// </summary>
+        internal long Sum(DateTime now, Func<Bucket, int> count)
+        {
+            var current = now.Ticks / _width;
+
+            long sum = 0;
+
+            foreach (var bucket in _buckets)
+            {
+                if (bucket.Stamp > current - length && bucket.Stamp <= current)
+                {
+                    sum += count(bucket);
+                }
+            }
+
+            return sum;
+        }
+
         internal static IReadOnlyList<TrafficPoint> Empty(DateTime now, (int Length, TimeSpan Width) shape)
             => new Ring(shape.Length, shape.Width).Read(now);
 
-        private struct Bucket
+        internal struct Bucket
         {
             internal long Stamp;
             internal int Requests;

@@ -57,7 +57,9 @@ public sealed class AdminTests
         // fail where reflection does not
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel, compiled: true);
 
-        foreach (var path in new[] { "/api/v1/admin/lambdas?page=1", "/api/v1/telemetry?minutes=5", "/api/v1/telemetry/lambdas", "/api/v1/logs?level=info" })
+        foreach (var path in new[] { "/api/v1/admin/lambdas?page=1", "/api/v1/admin/lambdas?state=online&uses=database,drafts&view=full&created=7&sort=visited",
+                                     "/api/v1/admin/overview", "/api/v1/admin/storage", "/api/v1/telemetry?minutes=5", "/api/v1/telemetry/lambdas",
+                                     "/api/v1/logs?level=info" })
         {
             using var response = await fixture.GetAsOperatorAsync(path);
 
@@ -228,6 +230,81 @@ public sealed class AdminTests
         using var byDomain = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas?search=example.org", Token);
 
         Assert.AreEqual(premium.PublicKey, (await byDomain.GetContentAsync<AdminListingResponse>()).Lambdas.Single().PublicKey);
+    }
+
+    [TestMethod]
+    public async Task TheListingCanBeNarrowedToWhatTheLambdasUseAndTheirState()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        var online = await fixture.CreateLambdaAsync("online");
+        var keeping = await fixture.CreateLambdaAsync("keeping");
+        await fixture.CreateLambdaAsync("plain");
+
+        await fixture.DeployAsync(online.PrivateKey);
+
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{keeping.PrivateKey}/data/database")) { }
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{keeping.PrivateKey}/data/secrets")) { }
+
+        async Task<IReadOnlyList<string>> Listed(string query)
+        {
+            using var response = await Send(fixture, HttpMethod.Get, $"/api/v1/admin/lambdas?{query}", Token);
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, query);
+
+            return [.. (await response.GetContentAsync<AdminListingResponse>()).Lambdas.Select(l => l.PublicKey)];
+        }
+
+        CollectionAssert.AreEqual(new[] { "online" }, (await Listed("state=online")).ToArray());
+        CollectionAssert.AreEquivalent(new[] { "keeping", "plain" }, (await Listed("state=offline")).ToArray());
+        CollectionAssert.AreEqual(new[] { "keeping" }, (await Listed("uses=database")).ToArray());
+        CollectionAssert.AreEqual(new[] { "keeping" }, (await Listed("uses=Database,secrets")).ToArray(), "every feature named, in any case");
+        Assert.IsEmpty(await Listed("uses=database&state=online"), "each filter narrows what the others left");
+        Assert.IsEmpty(await Listed("state=expiring"), "nothing new expires within the week");
+        Assert.HasCount(3, await Listed("created=1&view=full"));
+        CollectionAssert.AreEqual(new[] { "keeping", "online", "plain" }, (await Listed("sort=key")).ToArray());
+        CollectionAssert.AreEqual(new[] { "online", "keeping", "plain" }, (await Listed("sort=oldest")).ToArray());
+    }
+
+    [TestMethod]
+    public async Task TheListingSaysWhatEachLambdaUses()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        var keeping = await fixture.CreateLambdaAsync("keeping");
+        var plain = await fixture.CreateLambdaAsync("plain");
+
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{keeping.PrivateKey}/data/secrets")) { }
+        using (var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{plain.PrivateKey}/data/workspace")) { }
+
+        var listing = await ListAsync(fixture);
+
+        var uses = listing.Lambdas.Single(l => l.PublicKey == "keeping").Uses!;
+
+        Assert.IsTrue(uses.Secrets);
+        Assert.IsFalse(uses.Database);
+        Assert.IsTrue(uses.Workspace, "the workspace comes switched on");
+        Assert.IsNull(uses.AnalyticsSince);
+        Assert.AreEqual("Full", uses.View);
+
+        Assert.IsFalse(listing.Lambdas.Single(l => l.PublicKey == "plain").Uses!.Workspace, "until it is switched off");
+
+        using var withWorkspace = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas?uses=workspace", Token);
+
+        Assert.AreEqual("keeping", (await withWorkspace.GetContentAsync<AdminListingResponse>()).Lambdas.Single().PublicKey);
+    }
+
+    [TestMethod]
+    public async Task AFilterThatDoesNotExistIsRefused()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        foreach (var query in new[] { "state=sleeping", "uses=database,magic", "sort=price", "view=2" })
+        {
+            using var response = await Send(fixture, HttpMethod.Get, $"/api/v1/admin/lambdas?{query}", Token);
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, query);
+        }
     }
 
     [TestMethod]

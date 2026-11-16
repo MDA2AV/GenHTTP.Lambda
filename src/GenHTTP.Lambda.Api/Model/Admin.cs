@@ -1,5 +1,7 @@
 using GenHTTP.Api.Content.Documentation;
 
+using GenHTTP.Lambda.Services.Census;
+using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -61,8 +63,38 @@ public sealed record AdminLambda(
     [Summary("Since when it is blocked; absent while it is not")]
     DateTime? Blocked = null,
     [Summary("Whether it may connect to other servers, and where its request for that stands")]
-    ConnectivityResponse? Connectivity = null
+    ConnectivityResponse? Connectivity = null,
+    [Summary("Which of the platform's features it uses")]
+    AdminLambdaUses? Uses = null,
+    [Summary("When it was last visited, as the platform writes it down - at most hourly, so it may be behind `lastSeen`; absent if it never was")]
+    DateTime? Visited = null
 );
+
+[Summary("Which of the platform's features a lambda uses, as far as the platform's database tells.")]
+public sealed record AdminLambdaUses(
+    [Summary("Whether its database is switched on")]
+    bool Database,
+    [Summary("Whether its workspace is switched on")]
+    bool Workspace,
+    [Summary("Whether its secrets are switched on")]
+    bool Secrets,
+    [Summary("Since when its visits are counted; absent while they are not")]
+    DateTime? AnalyticsSince,
+    [Summary("Whether its owner put it in the showcase")]
+    bool Showcase,
+    [Summary("Whether its owner published its code at `/source`")]
+    bool Source,
+    [Summary("How many features (drafts) it has open")]
+    int Drafts,
+    [Summary("How its editor opens for somebody who has not chosen a view of their own: `Simple`, for an owner who does not write code, or `Full`")]
+    string View
+)
+{
+
+    public static AdminLambdaUses Of(LambdaUses uses)
+        => new(uses.Database, uses.Workspace, uses.Secrets, uses.AnalyticsSince, uses.Showcase, uses.Source, uses.Drafts, uses.View.ToString());
+
+}
 
 [Summary("Everything about one lambda, for the operator.")]
 public sealed record AdminLambdaDetail(
@@ -83,7 +115,17 @@ public sealed record AdminLambdaDetail(
     [Summary("The address this request came from as a block would cover it, so the operator does not block themselves; absent where it is on one of the installation's own networks")]
     string? You = null,
     [Summary("Whether the code of its version online, or of its newest, connects to other servers - as far as what is written tells - which it may only where `lambda.connectivity.allowed`")]
-    bool Connects = false
+    bool Connects = false,
+    [Summary("The lambda at a glance, as its owner's overview shows it: its traffic over the last hour and day, its last problems, what it keeps against its allowances, and what its documentation says")]
+    LambdaSummaryResponse? Summary = null,
+    [Summary("Which of the platform's features it uses")]
+    AdminLambdaUses? Uses = null,
+    [Summary("Its entry in the showcase, while it has one")]
+    ShowcaseResponse? Showcase = null,
+    [Summary("How its code is published at `/source`, where its owner ever published it; `published` says whether it is now")]
+    SourceSettingsResponse? Source = null,
+    [Summary("Its features (drafts), the most recently changed first")]
+    IReadOnlyList<FeatureResponse>? Features = null
 );
 
 [Summary("That the operator blocked a lambda, and why.")]
@@ -229,3 +271,152 @@ public sealed record TierLimitsModel(
     [Summary("What the tier is called on the installation's pages, shown as written in every language, up to 24 characters; absent or empty for its own name, which the pages translate")]
     string? Label = null
 );
+
+/// <remarks>
+/// Everything the operator's dashboards draw that is not about the machine:
+/// the lambdas counted, what waits for the operator, and the room left. The
+/// panel asks for it as it opens a section, which is how the count beside
+/// Connectivity stays current without a timer.
+/// </remarks>
+[Summary("The installation at a glance, for whoever runs it: its lambdas counted, what waits for a decision, and the room left.")]
+public sealed record AdminOverviewResponse(
+    [Summary("The lambdas counted, the demos apart")]
+    AdminCensusResponse Lambdas,
+    [Summary("What waits for the operator")]
+    AdminAttentionResponse Attention,
+    [Summary("The volume of the data directory: how large it is and how much is free, read as this was asked for; absent where the system does not say")]
+    AdminDiskResponse? Disk,
+    [Summary("The newest lambdas, the newest first")]
+    IReadOnlyList<AdminLambda> Newest,
+    [Summary("The lambdas that answered with a server error in the last hour, the most first, with what they did in that hour")]
+    IReadOnlyList<LambdaActivity> Failing
+);
+
+[Summary("The lambdas of the installation, counted. The demos are counted apart and in nothing else.")]
+public sealed record AdminCensusResponse(
+    [Summary("When they were counted")]
+    DateTime Taken,
+    [Summary("How many there are, the demos left out")]
+    int Total,
+    [Summary("How many demos the installation keeps")]
+    int Demos,
+    [Summary("How many have a version online")]
+    int Online,
+    [Summary("How many have none and are not blocked")]
+    int Offline,
+    [Summary("How many the operator blocked")]
+    int Blocked,
+    [Summary("How many are in each tier, by its name - `Sandbox`, `Production`, `System` and `Demo`")]
+    IReadOnlyDictionary<string, int> Tiers,
+    [Summary("How many were created in the last day")]
+    int CreatedDay,
+    [Summary("How many were created in the last seven days")]
+    int CreatedWeek,
+    [Summary("How many were created in the last thirty days")]
+    int CreatedMonth,
+    [Summary("How many were changed or visited in the last thirty days")]
+    int ActiveMonth,
+    [Summary("How many go offline within seven days unless they are used - in a tier that is not kept while unused")]
+    int GoingOffline,
+    [Summary("How many are removed within seven days unless they are used")]
+    int Removed,
+    [Summary("How many use each of the platform's features")]
+    CensusUses Uses,
+    [Summary("How many open in the simple view, for an owner who does not write code")]
+    int Simple,
+    [Summary("How many open in the full view")]
+    int Full,
+    [Summary("How many versions are kept, all together")]
+    int Versions,
+    [Summary("Versions saved in the last thirty days, by where they came from: `agent` (MCP), `api`, `git`, `template`, `admin` or `system`")]
+    IReadOnlyDictionary<string, int> Saved
+)
+{
+
+    public static AdminCensusResponse Of(LambdaCensus census) => new(
+        census.Taken, census.Lambdas, census.Demos, census.Online, census.Offline, census.Blocked,
+        census.Tiers.ToDictionary(t => t.Key.ToString(), t => t.Value),
+        census.CreatedDay, census.CreatedWeek, census.CreatedMonth, census.ActiveMonth, census.GoingOffline, census.Removed,
+        census.Uses, census.Simple, census.Full, census.Versions, census.Saved);
+
+}
+
+[Summary("What waits for the operator.")]
+public sealed record AdminAttentionResponse(
+    [Summary("How many lambdas ask to connect to other servers and wait for a decision")]
+    int ConnectivityWaiting,
+    [Summary("Since when the one waiting longest asks; absent while none waits")]
+    DateTime? ConnectivityWaitingSince,
+    [Summary("How many addresses are blocked")]
+    int AddressBlocks,
+    [Summary("Whether the address this request came from is blocked - only this panel answers it then")]
+    bool YouAreBlocked,
+    [Summary("Whether the installation sends a usage report")]
+    bool UsageReports,
+    [Summary("Why the last usage report did not arrive; absent if it did, or none is sent")]
+    string? UsageReportFailure
+);
+
+[Summary("The volume the data directory is on.")]
+public sealed record AdminDiskResponse(
+    [Summary("How large it is, in bytes")]
+    long Size,
+    [Summary("How much of it is free for the platform, in bytes")]
+    long Free
+);
+
+[Summary("The room the installation has, and what takes it.")]
+public sealed record AdminStorageResponse(
+    [Summary("The data directory, where everything the platform keeps is")]
+    string Directory,
+    [Summary("The volume it is on, read as this was asked for; absent where the system does not say")]
+    AdminDiskResponse? Disk,
+    [Summary("When what follows was measured - a walk over every file, done every hour, not on every request")]
+    DateTime? Measured,
+    [Summary("What the data directory holds, by part, the largest first: `versions`, `drafts`, `databases`, `workspaces`, `git`, `sources` (packed for `/source`), `compiled` and `resources` (what the lambdas were compiled and unpacked to, made again when missing), `platform` and `analytics` (the platform's two databases), and `other`")]
+    IReadOnlyList<StoragePart> Parts,
+    [Summary("How many lambdas something was found of")]
+    int Lambdas,
+    [Summary("The lambdas that take the most room, the largest first")]
+    IReadOnlyList<AdminLambdaStorage> Largest,
+    [Summary("The lambdas whose data is beyond what their tier allows, the furthest first - kept as it is, and written to again only once it is within it. A lambda gets there when it is moved to a tier that allows less, or the operator lowers the limit.")]
+    IReadOnlyList<AdminLambdaStorage> Over
+)
+{
+
+    public static AdminStorageResponse Of(StorageCensus census) => new(
+        census.Directory,
+        census.DiskBytes is { } size && census.FreeBytes is { } free ? new AdminDiskResponse(size, free) : null,
+        census.Measured,
+        census.Parts,
+        census.Lambdas,
+        [.. census.Largest.Select(AdminLambdaStorage.Of)],
+        [.. census.Over.Select(AdminLambdaStorage.Of)]);
+
+}
+
+[Summary("What one lambda takes of the room.")]
+public sealed record AdminLambdaStorage(
+    [Summary("Its public key")]
+    string PublicKey,
+    [Summary("`Sandbox`, `Production`, `System` or `Demo`")]
+    string Tier,
+    [Summary("Its database and its workspace, counted as its allowance counts them, in bytes")]
+    long DataBytes,
+    [Summary("What its tier allows its data, in bytes")]
+    long AllowedBytes,
+    [Summary("Its versions, as they are kept, in bytes")]
+    long VersionBytes,
+    [Summary("Its features (drafts), with their copies of the data, in bytes")]
+    long DraftBytes,
+    [Summary("What is kept for it besides - its git history, its packed source, what it was compiled and unpacked to - in bytes")]
+    long OtherBytes,
+    [Summary("All of it together, in bytes")]
+    long TotalBytes
+)
+{
+
+    public static AdminLambdaStorage Of(LambdaStorage lambda)
+        => new(lambda.PublicKey, lambda.Tier.ToString(), lambda.DataBytes, lambda.AllowedBytes, lambda.VersionBytes, lambda.DraftBytes, lambda.OtherBytes, lambda.TotalBytes);
+
+}

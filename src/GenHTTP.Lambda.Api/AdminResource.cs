@@ -7,12 +7,21 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Blocking;
+using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Connectivity;
+using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.Showcase;
+using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.UsageReports;
+using GenHTTP.Lambda.Services.Workspace;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -46,29 +55,62 @@ namespace GenHTTP.Lambda.Api;
          """)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
                                    IAddressBlocks blocks, IConnectivityService connectivity, IUsageReportService usageReports,
-                                   LambdaOptions options, ILogger<AdminResource> logger)
+                                   ICensusService census, IShowcaseService showcases, ISourceService sources, IFeatureService features,
+                                   IWorkspaceService workspace, ISecretService secrets, IDataService data, ILogBook book,
+                                   ILambdaAddresses addresses, LambdaOptions options, ILogger<AdminResource> logger)
 {
+    private readonly LambdaSummaries _summaries = new(meta, workspace, secrets, data, telemetry, book, limits, connectivity);
 
     #region Listing
 
     [ResourceMethod("lambdas")]
     [Summary("Lists every lambda")]
-    [Remarks("Newest first, twenty to a page, with what each has been doing since the server came up, which is counted in memory.")]
-    [Response(ResponseStatus.BadRequest, "There is no such tier.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Remarks("""
+             Twenty to a page, the newest first unless `sort` says otherwise, with which of the platform's features each uses and
+             what it has been doing since the server came up, which is counted in memory. Every filter narrows what the others
+             left: `uses=database,showcase` lists the lambdas that use both. Only what the platform keeps narrows it - the requests
+             and errors are not filters, since they are counted in memory.
+             """)]
+    [Response(ResponseStatus.BadRequest, "There is no such tier, state, feature, view or order.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("A page of lambdas")]
     public AdminListingResponse GetLambdas([Summary("Only lambdas whose public key or domain contains this")] string? search,
                                            [Summary("Only lambdas of this tier: `Sandbox`, `Production`, `System` or `Demo`")] string? tier,
+                                           [Summary("Only lambdas in this state: `online`, `offline` (and not blocked), `blocked`, or `expiring` - going offline or removed within seven days unless they are used")] string? state,
+                                           [Summary("Only lambdas that use every one of these, separated by commas: `database`, `workspace`, `secrets`, `analytics`, `showcase`, `source` (published), `domain`, `drafts` (a feature open), `connects` (may connect to other servers) and `requested` (asks to, and waits)")] string? uses,
+                                           [Summary("Only lambdas whose editor opens in this view: `simple` or `full`")] string? view,
+                                           [Summary("Only lambdas created in the last this many days")] int? created,
+                                           [Summary("The order: `newest` (the default), `oldest`, `changed`, `visited` or `key`")] string? sort,
                                            [Summary("The page, counting from 1")] int page = 1)
     {
         var wanted = Math.Max(1, page);
 
-        var result = meta.List(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : TierDescription.Parse(tier));
+        var query = new LambdaQuery(
+            search,
+            string.IsNullOrEmpty(tier) ? null : TierDescription.Parse(tier),
+            Parse<LambdaState>(state, "state"),
+            string.IsNullOrWhiteSpace(uses) ? null : [.. uses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(u => Parse<LambdaFeature>(u, "feature")!.Value)],
+            Parse<EditorView>(view, "view"),
+            created is > 0 ? TimeSpan.FromDays(created.Value) : null,
+            Parse<LambdaOrder>(sort, "order") ?? LambdaOrder.Newest
+        );
 
+        var result = meta.List(query, (wanted - 1) * PageSize, PageSize);
+
+        var pages = Math.Max(1, (result.Matched + PageSize - 1) / PageSize);
+
+        return new AdminListingResponse(Describe(result.Lambdas), result.Total, result.Deployed, result.Matched, Math.Min(wanted, pages), pages);
+    }
+
+    /// <summary>
+    /// The lambdas of a page, with what they have been doing since the server came up.
+    /// </summary>
+    private List<AdminLambda> Describe(IReadOnlyList<LambdaOverview> lambdas)
+    {
         // the counters are held per lambda in memory, so this is a lookup
         // rather than a join - and a lambda nobody has called is simply absent
         var activity = telemetry.DescribeLambdas().ToDictionary(a => a.PublicKey, StringComparer.Ordinal);
 
-        var lambdas = result.Lambdas.Select(l =>
+        return [.. lambdas.Select(l =>
         {
             var seen = activity.GetValueOrDefault(l.PublicKey);
 
@@ -90,14 +132,99 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 l.Domain,
                 l.Domain != null && l.Policy.OwnDomain,
                 l.Blocked,
-                ConnectivityResponse.Of(l.Connectivity)
+                ConnectivityResponse.Of(l.Connectivity),
+                l.Uses == null ? null : AdminLambdaUses.Of(l.Uses),
+                l.Visited
             );
-        }).ToList();
-
-        var pages = Math.Max(1, (result.Matched + PageSize - 1) / PageSize);
-
-        return new AdminListingResponse(lambdas, result.Total, result.Deployed, result.Matched, Math.Min(wanted, pages), pages);
+        })];
     }
+
+    /// <summary>
+    /// A value of the listing's query by its name in any case, or a refusal that names what there is.
+    /// </summary>
+    private static T? Parse<T>(string? value, string what) where T : struct, Enum
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (Enum.TryParse<T>(value.Trim(), ignoreCase: true, out var parsed) && Enum.IsDefined(parsed) && !int.TryParse(value, out _))
+        {
+            return parsed;
+        }
+
+        throw LambdaException.Invalid($"There is no {what} '{value}'. There are: {string.Join(", ", Enum.GetNames<T>().Select(n => n.ToLowerInvariant()))}.");
+    }
+
+    #endregion
+
+    #region Overview
+
+    [ResourceMethod("overview")]
+    [Summary("Reads the installation at a glance")]
+    [Remarks("""
+             What the operator's dashboards draw that is not about the machine: the lambdas counted - in which state and tier, how
+             recent, which of the platform's features they use, where their versions came from - what waits for a decision, the
+             room left on the volume of the data directory, the newest lambdas and the ones that failed in the last hour. The
+             demos are counted apart and in nothing else. A few counts on the platform's database; the free space is read as it
+             is asked for.
+             """)]
+    [return: Summary("The installation at a glance")]
+    public AdminOverviewResponse GetOverview(IRequest request)
+    {
+        var counted = census.Count();
+
+        var held = blocks.List();
+
+        var you = You(request);
+
+        var report = usageReports.Status;
+
+        var newest = meta.List(new LambdaQuery(), 0, NewestShown);
+
+        var failing = telemetry.DescribeLambdas()
+                               .Where(a => a.HourFailed > 0)
+                               .OrderByDescending(a => a.HourFailed)
+                               .Take(FailingShown)
+                               .ToList();
+
+        return new AdminOverviewResponse(
+            AdminCensusResponse.Of(counted),
+            new AdminAttentionResponse(
+                counted.Uses.Requested,
+                counted.RequestedSince,
+                held.Count,
+                you != null && held.Any(b => b.Address == you),
+                report.Enabled,
+                report.Enabled ? report.Failure : null
+            ),
+            census.Disk() is var (size, free) && size != null && free != null ? new AdminDiskResponse(size.Value, free.Value) : null,
+            Describe(newest.Lambdas),
+            failing
+        );
+    }
+
+    [ResourceMethod("storage")]
+    [Summary("Reads the room the installation has, and what takes it")]
+    [Remarks("""
+             The volume of the data directory - how large, how much is free, read as this is asked for - and what the directory
+             holds, by part and by lambda, as last measured. Measuring walks over every file, so it is done every hour in the
+             background, and the first time it is asked for where it never was; `measured` says when.
+             """)]
+    [return: Summary("The room, and what takes it")]
+    public async ValueTask<AdminStorageResponse> GetStorage()
+        => AdminStorageResponse.Of(await census.StorageAsync());
+
+    /// <summary>
+    /// How many of the newest lambdas the overview names.
+    /// </summary>
+    private const int NewestShown = 6;
+
+    /// <summary>
+    /// How many of the lambdas that failed in the last hour the overview names.
+    /// </summary>
+    private const int FailingShown = 8;
 
     #endregion
 
@@ -525,7 +652,12 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
             [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
             You(request),
-            connectivity.Connects(id, lambda.ActiveVersion, lambda.LatestVersion)
+            connectivity.Connects(id, lambda.ActiveVersion, lambda.LatestVersion),
+            _summaries.Of(privateKey),
+            AdminLambdaUses.Of(meta.GetUses(privateKey)),
+            showcases.Get(privateKey) is { } entry ? ShowcaseResponse.Of(entry, addresses) : null,
+            sources.Get(privateKey) is { } source ? SourceSettingsResponse.Of(source) : null,
+            [.. features.List(privateKey).OrderByDescending(f => f.Modified).Select(FeatureResource.Describe)]
         );
     }
 
