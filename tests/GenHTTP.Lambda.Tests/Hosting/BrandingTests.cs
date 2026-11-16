@@ -108,6 +108,21 @@ public sealed class BrandingTests
     }
 
     [TestMethod]
+    public async Task WhatAPageSaysOfItselfIsNeverRenamed()
+    {
+        await using var fixture = await CommunityAsync(options =>
+            File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "site"), "pages.json"),
+                              """{ "/": { "text": { "en": { "title": "Notes on GenHTTP Lambda", "description": "What runs here." } } } }"""));
+
+        await RenameAsync(fixture, "Acme Apps");
+
+        var markup = await PageAsync(fixture, "/en");
+
+        Assert.Contains("<title>Notes on GenHTTP Lambda - Acme Apps</title>", markup, "the page's own words stay as they are, the installation is named after them");
+        Assert.Contains("<meta property=\"og:title\" content=\"Notes on GenHTTP Lambda - Acme Apps\" />", markup);
+    }
+
+    [TestMethod]
     public async Task TheEditorAndThePanelAreNamedAfterItToo()
     {
         await using var fixture = await CommunityAsync(options =>

@@ -32,10 +32,10 @@ public static partial class PageBranding
 
     private static readonly HtmlEncoder Html = HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
 
-    [GeneratedRegex("<title>(.*?)</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+    [GeneratedRegex("(<title>)(.*?)(</title>)", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TitleTag();
 
-    [GeneratedRegex("<meta\\s+(?:name|property)=\"(?:og:title|og:site_name|og:image:alt|twitter:title|application-name|apple-mobile-web-app-title)\"[^>]*>", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("(<meta\\s+(?:name|property)=\"(?:og:title|og:site_name|og:image:alt|twitter:title|application-name|apple-mobile-web-app-title)\"\\s+content=\")([^\"]*)(\")", RegexOptions.IgnoreCase)]
     private static partial Regex NamingMeta();
 
     [GeneratedRegex("<link\\b[^>]*\\brel=\"[^\"]*icon[^\"]*\"[^>]*>\\s*", RegexOptions.IgnoreCase)]
@@ -58,9 +58,13 @@ public static partial class PageBranding
         var name = Html.Encode(brand.Name);
 
         // the name wherever the page names the installation before a script
-        // names the page: its title, and what a link preview calls the site
-        markup = TitleTag().Replace(markup, tag => tag.Value.Replace(platform, name, StringComparison.Ordinal), 1);
-        markup = NamingMeta().Replace(markup, tag => tag.Value.Replace(platform, name, StringComparison.Ordinal));
+        // names the page: its title, and what a link preview calls the site -
+        // only where the name is the whole of it or ends it, as the platform
+        // names a page, so nothing a page says of its own is ever renamed
+        string Rename(Match tag) => tag.Groups[1].Value + Renamed(tag.Groups[2].Value, platform, name) + tag.Groups[3].Value;
+
+        markup = TitleTag().Replace(markup, Rename, 1);
+        markup = NamingMeta().Replace(markup, Rename);
 
         // the picture as the only icon, where the platform's were: a touch
         // icon has to be a raster image, so an SVG is none
@@ -78,6 +82,23 @@ public static partial class PageBranding
         var said = JsonSerializer.Serialize(new { name = brand.Name, logo = brand.PicturePath });
 
         return SiteMeta.InHead(markup, $"{icons}\n<script id=\"{Element}\" type=\"application/json\">{said}</script>");
+    }
+
+    /// <summary>
+    /// The installation's name in place of the platform's, where the
+    /// platform's is all a text says or what ends it: <c>GenHTTP Lambda</c>,
+    /// <c>Editor - GenHTTP Lambda</c>.
+    /// </summary>
+    private static string Renamed(string text, string platform, string name)
+    {
+        if (text == platform)
+        {
+            return name;
+        }
+
+        var suffix = " - " + platform;
+
+        return text.EndsWith(suffix, StringComparison.Ordinal) ? text[..^platform.Length] + name : text;
     }
 
     /// <summary>
