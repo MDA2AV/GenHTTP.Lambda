@@ -2302,7 +2302,7 @@ The routes the panel draws its dashboards from:
 |------------------------------------------|-----------------------------------------------------------------------|
 | `GET /admin/overview`                    | the lambdas counted (the demos apart and in nothing else), what waits for a decision, the volume's size and free space, the newest lambdas and those that failed in the last hour |
 | `GET /admin/storage`, `POST /admin/storage/measure` | the volume, and what the data directory holds by part and by lambda as last measured; measures again at once |
-| `GET /admin/lambdas`                     | a page of lambdas (`search`, `tier`, `state`, `uses`, `view`, `created`, `sort`, `page`), each with which features it uses |
+| `GET /admin/lambdas`                     | a page of lambdas (`search`, `tier`, `state`, `uses`, `view`, `created`, `sort`, `page`), each with which features it uses; the demos are left out unless `tier=Demo` or `demos=true` asks for them, so every count of the overview leads to a list of as many |
 | `GET /admin/lambdas/{publicKey}`         | one lambda in full: the owner's summary, what it uses, its showcase entry, published source and drafts beside its versions and deployments |
 
 The counts are the platform's database, read as they are asked for

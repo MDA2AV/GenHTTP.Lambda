@@ -913,7 +913,7 @@ how it shows them did.
   directory, done hourly by `StorageCensusJob` - only where there is a panel
   - and on **Measure again**, and kept; the free space is read on every
   request, since that is what runs out. The demos are counted apart and in
-  nothing else. The workspace counts as switched on unless its owner switched
+  nothing else, and listed apart too, so a count leads to a list of as many. The workspace counts as switched on unless its owner switched
   it off, as it comes.
 - **Free space is watched**: on the dashboard, in Storage and as a mark
   beside it - under a tenth of the volume or 2 GB a warning, under a
