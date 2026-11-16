@@ -85,7 +85,9 @@ export function SideNav({ label, groups, current, onOpen }: Props) {
  * the top first, so the list never opens into the little room left under
  * the lambda's name.
  */
-export function PhoneNav({ label, groups, current, onOpen, footer, scroller }: Props & {
+export function PhoneNav({ label, groups, current, title, onOpen, footer, scroller }: Props & {
+  /** What the section open is called, for when the list does not have it - the simple view, come to by a link to the code. */
+  title: string;
   /** What the sidebar has under its sections, handed what closes the list. */
   footer?: (close: () => void) => ReactNode;
   /** What scrolls the page, to bring the bar to the top as the list opens. */
@@ -156,8 +158,10 @@ export function PhoneNav({ label, groups, current, onOpen, footer, scroller }: P
 
   return (
     <div ref={holder} className="sticky top-0 z-20 md:hidden">
-      {/* the page under the list is out of play while it is open */}
-      {open && <div aria-hidden="true" className="fixed inset-0 bg-slate-900/20 dark:bg-black/50" />}
+      {/* the page under the list is out of play while it is open, and a tap
+          on it closes the list - it is inside the holder, so the listener for
+          taps outside would not */}
+      {open && <div aria-hidden="true" onClick={() => close()} className="fixed inset-0 bg-slate-900/20 dark:bg-black/50" />}
 
       <button
         ref={button}
@@ -169,7 +173,7 @@ export function PhoneNav({ label, groups, current, onOpen, footer, scroller }: P
       >
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-medium uppercase tracking-wide text-slate-400">{within?.label ?? label}</span>
-          <span className="block truncate text-[15px] font-medium">{here?.label}</span>
+          <span className="block truncate text-[15px] font-medium">{here?.label ?? title}</span>
         </span>
         {!open && calling && <Summary call={calling} />}
         <IconChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />

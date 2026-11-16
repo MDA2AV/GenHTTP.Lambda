@@ -848,8 +848,8 @@ export function Editor({ theme }: Props) {
 
   // one view is no choice, so the simple view has no list of a draft's
   const navigation = featureKey
-    ? (simple ? null : { label: t.features.viewsLabel, groups: featureGroups, current: featureView })
-    : { label: said.sectionsLabel, groups, current: section };
+    ? (simple ? null : { label: t.features.viewsLabel, groups: featureGroups, current: featureView, title: featureEntry(featureKey)(featureView).label })
+    : { label: said.sectionsLabel, groups, current: section, title: entry(section).label };
 
   /*
    * One centred column holding the sidebar and the section beside it, the
@@ -905,6 +905,15 @@ export function Editor({ theme }: Props) {
                     <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
                       {said.download}
                     </a>
+                  )}
+                  {/* on a phone the switch is at the foot of the list of sections;
+                      a draft in the simple view has no list, so it is here */}
+                  {!navigation && (
+                    <button type="button" role="menuitem" className={`${menuItem} md:hidden`}
+                            onClick={() => { close(); switchTo('full'); }}>
+                      <IconViewFull className="h-4 w-4 text-slate-400" />
+                      {t.simple.toFull}
+                    </button>
                   )}
                   {!demo && menuRule}
                   {!demo && (
