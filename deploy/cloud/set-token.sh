@@ -1,26 +1,21 @@
 #!/usr/bin/env bash
 #
-# Gives the agent a long-lived token of its own, so it stops living on a copy
-# of this machine's login.
-#
-# A copy cannot last: both sides refresh, a refresh rotates the refresh token,
-# and whichever goes first revokes the other. In practice that is hours, and
-# it fails in front of whoever is using the build page. A token from
-# "claude setup-token" does not refresh and does not rotate anything, so the
-# two stop fighting.
+# Gives the build agent the token its builds sign in with, a long-lived one of
+# the subscription: it does not refresh and rotates nothing, so a login of
+# yours elsewhere cannot revoke it.
 #
 # It spends the same subscription as your own sessions - that is the point of
 # using it rather than an API key - so a busy day on the build page can
 # throttle your own work.
 #
-#   claude setup-token     # somewhere with a browser; it prints a token
-#   ./docker/agent/set-token.sh
+#   claude setup-token                    # somewhere with a browser; it prints a token
+#   sudo deploy/cloud/set-token.sh
 #
-# The token is read without echo and written straight to .env, which is
-# gitignored. It is never printed.
+# The token is read without echo and written straight to .env beside this
+# file, which is gitignored. It is never printed.
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$(readlink -f "$0")")"
 
 [ -f .env ] || { echo "No .env here." >&2; exit 1; }
 
@@ -64,7 +59,7 @@ chmod 600 .env
 
 echo "Written to .env. Restarting the agent on it."
 
-docker compose -f docker-compose.yml -f docker-compose.ioxide.yml -f docker-compose.agent.yml up -d agent
+docker compose up -d agent
 
 # Checked in a build container rather than in the agent.
 #
@@ -80,9 +75,5 @@ docker run --rm --network "${LAMBDA_AGENT_BUILD_NETWORK:-genhttp-build-net}" \
   -e NO_PROXY=genhttp.dev,lambda,localhost,127.0.0.1 \
   --entrypoint sh "${LAMBDA_AGENT_IMAGE:-genhttp-agent:latest}" \
   -c 'cd "$(mktemp -d)" && claude -p "Reply with exactly: ready" --model claude-haiku-4-5-20251001 --max-turns 1 --permission-mode dontAsk' < /dev/null
-
-echo
-echo "If that said 'ready', the copied credentials no longer matter and"
-echo "seed-credentials.sh is not needed again."
 
 unset TOKEN

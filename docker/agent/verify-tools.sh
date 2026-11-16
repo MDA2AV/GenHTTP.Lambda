@@ -8,13 +8,17 @@
 # CLI, but some built-in tools are offered whatever the allowlist says, so the
 # denylist has to name them - and a denylist is only correct for the version
 # it was written against.
+#
+# Run on genhttp.dev, against the runner deploy/cloud started.
 set -euo pipefail
 
 SERVICE=${1:-agent}
 
+COMPOSE=(docker compose -f "$(dirname "$(readlink -f "$0")")/../../deploy/cloud/docker-compose.yml")
+
 echo "Asking the agent what it can reach..."
 
-docker compose -f docker-compose.yml -f docker-compose.agent.yml exec -T "$SERVICE" \
+"${COMPOSE[@]}" exec -T "$SERVICE" \
   node -e '
     const { execFileSync } = require("node:child_process");
     const src = require("node:fs").readFileSync("/app/builder.mjs", "utf8");
@@ -22,7 +26,7 @@ docker compose -f docker-compose.yml -f docker-compose.agent.yml exec -T "$SERVI
     console.log("names covered by builder.mjs:", listed.size);
   ' || true
 
-docker compose -f docker-compose.yml -f docker-compose.agent.yml exec -T "$SERVICE" sh -lc '
+"${COMPOSE[@]}" exec -T "$SERVICE" sh -lc '
   cd "$(mktemp -d)"
   printf "%s" "{\"mcpServers\":{\"genhttp\":{\"type\":\"http\",\"url\":\"${AGENT_MCP_URL}\"}}}" > mcp.json
   claude -p "List every tool you can call, one per line, names only. Call nothing." \

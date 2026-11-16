@@ -71,6 +71,9 @@ src/*/Frontend/.prerender/
 # Runtime data: the SQLite database, the stored code and the lambda workspaces
 data/
 
+# the worktrees Claude Code makes for parallel work
+.claude/worktrees/
+
 # IDEs
 .vs/
 .idea/
