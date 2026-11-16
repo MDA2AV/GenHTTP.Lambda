@@ -10,12 +10,13 @@ const count = (value: number, one: string, many: string) => `${value} ${Math.ab
 export const source: SourceMessages = {
   shell: {
     section: 'Open source',
-    home: 'GenHTTP Lambda, page d’accueil',
+    home: (platform) => `${platform}, page d’accueil`,
   },
 
   lambda: {
     label: 'Qu’est-ce qu’une lambda ?',
-    text: 'Une application web sur GenHTTP Lambda : quelqu’un décrit ce qu’il veut, un agent IA l’écrit en C#, et en quelques minutes elle est en ligne à sa propre adresse – chaque version est gardée, avec ce qu’elle a changé.',
+    text: (platform) =>
+      `Une application web sur ${platform} : quelqu’un décrit ce qu’il veut, un agent IA l’écrit en C#, et en quelques minutes elle est en ligne à sa propre adresse – chaque version est gardée, avec ce qu’elle a changé.`,
     build: 'Créer la vôtre',
   },
 

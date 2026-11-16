@@ -3,6 +3,7 @@ using GenHTTP.Modules.Git;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
@@ -29,7 +30,7 @@ namespace GenHTTP.Lambda.Services.Git;
 /// applied at once on the whole server.
 /// </remarks>
 public sealed class GitService(IMetaService meta, IFeatureService features, ISourceService sources, GitStore store, GitHistory history, GitPushes pushes,
-                                LambdaOptions options) : IGitService
+                                IBrandingService branding, LambdaOptions options) : IGitService
 {
     private readonly SemaphoreSlim[] _turns = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
@@ -143,8 +144,15 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
 
     /// <summary>
     /// The lambda as its repository says it: where it runs, where the
-    /// installation is, and the license its source is published under.
+    /// installation is and what it is called, and the license its source is
+    /// published under.
     /// </summary>
+    /// <remarks>
+    /// The name is the installation's as it is when a commit is made, as the
+    /// address is: a commit is kept as it was made, and a push is compared
+    /// with the commits it builds on, so renaming the installation changes
+    /// the platform's files of the commits made after it and refuses no push.
+    /// </remarks>
     private GitLambda Describe(LambdaInfo lambda, long id, string origin)
     {
         var home = (options.PublicUrl ?? origin).TrimEnd('/');
@@ -153,7 +161,7 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
             ? new RepositoryLicense(found, DateTime.UtcNow.Year, SourceLicenses.Holder(source.Author, lambda.PublicKey))
             : null;
 
-        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Policy.ReadOnly, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license),
+        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Policy.ReadOnly, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license, branding.Current.Name),
                              origin.TrimEnd('/'), lambda.Blocked != null);
     }
 

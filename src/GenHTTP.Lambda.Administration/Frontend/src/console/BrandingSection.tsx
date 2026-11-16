@@ -281,10 +281,15 @@ export function BrandingSection({ access }: { access: Access }) {
                 Link previews of the front page and the showcase show the logo where it is a PNG, JPEG, GIF or WebP image, and no
                 picture otherwise - their own pictures have GenHTTP Lambda drawn into them.
               </li>
+              <li>
+                The &ldquo;Made with&rdquo; line agents put at the foot of the apps they build here, what the pages of the published
+                sources and of the hosting domain say an app was built with, and a lambda&rsquo;s repository - in what is written
+                after the change.
+              </li>
             </ul>
             <p className="mt-3 text-[13px] text-slate-500">
               GenHTTP Lambda stays named where the software is meant: the link to its source and its community, the API&rsquo;s
-              description, the tools agents connect with, and the line apps built here are asked to carry at their foot.
+              description, the MCP server, and the project a lambda is exported as.
             </p>
           </Card>
 

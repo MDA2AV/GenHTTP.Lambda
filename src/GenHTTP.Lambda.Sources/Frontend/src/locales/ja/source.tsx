@@ -9,12 +9,13 @@ import type { SourceMessages } from '../en/source';
 export const source: SourceMessages = {
   shell: {
     section: 'オープンソース',
-    home: 'GenHTTP Lambdaのトップページ',
+    home: (platform) => `${platform}のトップページ`,
   },
 
   lambda: {
     label: 'lambdaとは？',
-    text: 'GenHTTP Lambdaで動くWebアプリです。作りたいものを伝えるとAIエージェントがC#で書き、数分で専用のURLで公開されます。すべてのバージョンが、何を変えたかと一緒に残ります。',
+    text: (platform) =>
+      `${platform}で動くWebアプリです。作りたいものを伝えるとAIエージェントがC#で書き、数分で専用のURLで公開されます。すべてのバージョンが、何を変えたかと一緒に残ります。`,
     build: '自分でも作ってみる',
   },
 

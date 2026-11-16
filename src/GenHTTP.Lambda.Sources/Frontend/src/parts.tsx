@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, api, type License } from '@genhttp-lambda/kit/api';
+import { useBrand } from '@genhttp-lambda/kit/brand';
 import { IconScale, IconSpinner, IconStar } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { useT } from '@genhttp-lambda/kit/i18n';
@@ -19,6 +20,7 @@ import { useStartPage } from '@genhttp-lambda/kit/installation';
 export function LambdaNotice({ className = '', slim = false }: { className?: string; slim?: boolean }) {
   const start = useStartPage();
   const said = useSourceT().lambda;
+  const brand = useBrand();
 
   // above the code of one lambda: a line, so the code stays where the eye lands
   if (slim) {
@@ -26,7 +28,7 @@ export function LambdaNotice({ className = '', slim = false }: { className?: str
       <aside className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 border-l-2 border-logo-500 bg-logo-500/[0.04] py-1.5 pl-3 pr-2 text-[13px] ${className}`}>
         <p className="min-w-0 flex-1 basis-72 leading-relaxed text-slate-600 dark:text-slate-400">
           <span aria-hidden="true" className="mr-1.5 font-semibold text-logo-500">λ</span>
-          <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text}
+          <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text(brand.name)}
         </p>
         <Link to={start} className="shrink-0 whitespace-nowrap font-medium text-accent-600 hover:underline dark:text-accent-400">
           {said.build} →
@@ -41,7 +43,7 @@ export function LambdaNotice({ className = '', slim = false }: { className?: str
         λ
       </span>
       <p className="min-w-0 flex-1 basis-64 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
-        <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text}
+        <span className="font-medium text-ink-900 dark:text-slate-100">{said.label}</span> {said.text(brand.name)}
       </p>
       <Link to={start} className="btn-ghost shrink-0 !px-3 !py-1.5 text-[13px]">
         {said.build} →

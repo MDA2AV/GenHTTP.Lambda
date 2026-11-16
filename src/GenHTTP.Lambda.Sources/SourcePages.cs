@@ -196,7 +196,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
         // its picture on the showcase, where it has one, and the page's own otherwise
         var image = entry.Picture is { } picture ? $"/api/v1/showcases/{entry.PublicKey}/image?v={picture.Ticks}" : null;
 
-        var page = meta.Source(language, below, name, about, image) with { ImageType = image != null ? entry.PictureType : null };
+        var page = meta.Source(language, below, name, about, image, brand) with { ImageType = image != null ? entry.PictureType : null };
 
         var schema = new SourceSchema(name, about, SourceLicenses.Find(entry.License)?.Url ?? entry.License, project.Author, entry.Updated,
                                       entry.Online ? addresses.Of(entry.PublicKey, entry.Tier, entry.Domain) : null);

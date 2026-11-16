@@ -69,7 +69,7 @@ public sealed class SiteMeta
     /// nothing.
     /// </summary>
     private static readonly SiteText SourceFallback = new("{name} - Source code",
-        "The source code of {name}, an app built with GenHTTP Lambda: read it, download it and run it anywhere.");
+        "The source code of {name}, an app built with {platform}: read it, download it and run it anywhere.");
 
     #region Get-/Setters
 
@@ -163,8 +163,11 @@ public sealed class SiteMeta
     /// <param name="name">What the lambda is called</param>
     /// <param name="about">What it says it is, if it says</param>
     /// <param name="image">Its picture on the showcase, if it has one</param>
-    public SitePage Source(string language, string path, string name, string? about, string? image)
+    /// <param name="brand">The installation it is published on, which the words name with <c>{platform}</c></param>
+    public SitePage Source(string language, string path, string name, string? about, string? image, Brand? brand = null)
     {
+        var platform = (brand ?? Brand.Platform).Name;
+
         var entry = ReadPages().GetValueOrDefault(SourceTemplate);
 
         var text = entry?.Text.GetValueOrDefault(language) ?? entry?.Text.GetValueOrDefault(SiteLanguages.Default) ?? SourceFallback;
@@ -176,9 +179,11 @@ public sealed class SiteMeta
             languages.Add(language);
         }
 
-        var description = string.IsNullOrWhiteSpace(about) ? text.Description.Replace("{name}", name, StringComparison.Ordinal) : about;
+        var description = string.IsNullOrWhiteSpace(about)
+                        ? text.Description.Replace("{name}", name, StringComparison.Ordinal).Replace("{platform}", platform, StringComparison.Ordinal)
+                        : about;
 
-        return new SitePage(language, path, text.Title.Replace("{name}", name, StringComparison.Ordinal), description, languages,
+        return new SitePage(language, path, text.Title.Replace("{name}", name, StringComparison.Ordinal).Replace("{platform}", platform, StringComparison.Ordinal), description, languages,
                             image ?? text.Image ?? entry?.Image);
     }
 

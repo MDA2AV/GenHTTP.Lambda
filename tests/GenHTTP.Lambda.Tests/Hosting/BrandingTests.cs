@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Tests.Git;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -562,6 +563,64 @@ public sealed class BrandingTests
     #region What else names it
 
     [TestMethod]
+    public async Task AppsBuiltHereSayTheyWereMadeWithIt()
+    {
+        await using var fixture = await CommunityAsync(configure: o => o with { PublicUrl = "https://apps.example.com" });
+
+        await RenameAsync(fixture, "Acme & Co");
+
+        var guide = await GuideAsync(fixture);
+
+        Assert.Contains("\"Made with Acme & Co\"", guide["ask"]!.GetValue<string>(), "the line names the installation it links to");
+        Assert.Contains("<a href=\"https://apps.example.com/\">Made with Acme &amp; Co</a>", guide["how"]!.GetValue<string>(),
+                        "written as markup an agent puts into a page as it is");
+
+        Assert.Contains("given this name with your next change", guide["renamed"]!.GetValue<string>(), "a line from before the rename is brought up to date");
+
+        using var reset = await SendAsync(fixture, HttpMethod.Delete, "/api/v1/admin/branding");
+
+        Assert.Contains(">Made with GenHTTP Lambda</a>", (await GuideAsync(fixture))["how"]!.GetValue<string>(), "and the platform where nobody named it");
+    }
+
+    [TestMethod]
+    public async Task ARepositoryNamesItAndARenameRefusesNoPush()
+    {
+        await using var fixture = await CommunityAsync();
+
+        using var git = new GitClient();
+
+        var lambda = await fixture.CreateLambdaAsync("named", "demo-crud");
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "named");
+
+        Assert.Contains("a lambda on GenHTTP Lambda", git.Read("named", "AGENTS.md"));
+
+        await RenameAsync(fixture, "Acme Apps");
+
+        // committed on top of what was cloned while it went by another name
+        git.Change("named", "Project.cs", "var store = new TaskStore(limit: 200);", "var store = new TaskStore(limit: 300);");
+
+        await git.CommitAsync("named", "Keeps three hundred tasks");
+
+        var pushed = await git.RunAsync("named", "push");
+
+        Assert.Contains("Saved version 2", pushed.Said, "the platform's files are compared with the commit the push builds on");
+
+        using (var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
+                                                    LambdaFixture.Version("return Inline.Create().Get(() => \"renamed\");")))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
+        }
+
+        await git.RunAsync("named", "pull", "--ff-only");
+
+        Assert.Contains("a lambda on Acme Apps", git.Read("named", "AGENTS.md"), "the commit made after the rename names it");
+        Assert.Contains("\"Made with Acme Apps\"", git.Read("named", "AGENTS.md"));
+        Assert.Contains("a lambda on Acme Apps", git.Read("named", "CLAUDE.md"));
+        Assert.Contains("This app is a lambda on Acme Apps", git.Read("named", "Program.cs"));
+    }
+
+    [TestMethod]
     public async Task TheManifestNamesIt()
     {
         await using var fixture = await CommunityAsync(options =>
@@ -611,16 +670,38 @@ public sealed class BrandingTests
         await using var fixture = await CommunityAsync(options =>
         {
             File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "sources"), "index.html"), Index);
-            File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "sources"), "pages.json"),
-                              """{ "/source": { "prerender": false, "text": { "en": { "title": "Open source", "description": "Read the code." } } } }""");
+            File.WriteAllText(Path.Combine(LambdaFixture.BundleOf(options, "sources"), "pages.json"), """
+                {
+                  "/source": { "prerender": false, "text": { "en": { "title": "Open source", "description": "Read the code." } } },
+                  "/source/:key": { "text": { "en": { "title": "{name} - Source code", "description": "Source code of {name}, a web app built on {platform}." } } }
+                }
+                """);
         });
 
-        await RenameAsync(fixture, "Acme Apps");
+        await RenameAsync(fixture, "Acme & Co");
 
         var markup = await PageAsync(fixture, "/en/source");
 
-        Assert.Contains("<title>Open source - Acme Apps</title>", markup);
+        Assert.Contains("<title>Open source - Acme &amp; Co</title>", markup);
         Assert.Contains("id=\"lambda-brand\"", markup);
+
+        var lambda = await fixture.CreateLambdaAsync("quiz");
+
+        // without documentation, so the page is described in the words of its table
+        using (var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", LambdaFixture.Version("return Inline.Create();")))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
+        }
+
+        using (var published = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/source", new SourceRequest(null, null)))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, published.StatusCode);
+        }
+
+        var source = await PageAsync(fixture, "/en/source/quiz");
+
+        Assert.Contains("<meta name=\"description\" content=\"Source code of quiz, a web app built on Acme &amp; Co.\" />", source,
+                        "what the page says the app was built with is the installation");
     }
 
     [TestMethod]
@@ -632,7 +713,11 @@ public sealed class BrandingTests
 
         using var page = await fixture.GetAsync("/", accept: "text/html", host: "apps.example.com");
 
-        Assert.Contains("Acme Apps", await page.GetContentAsync());
+        var markup = await page.GetContentAsync();
+
+        Assert.Contains("<title>Apps made with Acme Apps</title>", markup, "what the apps here were made with");
+        Assert.Contains("go to Acme Apps.", markup, "and where to make one, named where there is no address to link to");
+        Assert.DoesNotContain("GenHTTP Lambda", markup);
     }
 
     #endregion
@@ -778,6 +863,19 @@ public sealed class BrandingTests
         });
 
         return (JsonObject)JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+    }
+
+    private static async Task<JsonNode> GuideAsync(LambdaFixture fixture)
+    {
+        using var response = await PostMcpAsync(fixture, new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 1,
+            ["method"] = "tools/call",
+            ["params"] = new JsonObject { ["name"] = "platform_guide", ["arguments"] = new JsonObject() }
+        });
+
+        return JsonNode.Parse(await response.Content.ReadAsStringAsync())!["result"]!["structuredContent"]!["backlink"]!;
     }
 
     private static async Task<HttpResponseMessage> PostMcpAsync(LambdaFixture fixture, JsonObject message)

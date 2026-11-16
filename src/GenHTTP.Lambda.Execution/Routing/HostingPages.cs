@@ -35,7 +35,7 @@ namespace GenHTTP.Lambda.Execution;
 public sealed class HostingPages(LambdaOptions options, IBrandingService branding)
 {
 
-    /// <summary>The words of the page at the root of the hosting domain, with <c>{site}</c> where the site goes.</summary>
+    /// <summary>The words of the page at the root of the hosting domain, with <c>{site}</c> where the site goes and <c>{platform}</c> where its name does.</summary>
     public const string HomeTemplate = "hosting:/";
 
     /// <summary>The words of a subdomain nothing answers at, with <c>{address}</c> and <c>{site}</c>.</summary>
@@ -57,8 +57,8 @@ public sealed class HostingPages(LambdaOptions options, IBrandingService brandin
         return reader.ReadToEnd();
     });
 
-    private static readonly SiteText HomeFallback = new("Apps made with GenHTTP Lambda",
-        "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of your own, go to {site}.");
+    private static readonly SiteText HomeFallback = new("Apps made with {platform}",
+        "The apps on this domain were built with {platform}, each at an address of its own. To build one of your own, go to {site}.");
 
     private static readonly SiteText MissingFallback = new("Nothing is running here",
         "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of your own, go to {site}.");
@@ -139,13 +139,15 @@ public sealed class HostingPages(LambdaOptions options, IBrandingService brandin
                        ? $"<a href=\"{Html.Encode(url + "/")}\">{Html.Encode(new Uri(url).Authority)}</a>"
                        : Html.Encode(named);
 
-        var title = Html.Encode(text.Title);
+        var title = Html.Encode(text.Title.Replace("{platform}", named, StringComparison.Ordinal));
 
         var description = Html.Encode(text.Description).Replace(Html.Encode("{address}"), $"<strong>{Html.Encode(host)}</strong>", StringComparison.Ordinal)
-                                                       .Replace(Html.Encode("{site}"), site, StringComparison.Ordinal);
+                                                       .Replace(Html.Encode("{site}"), site, StringComparison.Ordinal)
+                                                       .Replace(Html.Encode("{platform}"), Html.Encode(named), StringComparison.Ordinal);
 
         var summary = Html.Encode(text.Description.Replace("{address}", host, StringComparison.Ordinal)
-                                                  .Replace("{site}", options.PublicUrl is { } address ? new Uri(address).Authority : named, StringComparison.Ordinal));
+                                                  .Replace("{site}", options.PublicUrl is { } address ? new Uri(address).Authority : named, StringComparison.Ordinal)
+                                                  .Replace("{platform}", named, StringComparison.Ordinal));
 
         // who runs it and what is recorded of a visit, on the site's pages
         // for both - where it has them - named as the site names them

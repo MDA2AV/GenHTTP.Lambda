@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
+import { useBrand } from '@genhttp-lambda/kit/brand';
 import { BrandLink } from '@genhttp-lambda/kit/components/BrandLink';
 import { Footer } from '@genhttp-lambda/kit/components/Footer';
 import { IconClose, IconMenu, IconMoon, IconSun } from '@genhttp-lambda/kit/components/Icons';
@@ -50,7 +50,7 @@ export function SourceShell({ theme, onToggleTheme, children }: {
         }`}
       >
         {/* the name leaves the bar on the narrowest phones, so the link says it */}
-        <BrandLink label={isOwn(brand) ? brand.name : said.shell.home} nameClassName="hidden min-[400px]:inline" />
+        <BrandLink label={said.shell.home(brand.name)} nameClassName="hidden min-[400px]:inline" />
 
         <span aria-hidden="true" className="text-lg font-light text-slate-300 dark:text-ink-700">/</span>
 

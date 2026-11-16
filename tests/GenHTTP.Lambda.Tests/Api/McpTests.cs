@@ -787,7 +787,7 @@ public sealed class McpTests
 
         var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
 
-        Assert.Contains("Made with GenHTTP Lambda", instructions, "asked on connecting, before anything is built");
+        Assert.Contains("\"Made with\" line naming this platform", instructions, "asked on connecting, before anything is built - in words that hold whatever the installation is called");
         Assert.Contains("does not want it", instructions, "as a request the user may turn down");
 
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));

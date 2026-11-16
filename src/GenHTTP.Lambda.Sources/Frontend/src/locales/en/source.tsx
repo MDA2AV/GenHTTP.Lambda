@@ -15,13 +15,16 @@ export const source = {
   /** The frame of these pages. */
   shell: {
     section: 'Open source',
-    home: 'GenHTTP Lambda, the start page',
+    /** What a screen reader calls the link to the front page; platform is what the installation is called - GenHTTP Lambda, or the name its operator gave it. */
+    home: (platform: string) => `${platform}, the start page`,
   },
 
   /** What a lambda is, for somebody who arrived at the code of one. */
   lambda: {
     label: 'What is a lambda?',
-    text: 'A web app on GenHTTP Lambda: somebody says what they want, an AI agent writes it in C#, and it is online at an address of its own within minutes - every version kept, with what it changed.',
+    /** platform is what the installation is called - GenHTTP Lambda, or the name its operator gave it. */
+    text: (platform: string) =>
+      `A web app on ${platform}: somebody says what they want, an AI agent writes it in C#, and it is online at an address of its own within minutes - every version kept, with what it changed.`,
     build: 'Build your own',
   },
 
