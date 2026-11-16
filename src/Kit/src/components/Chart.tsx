@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
 import { useShared } from '../ui/words';
 
@@ -26,6 +26,8 @@ interface Props {
    * band is a share of it.
    */
   shape?: 'line' | 'step' | 'stacked';
+  /** What chooses what the chart shows - a range, say - under its title. */
+  toolbar?: ReactNode;
 }
 
 const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
@@ -37,7 +39,7 @@ const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
  * numbers do not support. Where two measures do not share a scale they get two
  * charts instead.
  */
-export function Chart({ title, hint, labels, series, format, dark, height = 190, shape = 'line' }: Props) {
+export function Chart({ title, hint, labels, series, format, dark, height = 190, shape = 'line', toolbar }: Props) {
   const clip = useId();
   const words = useShared();
   const [hover, setHover] = useState<number | null>(null);
@@ -75,6 +77,7 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
     return (
       <figure className="surface p-4">
         <Caption title={title} hint={hint} />
+        {toolbar && <div className="mt-3">{toolbar}</div>}
         <p className="py-10 text-center text-sm text-slate-500">{words.chart.none}</p>
       </figure>
     );
@@ -92,6 +95,8 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
           {table ? words.chart.showChart : words.chart.showValues}
         </button>
       </div>
+
+      {toolbar && <div className="mt-3">{toolbar}</div>}
 
       {/* identity never rests on colour alone: every series is named here */}
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">

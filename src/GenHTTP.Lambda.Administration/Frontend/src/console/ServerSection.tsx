@@ -1,30 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import { lambdaAddress } from '@genhttp-lambda/kit/address';
 import { refusedToken, api, type Activity, type Telemetry, type TelemetrySample } from '@genhttp-lambda/kit/api';
 import { Chart, type Series } from '@genhttp-lambda/kit/components/Chart';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
-import { LambdaLink } from '@genhttp-lambda/kit/components/LambdaLink';
 import { Pills, Section } from '@genhttp-lambda/kit/ui/ui';
-import { askPlatform } from '@genhttp-lambda/kit/site';
-import type { Access } from './context';
-
-/** What each kind of event is called on screen. */
-const KINDS: Record<string, string> = {
-  created: 'Created',
-  saved: 'Saved',
-  deployed: 'Deployed',
-  undeployed: 'Undeployed',
-  deleted: 'Deleted',
-};
-
-const NOTES: Record<string, string> = {
-  created: 'Lambdas people have made, demos excluded. Counted from the beginning: the older half of this was recovered from the timestamps already stored rather than started from zero when the counting began.',
-  saved: 'Versions written. One per save, so a lambda worked on all afternoon contributes many.',
-  deployed: 'Times something was put online, including redeployments of the same lambda. Only this one and the two below begin from the day they started being recorded - a redeploy used to overwrite the timestamp of the one before it.',
-  undeployed: 'Times something was taken offline by hand, rather than by expiring.',
-  deleted: 'Lambdas removed. The lambda is gone; the fact that it existed is not.',
-};
+import { lambdaPage, type Access } from './context';
+import { Tile, Tiles, bytes, count, duration } from './parts';
 
 const WINDOWS = [
   { minutes: 15, label: '15m' },
@@ -49,8 +31,6 @@ function readWindow(): number {
 const BLUE: [string, string] = ['#1a73e8', '#4285f4'];
 const ORANGE: [string, string] = ['#e8710a', '#d56e0c'];
 const PURPLE: [string, string] = ['#9334e6', '#a142f4'];
-const GREEN: [string, string] = ['#137333', '#1e8e3e'];
-const GREY: [string, string] = ['#5f6368', '#9aa0a6'];
 const RED: [string, string] = ['#c5221f', '#ea4335'];
 // the four things a resident set is made of; checked as a set against both
 // surfaces, including for colour blindness, rather than picked to look nice
@@ -72,15 +52,6 @@ export function ServerSection({ access }: { access: Access }) {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [minutes, setMinutes] = useState(readWindow);
   const [error, setError] = useState<string | null>(null);
-
-  /** Where a lambda answers, with {key} where its key goes - the listing knows the lambdas by key alone. */
-  const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    askPlatform()
-      .then((platform) => setLambdaUrl(platform.lambdaUrl))
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     try {
@@ -135,10 +106,8 @@ export function ServerSection({ access }: { access: Access }) {
     );
   }
 
-  const { server, traffic, platform, latest, samples, events } = data;
+  const { server, traffic, platform, latest, samples } = data;
 
-  /** One event kind's daily counts, or nothing if the server did not send it. */
-  const pick = (kind: string) => events?.series.find((s) => s.kind === kind)?.counts ?? [];
   const labels = samples.map((s) => time(s.taken));
 
   const line = (label: string, color: [string, string], pick: (s: TelemetrySample) => number): Series => ({
@@ -166,7 +135,7 @@ export function ServerSection({ access }: { access: Access }) {
     >
       {error !== null && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+      <Tiles>
         <Tile label="Uptime" value={duration(server.uptimeSeconds)} />
         <Tile label="Managed heap" value={bytes(latest.managedBytes)} />
         <Tile label="Working set" value={bytes(latest.workingSetBytes)} />
@@ -174,61 +143,30 @@ export function ServerSection({ access }: { access: Access }) {
         <Tile label="Requests" value={latest ? count(traffic.requests) : '—'} />
         <Tile label="Server errors" value={count(traffic.failed)} tone={traffic.failed > 0 ? 'bad' : undefined} />
         <Tile label="Open sockets" value={count(traffic.openSockets)} />
-        <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} />
-      </div>
-
-      {/* What people have done, as opposed to what the machine is doing. The
-          counts are for the whole life of the installation: the tables beside
-          them hold the present, and only the events remember last week. */}
-      {events && (
-        <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-5 dark:border-ink-800 dark:bg-ink-800">
-          {events.series.map((s) => (
-            <Tile
-              key={s.kind}
-              label={KINDS[s.kind] ?? s.kind}
-              value={count(s.total)}
-              note={NOTES[s.kind]}
-            />
-          ))}
-        </div>
-      )}
+        <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} to="/admin/statistics" detail="online, of all" />
+      </Tiles>
 
       {/* absent rather than zeroed where the kernel does not offer them */}
       {latest.residentBytes > 0 && (
-        <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+        <div className="mt-px">
+        <Tiles>
           <Tile label="Connections open" value={count(latest.openConnections)} />
           <Tile
             label="Connections accepted"
             value={count(latest.acceptedConnections)}
-            note="Every inbound connection since the container started, counted by the kernel. Unlike the graph below, this one includes the health check's own connections over loopback."
+            title="Every inbound connection since the container started, counted by the kernel. Unlike the graph below, this one includes the health check's own connections over loopback."
           />
           <Tile label="File descriptors" value={count(latest.fileDescriptors)} />
           <Tile
             label="io_uring rings"
             value={count(latest.ringDescriptors)}
-            note="A fixed handful for the lifetime of the process. If this climbs with traffic, the engine is opening a ring per connection and not closing it."
+            title="A fixed handful for the lifetime of the process. If this climbs with traffic, the engine is opening a ring per connection and not closing it."
           />
+        </Tiles>
         </div>
       )}
 
       <div className="mt-6 space-y-5">
-        {events && events.days.length > 1 && (
-          <Chart
-            title="What people did"
-            hint="Drawn as steps rather than lines: each value counts a whole day, and sloping between them would claim activity moved smoothly from one to the next. Deployed counts every time something went online, so a lambda redeployed five times in an afternoon appears five times."
-            labels={events.days.map((d) => d.slice(5))}
-            dark={dark}
-            format={(v) => count(v)}
-            shape="step"
-            series={[
-              { label: 'Created', color: BLUE, values: pick('created') },
-              { label: 'Saved', color: PURPLE, values: pick('saved') },
-              { label: 'Deployed', color: GREEN, values: pick('deployed') },
-              { label: 'Deleted', color: GREY, values: pick('deleted') },
-            ]}
-          />
-        )}
-
         <Chart
           title="Managed heap"
           hint="The leak chart. A heap that keeps climbing across gen 2 collections is holding references it should have dropped. Committed rising while the live heap stays flat is the collector keeping pages it could hand back, which is not the same thing."
@@ -364,13 +302,9 @@ export function ServerSection({ access }: { access: Access }) {
                 {activity.lambdas.map((entry) => (
                   <tr key={entry.publicKey} className="border-b border-slate-200 last:border-0 dark:border-ink-800">
                     <td className="px-4 py-2">
-                      {lambdaUrl !== null ? (
-                        <LambdaLink address={lambdaAddress(lambdaUrl, entry.publicKey)} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
-                          {entry.publicKey}
-                        </LambdaLink>
-                      ) : (
-                        <span className="font-mono">{entry.publicKey}</span>
-                      )}
+                      <Link to={lambdaPage(entry.publicKey)} className="font-mono text-accent-600 hover:underline dark:text-accent-400">
+                        {entry.publicKey}
+                      </Link>
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{count(entry.requests)}</td>
                     <td className={`px-4 py-2 text-right tabular-nums ${entry.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>
@@ -413,15 +347,6 @@ export function ServerSection({ access }: { access: Access }) {
   );
 }
 
-function Tile({ label, value, tone, note }: { label: string; value: string; tone?: 'bad'; note?: string }) {
-  return (
-    <div className="bg-white px-4 py-3.5 dark:bg-ink-900" title={note}>
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className={`mt-1 text-xl font-semibold tabular-nums ${tone === 'bad' ? 'text-red-500' : ''}`}>{value}</div>
-    </div>
-  );
-}
-
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3 border-b border-slate-200 py-1.5 dark:border-ink-800">
@@ -429,33 +354,6 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className="truncate font-mono text-xs">{value}</dd>
     </div>
   );
-}
-
-const units = ['B', 'kB', 'MB', 'GB', 'TB'];
-
-function bytes(value: number): string {
-  let size = value;
-  let unit = 0;
-
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit++;
-  }
-
-  return `${size.toFixed(size >= 100 || unit === 0 ? 0 : 1)} ${units[unit]}`;
-}
-
-const count = (value: number) => value.toLocaleString('en-US');
-
-function duration(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-
-  return `${minutes}m`;
 }
 
 /** How long ago, in the coarsest unit that still says something. */

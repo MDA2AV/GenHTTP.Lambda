@@ -79,6 +79,8 @@ public sealed class MetaService : IMetaService
 
     private LambdaDescriber Describer { get; }
 
+    private LambdaListing Listing { get; }
+
     private VersionFactsCache Facts { get; }
 
     private EventReader Events { get; }
@@ -103,7 +105,7 @@ public sealed class MetaService : IMetaService
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
         LambdaOptions options, ILimitsService limits, ILogBook book, IDatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
-        LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, VersionFactsCache facts, EventReader events,
+        LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, LambdaListing listing, VersionFactsCache facts, EventReader events,
         EditorAddresses editors, DatabaseChanges changes, ILogger<MetaService> logger)
     {
         ByKey = new ResolutionCache<string>(changes);
@@ -121,6 +123,7 @@ public sealed class MetaService : IMetaService
         Lifetime = lifetime;
         Removal = removal;
         Describer = describer;
+        Listing = listing;
         Facts = facts;
         Events = events;
         Editors = editors;
@@ -394,50 +397,16 @@ public sealed class MetaService : IMetaService
 
     public EventHistory GetEvents(int days) => Events.History(days);
 
-    public LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null)
+    public LambdaPage List(LambdaQuery query, int skip = 0, int take = int.MaxValue) => Listing.List(query, skip, take);
+
+    public LambdaUses GetUses(string privateKey)
     {
         using var database = Databases.CreateDbContext();
 
-        var total = database.Lambdas.AsNoTracking().Count();
+        var lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+                     ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-        var deployed = database.Lambdas.AsNoTracking().Count(l => l.ActiveVersion != null);
-
-        var query = database.Lambdas.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-
-            // the key and the domain are what an administrator has to go on
-            // that is not the code itself, and what the panel shows
-            query = query.Where(l => EF.Functions.Like(l.PublicKey, $"%{term}%")
-                                  || (l.Domain != null && EF.Functions.Like(l.Domain, $"%{term}%")));
-        }
-
-        if (tier is { } wanted)
-        {
-            query = query.Where(l => l.Tier == wanted);
-        }
-
-        var matched = query.Count();
-
-        var lambdas = query.OrderByDescending(l => l.Created)
-                           .Skip(skip)
-                           .Take(take)
-                           .ToList();
-
-        var counts = database.Deployments.AsNoTracking()
-                             .GroupBy(d => d.LambdaId)
-                             .Select(g => new { LambdaId = g.Key, Count = g.Count() })
-                             .ToDictionary(g => g.LambdaId, g => g.Count);
-
-        var latest = database.Deployments.AsNoTracking()
-                             .GroupBy(d => d.LambdaId)
-                             .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
-                             .ToDictionary(g => g.LambdaId, g => (int?)g.Version);
-
-        return new LambdaPage([.. lambdas.Select(l => Describer.Overview(l, latest.GetValueOrDefault(l.Id), counts.GetValueOrDefault(l.Id)))],
-                              matched, total, deployed);
+        return Listing.UsesOf(database, [lambda])[lambda.Id];
     }
 
     public LambdaCounts Count()

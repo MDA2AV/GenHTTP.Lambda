@@ -6,6 +6,7 @@ import { IconGlobe, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago, Empty, Section, StatusBadge, TierBadge } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
+import { AllClear } from './parts';
 import { ConnectivityDecisionDialog } from './ConnectivityControl';
 import { BlockedBadge } from './LambdaDetail';
 
@@ -67,7 +68,9 @@ export function ConnectivitySection({ access }: { access: Access }) {
           </h2>
 
           {requested.length === 0 ? (
-            <Empty>Nothing waits for a decision. An owner asks in their editor, or their agent does with request_connectivity.</Empty>
+            <div className="mt-3">
+              <AllClear>Nothing waits for a decision. An owner asks in their editor, or their agent does with request_connectivity.</AllClear>
+            </div>
           ) : (
             <ul className="mt-3 space-y-3">
               {requested.map((entry) => (

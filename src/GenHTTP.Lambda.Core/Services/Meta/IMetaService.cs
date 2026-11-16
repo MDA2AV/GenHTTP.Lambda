@@ -203,11 +203,14 @@ public interface IMetaService
     long RequireEditable(string privateKey);
 
     /// <summary>
-    /// One page of the lambdas on the installation, newest first.
+    /// One page of the lambdas on the installation, narrowed and ordered as asked.
     /// </summary>
-    /// <param name="search">Narrows the listing to public keys or domains containing this</param>
-    /// <param name="tier">Narrows the listing to one tier</param>
-    LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null);
+    LambdaPage List(LambdaQuery query, int skip = 0, int take = int.MaxValue);
+
+    /// <summary>
+    /// Which of the platform's features a lambda uses, for the operator's page of it.
+    /// </summary>
+    LambdaUses GetUses(string privateKey);
 
     /// <summary>
     /// The editor key behind a public one, for the operations that act on a

@@ -40,7 +40,7 @@ import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
 import { HistoryTab } from '../control/HistoryTab';
 import { LogsTab } from '../control/LogsTab';
-import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '../control/Navigation';
+import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '@genhttp-lambda/kit/components/Navigation';
 import { StatsTab } from '../control/StatsTab';
 import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SimpleOverview } from '../control/SimpleOverview';

@@ -75,7 +75,7 @@ tested in a draft before it goes live.
   </tr>
   <tr>
     <td valign="top"><img src="docs/images/code.png" alt="The code of an app"><br><sub><b>Code</b> - available when you need it: read it, edit it, or clone it with git.</sub></td>
-    <td valign="top"><img src="docs/images/panel.png" alt="The administration panel"><br><sub><b>Administration panel</b> - every app on the server, its traffic and errors, the limits and the log.</sub></td>
+    <td valign="top"><img src="docs/images/panel.png" alt="The administration panel"><br><sub><b>Administration panel</b> - what needs your attention, every app on the server and what it uses, its traffic and errors, the free disk space, the limits and the log.</sub></td>
   </tr>
 </table>
 
@@ -240,7 +240,7 @@ docker compose --profile agent up -d
 - **Unused apps are taken offline.** A new app starts in the *sandbox*: by
   default, one that is neither visited nor changed for 30 days is taken
   offline, and removed 90 days after that. Moving an app to *production* in the
-  panel (*Lambdas*, the app's page, *Tier*) keeps it online, with more room and
+  panel (*All lambdas*, the app's page, *Manage*, *Tier*) keeps it online, with more room and
   a custom domain. On an installation run for a team rather than for
   strangers, set *New lambdas start in* to *Production* under *Limits*; how
   long sandbox apps last is set there as well.

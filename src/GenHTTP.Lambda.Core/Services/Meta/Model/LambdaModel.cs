@@ -196,5 +196,144 @@ public sealed record LambdaOverview(
     DateTime? KeptUntil,
     string? Domain,
     DateTime? Blocked = null,
-    ConnectivityInfo? Connectivity = null
+    ConnectivityInfo? Connectivity = null,
+    LambdaUses? Uses = null,
+    DateTime? Visited = null
 );
+
+/// <summary>
+/// Which of the platform's features a lambda uses, as far as the platform's
+/// database tells - what the operator would otherwise open the editor for.
+/// </summary>
+/// <param name="AnalyticsSince">Since when its visits are counted, or nothing while they are not</param>
+/// <param name="Showcase">Whether its owner put it in the showcase</param>
+/// <param name="Source">Whether its owner published its code</param>
+/// <param name="Drafts">How many features (drafts) it has open</param>
+/// <param name="View">How its editor opens: the simple view for an owner who does not write code</param>
+public sealed record LambdaUses(
+    bool Database,
+    bool Workspace,
+    bool Secrets,
+    DateTime? AnalyticsSince,
+    bool Showcase,
+    bool Source,
+    int Drafts,
+    EditorView View
+);
+
+/// <summary>
+/// What the operator narrows the listing of the lambdas to, and in which order it comes.
+/// </summary>
+/// <remarks>
+/// Only what the platform's database holds can narrow it: the requests and
+/// errors of a lambda are counted in memory, page by page, and a filter on
+/// them could not be paged.
+/// </remarks>
+/// <param name="Search">Only lambdas whose public key or domain contains this</param>
+/// <param name="Tier">Only lambdas of this tier</param>
+/// <param name="State">Only lambdas in this state</param>
+/// <param name="Uses">Only lambdas that use every one of these</param>
+/// <param name="View">Only lambdas whose editor opens in this view</param>
+/// <param name="CreatedWithin">Only lambdas created in this time, up to now</param>
+/// <param name="Demos">
+/// Whether the installation's demos are listed - and counted - with the rest;
+/// they are where the tier asked for is theirs. Left out otherwise, as every
+/// count of the panel leaves them out.
+/// </param>
+public sealed record LambdaQuery(
+    string? Search = null,
+    LambdaTier? Tier = null,
+    LambdaState? State = null,
+    IReadOnlyCollection<LambdaFeature>? Uses = null,
+    EditorView? View = null,
+    TimeSpan? CreatedWithin = null,
+    LambdaOrder Order = LambdaOrder.Newest,
+    bool Demos = false
+)
+{
+
+    /// <summary>
+    /// How soon a lambda that goes offline or is removed unless it is used
+    /// counts as expiring: soon enough that its owner may not notice in time.
+    /// </summary>
+    public static TimeSpan ExpiringWithin { get; } = TimeSpan.FromDays(7);
+
+}
+
+/// <summary>
+/// A state the listing can be narrowed to.
+/// </summary>
+public enum LambdaState
+{
+
+    /// <summary>A version is online.</summary>
+    Online,
+
+    /// <summary>No version is online, and it is not blocked.</summary>
+    Offline,
+
+    /// <summary>The operator blocked it.</summary>
+    Blocked,
+
+    /// <summary>
+    /// A lambda of a tier that is not kept while unused which goes offline or
+    /// is removed within <see cref="LambdaQuery.ExpiringWithin"/>, unless it
+    /// is used before then.
+    /// </summary>
+    Expiring
+
+}
+
+/// <summary>
+/// One of the platform's features a lambda may use, to narrow the listing to.
+/// </summary>
+public enum LambdaFeature
+{
+
+    Database,
+
+    Workspace,
+
+    Secrets,
+
+    Analytics,
+
+    Showcase,
+
+    Source,
+
+    Domain,
+
+    /// <summary>It has a feature (a draft) open.</summary>
+    Drafts,
+
+    /// <summary>Its code may connect to other servers, whether its tier includes it or the operator allowed it.</summary>
+    Connects,
+
+    /// <summary>Its owner asked to connect to other servers, and waits for a decision.</summary>
+    Requested
+
+}
+
+/// <summary>
+/// The orders the listing comes in.
+/// </summary>
+public enum LambdaOrder
+{
+
+    /// <summary>The newest first.</summary>
+    Newest,
+
+    /// <summary>The oldest first.</summary>
+    Oldest,
+
+    /// <summary>The one changed most recently first.</summary>
+    Changed,
+
+    /// <summary>The one visited most recently first, as the sweep last wrote it down; never visited last.</summary>
+    Visited,
+
+    /// <summary>By public key, alphabetically.</summary>
+    Key
+
+}

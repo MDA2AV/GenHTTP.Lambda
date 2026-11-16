@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   title: string;
@@ -10,7 +11,13 @@ interface Props {
   wide?: boolean;
 }
 
-/** A small modal; closes on escape or a click outside the panel. */
+/**
+ * A small modal; closes on escape or a click outside the panel.
+ *
+ * Drawn at the end of the page rather than where it is written, so a dialog
+ * opened from inside a part that stays in place as the page moves - a sticky
+ * column, which is a layer of its own - still covers the site's bar above it.
+ */
 export function Dialog({ title, open, onClose, children, footer, wide = false }: Props) {
   const panel = useRef<HTMLDivElement>(null);
 
@@ -34,7 +41,7 @@ export function Dialog({ title, open, onClose, children, footer, wide = false }:
     return null;
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
@@ -48,6 +55,7 @@ export function Dialog({ title, open, onClose, children, footer, wide = false }:
         <div className={`space-y-3 px-5 py-4 text-sm ${wide ? 'max-h-[70vh] overflow-y-auto' : ''}`}>{children}</div>
         {footer && <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3.5 dark:border-ink-800">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

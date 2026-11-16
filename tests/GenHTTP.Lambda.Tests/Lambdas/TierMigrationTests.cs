@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using EvolveDb.Migration;
@@ -73,7 +74,7 @@ public sealed class TierMigrationTests
         Assert.AreEqual(nameof(LambdaTier.Production), fixture.Meta.Get("key-shop")!.Tier);
         Assert.AreEqual(nameof(LambdaTier.Production), fixture.Meta.Get("key-telemetry")!.Tier, "nothing becomes a system lambda without the operator");
 
-        Assert.AreEqual(0, fixture.Meta.List(tier: LambdaTier.System).Matched);
+        Assert.AreEqual(0, fixture.Meta.List(new LambdaQuery(Tier: LambdaTier.System)).Matched);
 
         Assert.IsTrue(fixture.Meta.Get("key-declined")!.Connectivity!.Allowed, "what a premium lambda could do, it still can");
         Assert.AreEqual(ConnectivityStatus.Requested, fixture.Meta.Get("key-asked")!.Connectivity!.Status, "and a sandbox's request waits as before");

@@ -874,6 +874,55 @@ how to write apps and to give them a good starting point.
   and works without one, so a copy runs before its owner switches secrets on
   (`demo-registration`, `PASSWORD_PEPPER`).
 
+### The operator's panel
+
+**Reworked as one piece - asked for by the owner**, once it had grown
+section by section with each feature. Its concepts did not change with it;
+how it shows them did.
+
+- **Sections in groups, as the editor has them** (the kit's `Navigation`):
+  the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
+  lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
+  (Server, Storage, Log); **Configuration** (Settings, Limits, Usage
+  report). A new section joins the group it belongs to. A mark beside a
+  section says what waits there, read from `GET /admin/overview` as the
+  operator moves around the panel - never on a timer.
+- **What is shown and what is done are kept apart - asked for by the owner.**
+  Information is in cards, which may link on. Actions are buttons in three
+  places only: a section's header, a card titled as such (the **Manage**
+  card of a lambda), and the last cell of a row (a menu in the list of
+  lambdas). Each that changes something says what it will do in a dialog
+  before it does it. A setting is the one exception: its switch or field is
+  what it is. What waits for the operator is a notice that leads to where it
+  is decided, and decides nothing itself. The parts are in
+  `console/parts.tsx`; a new section is built from them.
+- **The operator does not open the editor to see how a lambda is set up -
+  asked for by the owner.** A lambda's page sums up every section of the
+  editor, read only: what its documentation says it is, its traffic and
+  problems, which of the platform's features it uses and what they hold,
+  what it keeps against its allowances, its versions, deployments and
+  lifetime. The list says on each row what a lambda uses and narrows by it.
+  A feature the editor gains gets its line there (`console/uses.tsx`), and a
+  count in the census where the platform's database keeps it.
+- **The operator's actions stay what they were**: online, tier, domain,
+  connectivity, block, remove. The panel switches nothing that is the
+  owner's - data, analytics, showcase, source.
+- **Dashboards are drawn from counts, never from a walk while a request
+  waits.** `ICensusService` counts the lambdas on the platform's database as
+  asked (`LambdaTally`); what takes the room is a walk over the data
+  directory, done hourly by `StorageCensusJob` - only where there is a panel
+  - and on **Measure again**, and kept; the free space is read on every
+  request, since that is what runs out. The demos are counted apart and in
+  nothing else, and listed apart too, so a count leads to a list of as many. The workspace counts as switched on unless its owner switched
+  it off, as it comes.
+- **Free space is watched**: on the dashboard, in Storage and as a mark
+  beside it - under a tenth of the volume or 2 GB a warning, under a
+  twentieth or 512 MB a problem (`diskState`).
+- **Charts**: the kit's `Chart` for a series over time; `Segments` (one whole
+  in a handful of parts) and `Ranked` (the largest first, one hue) in
+  `console/charts.tsx`, in the colour pairs the Server section validated.
+  Every chart has its values as a table one click away.
+
 ### Blocking
 
 What the operator does about abuse - a lambda that phishes, spreads malware or
@@ -1155,10 +1204,11 @@ services. The rules that matter:
   asked for by the owner** once there were twenty: a bar at the top of the
   page names the section open and stays as the page moves, and opens every
   section at once in the sidebar's groups, two columns of them, with the view
-  switch at the foot (`control/Navigation.tsx`, which draws the sidebar from
-  the same entries). A dot a section shows beside its name is summed up on
-  the closed bar, the most urgent one, so nothing waits out of sight. A
-  draft's views are listed the same way.
+  switch at the foot (`components/Navigation.tsx` in the kit, which draws the
+  sidebar from the same entries, and the operator's panel's as well). A dot a
+  section shows beside its name is summed up on the closed bar, the most
+  urgent one, so nothing waits out of sight. A draft's views are listed the
+  same way.
 - **Wired through the container**, not by hand and not in statics. A concern
   that needs nothing but services is an `IDependentConcern`, registered as a
   singleton and added with `Dependent.Concern<T>()`; only a concern built with
