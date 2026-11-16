@@ -14,7 +14,6 @@ export const frame = {
     showcase: 'Showcase',
     source: 'Open source',
     domain: 'Domain',
-    data: 'Data',
     versions: 'Versions',
     history: 'History',
     deployments: 'Deployments',

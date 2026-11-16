@@ -68,8 +68,8 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1個のファイル' : `${files}個のファイル`),
   groupUsage: (files, size) => `${files}、${size}`,
   usage: (used, of) => `このバージョンは、1バージョンあたりの上限${of}のうち${used}を使っています（コードとリソースの合計）。`,
-  scope: (data) => (
-    <>lambdaが実行中に保存するものはどのバージョンでも共通で、{data('データ')}にあります。</>
+  scope: (database, workspace, secrets) => (
+    <>lambdaが実行中に保存するもの（{database('データベース')}、{workspace('ワークスペース')}、{secrets('シークレット')}）は、どのバージョンでも共通です。</>
   ),
   download: 'ダウンロード',
   newIn: (group) => `${group}に新しいファイル`,

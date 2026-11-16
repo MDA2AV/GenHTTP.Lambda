@@ -36,10 +36,11 @@ export interface Control {
   /** The agent changing this lambda, followed wherever the owner is. */
   agent: AgentControl;
   /**
-   * Opens the data of the lambda, which no version holds - at one kind of
-   * it, and with the dialog that sets the secret named, if one is.
+   * Opens a kind of the lambda's data, which no version holds - or, in a
+   * feature, of its test data - with the dialog that sets the secret named,
+   * if one is.
    */
-  openData: (kind?: string, set?: string) => void;
+  openData: (kind: DataKind, set?: string) => void;
   /**
    * Asks for a new feature, starting from a version - the newest when none is
    * named - and holding the files given instead of that version's, if any.
@@ -65,10 +66,21 @@ export interface Control {
 }
 
 /**
- * The views of a feature: what it is and changes, its documentation, its
- * code, its tests, its copy of the data, what its preview said.
+ * The kinds of data a lambda keeps, each a section of its own - of the
+ * lambda, and of a feature's test data - in the order they are listed.
  */
-export type FeatureView = 'overview' | 'docs' | 'code' | 'tests' | 'data' | 'logs';
+export type DataKind = 'database' | 'workspace' | 'secrets';
+
+export const DATA_KINDS: DataKind[] = ['database', 'workspace', 'secrets'];
+
+/** The kind a part of an address names, if it names one. */
+export const kindOf = (part?: string): DataKind | undefined => DATA_KINDS.find((kind) => kind === part);
+
+/**
+ * The views of a feature: what it is and changes, its documentation, its
+ * code, its tests, each kind of its copy of the data, what its preview said.
+ */
+export type FeatureView = 'overview' | 'docs' | 'code' | 'tests' | DataKind | 'logs';
 
 /**
  * A feature the control center is opened on. The frame holds it, so the

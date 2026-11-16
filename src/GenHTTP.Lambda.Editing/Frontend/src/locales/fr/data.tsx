@@ -4,11 +4,6 @@ import { count } from './language';
 export const data: EditorMessages['data'] = {
   hint:
     'Les données sont ce que la lambda garde pendant qu’elle tourne. Elles appartiennent à la lambda, pas à une version : toutes les versions lisent et écrivent les mêmes données, et rien de ce que vous faites avec les versions ne les change. Un brouillon s’essaie sur une copie de ces données. Elles disparaissent quand la lambda est supprimée, ou quand vous désactivez ce type de données. La base de données et le workspace se partagent une même réserve de place : chacun peut grandir jusqu’où l’autre le lui permet.',
-  facts: [
-    ['Partagées par toutes les versions', 'Quelle que soit la version en ligne, elle lit et écrit les mêmes données.'],
-    ['Gardées quand vous déployez', 'Déployer, restaurer ou intégrer un brouillon n’y touche jamais.'],
-    ['Vous décidez', 'Chaque type n’est activé que tant que vous le voulez. En désactiver un supprime ce qu’il contient.'],
-  ],
   featureHint:
     'Une copie des données de votre app, rien que pour ce brouillon : son aperçu lit et écrit uniquement dans cette copie, donc vos essais ici ne touchent jamais aux vraies données. Elle disparaît avec le brouillon.',
   recopy: 'Réinitialiser les données de test',
@@ -20,7 +15,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Les données de test sont de nouveau à jour.',
   recopyFailed: 'Impossible de réinitialiser les données de test.',
   copyContents: 'Ce que contient la copie du workspace',
-  kindsLabel: 'Types de données',
   kinds: {
     database: {
       name: 'Base de données',
@@ -179,7 +173,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `et ${count} de plus`,
     database: 'Entrées',
-    databaseTitle: 'Les entrées que garde votre application',
     databaseText: 'Ce que votre application garde pendant que des gens l’utilisent – inscriptions, messages, votes –, table par table. Rien ici ne change quand une nouvelle modification est mise en ligne.',
     records: (records) => `${records.toLocaleString()} ${records < 2 ? 'entrée' : 'entrées'}`,
     noRecords: 'Votre application n’a encore gardé aucune entrée.',

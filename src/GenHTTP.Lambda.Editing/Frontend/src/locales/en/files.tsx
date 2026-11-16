@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 type Node = ReactNode;
 
 /**
- * Browsing files: the workspace under Data, and a version's pages and the
- * files beside them under Documentation and Tests.
+ * Browsing files: the workspace in its own section, and a version's pages
+ * and the files beside them under Documentation and Tests.
  */
 export const files = {
   version: 'Version',

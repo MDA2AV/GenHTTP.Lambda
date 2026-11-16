@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { absoluteAddress, aroundKey, shownAddress } from '@genhttp-lambda/kit/address';
@@ -29,9 +29,9 @@ import { AnalyticsTab } from '../control/AnalyticsTab';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import { CodeTab } from '../control/CodeTab';
-import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
+import { DATA_KINDS, kindOf, type Busy, type Control, type DataKind, type FeatureControl, type FeatureView, type Rejection } from '../control/context';
 import { ContextTab } from '../control/ContextTab';
-import { DataTab } from '../control/DataTab';
+import { DataTab, useKindName } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
 import { AskForServices, ConnectivityTab } from '../control/ConnectivityTab';
@@ -40,6 +40,7 @@ import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
 import { HistoryTab } from '../control/HistoryTab';
 import { LogsTab } from '../control/LogsTab';
+import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '../control/Navigation';
 import { StatsTab } from '../control/StatsTab';
 import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SimpleOverview } from '../control/SimpleOverview';
@@ -62,25 +63,28 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats' | 'analytics'
+  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | DataKind | 'versions' | 'deployments' | 'stats' | 'analytics'
   | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'connectivity';
 
 /*
  * Where the sections that went into Code used to be - its files, what it was
  * built from - and the old address of the code itself, so a link kept from
- * before still opens what it showed.
+ * before still opens what it showed. The data was one section too, its kinds
+ * picked from pills: /data/{kind} is the section of that kind now, and /data
+ * the first one the lambda keeps (see dataAt).
  */
 const MOVED: Record<string, SectionId> = { edit: 'code', files: 'code', build: 'code' };
 
 type GroupId = 'develop' | 'program' | 'run' | 'sharing';
 
 /*
- * The full view's sections, in groups, because fifteen of them in one list
+ * The full view's sections, in groups, because twenty of them in one list
  * is a list nobody reads: the groups are what somebody scans for, and the
  * section is found inside the one it belongs to. Every section stays one
  * click away - folding some behind pills in others would have made the list
  * shorter by making the log, which developers open all the time, further
- * away.
+ * away. That is why the kinds of data are sections of their own, too: they
+ * were pills of one, and the secrets a click further than they needed to be.
  *
  * The overview and the documentation first, under no heading: how the
  * lambda is doing, and what it is and why - where anybody starts, a stranger
@@ -89,8 +93,8 @@ type GroupId = 'develop' | 'program' | 'run' | 'sharing';
  * what the lambda is, since those are what it is to everybody else. Then
  * where a change is made: Change and the drafts, the code - every file of a
  * version, its resources included - and the tests that say whether a change
- * works. Then the program and what it keeps, side by side - the data of the
- * lambda, and the versions that all share it. Then how it runs - and,
+ * works. Then the program and what it keeps, side by side - the versions,
+ * and the kinds of data that all of them share. Then how it runs - and,
  * beside where it is put online, whether it may connect to other servers,
  * which the operator decides and which decides whether code that does goes
  * online at all.
@@ -99,7 +103,7 @@ const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
-  { id: 'program', sections: ['data', 'versions'] },
+  { id: 'program', sections: ['versions', ...DATA_KINDS] },
   { id: 'run', sections: ['deployments', 'connectivity', 'stats', 'analytics', 'logs'] },
 ];
 
@@ -107,12 +111,14 @@ const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
 
 /*
  * What a feature is worked on with: what it is, what is written about it,
- * its code, its tests, its copy of the data and what its preview said.
- * The rest - the showcase, the domain, the figures, the deployments -
- * belongs to the lambda, which the feature leaves alone until it is put
- * online.
+ * its code, its tests and what its preview said - and, under a heading of
+ * their own, the kinds of its copy of the data, its test data. The rest -
+ * the showcase, the domain, the figures, the deployments - belongs to the
+ * lambda, which the feature leaves alone until it is put online. Every kind
+ * is there whether the lambda keeps it or not, as in the lambda's own
+ * sections: a draft whose code wants a kind that is off is told so there.
  */
-const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'tests', 'data', 'logs'];
+const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'tests', 'logs', ...DATA_KINDS];
 
 /** The views something can be written and left unsaved in. */
 const WRITABLE = ['code', 'docs', 'tests'];
@@ -128,15 +134,17 @@ const WRITABLE = ['code', 'docs', 'tests'];
  * files, its deployments, its log - and not the figures either, which the
  * overview sums up in the two that matter. The versions are there, as the
  * history: the changes the app went through and a way back to any of them,
- * without the files to compare. The data is there once the app keeps any -
- * what it saved, and the keys it uses - and not while there is nothing in it.
- * Publishing its code is there, next to the showcase: it is the owner's to
- * decide whoever built the app, and said in the same words in both views.
- * And who visits it, after how people find it: an owner who never reads the
- * code wants to know who comes as much as one who does - it is about the
- * audience, not the program, so unlike the figures it is in both.
+ * without the files to compare. Each kind of data is there once the app
+ * keeps something in it - its records, what it saved, the keys it uses or
+ * waits for - and not while there is nothing in it, so an app that keeps
+ * nothing has none of them. Publishing its code is there, next to the
+ * showcase: it is the owner's to decide whoever built the app, and said in
+ * the same words in both views. And who visits it, after how people find it:
+ * an owner who never reads the code wants to know who comes as much as one
+ * who does - it is about the audience, not the program, so unlike the
+ * figures it is in both.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'source', 'domain', 'analytics'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', ...DATA_KINDS, 'showcase', 'source', 'domain', 'analytics'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -164,6 +172,7 @@ export function Editor({ theme }: Props) {
   const t = useEditorT();
   const said = t.frame;
   const language = useLanguage();
+  const kindName = useKindName();
 
   const installation = useInstallation();
 
@@ -179,18 +188,44 @@ export function Editor({ theme }: Props) {
 
   // a feature, opened at one of its views
   const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
-  const featureView: FeatureView = parts[2] === 'build' ? 'code' : (FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview');
-
-  const section: SectionId = MOVED[segment]
-    ?? ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
-
-  // the kind of data open: /data/secrets, or /features/{key}/data/secrets
-  const dataKind = featureKey ? (featureView === 'data' ? parts[3] : undefined) : section === 'data' ? parts[1] : undefined;
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
   const { view, choose } = useView(lambda?.publicKey, lambda?.view);
   const simple = view === 'simple';
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
+
+  // what the lambda keeps as data, and the secrets its code waits for
+  const holding = summary?.storage;
+  const missingSecrets = holding?.missingSecrets ?? [];
+
+  /** Whether the lambda keeps something in a kind of data - or, the secrets, is waiting for one - which is when the simple view has it. */
+  const holds = (kind: DataKind) => holding != null && (
+    kind === 'database' ? holding.databaseTables > 0
+      : kind === 'workspace' ? holding.workspaceFiles > 0
+        : holding.secrets > 0 || missingSecrets.length > 0);
+
+  /** Whether a kind of data is switched on. */
+  const keeps = (kind: DataKind) => holding != null && (
+    kind === 'database' ? holding.databaseEnabled : kind === 'workspace' ? holding.workspaceEnabled : holding.secretsEnabled);
+
+  /**
+   * The kind an address from before the kinds were sections of their own
+   * names - /data/{kind} - or, where it names none, the first the lambda
+   * keeps: what the one section of them opened on, so a lambda that never
+   * switched its database on opens on what it does keep.
+   */
+  const dataAt = (part?: string): DataKind => kindOf(part) ?? DATA_KINDS.find(simple ? holds : keeps) ?? 'database';
+
+  const featureView: FeatureView = parts[2] === 'build'
+    ? 'code'
+    : parts[2] === 'data' ? dataAt(parts[3]) : (FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview');
+
+  const section: SectionId = segment === 'data'
+    ? dataAt(parts[1])
+    : MOVED[segment] ?? ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
+
+  // such an address is written as the one it opens now, once the lambda says which
+  const former = featureKey ? parts[2] === 'data' : segment === 'data';
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [features, setFeatures] = useState<Feature[] | null>(null);
   /** Whether its code is published, for the link to where it is read. */
@@ -227,6 +262,14 @@ export function Editor({ theme }: Props) {
   const [welcome, setWelcome] = useState(fresh);
 
   const base = `/editor/${privateKey}`;
+
+  // the lambda arrives with its summary, which says which kind a bare /data opens on;
+  // the query - a table to show, a secret to set - goes along
+  useEffect(() => {
+    if (former && lambda) {
+      navigate(`${featureKey ? `${base}/features/${featureKey}/${featureView}` : `${base}/${section}`}${location.search}`, { replace: true });
+    }
+  }, [former, lambda, featureKey, featureView, section, base, location.search, navigate]);
 
   /** Where a lambda answers, with {key} where its key goes - for the field a new key is typed into. */
   const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
@@ -495,12 +538,6 @@ export function Editor({ theme }: Props) {
   // so there is no agent to ask; the rest is there to be read
   const blocked = lambda?.blocked != null;
 
-  // what the lambda keeps as data, and the secrets its code waits for
-  const holding = summary?.storage;
-  const missingSecrets = holding?.missingSecrets ?? [];
-  const keeps = holding != null
-    && (holding.databaseTables > 0 || holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
-
   // the code connects to a database that is switched off - the agent's to
   // switch on, so the simple view is not asked about it
   const databaseWanted = !simple && holding != null && holding.usesDatabase && !holding.databaseEnabled;
@@ -521,8 +558,9 @@ export function Editor({ theme }: Props) {
     // a demo connects to nothing, and of a blocked lambda nothing changes
     || (id === 'connectivity' && (demo || blocked))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
-    // the simple view has the data once the app keeps any, or waits for a key
-    || (id === 'data' && simple && section !== 'data' && !keeps)
+    // the simple view has a kind of data once the app keeps something in it,
+    // or the keys and passwords while it waits for one
+    || (simple && section !== id && DATA_KINDS.some((kind) => kind === id && !holds(kind)))
     // the full view has the versions for it - known once the lambda is,
     // which says which view it opens in
     || (id === 'history' && lambda != null && !simple);
@@ -647,7 +685,7 @@ export function Editor({ theme }: Props) {
     openContext: (area, version) =>
       go(open && version == null ? featurePath(open.key, area) : `${base}/${area}${version != null ? `?version=${version}` : ''}`),
     agent,
-    openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, 'data') : `${base}/data`}${kind ? `/${kind}` : ''}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
+    openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, kind) : `${base}/${kind}`}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
     startFeature: (from, files) => setCreating({ base: from, files }),
     openFeature: (key, view) => go(featurePath(key, view)),
     putOnline: (key) => setMerging(key),
@@ -714,63 +752,104 @@ export function Editor({ theme }: Props) {
 
   const code = coding != null;
 
-  /** One section in the sidebar, with what is worth noticing about it beside its name. */
-  const entry = (id: SectionId) => {
-    const to = id === 'overview' ? base : `${base}/${id}`;
-    const current = section === id;
+  /** A dot beside the name of a section, saying it wants a look. */
+  const dot = (colour: string, title: string) => <span className={`ml-auto h-1.5 w-1.5 shrink-0 rounded-full ${colour}`} title={title} />;
 
-    return (
-      <Link
-        key={id}
-        to={to}
-        onClick={(event) => {
-          event.preventDefault();
+  /** A count beside the name of a section. */
+  const count = (value: number) => <span className="ml-auto text-xs tabular-nums text-slate-400">{value}</span>;
 
-          // the section already open, asked for again, is asked for
-          // as it is now
-          if (current) {
-            refresh().catch(() => undefined);
-          } else {
-            go(to);
-          }
-        }}
-        aria-current={current ? 'page' : undefined}
-        className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
-          current
-            ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
-            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-        }`}
-      >
-        {simple && id === 'docs' ? t.simple.about : said.sections[id]}
-        {id === 'versions' && versions.length > 0 && (
-          <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
-        )}
-        {id === 'features' && (features?.length ?? 0) > 0 && (
-          <span className="ml-auto text-xs tabular-nums text-slate-400">{features!.length}</span>
-        )}
-        {id === 'logs' && problems && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
-        )}
-        {id === 'connectivity' && connectivityWanted && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.connectivity.connects} />
-        )}
-        {id === 'data' && (missingSecrets.length > 0 || databaseWanted) && !demo && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={missingSecrets.length > 0 ? t.data.missingDot : t.data.offDot} />
-        )}
-        {id === 'change' && changing && (
-          <span className="ml-auto" title={said.changeRunning}>
-            <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
-          </span>
-        )}
-        {id === 'change' && !changing && agent.unseen && (
-          <span
-            className={`ml-auto h-1.5 w-1.5 rounded-full ${change?.result?.ok ? 'bg-emerald-500' : 'bg-amber-500'}`}
-            title={said.changeEnded}
-          />
-        )}
-      </Link>
-    );
+  /**
+   * What is worth noticing about a section, beside its name - the same in
+   * the sidebar and in the list a phone opens, whose bar sums up what the
+   * sections it hides ask for.
+   */
+  const markOf = (id: SectionId): Pick<NavEntry, 'marker' | 'calls'> => {
+    switch (id) {
+      case 'versions':
+        return versions.length > 0 ? { marker: count(versions.length) } : {};
+      case 'features':
+        return features && features.length > 0 ? { marker: count(features.length) } : {};
+      case 'logs':
+        return problems ? { marker: dot('bg-red-500', said.problems), calls: 'problem' } : {};
+      case 'connectivity':
+        return connectivityWanted ? { marker: dot('bg-amber-500', t.connectivity.connects), calls: 'wanted' } : {};
+      case 'secrets':
+        return missingSecrets.length > 0 && !demo ? { marker: dot('bg-amber-500', t.data.missingDot), calls: 'wanted' } : {};
+      case 'database':
+        return databaseWanted && !demo ? { marker: dot('bg-amber-500', t.data.offDot), calls: 'wanted' } : {};
+      case 'change':
+        if (changing) {
+          return {
+            marker: (
+              <span className="ml-auto" title={said.changeRunning}>
+                <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
+              </span>
+            ),
+            calls: 'busy',
+          };
+        }
+
+        return agent.unseen
+          ? { marker: dot(change?.result?.ok ? 'bg-emerald-500' : 'bg-amber-500', said.changeEnded), calls: change?.result?.ok ? 'done' : 'wanted' }
+          : {};
+      default:
+        return {};
+    }
   };
+
+  /** One section, as both navigations list it. */
+  const entry = (id: SectionId): NavEntry => {
+    const kind = kindOf(id);
+
+    const label = kind
+      ? kindName(kind, simple)
+      : simple && id === 'docs' ? t.simple.about : said.sections[id as keyof typeof said.sections];
+
+    return { id, to: id === 'overview' ? base : `${base}/${id}`, label, ...markOf(id) };
+  };
+
+  /** The sections there are, in the groups of the full view - the simple view has one, without a name. */
+  const groups: NavGroup[] = simple
+    ? [{ id: 'simple', label: null, entries: SIMPLE_SECTIONS.filter((id) => !absent(id)).map(entry) }]
+    : GROUPS
+        .map((group) => ({
+          id: group.id ?? 'top',
+          label: group.id ? said.groups[group.id] : null,
+          entries: group.sections.filter((id) => !absent(id)).map(entry),
+        }))
+        .filter((group) => group.entries.length > 0);
+
+  /** A feature's views: its own, and its test data. */
+  const featureEntry = (key: string) => (view: FeatureView): NavEntry => {
+    const kind = kindOf(view);
+
+    return {
+      id: view,
+      to: featurePath(key, view),
+      label: kind ? kindName(kind, false) : t.features.views[view as keyof typeof t.features.views],
+    };
+  };
+
+  const featureGroups: NavGroup[] = featureKey
+    ? [
+        { id: 'feature', label: null, entries: FEATURE_VIEWS.filter((view) => !kindOf(view)).map(featureEntry(featureKey)) },
+        { id: 'data', label: t.features.views.data, entries: DATA_KINDS.map(featureEntry(featureKey)) },
+      ]
+    : [];
+
+  /** The section already open, asked for again, is asked for as it is now. */
+  const opening = (entry: NavEntry) => {
+    if (entry.id === (featureKey ? featureView : section)) {
+      refresh().catch(() => undefined);
+    } else {
+      go(entry.to);
+    }
+  };
+
+  // one view is no choice, so the simple view has no list of a draft's
+  const navigation = featureKey
+    ? (simple ? null : { label: t.features.viewsLabel, groups: featureGroups, current: featureView, title: featureEntry(featureKey)(featureView).label })
+    : { label: said.sectionsLabel, groups, current: section, title: entry(section).label };
 
   /*
    * One centred column holding the sidebar and the section beside it, the
@@ -782,7 +861,12 @@ export function Editor({ theme }: Props) {
     <SharedWordsContext.Provider value={t.shared}>
     <div ref={scroller} className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
     <div className={`mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
-      <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:w-56 md:flex-col md:self-start md:border-b-0">
+      {/* where it is taller than the window, its sections scroll on their
+          own, under the lambda: it stays where it is as the page moves, and
+          the last of them would otherwise be out of reach until the page
+          was read to its end. As tall as the window below the site's bar,
+          which is 3.75rem high. */}
+      <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:max-h-[calc(100dvh-3.75rem)] md:w-56 md:flex-col md:self-start md:border-b-0">
         <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
@@ -822,12 +906,15 @@ export function Editor({ theme }: Props) {
                       {said.download}
                     </a>
                   )}
-                  {/* on a phone the switch below the sections is not there, so it is here */}
-                  <button type="button" role="menuitem" className={`${menuItem} md:hidden`}
-                          onClick={() => { close(); switchTo(simple ? 'full' : 'simple'); }}>
-                    {simple ? <IconViewFull className="h-4 w-4 text-slate-400" /> : <IconViewSimple className="h-4 w-4 text-slate-400" />}
-                    {simple ? t.simple.toFull : t.simple.toSimple}
-                  </button>
+                  {/* on a phone the switch is at the foot of the list of sections;
+                      a draft in the simple view has no list, so it is here */}
+                  {!navigation && (
+                    <button type="button" role="menuitem" className={`${menuItem} md:hidden`}
+                            onClick={() => { close(); switchTo('full'); }}>
+                      <IconViewFull className="h-4 w-4 text-slate-400" />
+                      {t.simple.toFull}
+                    </button>
+                  )}
                   {!demo && menuRule}
                   {!demo && (
                     <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
@@ -900,71 +987,32 @@ export function Editor({ theme }: Props) {
           )}
         </div>
 
-        {featureKey ? (
-          // one view is no choice, so the simple view has no row for it
-          !simple && (
-          <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-            {FEATURE_VIEWS.map((view) => {
-              const to = featurePath(featureKey, view);
-              const current = featureView === view;
+        <div className="hidden min-h-0 flex-1 overflow-y-auto pb-6 [scrollbar-width:thin] md:block">
+          {navigation && <SideNav {...navigation} onOpen={opening} />}
 
-              return (
-                <Link
-                  key={view}
-                  to={to}
-                  onClick={(event) => {
-                    event.preventDefault();
-
-                    if (current) {
-                      refresh().catch(() => undefined);
-                    } else {
-                      go(to);
-                    }
-                  }}
-                  aria-current={current ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
-                    current
-                      ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
-                      : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {t.features.views[view]}
-                </Link>
-              );
-            })}
-          </nav>
-          )
-        ) : (
-        <nav aria-label={said.sectionsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {simple
-            ? SIMPLE_SECTIONS.filter((id) => !absent(id)).map(entry)
-            : GROUPS.map((group) => {
-                const shown = group.sections.filter((id) => !absent(id));
-
-                if (shown.length === 0) {
-                  return null;
-                }
-
-                return (
-                  <Fragment key={group.id ?? 'top'}>
-                    {group.id && (
-                      <>
-                        {/* a row along the top on a phone: a rule between the groups rather than their names */}
-                        <span aria-hidden="true" className="my-2 w-px shrink-0 self-stretch bg-slate-200 dark:bg-ink-800 md:hidden" />
-                        <span className="hidden px-3 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wide text-slate-400 md:block">
-                          {said.groups[group.id]}
-                        </span>
-                      </>
-                    )}
-                    {shown.map(entry)}
-                  </Fragment>
-                );
-              })}
-        </nav>
-        )}
-
-        <ViewSwitch view={view} onSwitch={switchTo} />
+          <ViewSwitch view={view} onSwitch={switchTo} className="mt-6 border-t px-3 pt-4" />
+        </div>
       </aside>
+
+      {/* on a phone the sections are a bar of their own, which stays at the
+          top of the page as it moves - outside the sidebar, which does not */}
+      {navigation && (
+        <PhoneNav
+          {...navigation}
+          onOpen={opening}
+          scroller={scroller}
+          footer={(close) => (
+            <ViewSwitch
+              view={view}
+              onSwitch={(next) => {
+                close();
+                switchTo(next);
+              }}
+              className="border-t px-4 py-3"
+            />
+          )}
+        />
+      )}
 
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
         {demo && (
@@ -1060,8 +1108,8 @@ export function Editor({ theme }: Props) {
             <CodeTab key={open.key} control={control} onDirty={onDirty} />
           ) : featureView === 'docs' || featureView === 'tests' ? (
             <ContextTab key={`${open.key}-${featureView}`} control={control} area={featureView} onDirty={onDirty} />
-          ) : featureView === 'data' ? (
-            <DataTab key={open.key} control={control} kind={dataKind} onKind={(kind) => go(`${featurePath(open.key, 'data')}/${kind}`)} />
+          ) : kindOf(featureView) ? (
+            <DataTab key={`${open.key}-${featureView}`} control={control} kind={kindOf(featureView)!} />
           ) : featureView === 'logs' ? (
             <LogsTab key={open.key} control={control} />
           ) : (
@@ -1075,8 +1123,8 @@ export function Editor({ theme }: Props) {
           <FeaturesTab control={control} />
         ) : section === 'change' && !demo && !blocked ? (
           <ChangeTab control={control} />
-        ) : section === 'data' ? (
-          <DataTab control={control} kind={dataKind} onKind={(kind) => go(`${base}/data/${kind}`)} />
+        ) : kindOf(section) ? (
+          <DataTab key={section} control={control} kind={kindOf(section)!} />
         ) : section === 'history' && simple ? (
           <HistoryTab control={control} />
         ) : section === 'versions' ? (
@@ -1287,11 +1335,12 @@ export function Editor({ theme }: Props) {
 /**
  * Which view is showing, at the foot of the sidebar: the simple one or every
  * section. Kept for this lambda in the browser of whoever switches, and
- * nowhere else (see control/view.ts). On a phone the sidebar is a
- * row along the top with no room below it, so the menu has the switch there.
+ * nowhere else (see control/view.ts). On a phone the sidebar has no foot, so
+ * the switch is at the foot of the list of sections instead.
  */
-function ViewSwitch({ view, onSwitch }: { view: View; onSwitch: (view: View) => void }) {
+function ViewSwitch({ view, onSwitch, className }: { view: View; onSwitch: (view: View) => void; className: string }) {
   const said = useEditorT().simple;
+  const labelled = useId();
 
   const options: { id: View; label: string; title: string; Icon: typeof IconViewSimple }[] = [
     { id: 'simple', label: said.simple, title: said.simpleTitle, Icon: IconViewSimple },
@@ -1299,10 +1348,10 @@ function ViewSwitch({ view, onSwitch }: { view: View; onSwitch: (view: View) => 
   ];
 
   return (
-    <div className="mt-6 hidden border-t border-slate-200 px-3 pt-4 dark:border-ink-800 md:block">
-      <div id="editor-view" className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{said.view}</div>
+    <div className={`border-slate-200 dark:border-ink-800 ${className}`}>
+      <div id={labelled} className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{said.view}</div>
 
-      <div role="radiogroup" aria-labelledby="editor-view" className="mt-2 grid grid-cols-2 border border-slate-200 p-0.5 dark:border-ink-800">
+      <div role="radiogroup" aria-labelledby={labelled} className="mt-2 grid grid-cols-2 border border-slate-200 p-0.5 dark:border-ink-800">
         {options.map(({ id, label, title, Icon }) => {
           const on = view === id;
 

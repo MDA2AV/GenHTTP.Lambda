@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: 'Galeria',
     source: 'Open source',
     domain: 'Domena',
-    data: 'Dane',
     versions: 'Wersje',
     history: 'Historia',
     deployments: 'Wdrożenia',

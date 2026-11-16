@@ -164,13 +164,8 @@ export function DatabasePanel({ control, enabled, readOnly, generation, onChange
     <div className="space-y-5">
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-3">
         {simple ? (
-          <div className="min-w-0 flex-1">
-            <h2 className="flex items-center gap-2 text-[15px] font-medium">
-              <IconDatabase className="h-4 w-4 text-accent-500 dark:text-accent-400" />
-              {plain.databaseTitle}
-            </h2>
-            <p className="mt-1 max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{plain.databaseText}</p>
-          </div>
+          // the title of the section names them; what is left to say is what they are
+          <p className="min-w-0 max-w-2xl flex-1 text-[13px] text-slate-600 dark:text-slate-400">{plain.databaseText}</p>
         ) : (
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             <h2 className="flex items-center gap-2 text-sm font-medium">

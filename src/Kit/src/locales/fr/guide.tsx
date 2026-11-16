@@ -103,8 +103,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Brouillons', () => <>Des modifications essayées avant d’être mises en ligne, chacune à sa propre adresse et sur ses propres données de test. Une fois ouvert, un brouillon a son propre code, ses propres données de test et ses propres logs. La section apparaît dès qu’il y a un brouillon.</>],
-    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : la base de données, le workspace et les secrets, chacun dans son onglet. Consultez les tables et les fichiers, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
+    ['Base de données', () => <>Les entrées que l’application garde, table par table, à consulter – la vue simple les appelle des entrées. Comme le workspace et les secrets, elle est partagée par toutes les versions et activée ou désactivée dans sa propre section, que la vue simple affiche dès que l’application y garde quelque chose.</>],
+    ['Workspace', () => <>Les fichiers que l’application enregistre pendant qu’elle tourne, à parcourir, envoyer, télécharger et supprimer – dans la vue simple, ce qui est enregistré par votre application.</>],
+    ['Secrets', () => <>Les clés d’API et mots de passe que le code lit par leur nom : définissez-en un ou remplacez-le, mais il ne se relit jamais – dans la vue simple, clés et mots de passe.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
     ['Audience', () => <>Qui visite l’application, une fois que vous l’avez activée : visiteurs, pages vues et requêtes par jour, les pages ouvertes, les sites qui envoient les visiteurs, leurs pays et leurs appareils, et les moteurs de recherche et IA qui sont passés.</>],
@@ -127,7 +129,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Chaque section fonctionne de la même façon : son titre, un {k.b('ⓘ')} qui l’explique, ses actions à droite et, quand
       elle a plusieurs vues, une rangée d’onglets en dessous. La vue complète range les sections en groupes : la façon
-      dont on la trouve, là où se fait une modification, les versions et les données, et son fonctionnement.
+      dont on la trouve, là où se fait une modification, les versions et les données, et son fonctionnement. Sur un
+      téléphone, la barre en haut indique la section où vous êtes et les ouvre toutes.
     </>
   ),
   editorAside:
@@ -320,7 +323,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Une lambda garde des fichiers à deux endroits, et l’éditeur les montre séparément : {k.b('Code')} contient les
-      fichiers d’une version (le programme), et {k.b('Données')} contient le workspace (ce que le programme garde). La
+      fichiers d’une version (le programme), et {k.b('Workspace')} contient ce que le programme garde. La
       différence, c’est {k.em('à qui ils appartiennent')}. Les fichiers d’une version appartiennent à cette version ; les
       données appartiennent à la lambda, et toutes les versions les partagent. Chacun dispose d’un espace limité : le
       code et les ressources d’une version en partagent un, la base de données et le workspace de la lambda partagent
@@ -344,7 +347,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Les enregistrements – entrées, comptes, commandes, votes – ont leur place dans la {k.b('base de données')} : une
-      base SQLite propre à la lambda, que vous activez sous {k.b('Données')}. Le code ouvre une connexion avec{' '}
+      base SQLite propre à la lambda, que vous activez sous {k.b('Base de données')}. Le code ouvre une connexion avec{' '}
       {k.code('Database.GetConnection()')} et lit et écrit les données via{' '}
       {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, avec son propre contexte, qui mappe les
       tables :
@@ -361,8 +364,8 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Comme toutes les données, la base est partagée par toutes les versions, laissée intacte par les déploiements et
-      les retours en arrière, et un brouillon travaille sur une copie. Sous {k.b('Données')}, vous voyez ses tables et
-      leur contenu – la vue simple les appelle des entrées. {k.b('Télécharger en projet .NET')} l’emporte sous forme
+      les retours en arrière, et un brouillon travaille sur une copie. Sous {k.b('Base de données')}, vous voyez ses
+      tables et leur contenu – la vue simple les appelle des entrées. {k.b('Télécharger en projet .NET')} l’emporte sous forme
       de simple fichier SQLite.
     </>
   ),
@@ -399,8 +402,8 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Activez les secrets sous {k.b('Données')} et définissez-y la valeur. Une fois enregistrée, elle n’est plus
-      jamais affichée – ni à vous, ni à un agent ; vous pouvez seulement la remplacer. La liste indique quels noms le
+      Activez les secrets sous {k.b('Secrets')} et définissez-y la valeur. Une fois enregistrée, elle n’est plus
+      jamais affichée – ni à vous, ni à un agent ; vous pouvez seulement la remplacer. La liste indique quels noms le
       code lit sans qu’une valeur soit définie, et la vue d’ensemble les demande. {k.code('Secret.Exists')} indique
       si un secret est défini, pour du code qui s’en passe. Comme toutes les données, les secrets sont partagés par
       toutes les versions, et un brouillon travaille sur une copie.
@@ -511,7 +514,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Tout ce qui est dans le code devient public, les versions précédentes comprises. Une clé ou un mot de passe a sa place avec les clés et mots de passe, sous Données, jamais dans le code – publié ou non.',
+    'Tout ce qui est dans le code devient public, les versions précédentes comprises. Une clé ou un mot de passe a sa place sous Secrets (clés et mots de passe, dans la vue simple), jamais dans le code – publié ou non.',
   visitors: ((k) => (
     <>
       Ouvrez {k.b('Audience')} dans le tableau de bord et activez-la pour voir qui visite votre application : combien

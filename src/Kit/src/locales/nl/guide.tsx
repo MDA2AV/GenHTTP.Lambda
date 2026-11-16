@@ -103,8 +103,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Concepten', () => <>Wijzigingen die worden uitgeprobeerd voordat ze online gaan, elk op een eigen adres en met eigen testdata. Open je een concept, dan heeft het zijn eigen code, testdata en logs. Het onderdeel verschijnt zodra er een concept is.</>],
-    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de database, de workspace en de sleutels en wachtwoorden, elk met een eigen tabblad. Bekijk de tabellen en bestanden, upload bestanden, stel sleutels en wachtwoorden in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
+    ['Database', () => <>De items die de app bewaart, tabel voor tabel, om te lezen – de eenvoudige weergave noemt ze items. Net als de workspace en de secrets wordt de database gedeeld door elke versie en in een eigen onderdeel aan- of uitgezet; de eenvoudige weergave toont dat zodra de app er iets in bewaart.</>],
+    ['Workspace', () => <>De bestanden die de app tijdens het draaien opslaat, om te bekijken, uploaden, downloaden en verwijderen – in de eenvoudige weergave: wat je app heeft opgeslagen.</>],
+    ['Secrets', () => <>API-sleutels en wachtwoorden die de code op naam leest: stel er een in of vervang hem, maar lees hem nooit terug – in de eenvoudige weergave: sleutels en wachtwoorden.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
     ['Analytics', () => <>Wie de app bezoekt, zodra je het aanzet: bezoekers, paginaweergaven en requests per dag, de pagina’s die ze openen, de sites die hen sturen, hun landen en apparaten, en de zoekmachines en AI’s die langskwamen.</>],
@@ -127,7 +129,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Elk onderdeel werkt hetzelfde: een titel, een {k.b('ⓘ')} met uitleg, acties rechts en, als er meer dan één
       weergave is, een rij tabs eronder. De volledige weergave deelt de onderdelen in groepen in: hoe mensen hem
-      vinden, waar een wijziging gemaakt wordt, de versies en de data, en hoe hij draait.
+      vinden, waar een wijziging gemaakt wordt, de versies en de data, en hoe hij draait. Op een telefoon toont de balk
+      bovenaan in welk onderdeel je zit en opent hij ze allemaal.
     </>
   ),
   editorAside:
@@ -322,7 +325,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Een lambda bewaart bestanden op twee plekken, en de editor toont ze apart: {k.b('Code')} bevat de
-      bestanden van een versie (het programma), en {k.b('Data')} bevat de workspace (wat het programma bewaart). Het
+      bestanden van een versie (het programma), en {k.b('Workspace')} bevat wat het programma bewaart. Het
       verschil zit in {k.em('van wie ze zijn')}. De bestanden van een versie horen bij die versie; de data hoort bij de
       lambda, en elke versie deelt die. Elk heeft één gedeelde hoeveelheid ruimte: de code en de resources van een versie delen er
       één, en de database en de workspace van de lambda delen de andere.
@@ -345,7 +348,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Records – berichten, accounts, bestellingen, stemmen – horen in de {k.b('database')}: een eigen
-      SQLite-database van de lambda, die je aanzet onder {k.b('Data')}. De code opent een verbinding met{' '}
+      SQLite-database van de lambda, die je aanzet onder {k.b('Database')}. De code opent een verbinding met{' '}
       {k.code('Database.GetConnection()')} en leest en schrijft erin via{' '}
       {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, met een eigen context die de tabellen
       mapt:
@@ -362,7 +365,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Zoals alle data wordt de database gedeeld door elke versie, laten deploys en terugzetten hem met rust, en werkt
-      een concept op een kopie. Onder {k.b('Data')} zie je de tabellen en wat erin staat – de eenvoudige weergave noemt
+      een concept op een kopie. Onder {k.b('Database')} zie je de tabellen en wat erin staat – de eenvoudige weergave noemt
       ze items. {k.b('Downloaden als .NET-project')} neemt hem mee als gewoon SQLite-bestand.
     </>
   ),
@@ -398,7 +401,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Zet secrets aan onder {k.b('Data')} en stel de waarde daar in. Eenmaal opgeslagen wordt hij nooit meer getoond –
+      Zet secrets aan onder {k.b('Secrets')} en stel de waarde daar in. Eenmaal opgeslagen wordt hij nooit meer getoond –
       niet aan jou en niet aan een agent; je kunt hem alleen vervangen. De lijst laat zien welke namen de code leest
       waarvoor nog geen waarde is ingesteld, en het overzicht vraagt erom. {k.code('Secret.Exists')} zegt of er een is
       ingesteld, voor code die ook zonder kan. Zoals alle data delen alle versies de secrets, en een concept werkt op
@@ -508,7 +511,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Alles in de code wordt openbaar, de eerdere versies inbegrepen. Een sleutel of wachtwoord hoort bij de sleutels en wachtwoorden onder Data, nooit in de code – gepubliceerd of niet.',
+    'Alles in de code wordt openbaar, de eerdere versies inbegrepen. Een sleutel of wachtwoord hoort onder Secrets – sleutels en wachtwoorden, in de eenvoudige weergave – nooit in de code, gepubliceerd of niet.',
   visitors: ((k) => (
     <>
       Open {k.b('Analytics')} in het dashboard en zet het aan om te zien wie je app bezoekt: hoeveel mensen er per dag

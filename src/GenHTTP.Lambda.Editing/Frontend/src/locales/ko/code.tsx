@@ -73,8 +73,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '파일 1개' : `파일 ${files}개`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `이 버전은 코드와 리소스를 합해 한 버전에 허용되는 ${of} 중 ${used}를 쓰고 있어요.`,
-  scope: (data) => (
-    <>람다가 실행 중에 보관하는 것은 모든 버전이 똑같이 쓰고, {data('데이터')}에 있어요.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      람다가 실행 중에 보관하는 것, 즉 {database('데이터베이스')}, {workspace('워크스페이스')}, {secrets('시크릿')}은
+      모든 버전이 똑같이 써요.
+    </>
   ),
   download: '다운로드',
   newIn: (group) => `${group}에 새 파일`,

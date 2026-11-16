@@ -166,7 +166,8 @@ export function SummaryTab({ control }: { control: Control }) {
 
         {/* the two allowances a lambda has, and how much of each is spent:
             what a version may come to, and what the lambda may keep - what
-            makes them up is in Code and in Data, one click away */}
+            makes them up is in Code and in the sections of the data, one
+            click away */}
         <section className="lg:col-span-2">
           <h2 className="text-sm font-medium">{said.storage}</h2>
 
@@ -174,7 +175,9 @@ export function SummaryTab({ control }: { control: Control }) {
             <Link to={`${base}/code`} className="block rounded-sm hover:opacity-80">
               <Meter large label={said.versionAllowance} used={storage.codeBytes + storage.resourceBytes} of={limits.buildBytes} format={bytes} />
             </Link>
-            <Link to={`${base}/data`} className="block rounded-sm hover:opacity-80">
+            {/* the room of the database and the workspace together, so it
+                opens the database where it is on, and the workspace otherwise */}
+            <Link to={`${base}/${storage.databaseEnabled || !storage.workspaceEnabled ? 'database' : 'workspace'}`} className="block rounded-sm hover:opacity-80">
               <Meter
                 large
                 label={said.data}

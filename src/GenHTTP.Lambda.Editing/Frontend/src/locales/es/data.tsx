@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Los datos son lo que la lambda guarda mientras se ejecuta. Pertenecen a la lambda, no a una versión: todas las versiones leen y escriben los mismos datos, y nada de lo que hagas con las versiones los cambia. Un borrador se prueba con una copia de ellos. Desaparecen cuando se elimina la lambda o cuando desactivas ese tipo de datos. La base de datos y el workspace comparten un único espacio, así que cada uno puede crecer hasta donde el otro lo deje.',
-  facts: [
-    ['Compartidos por todas las versiones', 'La versión que esté en línea lee y escribe los mismos datos.'],
-    ['Se conservan al desplegar', 'Desplegar, restaurar o fusionar un borrador nunca los toca.'],
-    ['Tú decides', 'Cada tipo está activado solo mientras tú quieras. Al desactivar uno se elimina lo que contiene.'],
-  ],
   featureHint:
     'Una copia de los datos de tu app, solo para este borrador: su vista previa lee y escribe únicamente en esta copia, así que probar cosas aquí nunca toca los datos reales. Desaparece junto con el borrador.',
   recopy: 'Restablecer los datos de prueba',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Los datos de prueba vuelven a estar como nuevos.',
   recopyFailed: 'No se pudieron restablecer los datos de prueba.',
   copyContents: 'Lo que contiene la copia del workspace',
-  kindsLabel: 'Tipos de datos',
   kinds: {
     database: {
       name: 'Base de datos',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `y ${count} más`,
     database: 'Registros',
-    databaseTitle: 'Los registros que conserva tu app',
     databaseText: 'Lo que tu app guarda mientras la gente la usa, tabla por tabla: inscripciones, entradas, votos. Nada de esto cambia cuando se pone en línea un cambio nuevo.',
     records: (count) => (count === 1 ? '1 registro' : `${count.toLocaleString()} registros`),
     noRecords: 'Tu app todavía no ha guardado ningún registro.',

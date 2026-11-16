@@ -41,7 +41,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Le lien d’édition',
   ],
   careful:
-    'Tout ce qui est dans le code devient public, ses états précédents aussi. Un mot de passe ou une clé n’a jamais sa place dans le code : sa place est avec les clés et mots de passe, sous Données, qui ne sont jamais publiés.',
+    'Tout ce qui est dans le code devient public, ses états précédents aussi. Un mot de passe ou une clé n’a jamais sa place dans le code : sa place est avec les clés et mots de passe de l’application, conservés à part du code et jamais publiés.',
   licenseLabel: 'Licence',
   licenseHint: 'Ce que les autres peuvent faire du code. MIT, la plus courante, permet à chacun d’en faire presque tout, tant que votre nom y reste attaché.',
   readLicense: 'Lire la licence',

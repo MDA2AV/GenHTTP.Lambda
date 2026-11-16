@@ -38,7 +38,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Editör linki',
   ],
   careful:
-    'Koddaki her şey herkese açık hâle gelir, önceki hâlleri de. Bir parolanın ya da anahtarın yeri asla kod değildir: onların yeri, Veriler altındaki anahtarlar ve parolalardır ve bunlar asla yayımlanmaz.',
+    'Koddaki her şey herkese açık hâle gelir, önceki hâlleri de. Bir parolanın ya da anahtarın yeri asla kod değildir: onların yeri, uygulamanın koddan ayrı tutulan ve asla yayımlanmayan anahtarları ve parolalarıdır.',
   licenseLabel: 'Lisans',
   licenseHint:
     'Başkalarının kodla neler yapabileceği. En yaygını olan MIT, adınız üzerinde kaldığı sürece herkesin onunla neredeyse her şeyi yapmasına izin verir.',

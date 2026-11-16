@@ -74,8 +74,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1 plik' : files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? `${files} pliki` : `${files} plików`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `Ta wersja zajmuje ${used} z ${of}, które może mieć wersja – razem jej kod i zasoby.`,
-  scope: (data) => (
-    <>To, co lambda przechowuje w trakcie działania, jest wspólne dla każdej wersji i znajduje się w sekcji {data('Dane')}.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      To, co lambda przechowuje w trakcie działania – jej {database('baza danych')}, {workspace('obszar roboczy')} i{' '}
+      {secrets('sekrety')} – jest wspólne dla każdej wersji.
+    </>
   ),
   download: 'Pobierz',
   newIn: (group) => `Nowy plik w: ${group}`,

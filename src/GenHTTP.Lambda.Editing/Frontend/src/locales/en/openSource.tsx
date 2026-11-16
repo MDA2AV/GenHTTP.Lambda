@@ -44,7 +44,7 @@ export const openSource = {
     'The editor link',
   ],
   careful:
-    'Everything in the code becomes public, the earlier states of it too. A password or key never belongs in the code - it belongs with the keys and passwords under Data, which are never published.',
+    'Everything in the code becomes public, the earlier states of it too. A password or key never belongs in the code - it belongs with the app\'s keys and passwords, which are kept apart from the code and never published.',
   licenseLabel: 'License',
   licenseHint: 'What others may do with the code. MIT, the most common, lets anybody do nearly anything with it as long as your name stays on it.',
   readLicense: 'Read the license',

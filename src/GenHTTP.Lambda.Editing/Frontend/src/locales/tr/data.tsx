@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Veriler, lambdanın çalışırken sakladıklarıdır. Bir sürüme değil, lambdaya aittir: her sürüm aynı verileri okur ve yazar, sürümlerle yaptığınız hiçbir şey onları değiştirmez. Lambda silindiğinde ya da o veri türünü kapattığınızda silinirler. Veritabanı ve çalışma alanı tek bir yer payını paylaşır; bu yüzden her biri, diğerinin bıraktığı kadar büyüyebilir.',
-  facts: [
-    ['Tüm sürümler için ortak', 'Hangi sürüm yayındaysa aynı verileri okur ve yazar.'],
-    ['Yayına alınca da kalır', 'Yayına almak, eski bir sürüme dönmek ya da bir taslağı birleştirmek verilere hiç dokunmaz.'],
-    ['Açıp kapatmak sizde', 'Her tür yalnızca siz istediğiniz sürece açıktır. Birini kapatmak, içindekileri siler.'],
-  ],
   featureHint:
     'Uygulamanızın verilerinin yalnızca bu taslak için bir kopyası: önizlemesi yalnızca bu kopyayı okur ve yazar, bu yüzden burada denemeler yapmak gerçek verilere asla dokunmaz. Taslak silindiğinde kopya da gider.',
   recopy: 'Test verilerini sıfırla',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'Test verileri yeniden tazelendi.',
   recopyFailed: 'Test verileri sıfırlanamadı.',
   copyContents: 'Çalışma alanının kopyasında neler var',
-  kindsLabel: 'Veri türleri',
   kinds: {
     database: {
       name: 'Veritabanı',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `ve ${count} tane daha`,
     database: 'Kayıtlar',
-    databaseTitle: 'Uygulamanızın tuttuğu kayıtlar',
     databaseText: 'İnsanlar kullanırken uygulamanızın tuttukları (başvurular, girdiler, oylar), tablo tablo. Yeni bir değişiklik yayına girdiğinde buradaki hiçbir şey değişmez.',
     records: (count) => `${count.toLocaleString()} kayıt`,
     noRecords: 'Uygulamanız henüz hiç kayıt tutmadı.',

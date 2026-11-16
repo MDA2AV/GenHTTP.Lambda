@@ -119,6 +119,7 @@ export const features = {
     docs: 'Documentation',
     code: 'Code',
     tests: 'Tests',
+    /** The heading of the draft's copy of the data - its database, workspace and secrets - in the list of its views. */
     data: 'Test data',
     logs: 'Logs',
   },

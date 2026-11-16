@@ -12,7 +12,7 @@ import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en';
 import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
-import type { Control } from './context';
+import type { Control, DataKind } from './context';
 import { GroupList, Tree, sizeOf } from './FileBrowser';
 import { bytes, servesResources } from '@genhttp-lambda/kit/ui/format';
 import { Exposure } from './SummaryTab';
@@ -357,6 +357,13 @@ export function CodeTab({ control, onDirty }: { control: Control; onDirty: (dirt
   const total = files.reduce((sum, file) => sum + sizeOf(file), 0);
   const allowance = summary?.limits.buildBytes;
 
+  /** A link to the section of a kind of data, which no version holds. */
+  const opening = (kind: DataKind) => (text: string) => (
+    <button type="button" onClick={() => control.openData(kind)} className="text-accent-500 hover:underline">
+      {text}
+    </button>
+  );
+
   const faulty = new Set(diagnostics.filter((d) => d.file).map((d) => d.file!));
 
   const binary = current?.encoding === 'base64';
@@ -486,11 +493,7 @@ export function CodeTab({ control, onDirty }: { control: Control; onDirty: (dirt
               <p className="flex items-start gap-2">
                 <IconLayers className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
                 <span>
-                  {said.scope((text) => (
-                    <button type="button" onClick={() => control.openData()} className="text-accent-500 hover:underline">
-                      {text}
-                    </button>
-                  ))}
+                  {said.scope(opening('database'), opening('workspace'), opening('secrets'))}
                 </span>
               </p>
             </div>

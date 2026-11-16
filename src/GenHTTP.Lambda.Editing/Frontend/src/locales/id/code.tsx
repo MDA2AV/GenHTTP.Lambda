@@ -75,8 +75,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1 file' : `${files} file`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `Versi ini memakai ${used} dari ${of} yang boleh dimiliki sebuah versi, untuk kode dan sumber daya bersama-sama.`,
-  scope: (data) => (
-    <>Apa yang disimpan lambda selama berjalan sama untuk setiap versi, dan ada di bawah {data('Data')}.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      Apa yang disimpan lambda selama berjalan - {database('database')}, {workspace('workspace')}, dan{' '}
+      {secrets('rahasia')} - sama untuk setiap versi.
+    </>
   ),
   download: 'Unduh',
   newIn: (group) => `File baru di ${group}`,

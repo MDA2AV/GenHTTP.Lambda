@@ -74,8 +74,11 @@ export const code: EditorMessages['code'] = {
   count: (files) => (files === 1 ? '1 dosya' : `${files} dosya`),
   groupUsage: (files, size) => `${files}, ${size}`,
   usage: (used, of) => `Bu sürüm, kodu ve kaynaklarıyla birlikte, bir sürümün sahip olabileceği ${of} içinden ${used} tutuyor.`,
-  scope: (data) => (
-    <>Lambdanın çalışırken sakladıkları her sürüm için aynıdır ve {data('Veriler')} altındadır.</>
+  scope: (database, workspace, secrets) => (
+    <>
+      Lambdanın çalışırken sakladıkları - {database('veritabanı')}, {workspace('çalışma alanı')} ve{' '}
+      {secrets('gizli değerler')} - her sürüm için aynıdır.
+    </>
   ),
   download: 'İndir',
   newIn: (group) => `${group} içinde yeni dosya`,

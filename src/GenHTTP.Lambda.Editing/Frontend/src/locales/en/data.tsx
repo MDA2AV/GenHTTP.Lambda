@@ -2,15 +2,11 @@ import type { ReactNode } from 'react';
 
 type Node = ReactNode;
 
-/** The data of a lambda: what it keeps rather than what it is. */
+/** The data of a lambda: what it keeps rather than what it is - its database, its workspace and its secrets, a section each. */
 export const data = {
+  /** Behind the ⓘ beside the title of each kind's section - Database, Workspace, Secrets. */
   hint:
     'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off. The database and the workspace share one allowance of room, so each may grow as far as the other leaves it.',
-  facts: [
-    ['Shared by every version', 'Whichever version is online reads and writes the same data.'],
-    ['Kept when you deploy', 'Deploying or rolling back never touches it.'],
-    ['Yours to switch', 'Each kind is on only while you want it. Switching one off deletes what it holds.'],
-  ] as [string, string][],
   featureHint:
     'A copy of your app\'s data, just for this draft: its preview reads and writes only this copy, so trying things here never touches the real data. It goes when the draft does.',
   recopy: 'Reset the test data',
@@ -22,7 +18,7 @@ export const data = {
   recopied: 'The test data is fresh again.',
   recopyFailed: 'The test data could not be reset.',
   copyContents: 'What the test data holds',
-  kindsLabel: 'Kinds of data',
+  /** Each kind's name is the title of its section and its entry in the sidebar of the full view. */
   kinds: {
     database: {
       name: 'Database',
@@ -184,8 +180,11 @@ export const data = {
   },
 
   /**
-   * The data in the simple view, shown once there is any: what the app
-   * saved, and the keys it uses - nothing about files as a program has them.
+   * The data in the simple view, each kind a section once there is any in
+   * it: what the app saved, its records, and the keys it uses - nothing about
+   * files as a program has them. The names of the kinds - workspace,
+   * database, secrets - are the titles of their sections and their entries
+   * in the sidebar.
    */
   simple: {
     hint: 'What your app keeps - its records, the files it saved - and the keys it uses. It stays as it is whatever change is online.',
@@ -194,7 +193,6 @@ export const data = {
     workspaceSize: (files: string, size: string) => `${files}, ${size}`,
     more: (count: number) => `and ${count} more`,
     database: 'Records',
-    databaseTitle: 'Records your app keeps',
     databaseText: 'What your app keeps while people use it - sign-ups, entries, votes - table by table. Nothing here changes when a new change goes online.',
     records: (count: number) => (count === 1 ? '1 record' : `${count.toLocaleString()} records`),
     noRecords: 'Your app has not kept any records yet.',

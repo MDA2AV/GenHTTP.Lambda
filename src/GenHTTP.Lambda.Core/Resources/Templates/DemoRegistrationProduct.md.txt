@@ -20,7 +20,7 @@ Anybody who wants part of an app to be for registered people only - a club, a co
 ## Features, and why they are there
 
 - **Passwords are never stored.** The app keeps a fingerprint of each password that cannot be turned back into it, and that takes long to work out on purpose. Whoever gets hold of the saved accounts still has nobody's password, and every guess at one costs them that time.
-- **An extra key, if you give it one.** In the editor, under Data, you can enter a key named `PASSWORD_PEPPER`. It goes into the fingerprint of every password made from then on and is kept apart from the accounts, so the saved accounts on their own are not even enough to start guessing. The app works just the same without it, and accounts made before it was entered keep working.
+- **An extra key, if you give it one.** In the editor, under Secrets, you can enter a key named `PASSWORD_PEPPER`. It goes into the fingerprint of every password made from then on and is kept apart from the accounts, so the saved accounts on their own are not even enough to start guessing. The app works just the same without it, and accounts made before it was entered keep working.
 - **Once entered, keep that key.** Replacing it, or removing it, means everybody who registered while it was there can no longer sign in - until the old one is put back.
 - **The browser remembers the sign-in, for a week.** It is kept in a way no script on a page can read and no other website can make use of, so the pages themselves hold nothing to steal.
 - **A name nobody has and a wrong password are refused with the same message**, so the sign-in form does not say which of the two it was. Registering does say when a name is taken - it cannot do otherwise.

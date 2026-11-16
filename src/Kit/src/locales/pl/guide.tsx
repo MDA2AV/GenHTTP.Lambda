@@ -102,8 +102,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Szkice', () => <>Zmiany wypróbowywane, zanim zostaną udostępnione, każda pod własnym adresem i na własnych danych testowych. Otwarty szkic ma własny kod, dane testowe i logi. Sekcja pojawia się, gdy istnieje szkic.</>],
-    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: baza danych, obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj tabele i pliki, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
+    ['Baza danych', () => <>Wpisy, które aplikacja przechowuje, tabela po tabeli, do przeglądania – widok uproszczony nazywa je wpisami. Tak jak obszar roboczy i sekrety, jest wspólna dla wszystkich wersji i włączana lub wyłączana we własnej sekcji, którą widok uproszczony pokazuje, gdy aplikacja coś w niej przechowuje.</>],
+    ['Obszar roboczy', () => <>Pliki, które aplikacja zapisuje w trakcie działania – do przeglądania, przesyłania, pobierania i usuwania; w widoku uproszczonym: zapisane przez twoją aplikację.</>],
+    ['Sekrety', () => <>Klucze API i hasła, które kod odczytuje po nazwie: możesz ustawić wartość lub ją zastąpić, ale nigdy jej odczytać – w widoku uproszczonym: klucze i hasła.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
     ['Analityka', () => <>Kto odwiedza aplikację, gdy ją włączysz: odwiedzający, odsłony stron i żądania dziennie, otwierane strony, strony, które kierują ludzi do aplikacji, ich kraje i urządzenia oraz wyszukiwarki i AI, które zajrzały.</>],
@@ -125,7 +127,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Każda sekcja działa tak samo: tytuł, {k.b('ⓘ')} z wyjaśnieniem, akcje po prawej i – jeśli sekcja ma kilka widoków
       – rząd zakładek pod spodem. Widok pełny zbiera sekcje w grupy: jak ludzie trafiają do lambdy, gdzie powstają
-      zmiany, wersje i dane oraz jak lambda działa.
+      zmiany, wersje i dane oraz jak lambda działa. Na telefonie pasek u góry podaje nazwę sekcji, w której jesteś, i
+      otwiera wszystkie.
     </>
   ),
   editorAside:
@@ -312,7 +315,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Lambda trzyma pliki w dwóch miejscach, a edytor pokazuje je osobno: {k.b('Kod')} to pliki wersji – program –
-      a {k.b('Dane')} to obszar roboczy – to, co program przechowuje. Cała różnica polega na tym,{' '}
+      a {k.b('Obszar roboczy')} to to, co program przechowuje. Cała różnica polega na tym,{' '}
       {k.em('do kogo należą')}. Pliki wersji należą do tej wersji; dane należą do lambdy i wszystkie wersje je
       współdzielą. Każde z nich ma jedną pulę miejsca: kod i zasoby wersji dzielą jedną, a baza danych i obszar
       roboczy lambdy – drugą.
@@ -335,7 +338,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Rekordy – wpisy, konta, zamówienia, głosy – należą do {k.b('bazy danych')}: własnej bazy SQLite lambdy, którą
-      włączasz w sekcji {k.b('Dane')}. Kod otwiera połączenie przez {k.code('Database.GetConnection()')} i czyta oraz
+      włączasz w sekcji {k.b('Baza danych')}. Kod otwiera połączenie przez {k.code('Database.GetConnection()')} i czyta oraz
       zapisuje dane za pomocą {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, z własnym
       kontekstem, który mapuje tabele:
     </>
@@ -351,7 +354,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Jak wszystkie dane, baza danych jest wspólna dla wszystkich wersji, wdrożenia i powroty do starszej wersji jej nie
-      ruszają, a szkic pracuje na jej kopii. W sekcji {k.b('Dane')} widzisz jej tabele i to, co w nich jest – widok
+      ruszają, a szkic pracuje na jej kopii. W sekcji {k.b('Baza danych')} widzisz jej tabele i to, co w nich jest – widok
       uproszczony nazywa to wpisami. {k.b('Pobierz jako projekt .NET')} dołącza ją jako zwykły plik SQLite.
     </>
   ),
@@ -386,7 +389,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Włącz sekrety w sekcji {k.b('Dane')} i ustaw tam wartość. Po zapisaniu nigdy nie jest już pokazywana – ani tobie,
+      Włącz sekrety w sekcji {k.b('Sekrety')} i ustaw tam wartość. Po zapisaniu nigdy nie jest już pokazywana – ani tobie,
       ani agentowi; możesz ją tylko zastąpić. Lista pokazuje, które nazwy kod odczytuje, choć nie mają jeszcze wartości,
       a przegląd o nie prosi. {k.code('Secret.Exists')} mówi, czy sekret jest ustawiony – dla kodu, który działa i bez
       niego. Jak wszystkie dane, sekrety są wspólne dla wszystkich wersji, a szkic pracuje na kopii.
@@ -494,7 +497,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Wszystko, co jest w kodzie, staje się publiczne, łącznie z wcześniejszymi wersjami. Miejsce klucza czy hasła jest wśród kluczy i haseł w sekcji Dane, nigdy w kodzie – opublikowanym czy nie.',
+    'Wszystko, co jest w kodzie, staje się publiczne, łącznie z wcześniejszymi wersjami. Miejsce klucza czy hasła jest w sekcji Sekrety – w widoku uproszczonym: klucze i hasła – nigdy w kodzie, opublikowanym czy nie.',
   visitors: (k) => (
     <>
       Otwórz {k.b('Analityka')} w centrum sterowania i włącz ją, aby zobaczyć, kto odwiedza twoją aplikację: ilu ludzi

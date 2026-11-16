@@ -99,14 +99,16 @@ export const guide: KitMessages['guide'] = {
         <>
           Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat. Agen mencoba
           perubahan itu di sebuah draf - salinan dengan alamatnya sendiri - lalu menjadikannya online begitu berhasil. Matikan{' '}
-          {k.b('Langsung online setelah selesai')} kalau Anda ingin mencoba drafnya sendiri dulu.
+          {k.b('Jadikan online setelah selesai')} kalau Anda ingin mencoba drafnya sendiri dulu.
           Agen hanya mengerjakan aplikasi Anda: permintaan yang tidak berkaitan dengannya, atau yang bertujuan merugikan, akan ditolak beserta alasannya.
         </>
       ),
     ],
     ['Draf', () => <>Perubahan yang dicoba sebelum dijadikan online, masing-masing di alamat sendiri dan dengan data uji sendiri. Saat dibuka, draf punya kode, data uji, dan log-nya sendiri. Bagian ini muncul setelah ada draf.</>],
-    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: database, workspace, dan kunci dan kata sandi, masing-masing di tab sendiri. Lihat tabel dan file, unggah file, atur kunci dan kata sandi, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
+    ['Database', () => <>Catatan yang disimpan aplikasi, tabel demi tabel, untuk dibaca - tampilan sederhana menyebutnya catatan. Seperti workspace dan rahasia, database dipakai bersama oleh semua versi dan diaktifkan atau dinonaktifkan di bagiannya sendiri, yang ditampilkan tampilan sederhana begitu aplikasi menyimpan sesuatu di dalamnya.</>],
+    ['Workspace', () => <>File yang disimpan aplikasi selama berjalan, untuk dijelajahi, diunggah, diunduh, dan dihapus - di tampilan sederhana disebut disimpan aplikasi Anda.</>],
+    ['Rahasia', () => <>Kunci API dan kata sandi yang dibaca kode lewat namanya: atur atau ganti, tetapi tidak pernah bisa dibaca kembali - di tampilan sederhana disebut kunci dan kata sandi.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
     ['Analitik', () => <>Siapa yang mengunjungi aplikasi, setelah Anda mengaktifkannya: pengunjung, tampilan halaman, dan request per hari, halaman yang mereka buka, situs yang mengarahkan mereka, negara dan perangkat mereka, serta mesin pencari dan AI yang datang.</>],
@@ -129,7 +131,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Setiap bagian bekerja dengan cara yang sama: judulnya, tombol {k.b('ⓘ')} yang menjelaskannya, aksinya di kanan,
       dan (kalau punya lebih dari satu tampilan) deretan tab di bawahnya. Tampilan lengkap mengelompokkan bagian-bagiannya:
-      cara orang menemukannya, tempat perubahan dibuat, versi dan datanya, dan cara berjalannya.
+      cara orang menemukannya, tempat perubahan dibuat, versi dan datanya, dan cara berjalannya. Di ponsel, bilah di
+      bagian atas menyebut bagian yang sedang Anda buka dan membuka semuanya.
     </>
   ),
   editorAside:
@@ -323,7 +326,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Lambda menyimpan file di dua tempat, dan editor menampilkannya terpisah: {k.b('Kode')} berisi file dari sebuah
-      versi (programnya), dan {k.b('Data')} berisi workspace (apa yang disimpan program itu). Bedanya ada di{' '}
+      versi (programnya), dan {k.b('Workspace')} berisi apa yang disimpan program itu. Bedanya ada di{' '}
       {k.em('milik siapa')}. File dari sebuah versi milik versi itu; data milik lambda, dan dipakai bersama oleh semua
       versi. Masing-masing punya satu jatah ruang: kode dan sumber daya sebuah versi berbagi satu, dan database serta
       workspace lambda berbagi yang lain.
@@ -346,7 +349,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Catatan – entri, akun, pesanan, hasil voting – tempatnya di {k.b('database')}: database SQLite milik lambda itu
-      sendiri, yang diaktifkan di {k.b('Data')}. Kode membuka koneksi dengan {k.code('Database.GetConnection()')} lalu
+      sendiri, yang diaktifkan di {k.b('Database')}. Kode membuka koneksi dengan {k.code('Database.GetConnection()')} lalu
       membaca dan menulis datanya melalui {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, dengan
       konteks miliknya sendiri yang memetakan tabel-tabelnya:
     </>
@@ -362,7 +365,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Seperti semua data, database dipakai bersama oleh semua versi, tidak disentuh oleh deploy maupun rollback, dan draf
-      bekerja pada salinannya. Di {k.b('Data')} Anda bisa melihat tabel dan isinya – tampilan sederhana menyebutnya
+      bekerja pada salinannya. Di {k.b('Database')} Anda bisa melihat tabel dan isinya – tampilan sederhana menyebutnya
       catatan. {k.b('Unduh sebagai proyek .NET')} menyertakannya sebagai file SQLite biasa.
     </>
   ),
@@ -398,7 +401,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Aktifkan rahasia di {k.b('Data')} dan atur nilainya di sana. Setelah disimpan, nilainya tidak pernah ditampilkan
+      Aktifkan rahasia di {k.b('Rahasia')} dan atur nilainya di sana. Setelah disimpan, nilainya tidak pernah ditampilkan
       lagi – tidak kepada Anda, tidak kepada agen; Anda hanya bisa menggantinya. Daftarnya menunjukkan nama yang dibaca
       kode tetapi belum punya nilai, dan ikhtisar memintanya. {k.code('Secret.Exists')} memberi tahu apakah rahasia
       sudah diatur, untuk kode yang tetap berjalan tanpanya. Seperti semua data, rahasia dipakai bersama oleh semua
@@ -508,7 +511,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Semua yang ada di kode menjadi publik, termasuk versi-versi sebelumnya. Kunci atau kata sandi tempatnya di kunci dan kata sandi di bagian Data, tidak pernah di kode - dipublikasikan atau tidak.',
+    'Semua yang ada di kode menjadi publik, termasuk versi-versi sebelumnya. Kunci atau kata sandi tempatnya di Rahasia - kunci dan kata sandi di tampilan sederhana - bukan di kode, dipublikasikan atau tidak.',
   visitors: ((k) => (
     <>
       Buka {k.b('Analitik')} di pusat kontrol dan aktifkan untuk melihat siapa yang mengunjungi aplikasi Anda: berapa

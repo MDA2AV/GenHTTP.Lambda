@@ -102,8 +102,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Entwürfe', () => <>Änderungen, die ausprobiert werden, bevor sie online gehen, jede unter einer eigenen Adresse und mit eigenen Testdaten. Geöffnet hat ein Entwurf eigenen Code, eigene Testdaten und eigene Logs. Der Bereich erscheint, sobald es einen Entwurf gibt.</>],
-    ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: die Datenbank, der Workspace und die Secrets, jeweils mit eigenem Reiter. In Tabellen und Dateien hineinsehen, Dateien hochladen, Secrets setzen oder eine Art ein- und ausschalten. Die einfache Ansicht zeigt den Bereich, sobald die App etwas aufbewahrt.</>],
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
+    ['Datenbank', () => <>Die Einträge, die die App aufbewahrt, Tabelle für Tabelle zum Lesen – die einfache Ansicht nennt sie Einträge. Wie der Workspace und die Secrets ist sie für alle Versionen gemeinsam und wird in einem eigenen Bereich ein- oder ausgeschaltet, den die einfache Ansicht zeigt, sobald die App etwas darin aufbewahrt.</>],
+    ['Workspace', () => <>Die Dateien, die die App zur Laufzeit speichert, zum Durchsuchen, Hochladen, Herunterladen und Löschen – in der einfachen Ansicht: von Ihrer App gespeichert.</>],
+    ['Secrets', () => <>API-Schlüssel und Passwörter, die der Code über ihren Namen liest: Sie können einen setzen oder ersetzen, aber nie wieder auslesen – in der einfachen Ansicht: Schlüssel und Passwörter.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
     ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
     ['Analyse', () => <>Wer die App besucht, sobald Sie sie einschalten: Besucher, Seitenaufrufe und Requests pro Tag, die geöffneten Seiten, die Websites, die Besucher schicken, ihre Länder und Geräte sowie die Suchmaschinen und KI, die vorbeigeschaut haben.</>],
@@ -126,7 +128,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Alle Bereiche funktionieren gleich: oben der Titel, ein {k.b('ⓘ')} mit Erklärung, rechts die Aktionen und – wo es
       mehrere Ansichten gibt – darunter eine Reihe von Tabs. Die vollständige Ansicht fasst die Bereiche in Gruppen
-      zusammen: wie Leute es finden, wo eine Änderung entsteht, die Versionen und die Daten und wie es läuft.
+      zusammen: wie Leute es finden, wo eine Änderung entsteht, die Versionen und die Daten und wie es läuft. Auf dem
+      Smartphone nennt die Leiste oben den Bereich, in dem Sie sich befinden, und öffnet alle Bereiche.
     </>
   ),
   editorAside:
@@ -320,7 +323,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Ein Lambda hat Dateien an zwei Orten, und der Editor zeigt sie getrennt: {k.b('Code')} enthält die Dateien
-      einer Version – das Programm –, {k.b('Daten')} den Workspace – was das Programm aufbewahrt. Der Unterschied
+      einer Version – das Programm –, {k.b('Workspace')} das, was das Programm aufbewahrt. Der Unterschied
       ist, {k.em('wem sie gehören')}. Die Dateien einer Version gehören zu dieser Version; die Daten gehören dem
       Lambda, und alle Versionen teilen sie. Jedes von beiden hat einen eigenen Speicherplatz: Code und Ressourcen
       einer Version teilen sich den einen, die Datenbank und der Workspace des Lambdas den anderen.
@@ -343,7 +346,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Datensätze – Einträge, Konten, Bestellungen, Stimmen – gehören in die {k.b('Datenbank')}: eine eigene
-      SQLite-Datenbank des Lambdas, die Sie unter {k.b('Daten')} einschalten. Der Code öffnet mit{' '}
+      SQLite-Datenbank des Lambdas, die Sie unter {k.b('Datenbank')} einschalten. Der Code öffnet mit{' '}
       {k.code('Database.GetConnection()')} eine Verbindung und liest und schreibt über{' '}
       {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, mit einem eigenen Kontext, der die
       Tabellen abbildet:
@@ -360,7 +363,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Wie alle Daten teilen sich alle Versionen die Datenbank, Deployments und Zurückrollen lassen sie unberührt, und
-      ein Entwurf arbeitet mit einer Kopie. Unter {k.b('Daten')} sehen Sie ihre Tabellen und was darin steht – die
+      ein Entwurf arbeitet mit einer Kopie. Unter {k.b('Datenbank')} sehen Sie ihre Tabellen und was darin steht – die
       einfache Ansicht nennt sie Einträge. {k.b('Als .NET-Projekt herunterladen')} nimmt sie als gewöhnliche
       SQLite-Datei mit.
     </>
@@ -397,7 +400,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Schalten Sie Secrets unter {k.b('Daten')} ein und setzen Sie den Wert dort. Einmal gespeichert, wird er nie wieder
+      Schalten Sie Secrets unter {k.b('Secrets')} ein und setzen Sie den Wert dort. Einmal gespeichert, wird er nie wieder
       angezeigt – weder Ihnen noch einem Agenten; Sie können ihn nur ersetzen. Die Liste zeigt, welche Namen der Code
       liest, für die noch kein Wert gesetzt ist, und die Übersicht fragt danach. {k.code('Secret.Exists')} sagt, ob
       eines gesetzt ist – für Code, der auch ohne auskommt. Wie alle Daten teilen sich alle Versionen die Secrets, und
@@ -509,7 +512,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Alles im Code wird öffentlich, auch die früheren Versionen. Ein Schlüssel oder Passwort gehört zu den Schlüsseln und Passwörtern unter Daten, nie in den Code – ob veröffentlicht oder nicht.',
+    'Alles im Code wird öffentlich, auch die früheren Versionen. Ein Schlüssel oder Passwort gehört unter Secrets – in der einfachen Ansicht: Schlüssel und Passwörter –, nie in den Code, ob veröffentlicht oder nicht.',
   visitors: ((k) => (
     <>
       Öffnen Sie im Kontrollzentrum {k.b('Analyse')} und schalten Sie sie ein, um zu sehen, wer Ihre App besucht: wie viele

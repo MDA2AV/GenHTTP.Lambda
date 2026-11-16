@@ -20,7 +20,7 @@
 //   docs/, tests/           what it is for and why, and how it is tested
 //
 // A secret, PASSWORD_PEPPER, goes into every password hash where the lambda
-// has one - see Accounts.cs. Secrets are data, set by the owner under Data >
+// has one - see Accounts.cs. Secrets are data, set by the owner under
 // Secrets in the editor and never shown again; the code reads them by name.
 // Without one the demo works just the same, so a copy of it runs before
 // anybody has switched secrets on.

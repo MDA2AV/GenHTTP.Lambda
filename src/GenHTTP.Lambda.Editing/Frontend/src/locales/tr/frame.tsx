@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: 'Vitrin',
     source: 'Açık kaynak',
     domain: 'Alan adı',
-    data: 'Veriler',
     versions: 'Sürümler',
     history: 'Geçmiş',
     deployments: 'Yayın geçmişi',

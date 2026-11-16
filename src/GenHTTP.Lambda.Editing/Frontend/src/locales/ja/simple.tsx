@@ -9,7 +9,6 @@ export const simple: EditorMessages['simple'] = {
   simpleNote: 'アプリと、変更を依頼する入力欄です。',
   fullNote: 'コードを含むすべてのセクションです。',
   toFull: 'すべてのセクションを表示',
-  toSimple: 'シンプル表示に切り替える',
   about: 'アプリについて',
   aboutMore: 'アプリについてくわしく',
   outsideTitle: 'このページはすべて表示でのみ使えます',

@@ -258,7 +258,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => RefusingAsync(() => DatabaseAsync(privateKey, feature, table, offset, limit, order, ascending));
 
     [Tool("set_secret", Title = "Store a secret", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("Store an API key, password or token under a name the code reads with Secret.Read(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.Read and tell the user to set it under Data > Secrets in the editor - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to 100 secrets of 32 KB each.")]
+    [Summary("Store an API key, password or token under a name the code reads with Secret.Read(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.Read and tell the user to set it under Secrets in the editor (Keys and passwords in its simple view) - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to 100 secrets of 32 KB each.")]
     public object SetSecret([Summary(PrivateKey)] string privateKey,
                             [Summary("Letters, digits and underscores, not starting with a digit - conventionally upper case: 'STRIPE_KEY'. The name of an environment variable in an exported project.")] string name,
                             [Summary("The value, as the user gave it.")] string value,
@@ -974,7 +974,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             enabled = store.Enabled,
             next = store.Kind switch
             {
-                DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Data > Secrets in the editor. The code reads it with Secret.Read(\"NAME\").",
+                DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Secrets in the editor (Keys and passwords in its simple view). The code reads it with Secret.Read(\"NAME\").",
                 DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in resources/migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code keeps its records with a DbContext of Entity Framework Core on the connection Database.GetConnection() opens, synchronously; read_database shows what it holds.",
                 _ => "On from the lambda's next request, without a deploy."
             }
@@ -1095,7 +1095,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             note = !listing.Enabled
                 ? "Secrets are switched off. enable_data with kind 'secrets' switches them on when what you build needs one."
                 : listing.Missing.Count > 0
-                    ? $"The code reads {string.Join(", ", listing.Missing)}, which have no value: Secret.Read throws until they are set. Ask the user to set them under Data > Secrets in the editor, or store one they gave you with set_secret."
+                    ? $"The code reads {string.Join(", ", listing.Missing)}, which have no value: Secret.Read throws until they are set. Ask the user to set them under Secrets in the editor (Keys and passwords in its simple view), or store one they gave you with set_secret."
                     : null
         };
     }
@@ -1558,7 +1558,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     names = kept.Secrets.Select(n => n.Name),
                     missing = kept.Missing.Count > 0 ? kept.Missing : null,
                     note = kept.Missing.Count > 0
-                        ? "The code reads secrets that have no value yet: Secret.Read throws until the user sets them under Data > Secrets in the editor (or you store one they gave you with set_secret)."
+                        ? "The code reads secrets that have no value yet: Secret.Read throws until the user sets them under Secrets in the editor (Keys and passwords in its simple view), or you store one they gave you with set_secret."
                         : null
                 },
                 DataKinds.DatabaseId => new
@@ -2229,7 +2229,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 topLevel = "At the top level of lambda.cs, write using (var connection = Database.GetConnection()) { ... } - a using declaration (using var) is not allowed there. Inside methods and routes, using var is fine."
             },
             notAllowed = "A lambda does not open connections of its own - new SqliteConnection(...), a connection string (UseSqlite(\"Data Source=...\") included), ATTACH and VACUUM INTO are refused - and Entity Framework does not make its schema: EnsureCreated, EnsureDeleted, Migrate and its migrations are refused. The database is the one file Database.GetConnection() opens, and its schema is Evolve's.",
-            fromOutside = "read_database lists the tables and reads their rows - with feature, a feature's copy. The owner sees the same in the editor under Data. Nothing writes to it but the lambda.",
+            fromOutside = "read_database lists the tables and reads their rows - with feature, a feature's copy. The owner sees the same in the editor under Database (Records in its simple view). Nothing writes to it but the lambda.",
             exported = "The export carries the database as database/database.db; Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite, and a project whose code has a DbContext references Entity Framework Core.",
             limits = new
             {
@@ -2250,7 +2250,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             reach = "Secret can be used from every file, like Workspace, and read at the top of lambda.cs or per request. A value changed by the owner is what the next call reads, without a deploy - read it where it is used rather than once into a static, if a change should take effect without one.",
             switchedOn = "Secrets are off until switched on: enable_data with kind 'secrets'. While they are off Secret.Read throws and Secret.Exists answers false.",
-            whoSetsThem = "Best: the user, in the editor under Data > Secrets - the value then never passes through you. Write the code with Secret.Read(\"NAME\"), switch secrets on, and tell the user which names to set and where to get the values. read_lambda and list_secrets list the names the code reads that have no value yet (missing), and so does the editor, which offers to set them. If the user hands you a value, store it with set_secret.",
+            whoSetsThem = "Best: the user, in the editor under Secrets (Keys and passwords in its simple view) - the value then never passes through you. Write the code with Secret.Read(\"NAME\"), switch secrets on, and tell the user which names to set and where to get the values. read_lambda and list_secrets list the names the code reads that have no value yet (missing), and so does the editor, which offers to set them. If the user hands you a value, store it with set_secret.",
             neverShown = "A value is never shown again - not in the editor, the API or here. Only the lambda reads it. So a secret is replaced, not edited.",
             neverInTheOpen = "Never write a secret into code, a resource, the workspace, a log line, a specification or a change note, and never return one from a route or print it. Never echo a value the user gave you.",
             names = $"Letters, digits and underscores, not starting with a digit; conventionally upper case: STRIPE_KEY, SMTP_PASSWORD. Case sensitive. Up to {SecretVault.MaxSecrets} per lambda, {SecretVault.MaxValue / 1024} KB each.",
@@ -2391,7 +2391,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         thingsThatCatchPeopleOut = new[]
         {
             "A new version for every attempt at changing a lambda that is online. Work in a feature, try it at its preview address, and merge it once.",
-            "An API key or password in the code, where every version, export and reader of the history keeps it. Read it with Secret.Read(\"NAME\") and have the user set it under Data > Secrets.",
+            "An API key or password in the code, where every version, export and reader of the history keeps it. Read it with Secret.Read(\"NAME\") and have the user set it under Secrets in the editor (Keys and passwords in its simple view).",
             "A change that leaves docs/ as it was. The next agent reads the documentation first and works from what it says - so out of date, it is worse than none.",
             "Records in a JSON file in the workspace, rewritten whole on every change. Keep them in the database: enable_data with kind 'database', a migration, a DbContext on Database.GetConnection().",
             "Entity Framework's Async methods - ToListAsync, FirstOrDefaultAsync, SaveChangesAsync. Call ToList, FirstOrDefault and SaveChanges: SQLite answers synchronously whatever the method is called.",

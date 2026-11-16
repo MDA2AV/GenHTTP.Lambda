@@ -38,7 +38,7 @@ export const openSource: EditorMessages['openSource'] = {
     'Link editor',
   ],
   careful:
-    'Semua yang ada di kode menjadi publik, termasuk keadaan sebelumnya. Kata sandi atau kunci tidak pernah boleh ada di kode - tempatnya di kunci dan kata sandi di bagian Data, yang tidak pernah dipublikasikan.',
+    'Semua yang ada di kode menjadi publik, termasuk keadaan sebelumnya. Kata sandi atau kunci tidak pernah boleh ada di kode - tempatnya di kunci dan kata sandi aplikasi, yang disimpan terpisah dari kode dan tidak pernah dipublikasikan.',
   licenseLabel: 'Lisensi',
   licenseHint:
     'Apa yang boleh dilakukan orang lain dengan kodenya. MIT, yang paling umum, membolehkan siapa pun melakukan hampir apa saja dengannya selama nama Anda tetap tercantum.',

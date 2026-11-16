@@ -103,8 +103,10 @@ export const guide: KitMessages['guide'] = {
       ),
     ],
     ['Borradores', () => <>Cambios que se prueban antes de ponerlos en línea, cada uno en su propia dirección y con sus propios datos de prueba. Al abrirlo, un borrador tiene su propio código, datos de prueba y logs. La sección aparece en cuanto hay un borrador.</>],
-    ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: la base de datos, el workspace y los secretos, cada uno en su pestaña. Mira las tablas y los archivos, sube archivos, define secretos o activa y desactiva un tipo. La vista simple lo muestra en cuanto la app guarda algo.</>],
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
+    ['Base de datos', () => <>Los registros que guarda la app, tabla por tabla, para leerlos (la vista simple los llama registros). Igual que el workspace y los secretos, la comparten todas las versiones y se activa o desactiva en su propia sección, que la vista simple muestra en cuanto la app guarda algo en ella.</>],
+    ['Workspace', () => <>Los archivos que la app guarda mientras se ejecuta, para explorar, subir, descargar y borrar; en la vista simple, lo guardado por tu app.</>],
+    ['Secretos', () => <>Claves de API y contraseñas que el código lee por su nombre: puedes definir una o reemplazarla, pero nunca volver a leerla; en la vista simple, claves y contraseñas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
     ['Estadísticas', () => <>Peticiones, fallos, tiempos de respuesta y las rutas más pedidas, en la última hora o el último día.</>],
     ['Analítica', () => <>Quién visita la app, en cuanto la activas: visitantes, visualizaciones de página y peticiones por día, las páginas que abren, los sitios que los envían, sus países y dispositivos, y los buscadores y las IA que han pasado por aquí.</>],
@@ -127,7 +129,8 @@ export const guide: KitMessages['guide'] = {
     <>
       Todas las secciones funcionan igual: su título, un {k.b('ⓘ')} que la explica, sus acciones a la derecha y, si
       tiene más de una vista, una fila de pestañas debajo. La vista completa agrupa las secciones: cómo la encuentra la
-      gente, dónde se hace un cambio, las versiones y los datos, y cómo se ejecuta.
+      gente, dónde se hace un cambio, las versiones y los datos, y cómo se ejecuta. En el móvil, la barra de arriba
+      indica en qué sección estás y las abre todas.
     </>
   ),
   editorAside:
@@ -316,7 +319,7 @@ export const guide: KitMessages['guide'] = {
   storage: (k) => (
     <>
       Una lambda guarda archivos en dos lugares, y el editor los muestra por separado: {k.b('Código')} contiene los
-      archivos de una versión (el programa) y {k.b('Datos')} contiene el workspace (lo que el programa guarda). La
+      archivos de una versión (el programa) y {k.b('Workspace')} contiene lo que el programa guarda. La
       diferencia está en {k.em('de quién son')}. Los archivos de una versión pertenecen a esa versión; los datos
       pertenecen a la lambda, y todas las versiones los comparten. Cada uno tiene su propio espacio: el código y los
       recursos de una versión comparten uno, y la base de datos y el workspace de la lambda comparten el otro.
@@ -339,7 +342,7 @@ export const guide: KitMessages['guide'] = {
   database: (k) => (
     <>
       Los registros (entradas, cuentas, pedidos, votos) van en la {k.b('base de datos')}: una base de datos SQLite
-      propia de la lambda, que se activa en {k.b('Datos')}. El código abre una conexión con{' '}
+      propia de la lambda, que se activa en {k.b('Base de datos')}. El código abre una conexión con{' '}
       {k.code('Database.GetConnection()')} y lee y escribe los datos mediante{' '}
       {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, con un contexto propio que mapea las
       tablas:
@@ -356,7 +359,7 @@ export const guide: KitMessages['guide'] = {
   database3: (k) => (
     <>
       Como todos los datos, la base de datos la comparten todas las versiones, desplegar o volver atrás no la toca, y un
-      borrador trabaja con una copia. En {k.b('Datos')} ves sus tablas y sus filas, que la vista simple llama
+      borrador trabaja con una copia. En {k.b('Base de datos')} ves sus tablas y sus filas, que la vista simple llama
       registros. {k.b('Descargar como proyecto .NET')} la incluye como un archivo SQLite normal.
     </>
   ),
@@ -391,7 +394,7 @@ export const guide: KitMessages['guide'] = {
   ),
   secrets2: (k) => (
     <>
-      Activa los secretos en {k.b('Datos')} y define ahí el valor. Una vez guardado, no se vuelve a mostrar, ni a ti ni
+      Activa los secretos en {k.b('Secretos')} y define ahí el valor. Una vez guardado, no se vuelve a mostrar, ni a ti ni
       a un agente: solo puedes reemplazarlo. La lista dice qué nombres lee el código sin que haya todavía un valor, y el
       resumen los pide. {k.code('Secret.Exists')} dice si un secreto está definido, para el código que funciona sin
       él. Como todos los datos, los secretos los comparten todas las versiones, y un borrador trabaja con una copia.
@@ -499,7 +502,7 @@ export const guide: KitMessages['guide'] = {
     </>
   ),
   openAside:
-    'Todo lo que hay en el código se hace público, incluidas las versiones anteriores. Una clave o una contraseña va en Claves y contraseñas, dentro de Datos, nunca en el código, esté publicado o no.',
+    'Todo lo que hay en el código se hace público, incluidas las versiones anteriores. Una clave o una contraseña va en Secretos (claves y contraseñas, en la vista simple), nunca en el código, esté publicado o no.',
   visitors: (k) => (
     <>
       Abre {k.b('Analítica')} en el centro de control y actívala para ver quién visita tu app: cuánta gente llega cada

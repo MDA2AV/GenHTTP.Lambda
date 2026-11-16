@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'データは、lambdaが実行中に保存しておくものです。バージョンではなくlambdaのもので、どのバージョンも同じデータを読み書きします。バージョンをどう操作しても、データは変わりません。下書きは、そのコピーを使って試します。消えるのは、lambdaを削除したときか、その種類のデータをオフにしたときだけです。データベースとワークスペースは1つの容量を共有するため、それぞれ、もう一方が使っていない分まで増やせます。',
-  facts: [
-    ['すべてのバージョンで共有', 'どのバージョンがオンラインでも、同じデータを読み書きします。'],
-    ['デプロイしても残る', 'デプロイ、ロールバック、下書きの確定では、一切変わりません。'],
-    ['オン・オフは自分で', '種類ごとに、必要な間だけオンにできます。オフにすると、中身は削除されます。'],
-  ],
   featureHint:
     'アプリのデータのコピーで、この下書き専用です。プレビューが読み書きするのはこのコピーだけなので、ここで何を試しても、本物のデータには影響しません。下書きがなくなると、コピーもなくなります。',
   recopy: 'テスト用データをリセットする',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'テスト用データを新しい状態に戻しました。',
   recopyFailed: 'テスト用データをリセットできませんでした。',
   copyContents: 'ワークスペースのコピーの中身',
-  kindsLabel: 'データの種類',
   kinds: {
     database: {
       name: 'データベース',
@@ -179,7 +173,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}、${size}`,
     more: (count) => `ほか${count}件`,
     database: '記録',
-    databaseTitle: 'アプリが残している記録',
     databaseText: '利用者が使っているあいだにアプリが残している記録（登録、投稿、投票など）を、種類ごとに表示します。新しい変更を公開しても、ここは何も変わりません。',
     records: (count) => `${count.toLocaleString()}件`,
     noRecords: 'アプリはまだ何も記録していません。',

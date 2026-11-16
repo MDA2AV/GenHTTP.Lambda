@@ -3,11 +3,6 @@ import type { EditorMessages } from '../en';
 export const data: EditorMessages['data'] = {
   hint:
     'Data is wat de lambda bewaart terwijl hij draait. Het hoort bij de lambda, niet bij een versie: elke versie leest en schrijft dezelfde data, en niets wat je met versies doet, verandert eraan. Een concept wordt uitgeprobeerd op een kopie ervan. De data verdwijnt pas als de lambda wordt verwijderd, of als je dat soort data uitzet. De database en de workspace delen één hoeveelheid ruimte, dus elk van beide mag groeien tot waar de ander ruimte laat.',
-  facts: [
-    ['Gedeeld door elke versie', 'Welke versie er ook online staat, hij leest en schrijft dezelfde data.'],
-    ['Blijft bij een deploy', 'Deployen, terugzetten of een concept samenvoegen raakt het nooit aan.'],
-    ['Jij zet het aan of uit', 'Elk soort staat alleen aan zolang jij dat wilt. Zet je er een uit, dan wordt verwijderd wat erin zit.'],
-  ],
   featureHint:
     'Een kopie van de data van je app, alleen voor dit concept: de voorvertoning leest en schrijft alleen deze kopie, dus uitproberen raakt nooit de echte data. De kopie verdwijnt samen met het concept.',
   recopy: 'Testdata opnieuw instellen',
@@ -19,7 +14,6 @@ export const data: EditorMessages['data'] = {
   recopied: 'De testdata is weer vers.',
   recopyFailed: 'De testdata kon niet opnieuw worden ingesteld.',
   copyContents: 'Wat er in de kopie van de workspace staat',
-  kindsLabel: 'Soorten data',
   kinds: {
     database: {
       name: 'Database',
@@ -178,7 +172,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `en nog ${count}`,
     database: 'Items',
-    databaseTitle: 'Items die je app bijhoudt',
     databaseText: 'Wat je app bijhoudt terwijl mensen hem gebruiken – aanmeldingen, berichten, stemmen – tabel per tabel. Hier verandert niets als er een nieuwe wijziging online gaat.',
     records: (count) => (count === 1 ? '1 item' : `${count.toLocaleString()} items`),
     noRecords: 'Je app heeft nog geen items bijgehouden.',

@@ -4,11 +4,6 @@ import { josa } from './language';
 export const data: EditorMessages['data'] = {
   hint:
     '데이터는 람다가 실행 중에 보관하는 거예요. 버전이 아니라 람다에 속해요. 모든 버전이 같은 데이터를 읽고 쓰고, 버전으로 무엇을 하든 데이터는 바뀌지 않아요. 초안은 데이터의 복사본으로 써 봐요. 람다를 삭제하거나 그 종류의 데이터를 끌 때만 사라져요. 데이터베이스와 워크스페이스는 공간을 함께 쓰기 때문에, 한쪽이 쓰고 남은 만큼 다른 쪽이 늘어날 수 있어요.',
-  facts: [
-    ['모든 버전이 공유', '어느 버전이 온라인이든 같은 데이터를 읽고 써요.'],
-    ['배포해도 그대로', '배포, 롤백, 초안 확정은 데이터를 전혀 건드리지 않아요.'],
-    ['켜고 끄는 건 내 선택', '종류마다 원하는 동안만 켜 둘 수 있어요. 끄면 안에 있던 건 삭제돼요.'],
-  ],
   featureHint:
     '이 초안만을 위한 앱 데이터의 복사본이에요. 미리 보기는 이 복사본만 읽고 쓰기 때문에, 여기서 무엇을 해 봐도 실제 데이터는 건드리지 않아요. 초안이 사라지면 복사본도 함께 사라져요.',
   recopy: '테스트 데이터 초기화',
@@ -20,7 +15,6 @@ export const data: EditorMessages['data'] = {
   recopied: '테스트 데이터를 새로 만들었어요.',
   recopyFailed: '테스트 데이터를 초기화하지 못했어요.',
   copyContents: '워크스페이스 복사본에 담긴 것',
-  kindsLabel: '데이터 종류',
   kinds: {
     database: {
       name: '데이터베이스',
@@ -180,7 +174,6 @@ export const data: EditorMessages['data'] = {
     workspaceSize: (files, size) => `${files}, ${size}`,
     more: (count) => `외 ${count}개`,
     database: '기록',
-    databaseTitle: '앱이 보관하는 기록',
     databaseText: '사람들이 앱을 쓰는 동안 앱이 보관하는 기록(가입, 입력한 내용, 투표 등)을 종류별로 보여 줘요. 새 변경이 온라인에 올라가도 여기는 바뀌지 않아요.',
     records: (count) => `${count.toLocaleString()}건`,
     noRecords: '앱이 아직 아무 기록도 보관하지 않았어요.',

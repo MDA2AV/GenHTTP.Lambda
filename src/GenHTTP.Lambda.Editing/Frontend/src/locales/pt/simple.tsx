@@ -9,7 +9,6 @@ export const simple: EditorMessages['simple'] = {
   simpleNote: 'Seu app e um campo para pedir mudanças.',
   fullNote: 'Todas as seções, inclusive o código.',
   toFull: 'Mostrar todas as seções',
-  toSimple: 'Mudar para a visualização simples',
   about: 'Sobre',
   aboutMore: 'Mais sobre o seu app',
   outsideTitle: 'Isto faz parte da visualização completa',

@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: 'ショーケース',
     source: 'オープンソース',
     domain: 'ドメイン',
-    data: 'データ',
     versions: 'バージョン',
     history: '履歴',
     deployments: 'デプロイ履歴',
