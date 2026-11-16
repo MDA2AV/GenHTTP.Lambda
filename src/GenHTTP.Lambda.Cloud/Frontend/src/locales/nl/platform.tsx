@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Bouwen duurt een minuut.',
   titleAccent: 'De rest zit er al in.',
   intro:
-    'Een app die je hier maakt, is meer dan de code die een AI schreef. Wat hem nuttig houdt komt daarna: zijn items, zijn versies en waar hij voor dient, de mensen die hem bezoeken, een eigen domein. Elke app heeft dat allemaal, op één plek, die je opent met de link die je krijgt zodra hij klaar is.',
+    'Een app die je hier maakt, is meer dan de code die een AI schreef. Wat hem nuttig houdt komt daarna: zijn items, zijn versies en waar hij voor dient, weten wie hem bezoekt, een eigen domein zodra hij aanslaat - alles op één plek, die je opent met de link die je krijgt zodra hij klaar is.',
   build: 'Bouw iets',
   ownAgent: 'Gebruik je eigen agent',
   free: 'Gratis. Geen account, geen creditcard.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'Achter elke app',
   behindText:
-    'Wat een app nuttig houdt, is alles rond zijn code. Elke app heeft dat allemaal vanaf de eerste minuut - voor wie hem maakte, niet alleen voor wie code kan lezen.',
+    'Wat een app nuttig houdt, is alles rond zijn code - er voor wie hem maakte, niet alleen voor wie code kan lezen.',
 
   yoursTitle: 'Van jou om verder mee te gaan',
   yoursText: 'Voor ontwikkelaars, en voor iedereen die wil dat zijn app deze site overleeft.',

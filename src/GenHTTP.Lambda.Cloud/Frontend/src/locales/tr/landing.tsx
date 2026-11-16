@@ -43,7 +43,7 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Hallettim. Sürüm 4 aynı adreste yayında. Geri dönmek isterseniz sürüm 3 hâlâ duruyor.',
   more: (link) => (
-    <>Her uygulama ayrıca kayıtlarını, belgelerini ve ziyaretçilerini tutar, isterseniz kendi alan adını da alabilir. {link('Bir uygulamanın neler sunduğunun tamamını görün')}.</>
+    <>Her uygulama ayrıca kayıtlarını ve belgelerini tutar, ziyaretçilerini sayabilir ve kendi alan adına geçebilir. {link('Bir uygulamanın neler sunduğunun tamamını görün')}.</>
   ),
 
   agentsTitle: 'Kendi ajanınızla çalışın: Claude, Codex, Cursor',

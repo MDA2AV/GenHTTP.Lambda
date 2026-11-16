@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Membuatnya cuma semenit.',
   titleAccent: 'Selebihnya sudah tersedia.',
   intro:
-    'Aplikasi yang dibuat di sini lebih dari sekadar kode yang ditulis AI. Yang membuatnya tetap berguna datang sesudahnya: catatannya, versinya dan tujuannya, orang-orang yang mengunjunginya, serta domain sendiri. Setiap aplikasi mendapat semuanya, di satu tempat yang dibuka dengan link yang Anda terima saat aplikasinya selesai dibuat.',
+    'Aplikasi yang dibuat di sini lebih dari sekadar kode yang ditulis AI. Yang membuatnya tetap berguna datang sesudahnya: catatannya, versinya dan tujuannya, mengetahui siapa yang mengunjunginya, serta domain sendiri begitu aplikasinya mulai ramai - semuanya di satu tempat, dibuka dengan link yang Anda terima saat aplikasinya selesai dibuat.',
   build: 'Buat sesuatu',
   ownAgent: 'Pakai agen Anda sendiri',
   free: 'Gratis. Tanpa daftar, tanpa kartu kredit.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'Di balik setiap aplikasi',
   behindText:
-    'Yang membuat aplikasi tetap berguna adalah semua yang ada di sekitar kodenya. Setiap aplikasi mendapat semuanya sejak menit pertama - untuk siapa pun yang membuatnya, bukan hanya yang bisa membaca kode.',
+    'Yang membuat aplikasi tetap berguna adalah semua yang ada di sekitar kodenya - tersedia untuk siapa pun yang membuatnya, bukan hanya yang bisa membaca kode.',
 
   yoursTitle: 'Bisa Anda kembangkan sendiri',
   yoursText: 'Untuk developer, dan siapa pun yang ingin aplikasinya tetap hidup di luar situs ini.',

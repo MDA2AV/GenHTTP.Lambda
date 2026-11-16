@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Crearla richiede un minuto.',
   titleAccent: 'Il resto è già incluso.',
   intro:
-    'Un’app creata qui è più del codice scritto da un’IA. Quello che la rende utile viene dopo: le sue voci, le sue versioni e a cosa serve, le persone che la visitano, un dominio tutto suo. Ogni app ha tutto questo, in un unico posto che si apre con il link che ricevi quando è pronta.',
+    'Un’app creata qui è più del codice scritto da un’IA. Quello che la rende utile viene dopo: le sue voci, le sue versioni e a cosa serve, sapere chi la visita, un dominio tutto suo quando inizia a funzionare - tutto in un unico posto, che si apre con il link che ricevi quando è pronta.',
   build: 'Crea qualcosa',
   ownAgent: 'Usa il tuo agente',
   free: 'Gratis. Senza registrazione, senza carta di credito.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'Dietro ogni app',
   behindText:
-    'Quello che rende utile un’app è tutto ciò che sta intorno al suo codice. Ogni app ha tutto fin dal primo minuto, per chi l’ha creata e non solo per chi sa leggere il codice.',
+    'Quello che rende utile un’app è tutto ciò che sta intorno al suo codice: c’è per chi l’ha creata, non solo per chi sa leggere il codice.',
 
   yoursTitle: 'Tua, per andare oltre',
   yoursText: 'Per gli sviluppatori e per chiunque voglia che la propria app sopravviva a questo sito.',

@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Zbudowanie zajmuje minutę.',
   titleAccent: 'Cała reszta jest już w środku.',
   intro:
-    'Aplikacja zrobiona tutaj to coś więcej niż kod napisany przez AI. O jej przydatności decyduje to, co jest potem: jej wpisy, wersje i opis tego, do czego służy, osoby, które ją odwiedzają, własna domena. Każda aplikacja ma to wszystko w jednym miejscu, otwieranym linkiem, który dostajesz po jej zbudowaniu.',
+    'Aplikacja zrobiona tutaj to coś więcej niż kod napisany przez AI. O jej przydatności decyduje to, co jest potem: jej wpisy, wersje i opis tego, do czego służy, wiedza o tym, kto ją odwiedza, oraz własna domena, gdy aplikacja się przyjmie – wszystko w jednym miejscu, otwieranym linkiem, który dostajesz po jej zbudowaniu.',
   build: 'Zbuduj coś',
   ownAgent: 'Użyj własnego agenta',
   free: 'Za darmo. Bez rejestracji, bez karty kredytowej.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'W każdej aplikacji',
   behindText:
-    'O przydatności aplikacji decyduje wszystko, co jest wokół jej kodu. Każda aplikacja ma to wszystko od pierwszej minuty – dla każdego, kto ją zrobił, nie tylko dla tych, którzy czytają kod.',
+    'O przydatności aplikacji decyduje wszystko, co jest wokół jej kodu – to jest dla każdego, kto ją zrobił, nie tylko dla tych, którzy czytają kod.',
 
   yoursTitle: 'Rozwijaj ją dalej po swojemu',
   yoursText: 'Dla programistów i dla każdego, kto chce, żeby jego aplikacja przetrwała dłużej niż ta strona.',

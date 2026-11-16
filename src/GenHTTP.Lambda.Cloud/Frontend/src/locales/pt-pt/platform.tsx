@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Construir demora um minuto.',
   titleAccent: 'O resto já vem incluído.',
   intro:
-    'Uma app feita aqui é mais do que o código que uma IA escreveu. O que a torna útil vem depois: os seus registos, as suas versões e para que serve, as pessoas que a visitam, um domínio próprio. Cada app tem tudo isto, num só sítio, aberto com o link que recebes quando ela é criada.',
+    'Uma app feita aqui é mais do que o código que uma IA escreveu. O que a torna útil vem depois: os seus registos, as suas versões e para que serve, saber quem a visita, um domínio próprio quando ganha adeptos - tudo num só sítio, aberto com o link que recebes quando ela é criada.',
   build: 'Construir algo',
   ownAgent: 'Usar o teu próprio agente',
   free: 'Grátis. Sem registo, sem cartão de crédito.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'Por trás de cada app',
   behindText:
-    'O que torna uma app útil é tudo o que existe à volta do seu código. Cada app tem tudo isto desde o primeiro minuto - para quem a fez, e não só para quem sabe ler código.',
+    'O que torna uma app útil é tudo o que existe à volta do seu código - ao dispor de quem a fez, e não só de quem sabe ler código.',
 
   yoursTitle: 'Teu para ires mais longe',
   yoursText: 'Para programadores, e para quem quer que a sua app sobreviva a este site.',

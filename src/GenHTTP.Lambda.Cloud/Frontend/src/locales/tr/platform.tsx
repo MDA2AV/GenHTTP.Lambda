@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Yapmak bir dakika sürer.',
   titleAccent: 'Gerisi hazır geliyor.',
   intro:
-    'Burada yapılan bir uygulama, bir yapay zekânın yazdığı koddan fazlasıdır. Onu işe yarar kılan şey sonrasında gelir: kayıtları, sürümleri ve ne işe yaradığı, onu ziyaret edenler, kendi alan adı. Her uygulamada bunların hepsi vardır; hepsi, uygulama yapıldığında aldığınız linkle açılan tek bir yerdedir.',
+    'Burada yapılan bir uygulama, bir yapay zekânın yazdığı koddan fazlasıdır. Onu işe yarar kılan şey sonrasında gelir: kayıtları, sürümleri ve ne işe yaradığı, onu kimlerin ziyaret ettiğini bilmek, tutunduğunda kendi alan adı - hepsi, uygulama yapıldığında aldığınız linkle açılan tek bir yerde.',
   build: 'Bir şey yapın',
   ownAgent: 'Kendi ajanınızı kullanın',
   free: 'Ücretsiz. Üyelik yok, kredi kartı yok.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'Her uygulamanın arkasında',
   behindText:
-    'Bir uygulamayı işe yarar kılan, kodunun çevresindeki her şeydir. Her uygulamada bunların hepsi ilk dakikadan itibaren vardır - yalnızca kod okuyabilenler için değil, uygulamayı yapan herkes için.',
+    'Bir uygulamayı işe yarar kılan, kodunun çevresindeki her şeydir - yalnızca kod okuyabilenler için değil, uygulamayı yapan herkes için orada.',
 
   yoursTitle: 'Daha ileri taşımak size kalmış',
   yoursText: 'Geliştiriciler için ve uygulamasının bu siteden uzun yaşamasını isteyen herkes için.',

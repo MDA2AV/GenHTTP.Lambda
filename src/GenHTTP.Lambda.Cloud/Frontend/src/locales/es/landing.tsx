@@ -43,7 +43,7 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Listo. La versión 4 ya está en línea en la misma dirección, y la 3 sigue disponible si quieres volver atrás.',
   more: (link) => (
-    <>Cada app guarda además sus registros, su documentación y sus visitas, y puede tener un dominio propio. {link('Descubre todo lo que incluye una app')}.</>
+    <>Cada app guarda además sus registros y su documentación, puede contar sus visitas y puede pasar a un dominio propio. {link('Descubre todo lo que incluye una app')}.</>
   ),
 
   agentsTitle: 'Usa tu propio agente: Claude, Codex, Cursor',

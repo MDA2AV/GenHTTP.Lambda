@@ -43,7 +43,7 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Beres. Versi 4 sudah online di alamat yang sama. Versi 3 masih ada kalau Anda mau kembali.',
   more: (link) => (
-    <>Setiap aplikasi juga menyimpan catatan, dokumentasi, dan pengunjungnya, serta bisa punya domain sendiri. {link('Lihat semua yang didapat sebuah aplikasi')}.</>
+    <>Setiap aplikasi juga menyimpan catatan dan dokumentasinya, bisa menghitung pengunjungnya, dan bisa pindah ke domain sendiri. {link('Lihat semua yang didapat sebuah aplikasi')}.</>
   ),
 
   agentsTitle: 'Bawa agen Anda sendiri: Claude, Codex, Cursor',

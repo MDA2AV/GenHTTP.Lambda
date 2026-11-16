@@ -43,7 +43,7 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Erledigt. Version 4 ist unter derselben Adresse live. Version 3 lässt sich jederzeit zurückholen.',
   more: (link) => (
-    <>Jede App behält außerdem ihre Einträge, ihre Dokumentation und ihre Besucher und kann eine eigene Domain bekommen. {link('Alles, was eine App bekommt')}.</>
+    <>Jede App behält außerdem ihre Einträge und ihre Dokumentation, kann ihre Besucher zählen und auf eine eigene Domain umziehen. {link('Alles, was eine App bekommt')}.</>
   ),
 
   agentsTitle: 'Bringen Sie Ihren Agenten mit: Claude, Codex, Cursor',

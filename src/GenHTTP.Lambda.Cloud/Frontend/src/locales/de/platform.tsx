@@ -7,7 +7,7 @@ export const platform: Messages['platform'] = {
   title: 'Gebaut ist sie in einer Minute.',
   titleAccent: 'Alles andere ist schon eingebaut.',
   intro:
-    'Eine App von hier ist mehr als der Code, den eine KI geschrieben hat. Nützlich bleibt sie durch das, was danach kommt: ihre Einträge, ihre Versionen und ihr Zweck, die Menschen, die sie besuchen, eine eigene Domain. Jede App hat all das, an einem Ort, geöffnet mit dem Link, den Sie beim Erstellen bekommen.',
+    'Eine App von hier ist mehr als der Code, den eine KI geschrieben hat. Nützlich bleibt sie durch das, was danach kommt: ihre Einträge, ihre Versionen und ihr Zweck, das Wissen, wer sie besucht, und eine eigene Domain, sobald sie ankommt – alles an einem Ort, geöffnet mit dem Link, den Sie beim Erstellen bekommen.',
   build: 'Etwas bauen',
   ownAgent: 'Eigenen Agenten nutzen',
   free: 'Kostenlos. Ohne Anmeldung, ohne Kreditkarte.',
@@ -21,7 +21,7 @@ export const platform: Messages['platform'] = {
 
   behindTitle: 'In jeder App',
   behindText:
-    'Nützlich macht eine App alles rund um ihren Code. Jede App hat das alles von der ersten Minute an – für alle, die sie gemacht haben, nicht nur für Menschen, die Code lesen können.',
+    'Nützlich macht eine App alles rund um ihren Code – für alle da, die sie gemacht haben, nicht nur für Menschen, die Code lesen können.',
 
   yoursTitle: 'Zum Weiterführen',
   yoursText: 'Für Entwickler und für alle, die möchten, dass ihre App diese Seite überlebt.',

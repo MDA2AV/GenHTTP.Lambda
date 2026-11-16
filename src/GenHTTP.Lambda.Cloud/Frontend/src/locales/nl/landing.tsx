@@ -42,7 +42,7 @@ export const landing: Messages['landing'] = {
     'Hier is de editorlink van mijn lunchpoll. Kun je het stemmen elke vrijdag om 11 uur sluiten en de winnaar bovenaan zetten?',
   weekAnswer: 'Klaar! Versie 4 staat live op hetzelfde adres. Wil je terug? Versie 3 is er nog.',
   more: (link) => (
-    <>Elke app bewaart ook zijn items, zijn documentatie en zijn bezoekers, en kan een eigen domein krijgen. {link('Bekijk alles wat een app krijgt')}.</>
+    <>Elke app bewaart ook zijn items en zijn documentatie, kan zijn bezoekers tellen en kan verhuizen naar een eigen domein. {link('Bekijk alles wat een app krijgt')}.</>
   ),
 
   agentsTitle: 'Neem je eigen agent mee: Claude, Codex, Cursor',
