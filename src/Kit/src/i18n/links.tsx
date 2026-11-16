@@ -18,7 +18,7 @@ const UNLOCALIZED = ['/editor', '/admin', '/api', '/mcp', '/lambda', '/features'
 
 /**
  * Whether a path is a public page in every language: whatever a site serves -
- * the front page, its guide, the published sources - as opposed to the
+ * the front page, its showcase, the published sources - as opposed to the
  * editor, the panel, the API and the lambdas, which have no language in their
  * address. Said by what it is not, since the pages of a site differ between
  * installations and the components that link to them are the same in each.
@@ -40,7 +40,7 @@ export function isSourcePath(path: string): boolean {
 }
 
 /**
- * Whether a path is a page of a site - its front page, its guide, its
+ * Whether a path is a page of a site - its front page, its features, its
  * showcase - rather than one of the components every site has: the editor,
  * the panel, the published sources, the API and the lambdas.
  */

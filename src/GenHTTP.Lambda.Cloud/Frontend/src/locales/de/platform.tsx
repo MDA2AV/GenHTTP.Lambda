@@ -56,7 +56,7 @@ export const platform: Messages['platform'] = {
       alt: 'Der Verlauf der App: ihre Änderungen untereinander, die neueste online',
     },
     about: {
-      name: 'Über',
+      name: 'Über die App',
       title: 'Sie weiß, was sie ist',
       text: 'Mit jeder Änderung schreibt der Agent auf, wofür die App da ist, wer sie nutzt und warum sie so funktioniert. Sie lesen es in einfachen Worten, und der nächste Agent liest es, bevor er etwas ändert – so baut eine Änderung auf dem auf, was da ist, statt zu raten.',
       points: ['Was sie tut und für wen, in einfachen Worten', 'Die Entscheidungen dahinter, für alle, die sie als Nächstes ändern', 'Wie sie getestet wird, mit jeder Version aufbewahrt'],

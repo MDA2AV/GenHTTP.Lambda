@@ -88,12 +88,16 @@ together the GenHTTP way, and there are two hosts - two editions:
   every row a fact of each, taken from the code and the README rather than
   from memory. Its name in the menu, "Self-hosting", says the one thing a
   visitor would not otherwise know. The community edition has neither page:
-  it sells nothing and does not name the cloud.
+  it sells nothing and does not name the cloud. The pages, the comparison's
+  neutrality and the screenshots were the owner's; the paths, the menu's
+  word, Showcase joining the bar a step later and the order of the sections
+  were chosen with them, and are open to change.
 - **Every page links to the platform's source - decided by the owner.**
   `REPOSITORY` in the kit's `installation.ts`, beside Discord: the footer of
-  every page, the GitHub mark in the bar where it has room (from `xl`, the
-  menu below `lg`), the cloud's front page, its `/ship` and `/self-hosting`,
-  and the community's front page. `/build` has the footer's link only: it
+  every page (the owner's ask), and - chosen with it - the GitHub mark in the
+  bar where it has room (from `xl`, the menu below `lg`), the cloud's front
+  page, its `/ship` and `/self-hosting`, and the community's front page, whose
+  Reference card leads to `docs/reference.md` where the guide's card was. `/build` has the footer's link only: it
   speaks to people who do not write code.
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
@@ -1534,7 +1538,8 @@ touches all that apply:
 **There is no guide on the sites any more - decided by the owner.** `/docs`
 described what agents use, and they have `platform_guide`; an owner has the
 editor, in the words of the simple view. A link to `/docs` from before finds
-nothing, as `/enterprise` did. The cloud's features page (`/platform`) says
+nothing, as `/enterprise` did - a choice made with the removal, not the
+owner's; `/.well-known/ai-catalog.json` names the API's description instead. The cloud's features page (`/platform`) says
 *what* an app gets, not how: when a feature an owner would notice is added, or
 the editor's look changes, its section and its picture change with it.
 

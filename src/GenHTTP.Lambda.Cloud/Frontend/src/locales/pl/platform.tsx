@@ -35,7 +35,7 @@ export const platform: Messages['platform'] = {
       alt: 'Strona rezerwacji kortów: cztery korty, godzina po godzinie, z podpisanymi zarezerwowanymi godzinami',
     },
     change: {
-      name: 'Zmiany',
+      name: 'Zmień',
       title: 'Zmieniaj ją, prosząc o to',
       text: 'Każda aplikacja ma edytor, otwierany prywatnym linkiem, który dostajesz po jej zbudowaniu. Powiedz, co ma być inaczej, a agent zmieni aplikację i da znać, kiedy zajrzeć – albo daj link własnemu agentowi razem z kolejną zmianą.',
       points: ['Wystarczy jedno zdanie', 'Udostępniana sama, gdy działa, albo zatrzymana, żebyś najpierw ją wypróbował', 'Kod pozostaje poza zasięgiem wzroku, dopóki go nie zechcesz'],

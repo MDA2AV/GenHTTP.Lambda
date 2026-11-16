@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Web;
 
 /// <summary>
-/// The public pages of a site - its front page, its guide, its showcase - each
+/// The public pages of a site - its front page, its showcase - each
 /// named in its language before it is sent, and with the content the build
 /// rendered for it, so a crawler that runs no script reads the page it asked
 /// for.

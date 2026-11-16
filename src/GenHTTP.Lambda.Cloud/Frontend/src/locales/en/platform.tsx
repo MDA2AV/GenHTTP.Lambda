@@ -16,7 +16,7 @@ export const platform = {
   title: 'Building it takes a minute.',
   titleAccent: 'Everything else is built in.',
   intro:
-    'An app made here is more than the code an AI wrote. What keeps it useful comes after: its records, its versions and what it is for, the people who visit it, a domain of its own. Every app has all of it, in one place opened with the link you get when it is built.',
+    'An app made here is more than the code an AI wrote. What keeps it useful comes after: its records, its versions and what it is for, knowing who visits it, a domain of its own once it catches on - all in one place, opened with the link you get when it is built.',
   build: 'Build something',
   ownAgent: 'Use your own agent',
   free: 'Free. No sign-up, no credit card.',
@@ -32,7 +32,7 @@ export const platform = {
 
   behindTitle: 'Behind every app',
   behindText:
-    'What keeps an app useful is everything around its code. Every app has all of it from the first minute - for whoever made it, not only for whoever can read code.',
+    'What keeps an app useful is everything around its code - there for whoever made it, not only for whoever can read code.',
 
   yoursTitle: 'Yours to take further',
   yoursText: 'For developers, and for anybody who wants their app to outlive this site.',

@@ -60,7 +60,7 @@ window.CARD_TEXT = {
         "Building it takes a minute.",
         "Everything else is built in."
       ],
-      "sub": "Records, versions, drafts, documentation and visitors - in every app from the first minute.",
+      "sub": "Records, versions, drafts, documentation and visitors - in one place for every app.",
       "features": [
         "Records",
         "Drafts",
@@ -141,7 +141,7 @@ window.CARD_TEXT = {
         "Membuatnya cuma semenit.",
         "Selebihnya sudah tersedia."
       ],
-      "sub": "Catatan, versi, draf, dokumentasi, dan pengunjung - ada di setiap aplikasi sejak menit pertama.",
+      "sub": "Catatan, versi, draf, dokumentasi, dan pengunjung - di satu tempat untuk setiap aplikasi.",
       "features": [
         "Catatan",
         "Draf",
@@ -222,7 +222,7 @@ window.CARD_TEXT = {
         "Gebaut ist sie in einer Minute.",
         "Alles andere ist schon eingebaut."
       ],
-      "sub": "Einträge, Versionen, Entwürfe, Dokumentation und Besucher – in jeder App ab der ersten Minute.",
+      "sub": "Einträge, Versionen, Entwürfe, Dokumentation und Besucher – an einem Ort für jede App.",
       "features": [
         "Einträge",
         "Entwürfe",
@@ -303,7 +303,7 @@ window.CARD_TEXT = {
         "Crearla lleva un minuto.",
         "Todo lo demás ya viene incluido."
       ],
-      "sub": "Registros, versiones, borradores, documentación y visitantes: en cada app desde el primer minuto.",
+      "sub": "Registros, versiones, borradores, documentación y visitantes: en un solo lugar para cada app.",
       "features": [
         "Registros",
         "Borradores",
@@ -384,7 +384,7 @@ window.CARD_TEXT = {
         "La création prend une minute.",
         "Le reste est déjà intégré."
       ],
-      "sub": "Entrées, versions, brouillons, documentation et visiteurs : dans chaque app dès la première minute.",
+      "sub": "Entrées, versions, brouillons, documentation et visiteurs : au même endroit pour chaque app.",
       "features": [
         "Entrées",
         "Brouillons",
@@ -465,7 +465,7 @@ window.CARD_TEXT = {
         "Crearla richiede un minuto.",
         "Il resto è già incluso."
       ],
-      "sub": "Voci, versioni, bozze, documentazione e visitatori: in ogni app fin dal primo minuto.",
+      "sub": "Voci, versioni, bozze, documentazione e visitatori: in un unico posto per ogni app.",
       "features": [
         "Voci",
         "Bozze",
@@ -546,7 +546,7 @@ window.CARD_TEXT = {
         "Bouwen duurt een minuut.",
         "De rest zit er al in."
       ],
-      "sub": "Items, versies, concepten, documentatie en bezoekers: in elke app vanaf de eerste minuut.",
+      "sub": "Items, versies, concepten, documentatie en bezoekers: op één plek voor elke app.",
       "features": [
         "Items",
         "Concepten",
@@ -627,7 +627,7 @@ window.CARD_TEXT = {
         "Zbudowanie zajmuje minutę.",
         "Cała reszta jest już w środku."
       ],
-      "sub": "Wpisy, wersje, szkice, dokumentacja i odwiedzający – w każdej aplikacji od pierwszej minuty.",
+      "sub": "Wpisy, wersje, szkice, dokumentacja i odwiedzający – w jednym miejscu dla każdej aplikacji.",
       "features": [
         "Wpisy",
         "Szkice",
@@ -708,7 +708,7 @@ window.CARD_TEXT = {
         "Criar leva um minuto.",
         "O resto já vem incluído."
       ],
-      "sub": "Registros, versões, rascunhos, documentação e visitantes: em todo app desde o primeiro minuto.",
+      "sub": "Registros, versões, rascunhos, documentação e visitantes: em um só lugar para cada app.",
       "features": [
         "Registros",
         "Rascunhos",
@@ -789,7 +789,7 @@ window.CARD_TEXT = {
         "Construir demora um minuto.",
         "O resto já vem incluído."
       ],
-      "sub": "Registos, versões, rascunhos, documentação e visitantes: em todas as apps desde o primeiro minuto.",
+      "sub": "Registos, versões, rascunhos, documentação e visitantes: num só sítio para cada app.",
       "features": [
         "Registos",
         "Rascunhos",
@@ -870,7 +870,7 @@ window.CARD_TEXT = {
         "Yapmak bir dakika sürer.",
         "Gerisi hazır geliyor."
       ],
-      "sub": "Kayıtlar, sürümler, taslaklar, belgeler ve ziyaretçiler: her uygulamada ilk dakikadan itibaren.",
+      "sub": "Kayıtlar, sürümler, taslaklar, belgeler ve ziyaretçiler: her uygulama için tek bir yerde.",
       "features": [
         "Kayıtlar",
         "Taslaklar",
@@ -951,7 +951,7 @@ window.CARD_TEXT = {
         "作るのは1分。",
         "あとは最初からそろっています。"
       ],
-      "sub": "記録、バージョン、下書き、ドキュメント、アクセス解析。どのアプリにも最初からそろっています。",
+      "sub": "記録、バージョン、下書き、ドキュメント、アクセス解析。どのアプリも1か所で管理できます。",
       "features": [
         "記録",
         "下書き",
@@ -1032,11 +1032,11 @@ window.CARD_TEXT = {
         "만드는 데는 1분이면 돼요.",
         "나머지는 모두 갖춰져 있어요."
       ],
-      "sub": "기록, 버전, 초안, 문서, 방문자 분석까지. 모든 앱에 처음부터 갖춰져 있어요.",
+      "sub": "기록, 버전, 초안, 문서, 방문자 분석까지. 모든 앱을 한곳에서 관리하세요.",
       "features": [
         "기록",
         "초안",
-        "기록 보기",
+        "변경 기록",
         "분석",
         "도메인"
       ]

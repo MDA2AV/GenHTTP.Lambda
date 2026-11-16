@@ -45,7 +45,7 @@ export const landing = {
     'Done. Version 4 is live at the same address, and version 3 is still available if you want to roll back.',
   /** Under the conversation: what else every app keeps, leading to /platform. */
   more: (link: (text: string) => ReactNode) => (
-    <>Every app also keeps its records, its documentation and its visitors, and can get a domain of its own. {link('See everything an app gets')}.</>
+    <>Every app also keeps its records and its documentation, can count its visitors and can move to a domain of its own. {link('See everything an app gets')}.</>
   ),
 
   agentsTitle: 'Bring your own agent: Claude, Codex, Cursor',

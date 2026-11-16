@@ -6,8 +6,8 @@ namespace GenHTTP.Lambda.Community;
 
 /// <summary>
 /// The pages of a community installation that are its host's own - the front
-/// page, the guide and the showcase - at the root of the host, behind every
-/// component that has a path of its own.
+/// page and the showcase - at the root of the host, behind every component
+/// that has a path of its own.
 /// </summary>
 /// <remarks>
 /// Says nothing about who runs the installation beyond what its operator

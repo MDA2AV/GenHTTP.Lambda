@@ -56,7 +56,7 @@ export const platform: Messages['platform'] = {
       alt: 'La cronologia dell’app: le sue modifiche, una sotto l’altra, con la più recente online',
     },
     about: {
-      name: 'Info',
+      name: 'Informazioni',
       title: 'Sa cos’è',
       text: 'A ogni modifica l’agente annota a cosa serve l’app, chi la usa e perché funziona così. Tu lo leggi in parole semplici, e l’agente successivo lo legge prima di cambiare qualsiasi cosa: così una modifica si appoggia su ciò che c’è, invece di tirare a indovinare.',
       points: ['Cosa fa e per chi, in parole semplici', 'Le decisioni che ci sono dietro, per chi la modificherà dopo', 'Come viene provata, conservato con ogni versione'],

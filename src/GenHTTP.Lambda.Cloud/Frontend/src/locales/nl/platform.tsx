@@ -56,7 +56,7 @@ export const platform: Messages['platform'] = {
       alt: 'De geschiedenis van de app: zijn wijzigingen onder elkaar, de nieuwste online',
     },
     about: {
-      name: 'Over',
+      name: 'Over de app',
       title: 'Hij weet wat hij is',
       text: 'Bij elke wijziging schrijft de agent op waar de app voor dient, wie hem gebruikt en waarom hij werkt zoals hij werkt. Jij leest het in gewone taal, en de volgende agent leest het voordat hij iets aanpast - zodat een wijziging voortbouwt op wat er is in plaats van te gokken.',
       points: ['Wat hij doet en voor wie, in gewone taal', 'De keuzes erachter, voor wie hem hierna aanpast', 'Hoe hij getest wordt, bewaard bij elke versie'],
