@@ -149,6 +149,19 @@ docker compose up -d
 Further settings, covering limits, logging, TLS and analytics, are described
 in [the reference](docs/reference.md#configuration).
 
+### Name and logo
+
+The installation presents itself as GenHTTP Lambda until you give it a name
+and a logo of your own: in the administration panel, under *Configuration* →
+*Branding*. They replace GenHTTP Lambda's in the header of every page, in page
+titles and link previews, and as the browser tab icon; without a logo, the
+first letter of the name is shown. The logo may be a PNG, JPEG, GIF, WebP or
+SVG image of up to 512 KB; a square mark works best. Changes apply to the next
+page that is opened, without a restart. An agent that you give the admin token
+can do the same through the REST API (`PUT /api/v1/admin/branding`) or the MCP
+tool `customize_installation`. The links to the project's source code and
+community remain.
+
 ### HTTPS
 
 The image serves plain HTTP on port 8080. Place it behind your existing
@@ -265,7 +278,7 @@ var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))
                  .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                  .Add(PlatformRoutes.Editor, Editor.Create(platform))
-                 .Add(PlatformRoutes.Admin, AdminPanel.Create())
+                 .Add(PlatformRoutes.Admin, AdminPanel.Create(platform))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 
