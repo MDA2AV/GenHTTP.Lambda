@@ -33,9 +33,10 @@ export function boot(app: ReactNode): void {
 
   const tree = (
     <React.StrictMode>
-      {/* navigating is a transition, so a page in a language whose words are
-          still on their way stays on screen until they are there */}
-      <BrowserRouter future={{ v7_startTransition: true }}>{app}</BrowserRouter>
+      {/* navigating is a transition (React Router's default since 7), so a page
+          in a language whose words are still on their way stays on screen
+          until they are there */}
+      <BrowserRouter>{app}</BrowserRouter>
     </React.StrictMode>
   );
 

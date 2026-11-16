@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@genhttp-lambda/kit": "*",
+    "monaco-editor": "^0.52.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.0",
-    "monaco-editor": "^0.52.2"
+    "react-router-dom": "^7.18.5"
   }
 }
