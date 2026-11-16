@@ -41,7 +41,7 @@ const TIER: (Limit & { key: keyof TierLimits })[] = [
   { key: 'analyticsDays', title: 'Analytics shown', unit: 'days',
     note: 'How far back the owner sees what was counted of their visitors. A year is kept of every lambda, so at most 365; moved to a tier that shows more, a lambda shows what was counted before.' },
   { key: 'connectivity', title: 'Connects by default', unit: '', flag: true,
-    note: 'Whether its code may connect to other servers while nothing was decided about the lambda. What is allowed or declined in Connectivity comes first. Changing it builds the lambdas of the tier again.' },
+    note: 'Whether its code may connect to other servers while nothing was decided about the lambda. What is allowed or declined in Connectivity comes first. Switched off, the lambdas of the tier that connect are built again.' },
 ];
 
 /** Only the sandbox's: production and system lambdas are kept online and kept. */
