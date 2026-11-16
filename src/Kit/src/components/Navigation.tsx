@@ -3,6 +3,12 @@ import { Link } from 'react-router-dom';
 
 import { IconChevronDown, IconSpinner } from './Icons';
 
+/*
+ * The sections of a page that has many - the editor's, the operator's panel -
+ * down a sidebar where there is room for one, and as a bar that opens them all
+ * on a phone. The words are the page's: it hands in every label.
+ */
+
 /**
  * How much a section asks to be looked at: something went wrong, something
  * is wanted that is not there, something is under way, something ended.
@@ -83,7 +89,7 @@ export function SideNav({ label, groups, current, onOpen }: Props) {
  *
  * Opened, the list takes the screen below the bar: the page moves the bar to
  * the top first, so the list never opens into the little room left under
- * the lambda's name.
+ * what the page shows above it - the lambda's name, say.
  */
 export function PhoneNav({ label, groups, current, title, onOpen, footer, scroller }: Props & {
   /** What the section open is called, for when the list does not have it - the simple view, come to by a link to the code. */

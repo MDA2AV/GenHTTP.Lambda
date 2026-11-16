@@ -1782,9 +1782,13 @@ The readings live in memory and go with the process. That suits what they are
 for - a restart ends the run they were measuring - but it does mean a redeploy
 starts the graph over.
 
-It also lists what each lambda has served, busiest first. Only the public key
-identifies one there - the editor key, the code and the visitors are not part
-of it.
+It also lists what each lambda has served, busiest first - since the server
+came up, and over its last hour and day. Only the public key identifies one
+there - the editor key, the code and the visitors are not part of it. What
+happened on the platform per day - lambdas created, versions saved and put
+online, lambdas deleted - comes with it (`days`), and is drawn under
+**Statistics** rather than **Server**, being about the lambdas rather than
+the machine.
 
 Both are for the operator only, behind the administration token (see
 [Administration](#administration)); the owner of a lambda sees its own figures
@@ -2259,18 +2263,56 @@ this endpoint.
 
 `/admin` is the operator's panel, a component of its own (`AdminPanel`):
 pages only, in English, which call the operator's routes of the REST API with
-the token. Its **Lambdas** section lists every lambda, when it was created,
-whether it is online, and what its code says - and takes them offline or
-removes them; its **Connectivity** section the lambdas that ask to connect to other
-servers, and those allowed to; its **Server** section is what the process is
-holding and what the engine is carrying; its **Usage report** section what
-the installation sends about itself once a day (see [Usage reports](#usage-reports)).
-The token is entered on the panel's own page - no
-other page links there - and kept in the browser's local storage, so every
-tab of that browser is unlocked until **Lock again** is used or the server
-turns the token away. The panel no longer appears inside the editor: what
-only the operator decides about one lambda - its block, its tier, its connectivity -
-is on its page in the panel.
+the token. Its sections are in groups down a sidebar, the editor's navigation
+(`Navigation` in the kit) - a bar that opens them all on a phone:
+
+| Group         | Section               | What it is                                                                 |
+|---------------|-----------------------|----------------------------------------------------------------------------|
+|               | **Dashboard**         | what waits for the operator - a request to connect, lambdas that failed in the last hour, the volume running out of room, their own address blocked, a usage report that did not arrive, data beyond its allowance - and the installation at a glance: its lambdas, the newest of them, the server and the room left |
+| Lambdas       | **Statistics**        | the lambdas counted and drawn: by state, tier and view, which of the platform's features they use, where their versions came from, what people did per day, the busiest, the most failing, the largest and what expires this week - each leading to the lambdas it counts |
+|               | **All lambdas**       | every lambda, narrowed by a search and by tier, state (online, offline, blocked, expiring this week), the features it uses, its view and its age, in an order; the filters are in the address, so the dashboards link into it |
+| Security      | **Connectivity**      | the lambdas that ask to connect to other servers, and those allowed to (see [Connectivity](#connectivity)) |
+|               | **Blocked addresses** | the addresses refused, and lifting them (see [Blocking](#blocking))        |
+| Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
+|               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
+|               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
+| Configuration | **Settings**, **Limits**, **Usage report** | the site's switches, what a lambda may have, and what the installation reports about itself (see [Usage reports](#usage-reports)) |
+
+A lambda's page sums up everything its editor would show - what its
+documentation says it is and what was asked for, its traffic and problems,
+which features it uses (its database, workspace and secrets with what they
+hold, analytics, showcase entry, published source, domain, connectivity,
+drafts and view), what it keeps against its allowances, its versions,
+deployments, lifetime and the addresses it was changed from - so the editor
+is opened to read or change the code, not to find out how a lambda is set
+up. What the operator decides about it is in a **Manage** card beside that:
+whether it is online, its tier, its domain, its connectivity, a block, and
+removing it.
+
+**What is shown and what is done are kept apart, in every section.**
+Information is in cards and may link on; actions are buttons only in a
+section's header, a card titled as such (a lambda's Manage) and the last
+cell of a row, and each that changes something says what it will do in a
+dialog first. A setting is the exception: its switch or field is what it is.
+What waits for the operator is a notice that leads to where it is decided.
+
+The routes the panel draws its dashboards from:
+
+| Route                                    | What it answers                                                       |
+|------------------------------------------|-----------------------------------------------------------------------|
+| `GET /admin/overview`                    | the lambdas counted (the demos apart and in nothing else), what waits for a decision, the volume's size and free space, the newest lambdas and those that failed in the last hour |
+| `GET /admin/storage`, `POST /admin/storage/measure` | the volume, and what the data directory holds by part and by lambda as last measured; measures again at once |
+| `GET /admin/lambdas`                     | a page of lambdas (`search`, `tier`, `state`, `uses`, `view`, `created`, `sort`, `page`), each with which features it uses |
+| `GET /admin/lambdas/{publicKey}`         | one lambda in full: the owner's summary, what it uses, its showcase entry, published source and drafts beside its versions and deployments |
+
+The counts are the platform's database, read as they are asked for
+(`ICensusService`, `LambdaTally`); the workspace counts as switched on unless
+its owner switched it off, as it comes. The token is entered on the panel's
+own page - no other page links there - and kept in the browser until **Lock
+again** is used or the server turns it away (for the tab only where the
+lambdas answer on the panel's own address, see above). The panel no longer
+appears inside the editor: what only the operator decides about one lambda -
+its block, its tier, its connectivity - is on its page in the panel.
 
 This is the one part that authenticates. Everywhere else the editor link is
 the credential and it only ever reaches one lambda; this reads code that belongs
