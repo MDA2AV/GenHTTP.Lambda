@@ -1,8 +1,8 @@
 /*
  * Writes the icons and the link previews from logo.svg and cards.html next to
  * this file - a preview for every page in every language of cards.text.js:
- * the icons and the previews every site shares (the front page, the guide,
- * the showcase) into the kit's public/, which every bundle that wants them
+ * the icons and the previews every site shares (the front page, the
+ * showcase) into the kit's public/, which every bundle that wants them
  * copies (see vite.ts), and those of the cloud's own pages into its public/.
  * Run it after changing any of them:
  *

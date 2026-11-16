@@ -916,7 +916,6 @@ const PAGE_OF_FILE = {
   'cloud/imprint.tsx': '/imprint - legal',
   'community/landing.tsx': '/ - the front page of an installation somebody runs for themselves, for developers - technical, but in plain words',
   'kit/buildBox.tsx': 'the box that has the agent create a website, for people who do not code',
-  'kit/guide.tsx': '/docs - the guide for owners',
   'kit/showcase.tsx': '/showcase',
   'kit/connect.tsx': 'connecting an agent over MCP',
   'kit/common.tsx': 'every page: the frame, the menu, the footer',

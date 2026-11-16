@@ -6,6 +6,12 @@ import { askPlatform } from './site';
 export const DISCORD = 'https://discord.gg/PRkwKrnrB4';
 
 /**
+ * Where the source of GenHTTP Lambda is - the platform itself, MIT licensed -
+ * which every installation runs, so every installation links to it.
+ */
+export const REPOSITORY = 'https://github.com/MDA2AV/GenHTTP.Lambda';
+
+/**
  * Who runs this installation, as far as a page has to say so: where to write
  * to them, where to report abuse, and whether it has terms, a privacy policy
  * and an imprint to link to.

@@ -43,6 +43,10 @@ export const landing = {
     'Here is the editor link for my lunch poll. Please close voting at 11 on Fridays and show the winner at the top.',
   weekAnswer:
     'Done. Version 4 is live at the same address, and version 3 is still available if you want to roll back.',
+  /** Under the conversation: what else every app keeps, leading to /platform. */
+  more: (link: (text: string) => ReactNode) => (
+    <>Every app also keeps its records, its documentation and its visitors, and can get a domain of its own. {link('See everything an app gets')}.</>
+  ),
 
   agentsTitle: 'Bring your own agent: Claude, Codex, Cursor',
   agentsText:
@@ -54,6 +58,12 @@ export const landing = {
   hostIt: (link: (text: string) => ReactNode) => (
     <>Built something that only runs on localhost? {link('Host your vibe-coded app here')}.</>
   ),
+
+  openTitle: 'Open source, and yours to run',
+  openText:
+    'GenHTTP Lambda is open source under the MIT license. Use it here, or run the community edition on a server of your own - the same platform, as one Docker container.',
+  openCompare: 'Cloud or self-hosted',
+  openCode: 'The code on GitHub',
 
   contactTitle: 'Talk to us',
   contactText:

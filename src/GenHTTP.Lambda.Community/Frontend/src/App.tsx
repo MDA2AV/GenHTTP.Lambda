@@ -5,7 +5,6 @@ import { Shell, type ShellLink } from '@genhttp-lambda/kit/components/Shell';
 import { ToastHost } from '@genhttp-lambda/kit/components/Toast';
 import { useLanguage } from '@genhttp-lambda/kit/i18n';
 import { inLanguage, isLanguage } from '@genhttp-lambda/kit/i18n/languages';
-import { Guide } from '@genhttp-lambda/kit/pages/Guide';
 import { NotFound } from '@genhttp-lambda/kit/pages/NotFound';
 import { Showcase } from '@genhttp-lambda/kit/pages/Showcase';
 import { useTheme } from '@genhttp-lambda/kit/theme';
@@ -18,9 +17,9 @@ import { Landing } from './pages/Landing';
 const PAGES = new Set(Object.keys(pages));
 
 /**
- * The pages of a community installation: its front page, the guide and the
- * showcase. The editor, the panel and the published sources are components
- * with bundles of their own: a link there loads them.
+ * The pages of a community installation: its front page and the showcase.
+ * The editor, the panel and the published sources are components with
+ * bundles of their own: a link there loads them.
  */
 export function App() {
   const [theme, toggleTheme] = useTheme();
@@ -29,8 +28,7 @@ export function App() {
   useScrollToTop();
 
   const links: ShellLink[] = [
-    { to: '/showcase', label: t.shell.showcase, room: 'xs' },
-    { to: '/docs', label: t.shell.docs, room: 'always' },
+    { to: '/showcase', label: t.shell.showcase, room: 'always' },
     { to: '/admin', label: t.shell.admin, room: 'lg', locked: true },
   ];
 
@@ -56,7 +54,6 @@ function Localized() {
   return (
     <Routes>
       <Route index element={<Landing />} />
-      <Route path="docs" element={<Guide />} />
       <Route path="showcase" element={<Showcase />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

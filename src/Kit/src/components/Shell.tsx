@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { Footer } from './Footer';
-import { IconClose, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
+import { IconClose, IconGitHub, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
 import { LanguageMenu, LanguageSwitch } from './LanguageSwitch';
 import { useT } from '../i18n';
 import { Link, NavLink } from '../i18n/links';
+import { REPOSITORY } from '../installation';
 import type { Theme } from '../theme';
 
 /**
@@ -48,8 +49,8 @@ interface Props {
   fixed?: boolean;
   /**
    * The pages the bar links to, which differ between the sites: the
-   * cloud's marketing pages, the guide and the showcase everywhere, and the
-   * operator's panel. Without, the bar links to none.
+   * cloud's own pages, the showcase everywhere, and the operator's panel.
+   * Without, the bar links to none.
    */
   links?: ShellLink[];
 }
@@ -113,6 +114,18 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed, links = 
           ))}
 
           <LanguageSwitch />
+
+          {/* the platform is open source wherever it runs, so every bar says where */}
+          <a
+            href={REPOSITORY}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost hidden !px-2 sm:inline-flex"
+            aria-label={t.shell.sourceOnGitHub}
+            title={t.shell.sourceOnGitHub}
+          >
+            <IconGitHub />
+          </a>
 
           <button
             type="button"
@@ -213,6 +226,16 @@ function Menu({ theme, themeLabel, onToggleTheme, links }: MenuProps) {
             ))}
 
           <div className="mx-5 my-2 border-t border-grey-200 sm:hidden dark:border-ink-800" />
+
+          <a
+            href={REPOSITORY}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center gap-2 px-5 py-3 text-[15px] font-medium text-grey-800 hover:bg-grey-100 sm:hidden dark:text-grey-200 dark:hover:bg-ink-850"
+          >
+            <IconGitHub />
+            {t.shell.source}
+          </a>
 
           <button
             type="button"

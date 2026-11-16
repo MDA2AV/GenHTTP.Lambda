@@ -7,13 +7,14 @@ import {
   IconSpark, IconStar,
 } from '@genhttp-lambda/kit/components/Icons';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
+import { REPOSITORY } from '@genhttp-lambda/kit/installation';
 import { usePublicPage } from '@genhttp-lambda/kit/meta';
 import { askPlatform, useOrigin } from '@genhttp-lambda/kit/site';
 
 import { useT } from '../i18n';
 
-/** Where the source of the platform is, for whoever wants to read it. */
-const REPOSITORY = 'https://github.com/MDA2AV/GenHTTP.Lambda';
+/** What whoever runs an installation reads: its configuration, its operations, every route. */
+const REFERENCE = `${REPOSITORY}/blob/main/docs/reference.md`;
 
 /** What each thing every app gets is drawn with, in the order the words are in. */
 const FEATURE_ICONS = [IconGlobe, IconDatabase, IconFolder, IconKey, IconDraft, IconBranch, IconEye, IconCode];
@@ -192,10 +193,10 @@ export function Landing() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card to="/editor/create" icon={<IconCode className="h-5 w-5" />} {...said.around.demos} />
             <Card to="/showcase" icon={<IconStar className="h-5 w-5" />} {...said.around.showcase} />
-            <Card to="/docs" icon={<IconBook className="h-5 w-5" />} {...said.around.guide} />
             <Card to="/api/v1/scalar/" icon={<IconLayers className="h-5 w-5" />} {...said.around.api} />
             <Card to="/source" icon={<IconBranch className="h-5 w-5" />} {...said.around.sources} />
             <Card to="/admin" icon={<IconLock className="h-5 w-5" />} {...said.around.admin} />
+            <Card href={REFERENCE} icon={<IconBook className="h-5 w-5" />} {...said.around.reference} />
           </div>
         </div>
       </section>
@@ -212,14 +213,29 @@ function Heading({ children, icon }: { children: ReactNode; icon?: ReactNode }) 
   );
 }
 
-function Card({ to, icon, title, text }: { to: string; icon: ReactNode; title: string; text: string }) {
-  return (
-    <Link to={to} className="surface group flex h-full flex-col p-4 transition hover:border-accent-500/50">
+type CardProps = { icon: ReactNode; title: string; text: string } & ({ to: string; href?: never } | { href: string; to?: never });
+
+/** A page of this installation to look at next, or - with href - one elsewhere. */
+function Card({ to, href, icon, title, text }: CardProps) {
+  const inside = (
+    <>
       <span className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
         {icon}
         <span className="text-sm font-medium text-grey-900 group-hover:underline dark:text-grey-100">{title}</span>
       </span>
       <span className="mt-2 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{text}</span>
+    </>
+  );
+
+  const look = 'surface group flex h-full flex-col p-4 transition hover:border-accent-500/50';
+
+  return href ? (
+    <a href={href} target="_blank" rel="noreferrer" className={look}>
+      {inside}
+    </a>
+  ) : (
+    <Link to={to} className={look}>
+      {inside}
     </Link>
   );
 }

@@ -54,19 +54,6 @@ window.CARD_TEXT = {
         "Book club guestbook"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "A snippet of C#.",
-        "A public address in seconds."
-      ],
-      "sub": "Whatever the snippet returns is served at its own HTTPS address, ready to share.",
-      "facts": [
-        "Free",
-        "No account",
-        "Open source"
-      ],
-      "deployed": "Deployed. It’s live."
     }
   },
   "id": {
@@ -120,19 +107,6 @@ window.CARD_TEXT = {
         "Buku tamu klub buku"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Snippet C#.",
-        "Online dalam hitungan detik."
-      ],
-      "sub": "Apa pun yang dikembalikan snippet-nya disajikan di alamat HTTPS sendiri, siap dibagikan.",
-      "facts": [
-        "Gratis",
-        "Tanpa akun",
-        "Open source"
-      ],
-      "deployed": "Deploy selesai. Sudah online."
     }
   },
   "de": {
@@ -186,19 +160,6 @@ window.CARD_TEXT = {
         "Buchclub-Gästebuch"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Ein C#-Snippet.",
-        "In Sekunden online."
-      ],
-      "sub": "Was das Snippet zurückgibt, läuft unter einer eigenen HTTPS-Adresse – bereit zum Teilen.",
-      "facts": [
-        "Kostenlos",
-        "Kein Konto",
-        "Open Source"
-      ],
-      "deployed": "Deployt. Ist online."
     }
   },
   "es": {
@@ -252,19 +213,6 @@ window.CARD_TEXT = {
         "Libro de visitas del club"
       ],
       "count": "conectados"
-    },
-    "/docs": {
-      "title": [
-        "Un fragmento de C#.",
-        "En línea en segundos."
-      ],
-      "sub": "Lo que devuelve el fragmento se sirve en su propia dirección HTTPS, listo para compartir.",
-      "facts": [
-        "Gratis",
-        "Sin cuenta",
-        "Código abierto"
-      ],
-      "deployed": "Desplegado. Ya está en línea."
     }
   },
   "fr": {
@@ -318,19 +266,6 @@ window.CARD_TEXT = {
         "Livre d’or du club de lecture"
       ],
       "count": "connectés"
-    },
-    "/docs": {
-      "title": [
-        "Un snippet C#.",
-        "En ligne en quelques secondes."
-      ],
-      "sub": "Ce que le snippet renvoie est servi à sa propre adresse HTTPS, prête à partager.",
-      "facts": [
-        "Gratuit",
-        "Sans compte",
-        "Open source"
-      ],
-      "deployed": "Déployé. C’est en ligne."
     }
   },
   "it": {
@@ -384,19 +319,6 @@ window.CARD_TEXT = {
         "Guestbook del club del libro"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Uno snippet di C#.",
-        "Online in pochi secondi."
-      ],
-      "sub": "Quello che lo snippet restituisce va online al suo indirizzo HTTPS, pronto da condividere.",
-      "facts": [
-        "Gratis",
-        "Senza account",
-        "Open source"
-      ],
-      "deployed": "Deploy fatto. È online."
     }
   },
   "nl": {
@@ -450,19 +372,6 @@ window.CARD_TEXT = {
         "Gastenboek van de leesclub"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Een stukje C#.",
-        "Binnen seconden online."
-      ],
-      "sub": "Wat de snippet teruggeeft, draait op een eigen HTTPS-adres, klaar om te delen.",
-      "facts": [
-        "Gratis",
-        "Geen account",
-        "Open source"
-      ],
-      "deployed": "Gedeployd. Hij staat live."
     }
   },
   "pl": {
@@ -516,19 +425,6 @@ window.CARD_TEXT = {
         "Księga gości klubu książki"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Snippet w C#.",
-        "Publiczny adres w kilka sekund."
-      ],
-      "sub": "To, co zwraca snippet, działa pod własnym adresem HTTPS – gotowe do udostępnienia.",
-      "facts": [
-        "Za darmo",
-        "Bez konta",
-        "Open source"
-      ],
-      "deployed": "Wdrożono. Działa."
     }
   },
   "pt": {
@@ -582,19 +478,6 @@ window.CARD_TEXT = {
         "Recados do clube do livro"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Um trecho de C#.",
-        "No ar em segundos."
-      ],
-      "sub": "O que o trecho retorna fica no seu próprio endereço HTTPS, pronto para compartilhar.",
-      "facts": [
-        "Grátis",
-        "Sem conta",
-        "Open source"
-      ],
-      "deployed": "Deploy feito. Está no ar."
     }
   },
   "pt-pt": {
@@ -648,19 +531,6 @@ window.CARD_TEXT = {
         "Recados do clube do livro"
       ],
       "count": "online"
-    },
-    "/docs": {
-      "title": [
-        "Um snippet de C#.",
-        "Online em segundos."
-      ],
-      "sub": "O que o snippet devolve fica no seu próprio endereço HTTPS, pronto a partilhar.",
-      "facts": [
-        "Grátis",
-        "Sem conta",
-        "Open source"
-      ],
-      "deployed": "Deploy feito. Está online."
     }
   },
   "tr": {
@@ -714,19 +584,6 @@ window.CARD_TEXT = {
         "Kitap kulübü defteri"
       ],
       "count": "kişi çevrimiçi"
-    },
-    "/docs": {
-      "title": [
-        "Bir parça C# kodu.",
-        "Saniyeler içinde yayında."
-      ],
-      "sub": "Kodun döndürdüğü şey kendi HTTPS adresinde yayına girer, paylaşmaya hazır.",
-      "facts": [
-        "Ücretsiz",
-        "Hesap yok",
-        "Açık kaynak"
-      ],
-      "deployed": "Yayına alındı. Çalışıyor."
     }
   },
   "ja": {
@@ -780,19 +637,6 @@ window.CARD_TEXT = {
         "読書会のゲストブック"
       ],
       "count": "{n}人が閲覧中"
-    },
-    "/docs": {
-      "title": [
-        "C#のスニペットが、",
-        "数秒で公開URLに。"
-      ],
-      "sub": "スニペットが返すものは専用のHTTPSのURLで配信され、そのまま共有できます。",
-      "facts": [
-        "無料",
-        "アカウント不要",
-        "オープンソース"
-      ],
-      "deployed": "デプロイしました。公開中です。"
     }
   },
   "ko": {
@@ -846,19 +690,6 @@ window.CARD_TEXT = {
         "독서 모임 방명록"
       ],
       "count": "{n}명 접속 중"
-    },
-    "/docs": {
-      "title": [
-        "C# 스니펫을 쓰면",
-        "몇 초 만에 공개돼요."
-      ],
-      "sub": "스니펫이 반환하는 것이 바로 공유할 수 있는 전용 HTTPS 주소로 제공돼요.",
-      "facts": [
-        "무료",
-        "가입 없이",
-        "오픈소스"
-      ],
-      "deployed": "배포 완료. 온라인이에요."
     }
   }
 };

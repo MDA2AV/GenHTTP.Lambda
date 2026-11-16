@@ -53,9 +53,9 @@ export const landing = {
   around: {
     demos: { title: 'Start from a demo', text: 'An API over records, a login, live updates, a game: each a finished app to copy and change.' },
     showcase: { title: 'Showcase', text: 'The apps their owners chose to show here.' },
-    guide: { title: 'Guide', text: 'What an app can do and how, in the order you need it.' },
     api: { title: 'REST API', text: 'The same as the tools, over HTTP, described in OpenAPI.' },
     sources: { title: 'Published sources', text: 'Apps whose owners published their code, to read and download.' },
     admin: { title: 'Administration', text: 'The apps, the limits, the blocks and the log, behind the admin token.' },
+    reference: { title: 'Reference', text: 'Configuration, operations and every route, beside the source on GitHub.' },
   },
 };

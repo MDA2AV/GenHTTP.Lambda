@@ -63,6 +63,7 @@ export const ship = {
     removed: number,
     showcase: (text: string) => ReactNode,
     terms: (text: string) => ReactNode,
+    selfHosting: (text: string) => ReactNode,
   ): [string, ReactNode][] => [
     [
       'Is it really free?',
@@ -106,6 +107,13 @@ export const ship = {
     [
       'Can I take my code with me?',
       'Yes, it is yours. Download it from the editor whenever you like, as a project that runs on its own, database included - or clone it with git, every version included.',
+    ],
+    [
+      'Can I host it on my own server instead?',
+      <>
+        Yes. GenHTTP Lambda is open source, and its community edition is the same platform as one Docker container, for
+        your own server and your own agent. {selfHosting('Cloud or self-hosted')} says what differs.
+      </>,
     ],
     [
       'Who can see my app?',

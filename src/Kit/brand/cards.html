@@ -177,9 +177,6 @@
     '/showcase': (w) => `<div class="card"><div class="body">
         ${w.apps.map((app) => bar(app, 'live', words.live)).join('')}
         ${people(6, w.count)}</div></div>`,
-    '/docs': (w) => `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
-    .Get(() =&gt; <span class="s">"Hello, world"</span>);</div>
-        <div class="body">${bar(`h3ll0w.${HOSTING}`)}<div class="it" style="font-size:19px">${check}${w.deployed}</div></div></div>`,
   };
 
   const card = words[page] ?? words['/'];

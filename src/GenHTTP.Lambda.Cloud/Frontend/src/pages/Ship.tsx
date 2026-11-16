@@ -223,7 +223,7 @@ export function Ship() {
         </h2>
 
         <div className="mt-8 divide-y divide-grey-200 border-y border-grey-200 dark:divide-ink-800 dark:border-ink-800">
-          {said.questions(offline, removed, inline('/showcase'), inline('/terms')).map(([question, answer]) => (
+          {said.questions(offline, removed, inline('/showcase'), inline('/terms'), inline('/self-hosting')).map(([question, answer]) => (
             <details key={question} className="group">
               <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 py-4 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
                 {question}

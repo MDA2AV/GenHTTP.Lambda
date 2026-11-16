@@ -1,4 +1,4 @@
-import { DISCORD, useInstallation } from '../installation';
+import { DISCORD, REPOSITORY, useInstallation } from '../installation';
 import { useLanguage, useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { ReportAbuse } from './ReportAbuse';
@@ -62,6 +62,11 @@ export function Footer() {
 
         <a href={DISCORD} target="_blank" rel="noreferrer" className={LINK}>
           Discord
+        </a>
+
+        {/* what every installation runs, whoever runs it */}
+        <a href={REPOSITORY} target="_blank" rel="noreferrer" className={LINK}>
+          {said.source}
         </a>
 
         {/* the header carries this on anything wider than a phone */}
