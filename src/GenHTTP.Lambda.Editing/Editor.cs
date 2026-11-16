@@ -1,5 +1,6 @@
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Web;
 
@@ -71,6 +72,7 @@ public sealed class EditorBuilder(LambdaPlatform platform) : IHandlerBuilder<Edi
          * host where lambdas answer by path - and nothing for a search engine.
          */
         var pages = ClientApplication.From(_bundle)
+                                     .Branding(platform.Services.GetRequiredService<IBrandingService>())
                                      .Header("X-Robots-Tag", "noindex, nofollow")
                                      .Header("Referrer-Policy", "no-referrer");
 

@@ -280,6 +280,20 @@ public sealed record LambdaOptions
     public string StartPage { get; init; } = "/";
 
     /// <summary>
+    /// Whether the operator may give the installation a name and a logo of
+    /// its own, which its pages then show in place of GenHTTP Lambda's - in
+    /// the panel's Branding section, or through the API with the admin token.
+    /// </summary>
+    /// <remarks>
+    /// The host's to decide, not the environment's: the community edition
+    /// switches it on, since whoever runs it presents it as theirs, and
+    /// genhttp.dev leaves it off, since it is GenHTTP Lambda. Off, nothing an
+    /// operator could have stored is read, the routes that change it are not
+    /// there, and every page looks as it always did.
+    /// </remarks>
+    public bool Branding { get; init; }
+
+    /// <summary>
     /// How often a telemetry reading is taken.
     /// </summary>
     public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);

@@ -5,6 +5,7 @@ using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Web;
 
@@ -27,11 +28,12 @@ namespace GenHTTP.Lambda.Execution;
 /// Their words are the runner's own, in <c>Resources/hosting.json</c> - a
 /// table like a bundle's <c>pages.json</c>, translated with the rest - in the
 /// language the browser prefers, since a cookie of the site is never sent to
-/// this domain. Nothing of a frontend build is needed to draw them.
+/// this domain. Nothing of a frontend build is needed to draw them. Where they
+/// name the installation rather than link to it, they name it as its operator
+/// did (see <see cref="Brand"/>).
 /// </remarks>
-public sealed class HostingPages(LambdaOptions options)
+public sealed class HostingPages(LambdaOptions options, IBrandingService branding)
 {
-    private const string Site = "GenHTTP Lambda";
 
     /// <summary>The words of the page at the root of the hosting domain, with <c>{site}</c> where the site goes.</summary>
     public const string HomeTemplate = "hosting:/";
@@ -131,9 +133,11 @@ public sealed class HostingPages(LambdaOptions options)
     {
         // the site as a link where the installation names its address, and
         // by its name where it does not
+        var named = branding.Current.Name;
+
         var site = options.PublicUrl is { } url
                        ? $"<a href=\"{Html.Encode(url + "/")}\">{Html.Encode(new Uri(url).Authority)}</a>"
-                       : Site;
+                       : Html.Encode(named);
 
         var title = Html.Encode(text.Title);
 
@@ -141,7 +145,7 @@ public sealed class HostingPages(LambdaOptions options)
                                                        .Replace(Html.Encode("{site}"), site, StringComparison.Ordinal);
 
         var summary = Html.Encode(text.Description.Replace("{address}", host, StringComparison.Ordinal)
-                                                  .Replace("{site}", options.PublicUrl is { } named ? new Uri(named).Authority : Site, StringComparison.Ordinal));
+                                                  .Replace("{site}", options.PublicUrl is { } address ? new Uri(address).Authority : named, StringComparison.Ordinal));
 
         // who runs it and what is recorded of a visit, on the site's pages
         // for both - where it has them - named as the site names them

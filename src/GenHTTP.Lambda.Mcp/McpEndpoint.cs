@@ -27,14 +27,20 @@ public static class McpEndpoint
 {
 
     /// <summary>
-    /// The endpoint, answering with the given tools.
+    /// The endpoint, answering with the given tools - and the operator's, where
+    /// there are any for this installation.
     /// </summary>
-    internal static IHandlerBuilder Create(LambdaOptions options, McpTools instance)
+    internal static IHandlerBuilder Create(LambdaOptions options, McpTools instance, InstallationTools? installation = null)
     {
         var tools = Tools.Create()
                          .Server("genhttp-lambda", "1.0.0", "GenHTTP Lambda")
                          .Instructions(InstructionsFor(options))
                          .Add(instance);
+
+        if (installation != null)
+        {
+            tools.Add(installation);
+        }
 
         foreach (var origin in Origins(options))
         {

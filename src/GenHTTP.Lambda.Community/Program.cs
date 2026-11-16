@@ -17,15 +17,16 @@ using GenHTTP.Modules.Layouting;
 // report on unless LAMBDA_USAGE_REPORTS=false
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true);
 
+// whoever runs it may give it a name and a logo of their own, in the panel
 await using var platform = LambdaPlatform.Create()
-                                         .Options(settings.Platform)
+                                         .Options(settings.Platform with { Branding = true })
                                          .Build();
 
 var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))
                  .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                  .Add(PlatformRoutes.Editor, Editor.Create(platform))
-                 .Add(PlatformRoutes.Admin, AdminPanel.Create())
+                 .Add(PlatformRoutes.Admin, AdminPanel.Create(platform))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 

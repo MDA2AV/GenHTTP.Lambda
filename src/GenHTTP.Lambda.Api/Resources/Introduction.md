@@ -59,7 +59,8 @@ to a lambda the operator blocked, until they lift the block: it is offline, its
 The operations under *Operating the installation* are for whoever runs the
 server. They take the token of the installation in the `X-Admin-Token` header:
 `401` without it, `403` with a wrong one. An installation without a token does not
-have them at all (`404`).
+have them at all (`404`), and those under *Branding* are only there where the host
+of the installation lets its operator give it a name and a logo of its own.
 
 ## What a lambda is made of
 

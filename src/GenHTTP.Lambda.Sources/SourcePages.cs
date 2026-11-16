@@ -3,6 +3,7 @@ using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
@@ -82,7 +83,7 @@ public sealed class SourcePagesBuilder(LambdaPlatform platform) : IHandlerBuilde
         }
 
         var handler = new SourcePagesHandler(_bundle, new SiteMeta(_bundle, platform.Options.PublicUrl), services.GetRequiredService<ISourceService>(),
-                                             services.GetRequiredService<ILambdaAddresses>(), repositories, files);
+                                             services.GetRequiredService<ILambdaAddresses>(), services.GetRequiredService<IBrandingService>(), repositories, files);
 
         return Concerns.Chain(_concerns, handler);
     }
@@ -94,7 +95,8 @@ public sealed class SourcePagesBuilder(LambdaPlatform platform) : IHandlerBuilde
 /// <summary>
 /// Answers the paths of the published sources.
 /// </summary>
-internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceService sources, ILambdaAddresses addresses, IHandler repositories, IHandler files)
+internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceService sources, ILambdaAddresses addresses, IBrandingService branding,
+                                         IHandler repositories, IHandler files)
     : IHandler
 {
 
@@ -163,16 +165,18 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
     {
         var path = request.Header.Path.ToString();
 
+        var brand = branding.Current;
+
         if (meta.Find(path) is { } catalog)
         {
-            return Answer(request, meta.Render(bundle.Index(), catalog));
+            return Answer(request, PageBranding.Apply(meta.Render(bundle.Index(), catalog, brand), brand));
         }
 
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
         if (segments.Length < 3)
         {
-            return bundle.Answer(request, ResponseStatus.NotFound);
+            return bundle.Answer(request, ResponseStatus.NotFound, brand);
         }
 
         var key = segments[2];
@@ -181,7 +185,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
         // an unpublished source is not found, the same as a key nobody has
         if (sources.GetProject(key) is not { } project)
         {
-            return bundle.Answer(request, ResponseStatus.NotFound);
+            return bundle.Answer(request, ResponseStatus.NotFound, brand);
         }
 
         var entry = project.Entry;
@@ -197,7 +201,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
         var schema = new SourceSchema(name, about, SourceLicenses.Find(entry.License)?.Url ?? entry.License, project.Author, entry.Updated,
                                       entry.Online ? addresses.Of(entry.PublicKey, entry.Tier, entry.Domain) : null);
 
-        return Answer(request, meta.RenderSource(bundle.Index(), page, schema));
+        return Answer(request, PageBranding.Apply(meta.RenderSource(bundle.Index(), page, schema, brand), brand));
     }
 
     /// <summary>

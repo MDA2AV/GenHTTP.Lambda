@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Web;
@@ -22,10 +23,13 @@ namespace GenHTTP.Lambda.Web;
 ///
 /// The pages come from <c>pages.json</c>, which the frontend build puts next to
 /// the index page and the client imports as well, so the two cannot disagree.
+///
+/// Each is named for the installation it is answered by: GenHTTP Lambda, or
+/// what its operator named it (see <see cref="Brand"/>), which is handed in
+/// as a page is rendered, since the operator may change it any time.
 /// </remarks>
 public sealed class SiteMeta
 {
-    private const string Site = "GenHTTP Lambda";
 
     /// <summary>
     /// The picture shown for a page that has none of its own.
@@ -199,19 +203,22 @@ public sealed class SiteMeta
     /// The page of a published source, named, with what a search engine is
     /// told about the code beside it in schema.org terms.
     /// </summary>
-    public string RenderSource(string markup, SitePage page, SourceSchema schema)
+    public string RenderSource(string markup, SitePage page, SourceSchema schema, Brand? brand = null)
     {
-        markup = Render(markup, page);
+        markup = Render(markup, page, brand);
 
         return PublicUrl == null ? markup : InHead(markup, StructuredData.RenderSource(schema, PublicUrl, SiteLanguages.In(page.Language, page.Path), page.Language));
     }
 
     /// <summary>
-    /// The index page, named as the given page and in its language.
+    /// The index page, named as the given page and in its language, on the
+    /// installation of the given brand - the platform's own, where none is given.
     /// </summary>
-    public string Render(string markup, SitePage page)
+    public string Render(string markup, SitePage page, Brand? brand = null)
     {
-        var title = Encode($"{page.Title} - {Site}");
+        brand ??= Brand.Platform;
+
+        var title = Encode($"{page.Title} - {brand.Name}");
         var description = Encode(page.Description);
 
         markup = HtmlTag.Replace(markup, tag => Lang(tag.Value, SiteLanguages.TagOf(page.Language)), 1);
@@ -233,14 +240,44 @@ public sealed class SiteMeta
         // a preview needs the full address of the picture, which only the
         // public address can give - without it, the path is still better than
         // the front page's picture on every page
-        var picture = page.Image ?? DefaultImage;
+        string? picture = page.Image ?? DefaultImage;
 
-        var image = Encode((PublicUrl ?? string.Empty) + picture);
+        var type = ImageTypeOf(page, picture);
 
-        markup = SetMeta(markup, "property", "og:image", image);
-        markup = SetMeta(markup, "property", "og:image:type", ImageTypeOf(page, picture));
-        markup = SetMeta(markup, "property", "og:image:alt", title);
-        markup = SetMeta(markup, "name", "twitter:image", image);
+        // the site's own pictures have the platform's name drawn into them, so
+        // a branded installation's pages are previewed with its logo instead -
+        // small, beside the words - or with none where a network would not
+        // draw it; a lambda's own picture is the lambda's, whoever runs it
+        if (brand.Own && page.ImageType == null)
+        {
+            if (brand.Picture is { Raster: true } logo)
+            {
+                picture = brand.PicturePath!;
+                type = logo.Type;
+
+                markup = SetMeta(markup, "name", "twitter:card", "summary");
+            }
+            else
+            {
+                markup = RemoveMeta(markup, "property", "og:image");
+                markup = RemoveMeta(markup, "property", "og:image:type");
+                markup = RemoveMeta(markup, "property", "og:image:alt");
+                markup = RemoveMeta(markup, "name", "twitter:image");
+                markup = SetMeta(markup, "name", "twitter:card", "summary");
+
+                picture = null;
+            }
+        }
+
+        if (picture != null)
+        {
+            var image = Encode((PublicUrl ?? string.Empty) + picture);
+
+            markup = SetMeta(markup, "property", "og:image", image);
+            markup = SetMeta(markup, "property", "og:image:type", type);
+            markup = SetMeta(markup, "property", "og:image:alt", title);
+            markup = SetMeta(markup, "name", "twitter:image", image);
+        }
 
         if (PublicUrl != null)
         {
@@ -284,14 +321,22 @@ public sealed class SiteMeta
     /// those pages show and are previewed with. The zip of a version stays
     /// out: it is a download, and packing it is work nobody reads.
     /// </remarks>
-    public string Robots()
+    public string Robots(Brand? brand = null)
     {
         var robots = new StringBuilder();
 
         robots.Append("User-agent: *\n")
               .Append("Allow: /api/v1/sources/\n")
-              .Append("Allow: /api/v1/showcases/\n")
-              .Append("Disallow: /api/v1/sources/*/zip\n")
+              .Append("Allow: /api/v1/showcases/\n");
+
+        // the picture a branded installation's pages show as their icon,
+        // which a search engine fetches to show beside its results
+        if (brand is { Own: true })
+        {
+            robots.Append("Allow: /api/v1/system/logo\n");
+        }
+
+        robots.Append("Disallow: /api/v1/sources/*/zip\n")
               .Append("Disallow: /api/\n")
               .Append("Disallow: /mcp\n")
               .Append("Disallow: /start\n")
@@ -387,8 +432,10 @@ public sealed class SiteMeta
     /// the links are relative, which is less than a model wants but still
     /// points somewhere.
     /// </remarks>
-    public string LlmsText()
+    public string LlmsText(Brand? brand = null)
     {
+        var site = (brand ?? Brand.Platform).Name;
+
         var root = PublicUrl ?? string.Empty;
 
         var pages = Pages();
@@ -399,7 +446,7 @@ public sealed class SiteMeta
 
         var text = new StringBuilder();
 
-        text.Append($"# {Site}\n\n")
+        text.Append($"# {site}\n\n")
             .Append($"> {summary}\n\n")
             .Append("An app is a snippet of C# whose GenHTTP handler is served at a public HTTPS address. ")
             .Append("An agent creates, changes and deploys it through the MCP server or the REST API below.\n\n")
@@ -425,25 +472,27 @@ public sealed class SiteMeta
     /// (<c>/.well-known/ai-catalog.json</c>, Agentic Resource Discovery) - or
     /// nothing, when there is no public address to name it under.
     /// </summary>
-    public string? AiCatalog()
+    public string? AiCatalog(Brand? brand = null)
     {
         if (PublicUrl == null)
         {
             return null;
         }
 
+        var site = (brand ?? Brand.Platform).Name;
+
         var host = new Uri(PublicUrl).Host;
 
         var catalog = new
         {
             specVersion = "1.0",
-            host = new { displayName = Site, documentationUrl = $"{PublicUrl}/api/v1/scalar/" },
+            host = new { displayName = site, documentationUrl = $"{PublicUrl}/api/v1/scalar/" },
             entries = new object[]
             {
                 new
                 {
                     identifier = $"urn:air:{host}:server:lambda",
-                    displayName = Site,
+                    displayName = site,
                     type = "application/mcp-server-card+json",
                     description = "Write, deploy and host small C# web services and sites at a public address.",
                     representativeQueries = new[]
@@ -455,7 +504,7 @@ public sealed class SiteMeta
                     data = new
                     {
                         name = "dev.genhttp/lambda",
-                        title = Site,
+                        title = site,
                         description = "Write, deploy and host small C# web services and sites at a public address.",
                         websiteUrl = PublicUrl,
                         remotes = new[] { new { type = "streamable-http", url = $"{PublicUrl}/mcp" } }
@@ -464,7 +513,7 @@ public sealed class SiteMeta
                 new
                 {
                     identifier = $"urn:air:{host}:api:lambda",
-                    displayName = $"{Site} REST API",
+                    displayName = $"{site} REST API",
                     type = "application/vnd.oai.openapi+json",
                     description = "The same functionality as the MCP server over HTTP; versions can be downloaded and uploaded as a zip, and a feature being worked on downloaded and put back as one.",
                     url = $"{PublicUrl}/api/v1/openapi.json"
@@ -567,6 +616,12 @@ public sealed class SiteMeta
 
         return existing.IsMatch(markup) ? existing.Replace(markup, _ => tag, 1) : InHead(markup, tag);
     }
+
+    /// <summary>
+    /// Takes a meta tag out of the page, where it has one.
+    /// </summary>
+    private static string RemoveMeta(string markup, string attribute, string key)
+        => new Regex($"<meta\\s+{attribute}=\"{Regex.Escape(key)}\"[^>]*>\\s*", RegexOptions.IgnoreCase).Replace(markup, string.Empty, 1);
 
     public static string InHead(string markup, string element)
     {
