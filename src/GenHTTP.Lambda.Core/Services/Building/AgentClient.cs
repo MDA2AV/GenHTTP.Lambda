@@ -132,6 +132,7 @@ public sealed class AgentClient : IDisposable
     /// <param name="deploy">Whether to merge the change and put it online once it works</param>
     /// <param name="language">The language of the control center, for the agent to fall back on</param>
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
+    /// <param name="history">The conversation the message was sent with, cut to size</param>
     /// <returns>
     /// The change it took, or nothing where it took one but answered with
     /// nothing that could be read
@@ -140,7 +141,8 @@ public sealed class AgentClient : IDisposable
     /// It did not take the change: it refused, or it could not be reached
     /// </exception>
     public ValueTask<ChangeProgress?> StartChangeAsync(long lambda, string privateKey, int? before, string prompt, bool deploy,
-                                                       string model, string? language, string? feature)
+                                                       string model, string? language, string? feature,
+                                                       IReadOnlyList<ConversationTurn>? history)
         => StartAsync<ChangeProgress>(new
                                       {
                                           prompt,
@@ -150,7 +152,8 @@ public sealed class AgentClient : IDisposable
                                           deploy,
                                           language,
                                           before,
-                                          feature
+                                          feature,
+                                          history
                                       },
                                       "The agent would not take that.",
                                       "The agent is not answering. Try again in a moment.");

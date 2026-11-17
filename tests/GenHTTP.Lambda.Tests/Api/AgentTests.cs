@@ -456,6 +456,80 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task TheConversationSoFarIsHandedToTheAgentCutToSize()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // more turns than the agent is handed, one that says nothing, and one far too long
+        var history = Enumerable.Range(1, 11)
+                                .Select(n => new ConversationTurn($"Question {n}", $"Answer {n}"))
+                                .Append(new ConversationTurn("   ", "Nothing was asked"))
+                                .Append(new ConversationTurn(new string('x', 5000), new string('y', 5000)))
+                                .ToList();
+
+        using var started = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest("And last month?", History: history));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, started.StatusCode);
+
+        var sent = (JsonArray)agent.Received.Single()["history"]!;
+
+        Assert.HasCount(8, sent, "the newest turns, as many as the agent is handed");
+        Assert.AreEqual("Question 5", sent[0]!["prompt"]!.GetValue<string>(), "oldest first");
+        Assert.AreEqual("Answer 11", sent[6]!["reply"]!.GetValue<string>());
+        Assert.AreEqual(600, sent[7]!["prompt"]!.GetValue<string>().Length, "an earlier message is cut");
+        Assert.AreEqual(1000, sent[7]!["reply"]!.GetValue<string>().Length, "and so is an answer");
+        Assert.IsFalse(sent.Any(turn => turn!["reply"]?.GetValue<string>() == "Nothing was asked"), "a turn that asked nothing is left out");
+
+        Assert.AreEqual("And last month?", agent.Received.Single()["prompt"]!.GetValue<string>(), "the message is the message");
+    }
+
+    [TestMethod]
+    public async Task WithoutAConversationNothingButTheMessageIsHandedOn()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "Add a dark mode");
+
+        Assert.IsNull(agent.Received.Single()["history"], "the Change section of the editor sends none");
+    }
+
+    [TestMethod]
+    public async Task AQuestionIsAnsweredRatherThanMadeAChange()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "How many people came this week?");
+
+        var id = (await started.GetContentAsync<AgentState>()).Job!.Id;
+
+        agent.Step(id, new JsonObject { ["at"] = 3, ["kind"] = "analytics", ["done"] = true });
+
+        agent.Finish(id, new JsonObject
+        {
+            ["ok"] = true,
+            ["answered"] = true,
+            ["settings"] = new JsonArray("analytics"),
+            ["summary"] = "Analytics were off, so I switched them on: from now on every visit is counted."
+        });
+
+        var job = (await StateAsync(fixture, lambda.PrivateKey)).Job!;
+
+        Assert.IsTrue(job.Result!.Answered, "the page shows an answer, not a change");
+        Assert.AreEqual("analytics", job.Result.Settings!.Single(), "and the settings it changed, read off the tools");
+        Assert.AreEqual("analytics", job.Steps.Single().Kind);
+    }
+
+    [TestMethod]
     public async Task TheSecondModelIsForWhoeverKnowsItsPassword()
     {
         await using var agent = FakeAgent.Start();
