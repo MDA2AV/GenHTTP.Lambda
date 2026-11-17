@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Wie ändere ich meine Website später?',
-      'Öffnen Sie den Editor-Link, den Sie mit Ihrer Website bekommen, und beschreiben Sie, was anders sein soll – genauso wie hier. Gefällt Ihnen eine Änderung nicht, können Sie zum vorherigen Stand zurückkehren.',
+      'Gleich hier: Ihre Website bleibt in der Liste auf dieser Seite, Sie beschreiben also auf dieselbe Weise, was anders sein soll, oder fragen, wie es ihr geht. Auf einem anderen Gerät öffnen Sie den Editor-Link, den Sie dazu bekommen. Gefällt Ihnen eine Änderung nicht, können Sie zum vorherigen Stand zurückkehren.',
     ],
   ],
 

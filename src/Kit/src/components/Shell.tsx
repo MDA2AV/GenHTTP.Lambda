@@ -80,7 +80,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed, links = 
   const themeLabel = theme === 'dark' ? t.shell.lightMode : t.shell.darkMode;
 
   return (
-    <div className={fixed ? 'flex h-screen flex-col overflow-hidden' : 'flex min-h-screen flex-col'}>
+    <div className={fixed ? 'flex h-dvh flex-col overflow-hidden' : 'flex min-h-screen flex-col'}>
       {/*
         No rule under it, and the page showing through: the background belongs
         to the whole screen rather than starting below a bar. It stays put as

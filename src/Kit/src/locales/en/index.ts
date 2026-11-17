@@ -3,6 +3,7 @@ import { buildBox } from './buildBox';
 import { connect } from './connect';
 import { kinds, licenses } from './licenses';
 import { card, showcase } from './showcase';
+import { workspace } from './workspace';
 
 /**
  * The words every page of the platform shares, in English, which every other
@@ -16,6 +17,7 @@ export const kit = {
   common,
   connect,
   buildBox,
+  workspace,
   notFound,
   abuse,
   showcase,

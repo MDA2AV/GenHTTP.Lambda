@@ -36,17 +36,19 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Oluşturma ajanından istedikleriniz',
     agent: (policy) => (
       <>
-        Oluşturma kutusuna ya da bir lambdanın editöründeki Değiştir bölümüne yazdıklarınız, uygulamayı yazan model
-        Claude’u işleten ve ABD’de bulunan Anthropic PBC’ye gönderilir. Bir değişiklik yapmak için ajan lambdayı da okur:
-        kodunu, sürümlerinin notlarını ve logunu. Log, lambdanın aldığı istekleri ve yazdırdıklarını içerir, ama
-        ziyaretçilerinin IP adreslerini içermez. Ajanın okudukları da oraya gönderilir. Anthropic’in bunlarla ne yaptığı,
-        şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD, kişisel verileri AB’nin koruduğu gibi korumaz.
-        İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak ya da değiştirmek için bu gereklidir
+        Oluşturma sayfasına ya da bir lambdanın editöründeki Değiştir bölümüne yazdıklarınız, uygulamayı yazan model
+        Claude’u işleten ve ABD’de bulunan Anthropic PBC’ye gönderilir. Oluşturma sayfasından, ne demek istediğinizi
+        anlasın diye, bundan önceki son birkaç mesaj ve ajanın verdiği yanıt da birlikte gönderilir. Yanıt vermek ya da bir
+        değişiklik yapmak için ajan lambdayı da okur: kodunu, sürümlerinin notlarını, logunu (log, lambdanın aldığı
+        istekleri ve yazdırdıklarını içerir, ama ziyaretçilerinin IP adreslerini içermez) ve onlar hakkında soru
+        sorduğunuzda kayıtlarını ve ziyaretçi sayılarını. Ajanın okudukları da oraya gönderilir. Anthropic’in bunlarla ne
+        yaptığı, şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD, kişisel verileri AB’nin koruduğu gibi
+        korumaz. İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak ya da değiştirmek için bu gereklidir
         (GDPR md. 6/1-b ve md. 49/1-b). Bu yüzden paylaşmak istemeyeceğiniz hiçbir şeyi oraya yazmayın.
       </>
     ),
     agentKept:
-      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin tamamı sunucunun loguna, ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır. Bu logların da boyutu sabittir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
+      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin tamamı sunucunun loguna, ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır. Bu logların da boyutu sabittir. Oluşturma sayfasının birlikte gönderdiği önceki mesajlar yazılmaz. Oluşturma sayfası, uygulamalarınızın editör linklerini ve her biri hakkındaki sohbeti yalnızca tarayıcınızın kendi depolama alanında tutar, başka hiçbir yerde tutmaz: bir kopyasını saklamayız ve aynı tarayıcıyı kullanan herkes bunları açabilir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
 
     lambdasTitle: 'Bir lambdanın ne yaptığına sahibi karar verir',
     lambdas:
@@ -57,7 +59,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Çerezler ve tarayıcınız',
     storage:
-      'Tek bir çerez var, adı lang. Seçtiğiniz dili hatırlar, böylece dil belirtmeyen adresler o dilde açılır. Bir yıl geçerlidir. Tarayıcının kendi depolama alanı ise açık ya da koyu temayı, kullandığınız sayfaların birkaç ayarını ve yöneticiler için onların erişim anahtarını hatırlar. Bunların hiçbiri sizi takip etmek için kullanılmaz ve hiçbiri başka birine gitmez: bu sitenin ziyaret analizi yok, reklam yok, başka sitelerden hiçbir şey yüklenmez, yazı tipleri bile. Bunların hepsi yalnızca sizin istediğiniz şeyi yaptığı için onay gerekmez (Alman TDDDG yasası, § 25(2) no. 2).',
+      'Tek bir çerez var, adı lang. Seçtiğiniz dili hatırlar, böylece dil belirtmeyen adresler o dilde açılır. Bir yıl geçerlidir. Tarayıcının kendi depolama alanı ise açık ya da koyu temayı, kullandığınız sayfaların birkaç ayarını, oluşturma sayfasında listelenen uygulamaları editör linkleri ve sohbetleriyle birlikte ve yöneticiler için onların erişim anahtarını hatırlar. Bunların hiçbiri sizi takip etmek için kullanılmaz ve hiçbiri başka birine gitmez: bu sitenin ziyaret analizi yok, reklam yok, başka sitelerden hiçbir şey yüklenmez, yazı tipleri bile. Bunların hepsi yalnızca sizin istediğiniz şeyi yaptığı için onay gerekmez (Alman TDDDG yasası, § 25(2) no. 2).',
 
     hostingTitle: 'Nerede saklanır',
     hosting:

@@ -1,22 +1,20 @@
 import type { ReactNode } from 'react';
 
 /**
- * /platform, the features of genhttp.dev: what every app gets beyond being
- * built and changed - for both groups, in the words of the simple view (a
- * draft, test data, putting online, records, keys and passwords), with the
- * developer's words only where a feature is about code. Every screenshot
- * shows one example app, the court booking of a tennis club that does not
- * exist.
+ * /, the front page of genhttp.dev, told as what every app gets: an AI app
+ * builder with free hosting, for both groups - in the words of the simple
+ * view (a draft, test data, putting online, records, keys and passwords),
+ * with the developer's words only where a feature is about code. Every
+ * screenshot shows one example app, the court booking of a tennis club that
+ * does not exist.
  */
 export const platform = {
-  /** The page's name in the menu of every page. */
-  menu: 'Features',
-
-  eyebrow: 'Features',
+  /** The first line of the heading of the front page, small and above the rest: what people search for to find it. */
+  eyebrow: 'AI app builder with free hosting',
   title: 'Building it takes a minute.',
   titleAccent: 'Everything else is built in.',
   intro:
-    'An app made here is more than the code an AI wrote. What keeps it useful comes after: its records, its versions and what it is for, knowing who visits it, a domain of its own once it catches on - all in one place, opened with the link you get when it is built.',
+    'Describe an app to our AI agent - or to Claude Code, Codex or Cursor - and it is online in minutes, hosted for you, with a link to share. Everything that keeps it useful is already there: its records, its versions and what it is for, who visits it, and a domain of its own once it catches on.',
   build: 'Build something',
   ownAgent: 'Use your own agent',
   free: 'Free. No sign-up, no credit card.',
@@ -30,7 +28,8 @@ export const platform = {
   makeTitle: 'Build it, change it',
   makeText: 'Say what you need, and keep saying it. Nobody has to write or read code for either.',
 
-  behindTitle: 'Behind every app',
+  /** A heading that carries what the front page is found by: a database, version history and analytics - in the words people search for them with in the language. */
+  behindTitle: 'A database, version history and analytics for every app',
   behindText:
     'What keeps an app useful is everything around its code - there for whoever made it, not only for whoever can read code.',
 
@@ -51,10 +50,10 @@ export const platform = {
     },
     change: {
       name: 'Change',
-      title: 'Change it by asking',
-      text: 'Every app has an editor, opened with the private link you got when it was built. Say what should be different, and the agent changes the app and tells you when to look - or hand the link to your own agent with the next change.',
-      points: ['A sentence is enough', 'Online by itself once it works, or kept for you to try first', 'The code stays out of sight unless you want it'],
-      alt: 'The Change section: the club asked for the coach’s lessons, and the agent says the change is ready to try',
+      title: 'Ask about it, change it',
+      text: 'Your apps stay listed on the build page, each with a conversation. Ask how one is doing - who visited, what people entered, whether something is wrong - or say what should be different, and the agent answers or changes it. Or hand its editor link to your own agent.',
+      points: ['Answers about visitors, records and errors', 'Online by itself once it works, or kept as a draft to try first', 'The code stays out of sight unless you want it'],
+      alt: 'The build page: the club asked how many courts were booked this week, the agent answered, and the coach’s lessons are ready to try in a draft',
     },
     drafts: {
       name: 'Drafts',

@@ -252,6 +252,21 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task ABuildSaysHowManyAreLeftToday()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, perDay: 3);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, build.StatusCode);
+
+        var started = await build.GetContentAsync<BuildStarted>();
+
+        Assert.AreEqual(2, started.Left, "the workspace shows what is left before any app is known");
+    }
+
+    [TestMethod]
     public async Task AChangeNeedsToSayWhat()
     {
         await using var agent = FakeAgent.Start();
@@ -453,6 +468,108 @@ public sealed class AgentTests
         Assert.AreEqual("declined", result.Reason);
         Assert.AreEqual("Das ist keine Änderung an Ihrer App, deshalb macht der Agent das nicht.", result.Summary,
                         "the owner reads why, in the language they asked in");
+    }
+
+    [TestMethod]
+    public async Task TheConversationSoFarIsHandedToTheAgentCutToSize()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // more turns than the agent is handed, one that says nothing, and one far too long
+        var history = Enumerable.Range(1, 11)
+                                .Select(n => new ConversationTurn($"Question {n}", $"Answer {n}"))
+                                .Append(new ConversationTurn("   ", "Nothing was asked"))
+                                .Append(new ConversationTurn(new string('x', 5000), new string('y', 5000)))
+                                .ToList();
+
+        using var started = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest("And last month?", History: history));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, started.StatusCode);
+
+        var sent = (JsonArray)agent.Received.Single()["history"]!;
+
+        Assert.HasCount(8, sent, "the newest turns, as many as the agent is handed");
+        Assert.AreEqual("Question 5", sent[0]!["prompt"]!.GetValue<string>(), "oldest first");
+        Assert.AreEqual("Answer 11", sent[6]!["reply"]!.GetValue<string>());
+        Assert.AreEqual(600, sent[7]!["prompt"]!.GetValue<string>().Length, "an earlier message is cut");
+        Assert.AreEqual(1000, sent[7]!["reply"]!.GetValue<string>().Length, "and so is an answer");
+        Assert.IsFalse(sent.Any(turn => turn!["reply"]?.GetValue<string>() == "Nothing was asked"), "a turn that asked nothing is left out");
+
+        Assert.AreEqual("And last month?", agent.Received.Single()["prompt"]!.GetValue<string>(), "the message is the message");
+    }
+
+    /// <summary>
+    /// The runner takes a body of a bounded size. A message in Japanese with
+    /// the conversation before it, every letter escaped as six characters,
+    /// came to several times what it was, and the runner dropped it.
+    /// </summary>
+    [TestMethod]
+    public async Task AConversationInAnyLanguageFitsWhatTheRunnerTakes()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var history = Enumerable.Range(0, 8).Select(_ => new ConversationTurn(new string('あ', 600), new string('い', 1000))).ToList();
+
+        using var started = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest(new string('う', 2000), History: history));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, started.StatusCode);
+
+        var body = agent.Bodies.Single();
+        var text = System.Text.Encoding.UTF8.GetString(body);
+
+        Assert.IsLessThan(64 * 1024, body.Length, "what the runner takes, in bytes (LONGEST_BODY in builder.mjs)");
+        Assert.DoesNotContain("\\u3042", text, "the words travel as they are, not as escapes");
+        Assert.Contains(new string('う', 2000), text);
+    }
+
+    [TestMethod]
+    public async Task WithoutAConversationNothingButTheMessageIsHandedOn()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "Add a dark mode");
+
+        Assert.IsNull(agent.Received.Single()["history"], "the Change section of the editor sends none");
+    }
+
+    [TestMethod]
+    public async Task AQuestionIsAnsweredRatherThanMadeAChange()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "How many people came this week?");
+
+        var id = (await started.GetContentAsync<AgentState>()).Job!.Id;
+
+        agent.Step(id, new JsonObject { ["at"] = 3, ["kind"] = "analytics", ["done"] = true });
+
+        agent.Finish(id, new JsonObject
+        {
+            ["ok"] = true,
+            ["answered"] = true,
+            ["settings"] = new JsonArray("analytics"),
+            ["summary"] = "Analytics were off, so I switched them on: from now on every visit is counted."
+        });
+
+        var job = (await StateAsync(fixture, lambda.PrivateKey)).Job!;
+
+        Assert.IsTrue(job.Result!.Answered, "the page shows an answer, not a change");
+        Assert.AreEqual("analytics", job.Result.Settings!.Single(), "and the settings it changed, read off the tools");
+        Assert.AreEqual("analytics", job.Steps.Single().Kind);
     }
 
     [TestMethod]

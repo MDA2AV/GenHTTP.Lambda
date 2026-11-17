@@ -34,17 +34,19 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Co mówisz agentowi do budowania',
     agent: (policy) => (
       <>
-        To, co wpisujesz w pole na stronie „Zbuduj” albo w sekcji „Zmień” w edytorze lambdy, trafia do Anthropic PBC w
-        Stanach Zjednoczonych. Ta firma prowadzi model Claude, który pisze aplikację. Żeby wprowadzić zmianę, agent
-        czyta też lambdę – jej kod, notatki do jej wersji i jej log, w którym są żądania i to, co lambda wypisała, ale
-        nie adresy IP odwiedzających. To, co agent przeczyta, również jest tam wysyłane. Co Anthropic robi z tymi danymi,
-        opisuje {policy('polityka prywatności tej firmy')}. Stany Zjednoczone nie chronią danych osobowych tak jak UE.
-        Twoja prośba jest tam wysyłana, bo bez tego nie da się zbudować ani zmienić tego, o co prosisz
-        (art. 6 ust. 1 lit. b i art. 49 ust. 1 lit. b RODO). Nie wpisuj więc niczego, czym nie chcesz się dzielić.
+        To, co wpisujesz na stronie budowania albo w sekcji „Zmień” w edytorze lambdy, trafia do Anthropic PBC w Stanach
+        Zjednoczonych. Ta firma prowadzi model Claude, który pisze aplikację – ze strony budowania razem z kilkoma
+        poprzednimi wiadomościami i odpowiedziami agenta, żeby zrozumiał, co masz na myśli. Żeby odpowiedzieć lub
+        wprowadzić zmianę, agent czyta też lambdę – jej kod, notatki do jej wersji, jej log, w którym są żądania i to, co
+        lambda wypisała, ale nie adresy IP odwiedzających, a gdy o nie pytasz, także jej wpisy i liczby odwiedzających. To,
+        co agent przeczyta, również jest tam wysyłane. Co Anthropic robi z tymi danymi, opisuje {policy('polityka prywatności tej firmy')}.
+        Stany Zjednoczone nie chronią danych osobowych tak jak UE. Twoja prośba jest tam wysyłana, bo bez tego nie da się
+        zbudować ani zmienić tego, o co prosisz (art. 6 ust. 1 lit. b i art. 49 ust. 1 lit. b RODO). Nie wpisuj więc
+        niczego, czym nie chcesz się dzielić.
       </>
     ),
     agentKept:
-      'Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Sama prośba trafia w całości do logu serwera, a kilkaset pierwszych znaków także do logu usługi budowania; oba również mają stały rozmiar. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
+      'Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Sama prośba trafia w całości do logu serwera, a kilkaset pierwszych znaków także do logu usługi budowania; oba również mają stały rozmiar. Wcześniejszych wiadomości, które wysyła strona budowania, nie zapisujemy. Strona budowania przechowuje linki do edytorów twoich aplikacji i rozmowy o każdej z nich w pamięci twojej przeglądarki i nigdzie indziej: nie trzymamy kopii, a każdy, kto korzysta z tej samej przeglądarki, może je otworzyć. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
 
     lambdasTitle: 'O tym, co robi lambda, decyduje jej właściciel',
     lambdas:
@@ -55,7 +57,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Pliki cookie i twoja przeglądarka',
     storage:
-      'Jest jeden plik cookie o nazwie lang. Zapamiętuje wybrany przez ciebie język, żeby adresy bez języka otwierały się właśnie w nim, i jest ważny przez rok. Pamięć samej przeglądarki przechowuje jasny lub ciemny motyw, kilka ustawień stron, z których korzystasz, a w przypadku administratorów serwisu – ich token. Nic z tego nie służy do śledzenia cię i nic nie trafia do nikogo innego: nie ma analityki tego serwisu ani reklam, a nic nie jest ładowane z innych stron, nawet czcionki. Wszystko to służy wyłącznie temu, o co prosisz, więc nie wymaga zgody (§ 25 ust. 2 pkt 2 niemieckiej ustawy TDDDG).',
+      'Jest jeden plik cookie o nazwie lang. Zapamiętuje wybrany przez ciebie język, żeby adresy bez języka otwierały się właśnie w nim, i jest ważny przez rok. Pamięć samej przeglądarki przechowuje jasny lub ciemny motyw, kilka ustawień stron, z których korzystasz, aplikacje z listy na stronie budowania wraz z linkami do ich edytorów i rozmowami, a w przypadku administratorów serwisu – ich token. Nic z tego nie służy do śledzenia cię i nic nie trafia do nikogo innego: nie ma analityki tego serwisu ani reklam, a nic nie jest ładowane z innych stron, nawet czcionki. Wszystko to służy wyłącznie temu, o co prosisz, więc nie wymaga zgody (§ 25 ust. 2 pkt 2 niemieckiej ustawy TDDDG).',
 
     hostingTitle: 'Gdzie są przechowywane dane',
     hosting:

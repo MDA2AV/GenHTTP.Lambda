@@ -89,6 +89,8 @@ export const change: EditorMessages['change'] = {
     records: 'Czytanie bazy danych',
     secrets: 'Przeglądanie kluczy i haseł',
     connectivity: 'Prośba o połączenia z innymi serwerami',
+    analytics: 'Przeglądanie analityki',
+    source: 'Publikowanie kodu źródłowego',
     other: (tool) => `Korzystanie z narzędzia ${tool}`,
   },
   marks: {

@@ -34,18 +34,20 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Cosa chiedi al nostro agente',
     agent: (policy) => (
       <>
-        Quello che scrivi nel campo in cui chiedi l’app, o nella sezione Modifica dell’editor di una lambda, viene
-        inviato ad Anthropic PBC, negli Stati Uniti, che gestisce Claude, il modello che scrive l’app. Per fare una
-        modifica, l’agente legge anche la lambda (il codice, le note delle sue versioni e il suo log, che contiene le
-        richieste e quello che ha stampato, ma non gli indirizzi IP dei visitatori), e anche quello che legge viene inviato
-        lì. Cosa ne fa Anthropic lo stabilisce {policy('la sua informativa sulla privacy')}. Gli Stati Uniti non
-        proteggono i dati personali come l’UE. La tua richiesta viene inviata lì perché serve a creare o modificare
-        quello che hai chiesto (artt. 6, par. 1, lett. b) e 49, par. 1, lett. b) GDPR), quindi non scriverci niente che
-        non vorresti condividere.
+        Quello che scrivi nella pagina di creazione, o nella sezione Modifica dell’editor di una lambda, viene inviato
+        ad Anthropic PBC, negli Stati Uniti, che gestisce Claude, il modello che scrive l’app - dalla pagina di creazione
+        insieme agli ultimi messaggi precedenti e alle risposte dell’agente, così che capisca cosa intendi. Per
+        rispondere o fare una modifica, l’agente legge anche la lambda (il codice, le note delle sue versioni, il suo
+        log, che contiene le richieste e quello che ha stampato, ma non gli indirizzi IP dei visitatori, e, se glielo
+        chiedi, le sue voci e i conteggi dei suoi visitatori), e anche quello che legge viene inviato lì. Cosa ne fa
+        Anthropic lo stabilisce {policy('la sua informativa sulla privacy')}. Gli Stati Uniti non proteggono i dati
+        personali come l’UE. La tua richiesta viene inviata lì perché serve a creare o modificare quello che hai chiesto
+        (artt. 6, par. 1, lett. b) e 49, par. 1, lett. b) GDPR), quindi non scriverci niente che non vorresti
+        condividere.
       </>
     ),
     agentKept:
-      'L’agente salva la tua richiesta, spesso riformulata con parole sue, come nota della versione che scrive. La richiesta viene scritta per intero nel log del server, e le prime centinaia di caratteri nel log del servizio di creazione; anche questi due hanno una dimensione fissa. Se invece usi un tuo agente, come Claude o Claude Code, quello che gli dici va al fornitore di quell’agente, non a noi: noi riceviamo solo il codice e le note che manda qui.',
+      'L’agente salva la tua richiesta, spesso riformulata con parole sue, come nota della versione che scrive. La richiesta viene scritta per intero nel log del server, e le prime centinaia di caratteri nel log del servizio di creazione; anche questi due hanno una dimensione fissa. I messaggi precedenti, che la pagina di creazione manda insieme, non vengono registrati. La pagina di creazione conserva i link di modifica delle tue app e la conversazione su ciascuna nella memoria del tuo browser, e da nessun’altra parte: non ne teniamo una copia, e chi usa lo stesso browser può aprirle. Se invece usi un tuo agente, come Claude o Claude Code, quello che gli dici va al fornitore di quell’agente, non a noi: noi riceviamo solo il codice e le note che manda qui.',
 
     lambdasTitle: 'Cosa fa una lambda lo decide il suo proprietario',
     lambdas:
@@ -56,7 +58,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'I cookie e il tuo browser',
     storage:
-      'C’è un solo cookie, che si chiama lang. Ricorda la lingua che hai scelto, così gli indirizzi che non ne indicano una si aprono in quella lingua, e dura un anno. La memoria locale del browser ricorda il tema chiaro o scuro, alcune impostazioni delle pagine che usi e, per gli amministratori, il loro token. Niente di tutto questo serve a seguirti e niente va a qualcun altro: nessuno strumento di analisi di questo sito, niente pubblicità, e niente viene caricato da altri siti, nemmeno i font. Visto che tutto serve solo a fare quello che hai chiesto tu, non serve il consenso (§ 25, comma 2, n. 2 della legge tedesca TDDDG).',
+      'C’è un solo cookie, che si chiama lang. Ricorda la lingua che hai scelto, così gli indirizzi che non ne indicano una si aprono in quella lingua, e dura un anno. La memoria locale del browser ricorda il tema chiaro o scuro, alcune impostazioni delle pagine che usi, le app elencate nella pagina di creazione con i loro link di modifica e le conversazioni e, per gli amministratori, il loro token. Niente di tutto questo serve a seguirti e niente va a qualcun altro: nessuno strumento di analisi di questo sito, niente pubblicità, e niente viene caricato da altri siti, nemmeno i font. Visto che tutto serve solo a fare quello che hai chiesto tu, non serve il consenso (§ 25, comma 2, n. 2 della legge tedesca TDDDG).',
 
     hostingTitle: 'Dove sono conservati i dati',
     hosting:

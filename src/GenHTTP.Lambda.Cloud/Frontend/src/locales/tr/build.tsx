@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Sonradan nasıl değiştiririm?',
-      'Web sitenizle birlikte aldığınız editör linkini açın ve burada olduğu gibi neyin farklı olması gerektiğini anlatın. Bir değişikliği beğenmezseniz sitenin önceki hâline dönebilirsiniz.',
+      'Doğrudan burada: web siteniz bu sayfadaki listede durur; neyin farklı olması gerektiğini aynı şekilde anlatabilir ya da nasıl gittiğini sorabilirsiniz. Başka bir cihazda, web sitenizle birlikte aldığınız editör linkini açın. Bir değişikliği beğenmezseniz sitenin önceki hâline dönebilirsiniz.',
     ],
   ],
 

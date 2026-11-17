@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Masz aplikację zrobioną w Claude Code, Codex albo Cursor, ale działa tylko na twoim komputerze? Poproś agenta, żeby opublikował ją tutaj. Po kilku minutach ma publiczny link, który każdy może otworzyć, własną bazę danych i połączenie na żywo ze wszystkimi, którzy mają ją otwartą – więc ludzie mogą w niej razem grać, czatować i dodawać wpisy.',
   facts: ['Za darmo', 'Bez rejestracji', 'Bez karty kredytowej', 'Bez instalacji'],
-  connect: 'Podłącz agenta',
-  seeOthers: 'Zobacz, co opublikowali inni',
 
   stepsTitle: 'Opublikuj aplikację webową w trzech krokach',
   step: (n) => `Krok ${n}`,
@@ -29,31 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Nie tylko hosting. Baza danych i tryb wieloosobowy w zestawie.',
   together:
     'Większość hostingów daje każdemu odwiedzającemu osobną kopię aplikacji i każdy gra sam: tego, co jedna przeglądarka trzyma w localStorage, następna nigdy nie zobaczy. Tutaj każda aplikacja ma własną bazę danych i połączenie na żywo ze wszystkimi, którzy mają ją otwartą. Ruch jednej osoby od razu widzą wszyscy pozostali, a to, co ktoś napisze, jutro nadal tam będzie.',
-  together2:
-    'Żadnego konta w Supabase czy Firebase, żadnego backendu do podpinania, żadnego serwera do wynajęcia. Poproś o to własnymi słowami, jak w rozmowie ze znajomym.',
-  kinds: [
-    { name: 'Gry wieloosobowe', ask: 'Niech w jednej rundzie gra do ośmiu znajomych i każdy widzi ruchy innych na żywo.' },
-    { name: 'Czaty', ask: 'Dodaj pokój, w którym może pisać każdy, kto ma link. Niech zapamiętuje ostatnie sto wiadomości.' },
-    { name: 'Wspólne listy', ask: 'Zrób z listy rzeczy do spakowania taką, którą cały zespół może edytować naraz.' },
-    { name: 'Rankingi', ask: 'Dodaj ranking z najlepszym czasem każdego gracza i pokaż pierwszą dziesiątkę na ekranie startowym.' },
-    { name: 'Małe serwisy społecznościowe', ask: 'Niech goście weselni wrzucają zdjęcia na jedną tablicę i lajkują nawzajem swoje.' },
-  ],
-  quote: (text) => `„${text}”`,
-
-  connectTitle: 'Podłącz raz Claude Code, Codex albo Cursor',
-  connectText: 'Podaj agentowi adres naszego serwera MCP. Od tej chwili wie, jak tu publikować – bez klucza i bez logowania.',
   sayLike: 'Potem w swoim projekcie napisz na przykład',
   asks: [
     'Opublikuj tę aplikację na GenHTTP Lambda i wyślij mi link.',
     'Niech najlepsze wyniki będą wspólne, żeby wszyscy widzieli ten sam ranking.',
   ],
-
-  domainChip: 'Kiedy się przyjmie',
-  domainTitle: 'Nadaj jej własną domenę',
-  domainText:
-    'Ta sama aplikacja, ten sam link do edytora, ale pod adresem, który należy do ciebie. Łatwiej go powiedzieć, łatwiej zapamiętać i wygląda poważniej, kiedy ludzie zaczną go podawać dalej.',
-  domainSubject: 'Domena dla mojej aplikacji',
-  domainAsk: 'Zapytaj o domenę',
 
   questionsTitle: 'Zanim opublikujesz',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -119,41 +97,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'U ciebie działa.',
-  closeAccent: 'Niech działa też u nich.',
   noAgent: 'Nie masz agenta? Zbuduj tutaj',
-  closeFacts: 'Za darmo. Bez rejestracji. Bez instalacji.',
-
-  scene: {
-    label:
-      'Agent dostaje prośbę o publikację aplikacji. Adres zmienia się z localhost na publiczny link i dołączają kolejne osoby.',
-    ask: 'Wrzuć mój quiz do sieci, żeby znajomi mogli dołączyć.',
-    live: 'Gotowe, działa. Oto twój link.',
-    publishing: 'Publikuję…',
-    public: 'Publiczny',
-    onlyYou: 'Tylko ty',
-    app: 'Piątkowy quiz',
-    playing: (count) => <>{count} w grze</>,
-    you: 'Ty',
-  },
-
-  compareTitle: 'Najkrótsza droga od „działa” do „wypróbuj”',
-  compareText:
-    'Vercel, Cloudflare i Lovable to świetne miejsca do uruchamiania aplikacji. Ale wszędzie zaczynasz od formularza rejestracji, a gdy aplikacja ma dzielić dane między odwiedzających – także od konfiguracji kolejnej usługi. Tak to wygląda, gdy zaczynasz od zera.',
-  rows: [
-    'Start bez konta',
-    'Publikacja z agenta, którego już używasz',
-    'Baza danych i dane na żywo: czat, gry wieloosobowe, rekordy',
-    'Koszt pierwszego linku',
-  ],
-  us: ['Tak', 'Podłącz raz, potem tylko proś', 'Wbudowane w każdą aplikację', 'Za darmo'],
-  rivals: [
-    ['Wymaga rejestracji', 'Po zalogowaniu w ich narzędziach', 'Trzeba dodać bazę danych', 'Darmowy plan'],
-    ['Wymaga rejestracji', 'Po zalogowaniu w ich narzędziach', 'Możliwe, po konfiguracji', 'Darmowy plan'],
-    ['Wymaga rejestracji', 'W ich własnym edytorze', 'Przez podłączony backend', 'Darmowy plan, limit kredytów'],
-  ],
-  compareNote:
-    'Stan na wrzesień 2026, dla kogoś bez konta w żadnym z tych serwisów. Plany i funkcje innych usług się zmieniają – szczegóły sprawdź u nich.',
 
 };

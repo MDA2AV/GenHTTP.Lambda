@@ -244,6 +244,35 @@ public sealed class SiteMetaTests
     }
 
     /// <summary>
+    /// The features were a page of their own on genhttp.dev until they became
+    /// its front page: a link to them, in a language or in none, leads there
+    /// for good, so a search engine moves what it knew of the page along.
+    /// </summary>
+    [TestMethod]
+    [DataRow("/de/platform", "/de")]
+    [DataRow("/pt-pt/platform/", "/pt-pt")]
+    [DataRow("/platform?utm_source=mail", "/?utm_source=mail")]
+    public async Task TheFeaturesLeadToTheFrontPage(string path, string location)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await RequestAsync(fixture, path, "de");
+
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.AreEqual(location, response.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
+    public async Task TheCommunityEditionMovesNothing()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(Site());
+
+        using var response = await RequestAsync(fixture, "/de/platform", "de");
+
+        Assert.AreNotEqual(HttpStatusCode.MovedPermanently, response.StatusCode, "it never had the page");
+    }
+
+    /// <summary>
     /// The editor, the pages the examples used to have, a path that does not
     /// exist - in a language or in none - and a language the site is not
     /// written in are left alone: the client marks them as not to be indexed.

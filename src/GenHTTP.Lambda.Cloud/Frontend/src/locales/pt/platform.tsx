@@ -1,13 +1,12 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: 'Recursos',
 
-  eyebrow: 'Recursos',
+  eyebrow: 'Apps com IA e hospedagem grátis',
   title: 'Criar leva um minuto.',
   titleAccent: 'O resto já vem incluído.',
   intro:
-    'Um app feito aqui é mais do que o código que uma IA escreveu. O que o mantém útil vem depois: seus registros, suas versões e para que ele serve, saber quem o visita, um domínio próprio quando ele fizer sucesso - tudo em um só lugar, aberto com o link que você recebe quando ele fica pronto.',
+    'Descreva um app para o nosso agente de IA - ou para o Claude Code, o Codex ou o Cursor - e ele fica no ar em minutos, hospedado para você, com um link para compartilhar. Tudo o que o mantém útil já está lá: seus registros, suas versões e para que ele serve, quem o visita e um domínio próprio quando ele fizer sucesso.',
   build: 'Criar algo',
   ownAgent: 'Usar seu próprio agente',
   free: 'Grátis. Sem cadastro, sem cartão de crédito.',
@@ -19,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Criar e mudar',
   makeText: 'Diga o que você precisa e continue dizendo. Ninguém precisa escrever nem ler código para isso.',
 
-  behindTitle: 'Por trás de todo app',
+  behindTitle: 'Banco de dados, histórico de versões e analytics para todo app',
   behindText:
     'O que mantém um app útil é tudo o que existe em volta do código - disponível para quem o criou, e não só para quem sabe ler código.',
 
@@ -36,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Mudar',
-      title: 'Mude pedindo',
-      text: 'Todo app tem um editor, aberto com o link de edição que você recebeu quando ele ficou pronto. Diga o que deve ser diferente, e o agente muda o app e avisa quando você pode conferir. Ou entregue o link ao seu próprio agente junto com a próxima mudança.',
-      points: ['Uma frase basta', 'No ar sozinho quando funciona, ou guardado para você testar antes', 'O código fica fora de vista, a menos que você queira'],
-      alt: 'A seção Mudar: o clube pediu as aulas do treinador, e o agente avisa que a mudança está pronta para testar',
+      title: 'Pergunte, mude',
+      text: 'Seus apps ficam na lista da página de criação, cada um com uma conversa. Pergunte como um deles está - quem visitou, o que as pessoas digitaram, se algo está errado - ou diga o que deve ser diferente, e o agente responde ou muda o app. Ou entregue o link de edição dele ao seu próprio agente.',
+      points: ['Respostas sobre visitantes, registros e erros', 'No ar sozinho quando funciona, ou guardado como rascunho para você testar antes', 'O código fica fora de vista, a menos que você queira'],
+      alt: 'A página de criação: o clube perguntou quantas quadras foram reservadas esta semana, o agente respondeu, e as aulas do treinador estão prontas para testar em um rascunho',
     },
     drafts: {
       name: 'Rascunhos',

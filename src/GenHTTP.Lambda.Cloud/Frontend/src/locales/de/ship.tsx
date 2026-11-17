@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Sie haben mit Claude Code, Codex oder Cursor eine App gebaut, aber sie läuft nur auf Ihrem Rechner. Bitten Sie Ihren Agenten, sie hier online zu stellen. Wenige Minuten später hat sie einen öffentlichen Link, eine eigene Datenbank und eine Live-Verbindung zu allen, die sie gerade offen haben – so können Leute darin gemeinsam spielen, chatten und posten.',
   facts: ['Kostenlos', 'Ohne Anmeldung', 'Ohne Kreditkarte', 'Ohne Installation'],
-  connect: 'Agenten verbinden',
-  seeOthers: 'Sehen, was andere gebaut haben',
 
   stepsTitle: 'Web-App in drei Schritten online stellen',
   step: (n) => `Schritt ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Mehr als Hosting. Datenbank und Multiplayer inklusive.',
   together:
     'Bei den meisten Hostern bekommt jeder Besucher seine eigene Kopie der App – und alle spielen allein: Was ein Browser im localStorage ablegt, sieht der nächste nie. Hier hat jede App eine eigene Datenbank und eine Live-Verbindung zu allen, die sie gerade offen haben. Macht jemand einen Zug, sehen ihn alle anderen sofort. Und was gepostet wird, ist morgen noch da.',
-  together2:
-    'Keine Anmeldung bei Supabase oder Firebase, kein Backend zum Anbinden, kein Server zum Mieten. Beschreiben Sie es einfach so, wie Sie es einem Freund erzählen würden.',
-  kinds: [
-    { name: 'Multiplayer-Spiele', ask: 'Lass bis zu acht Freunde derselben Runde beitreten und die Züge der anderen live sehen.' },
-    { name: 'Chaträume', ask: 'Füg einen Raum hinzu, in dem alle mit dem Link chatten können, und speichere die letzten hundert Nachrichten.' },
-    { name: 'Gemeinsame Listen', ask: 'Mach aus der Packliste eine, die das ganze Team gleichzeitig bearbeiten kann.' },
-    { name: 'Bestenlisten', ask: 'Merk dir die Bestzeit jedes Spielers und zeig die Top 10 auf dem Startbildschirm.' },
-    { name: 'Kleine soziale Netzwerke', ask: 'Lass Hochzeitsgäste Fotos auf eine gemeinsame Pinnwand stellen und die der anderen liken.' },
-  ],
-  quote: (text) => `„${text}“`,
-
-  connectTitle: 'Claude Code, Codex oder Cursor einmal verbinden',
-  connectText:
-    'Geben Sie Ihrem Agenten diese Adresse unseres MCP-Servers. Ab dann weiß er, wie er hier veröffentlicht – ohne Key und ohne Login.',
   sayLike: 'Dann sagen Sie in Ihrem Projekt zum Beispiel:',
   asks: [
     'Veröffentliche diese App auf GenHTTP Lambda und schick mir den Link.',
     'Speichere die Highscores zentral, damit alle dieselbe Bestenliste sehen.',
   ],
-
-  domainChip: 'Wenn es gut ankommt',
-  domainTitle: 'Eine eigene Domain für Ihre App',
-  domainText:
-    'Dieselbe App, derselbe Editor-Link – aber unter einer Adresse, die Ihnen gehört. Leichter zu sagen, leichter zu merken. Und sie macht etwas her, wenn sich die App herumspricht.',
-  domainSubject: 'Eine Domain für meine App',
-  domainAsk: 'Domain anfragen',
 
   questionsTitle: 'Bevor Sie Ihre App online stellen',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -123,41 +100,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'Auf Ihrem Rechner läuft es schon.',
-  closeAccent: 'Jetzt auch bei allen anderen.',
   noAgent: 'Kein Agent? Hier bauen',
-  closeFacts: 'Kostenlos. Ohne Anmeldung. Ohne Installation.',
-
-  scene: {
-    label:
-      'Ein Agent soll eine App veröffentlichen. Die Adresse wechselt von localhost zu einem öffentlichen Link, und Leute kommen dazu.',
-    ask: 'Stell mein Quizspiel online, damit meine Freunde mitspielen können.',
-    live: 'Ist online. Hier ist der Link.',
-    publishing: 'Wird veröffentlicht …',
-    public: 'Öffentlich',
-    onlyYou: 'Nur Sie',
-    app: 'Quizabend am Freitag',
-    playing: (count) => <>{count} dabei</>,
-    you: 'Sie',
-  },
-
-  compareTitle: 'Der kürzeste Weg von „läuft“ zu „probier’s aus“',
-  compareText:
-    'Vercel, Cloudflare und Lovable sind großartige Plattformen. Aber dort beginnt alles mit einer Registrierung. Und sobald Ihre App Daten zwischen Besuchern teilen soll, müssen Sie einen zweiten Dienst einrichten. So sieht es aus, wenn Sie bei null anfangen.',
-  rows: [
-    'Start ohne Konto',
-    'Veröffentlichen aus Ihrem Agenten',
-    'Datenbank und Live-Daten: Chat, Multiplayer, Rekorde',
-    'Kosten bis zum ersten Link',
-  ],
-  us: ['Ja', 'Einmal verbinden, dann fragen', 'In jede App eingebaut', 'Kostenlos'],
-  rivals: [
-    ['Registrierung nötig', 'Nach Login in eigenen Tools', 'Datenbankdienst dazubuchen', 'Free-Tarif'],
-    ['Registrierung nötig', 'Nach Login in eigenen Tools', 'Möglich, mit Einrichtung', 'Free-Tarif'],
-    ['Registrierung nötig', 'Im eigenen Editor gebaut', 'Über ein angebundenes Backend', 'Free-Tarif, begrenzte Credits'],
-  ],
-  compareNote:
-    'Stand: September 2026, für jemanden ohne Konto bei einem der Anbieter. Tarife und Funktionen anderer Dienste ändern sich – Details bitte dort prüfen.',
 
 };

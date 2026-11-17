@@ -10,15 +10,6 @@ export const landing: Messages['landing'] = {
   connect: 'Ajanınızı bağlayın',
   write: 'Kodu kendiniz yazın',
 
-  buildTitle: 'Tarif edin',
-  buildText: 'Bir cümle yeterli. Geliştirme ajanı uygulamayı yazar, yayına alır ve sonradan değiştirebilmeniz için size linkini verir.',
-  noAgent: 'Bu kuruluma bağlı bir geliştirme ajanı yok. Aşağıdan kendi ajanınızı bağlayın - aynı işi o yapar.',
-
-  connectTitle: 'Ajanınızı bağlayın',
-  connectText:
-    'Kodlama ajanınız platformu araç olarak kullanır: uygulama oluşturur, kodunu yazıp kontrol eder, bir değişikliği verilerin kopyasıyla bir taslakta dener, yayına alır ve günlüklerini okur.',
-  connectThen: 'Sonra ondan bir şey isteyin, örneğin: “Bir ziyaretçi defteri yap, girişleri onaylayabileceğim bir sayfası olsun.”',
-
   featuresTitle: 'Her uygulamanın sahip olduğu her şey',
   features: [
     { title: 'Bir adres', text: 'Bu sunucuda, anahtarına göre adlandırılmış kendi adresi var - üretime taşındığında ise kendi alan adı da.' },

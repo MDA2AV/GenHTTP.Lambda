@@ -10,15 +10,6 @@ export const landing: Messages['landing'] = {
   connect: 'Połącz swojego agenta',
   write: 'Napisz kod samodzielnie',
 
-  buildTitle: 'Opisz ją',
-  buildText: 'Wystarczy jedno zdanie. Agent budujący napisze aplikację, udostępni ją i da ci link, by później ją zmienić.',
-  noAgent: 'Do tej instalacji nie jest podłączony żaden agent budujący. Połącz poniżej własnego agenta - zrobi to samo.',
-
-  connectTitle: 'Połącz swojego agenta',
-  connectText:
-    'Twój agent do kodowania dostaje platformę jako narzędzia: tworzy aplikację, pisze i sprawdza jej kod, wypróbowuje zmianę w szkicu z kopią danych, udostępnia ją i czyta jej logi.',
-  connectThen: 'Potem poproś go o coś, na przykład: „Zbuduj książkę gości ze stroną, na której zatwierdzam wpisy.”',
-
   featuresTitle: 'Co dostaje każda aplikacja',
   features: [
     { title: 'Adres', text: 'Własny adres na tym serwerze, nazwany od klucza aplikacji – a po przeniesieniu na produkcję także własna domena.' },

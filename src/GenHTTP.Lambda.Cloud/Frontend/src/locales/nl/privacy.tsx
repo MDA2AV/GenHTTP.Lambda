@@ -34,18 +34,20 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Wat je aan de bouwagent vraagt',
     agent: (policy) => (
       <>
-        Wat je op de pagina ‘App maken’ of in het onderdeel ‘Aanpassen’ in de editor van een lambda in het invoervak
-        typt, wordt naar Anthropic PBC in de Verenigde Staten gestuurd. Anthropic draait Claude, het model dat de app
-        schrijft. Om een wijziging door te voeren, leest de agent ook de lambda: de code, de notities bij de versies en
-        het log, met de requests en de output van de lambda, maar niet de IP-adressen van bezoekers. Ook wat hij leest,
-        wordt daarheen gestuurd. Wat Anthropic ermee doet, staat in{' '}
+        Wat je op de bouwpagina of in het onderdeel ‘Aanpassen’ in de editor van een lambda in het invoervak typt, wordt
+        naar Anthropic PBC in de Verenigde Staten gestuurd. Anthropic draait Claude, het model dat de app schrijft. Vanaf
+        de bouwpagina gaan ook de laatste paar berichten ervoor en wat de agent antwoordde mee, zodat hij begrijpt wat je
+        bedoelt. Om te antwoorden of een wijziging door te voeren, leest de agent ook de lambda: de code, de notities bij
+        de versies, het log, met de requests en de output van de lambda maar niet de IP-adressen van bezoekers, en als je
+        ernaar vraagt de items en het aantal bezoekers. Ook wat hij leest, wordt daarheen gestuurd. Wat Anthropic ermee
+        doet, staat in{' '}
         {policy('het eigen privacybeleid van Anthropic')}. De Verenigde Staten beschermen persoonsgegevens niet zoals de
         EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen of aan te passen wat je vroeg
         (art. 6 lid 1 sub b en art. 49 lid 1 sub b AVG). Zet er dus niets in wat je niet met anderen wilt delen.
       </>
     ),
     agentKept:
-      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst; beide hebben ook een vaste grootte. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
+      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst; beide hebben ook een vaste grootte. De berichten ervoor, die de bouwpagina meestuurt, worden niet opgeschreven. De bouwpagina bewaart de editorlinks van je apps en het gesprek over elke app in de eigen opslag van je browser en nergens anders: wij bewaren geen kopie, en wie dezelfde browser gebruikt kan ze openen. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
 
     lambdasTitle: 'Wat een lambda doet, bepaalt de eigenaar',
     lambdas:
@@ -56,7 +58,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookies en je browser',
     storage:
-      "Er is één cookie, met de naam lang. Die onthoudt welke taal je hebt gekozen, zodat adressen zonder taal in die taal openen, en blijft een jaar bewaard. De opslag van je browser zelf onthoudt of je de lichte of donkere modus gebruikt, een paar instellingen van de pagina's die je gebruikt en, voor beheerders, hun token. Niets daarvan wordt gebruikt om je te volgen en niets gaat naar anderen: er zijn geen analytics van deze site en geen advertenties, en er wordt niets van andere sites geladen, zelfs geen lettertypen. Omdat dit allemaal alleen doet waar je zelf om vraagt, is er geen toestemming nodig (§ 25 lid 2 nr. 2 van de Duitse TDDDG).",
+      "Er is één cookie, met de naam lang. Die onthoudt welke taal je hebt gekozen, zodat adressen zonder taal in die taal openen, en blijft een jaar bewaard. De opslag van je browser zelf onthoudt of je de lichte of donkere modus gebruikt, een paar instellingen van de pagina's die je gebruikt, de apps in de lijst op de bouwpagina met hun editorlinks en gesprekken en, voor beheerders, hun token. Niets daarvan wordt gebruikt om je te volgen en niets gaat naar anderen: er zijn geen analytics van deze site en geen advertenties, en er wordt niets van andere sites geladen, zelfs geen lettertypen. Omdat dit allemaal alleen doet waar je zelf om vraagt, is er geen toestemming nodig (§ 25 lid 2 nr. 2 van de Duitse TDDDG).",
 
     hostingTitle: 'Waar het wordt bewaard',
     hosting:

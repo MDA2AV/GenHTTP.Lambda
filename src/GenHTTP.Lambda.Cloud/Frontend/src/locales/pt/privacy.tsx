@@ -34,17 +34,19 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'O que você pede ao agente de criação',
     agent: (policy) => (
       <>
-        O que você digita na caixa de criação, ou na seção Mudar do editor de uma lambda, é enviado à Anthropic PBC, nos
-        Estados Unidos, que opera o Claude, o modelo que escreve o app. Para fazer uma mudança, o agente também lê a
-        lambda (o código, as notas das versões e o log, que contém as requisições e o que ela imprimiu, mas não os
-        endereços IP dos visitantes), e o que ele lê também é enviado para lá. O que a Anthropic faz com isso está descrito
+        O que você digita na página de criação, ou na seção Mudar do editor de uma lambda, é enviado à Anthropic PBC, nos
+        Estados Unidos, que opera o Claude, o modelo que escreve o app - na página de criação, junto com as últimas
+        mensagens anteriores e o que o agente respondeu, para que ele entenda o que você quer dizer. Para responder ou
+        fazer uma mudança, o agente também lê a lambda (o código, as notas das versões, o log, que contém as requisições e
+        o que ela imprimiu, mas não os endereços IP dos visitantes, e, quando você pergunta sobre eles, os registros e as
+        contagens de visitantes), e o que ele lê também é enviado para lá. O que a Anthropic faz com isso está descrito
         na {policy('política de privacidade da própria empresa')}. Os Estados Unidos não protegem dados pessoais do
         mesmo jeito que a UE. Seu pedido é enviado para lá porque isso é necessário para criar ou mudar o que você pediu
         (art. 6º, 1, b, e art. 49, 1, b, do RGPD). Então não coloque nele nada que você não queira compartilhar.
       </>
     ),
     agentKept:
-      'O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. O pedido em si é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação; os dois também têm tamanho fixo. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
+      'O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. O pedido em si é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação; os dois também têm tamanho fixo. As mensagens anteriores, que a página de criação envia junto, não são gravadas. A página de criação guarda os links de edição dos seus apps e a conversa sobre cada um no armazenamento do seu próprio navegador, e em nenhum outro lugar: não guardamos cópia, e quem usar o mesmo navegador pode abri-los. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
 
     lambdasTitle: 'O que uma lambda faz depende do dono dela',
     lambdas:
@@ -55,7 +57,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookies e o seu navegador',
     storage:
-      'Existe um único cookie, chamado lang. Ele guarda o idioma que você escolheu, para que os endereços que não indicam idioma abram nele, e dura um ano. O armazenamento do próprio navegador guarda o tema claro ou escuro, algumas configurações das páginas que você usa e, no caso dos administradores, o token deles. Nada disso é usado para rastrear você, e nada vai para mais ninguém: não há ferramentas de análise neste site, nem anúncios, e nada é carregado de outros sites, nem mesmo fontes. Como tudo isso só serve para fazer o que você pediu, não é preciso consentimento (§ 25(2) nº 2 da lei alemã TDDDG).',
+      'Existe um único cookie, chamado lang. Ele guarda o idioma que você escolheu, para que os endereços que não indicam idioma abram nele, e dura um ano. O armazenamento do próprio navegador guarda o tema claro ou escuro, algumas configurações das páginas que você usa, os apps listados na página de criação com seus links de edição e conversas e, no caso dos administradores, o token deles. Nada disso é usado para rastrear você, e nada vai para mais ninguém: não há ferramentas de análise neste site, nem anúncios, e nada é carregado de outros sites, nem mesmo fontes. Como tudo isso só serve para fazer o que você pediu, não é preciso consentimento (§ 25(2) nº 2 da lei alemã TDDDG).',
 
     hostingTitle: 'Onde tudo fica guardado',
     hosting:

@@ -111,7 +111,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         logger.LogInformation("Started build {Build}", started.Id);
 
-        return started;
+        return started with { Left = allowance.Left(caller) };
     }
 
     /// <summary>
@@ -156,17 +156,24 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
     }
 
     /// <summary>
-    /// Asks the agent to change a lambda, if this caller has any left today
-    /// and no other change of it is under way.
+    /// Asks the agent to change a lambda - or to answer a question about it,
+    /// or change one of its settings - if this caller has any left today and
+    /// no other change of it is under way.
     /// </summary>
+    /// <remarks>
+    /// A question costs what a change costs: the agent runs the same way for
+    /// either, and the allowance defends the subscription it runs on.
+    /// </remarks>
     /// <param name="lambda">The lambda, by the id the agent files the change under</param>
     /// <param name="privateKey">The editor key, which the agent needs to change anything</param>
     /// <param name="before">The version online now, to offer putting it back afterwards</param>
     /// <param name="deploy">Whether to merge the change and put it online once it works</param>
     /// <param name="language">The language of the control center, for the agent to fall back on</param>
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
+    /// <param name="history">What was said before, as the page keeps it, for the agent to understand the message by</param>
     public async ValueTask<AgentState> ChangeAsync(long lambda, string privateKey, int? before, string? prompt, bool deploy,
-                                                   string? model, string? password, string? language, string? feature, IPAddress? caller)
+                                                   string? model, string? password, string? language, string? feature,
+                                                   IReadOnlyList<ConversationTurn>? history, IPAddress? caller)
     {
         agent.Require();
 
@@ -198,7 +205,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
         try
         {
             job = await agent.StartChangeAsync(lambda, privateKey, before, wanted, deploy, wantedModel,
-                                               AgentInput.Language(language), feature);
+                                               AgentInput.Language(language), feature, AgentInput.History(history));
         }
         catch (ProviderException)
         {

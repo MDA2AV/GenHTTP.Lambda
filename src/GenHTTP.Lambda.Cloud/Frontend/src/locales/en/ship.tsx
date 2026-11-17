@@ -1,13 +1,17 @@
 import type { ReactNode } from 'react';
 
+/**
+ * /ship, the guide for developers who built an app with their own agent and
+ * want it online: connect the agent, ask it to publish, share the link - in
+ * the words they search for (hosting a vibe-coded app, from localhost, with a
+ * database and multiplayer built in).
+ */
 export const ship = {
   eyebrow: 'Free hosting for vibe-coded apps',
   title: 'From localhost to everyone’s screen.',
   intro:
     'You built an app with Claude Code, Codex or Cursor, and it only runs on your machine. Ask your agent to publish it here. A few minutes later it has a public link for anyone, its own database and a live line to everyone who has it open, so people can play, chat and post in it together.',
   facts: ['Free', 'No sign-up', 'No credit card', 'Nothing to install'],
-  connect: 'Connect your agent',
-  seeOthers: 'See what others shipped',
 
   stepsTitle: 'Three steps from localhost to a public link',
   step: (n: number) => `Step ${n}`,
@@ -29,33 +33,12 @@ export const ship = {
   togetherTitle: 'Not just hosting. A database and multiplayer, built in.',
   together:
     'Most hosts hand out a copy of your app to each visitor, and everybody plays alone: what one browser keeps in localStorage, the next one never sees. Here every app has its own database and a live line to everyone who has it open. A move one person makes shows up for all the others straight away, and what they post is still there tomorrow.',
-  together2:
-    'No Supabase or Firebase to sign up for, no backend to wire in, no server to rent. Ask for it the way you would describe it to a friend.',
-  /** What people build together, and how they would ask for it. */
-  kinds: [
-    { name: 'Multiplayer games', ask: 'Let up to eight friends join the same round and see each other’s moves live.' },
-    { name: 'Chat rooms', ask: 'Add a room where everyone with the link can talk, and keep the last hundred messages.' },
-    { name: 'Shared lists', ask: 'Turn the packing list into one the whole team edits at once.' },
-    { name: 'Leaderboards', ask: 'Keep a leaderboard with everyone’s best time and show the top ten on the start screen.' },
-    { name: 'Little social networks', ask: 'Let wedding guests post photos to one wall and like each other’s.' },
-  ],
-  quote: (text: string) => `“${text}”`,
 
-  connectTitle: 'Connect Claude Code, Codex or Cursor once',
-  connectText:
-    'Give your agent the address of our MCP server. From then on it knows how to publish here, no key and no sign-in needed.',
   sayLike: 'Then, in your project, say something like',
   asks: [
     'Publish this app on GenHTTP Lambda and send me the link.',
     'Make the high scores shared, so everyone sees the same leaderboard.',
   ],
-
-  domainChip: 'When it catches on',
-  domainTitle: 'Give it a domain of its own',
-  domainText:
-    'The same app, the same editor link, but served at an address you own. Easier to say out loud, easier to remember, and it looks the part when people start sharing it.',
-  domainSubject: 'A domain for my app',
-  domainAsk: 'Ask about your domain',
 
   questionsTitle: 'Before you publish',
   questions: (
@@ -125,41 +108,6 @@ export const ship = {
     ],
   ],
 
-  closeTitle: 'It works on your machine.',
-  closeAccent: 'Let it work on theirs.',
+  /** The way to the workspace on /build, for whoever has no agent of their own. */
   noAgent: 'No agent? Build it here',
-  closeFacts: 'Free. No sign-up. Nothing to install.',
-
-  /** The scene at the top: a request, the address going public, people arriving. */
-  scene: {
-    label: 'An agent is asked to publish an app. The address changes from localhost to a public link, and people join.',
-    ask: 'Put my quiz game online so my friends can join.',
-    live: 'It’s live. Here’s your link.',
-    publishing: 'Publishing…',
-    public: 'Public',
-    onlyYou: 'Only you',
-    app: 'Friday quiz night',
-    /** Who is in the app, around the number: "3 playing", where Japanese writes "3人がプレイ中". */
-    playing: (count: ReactNode) => <>{count} playing</>,
-    you: 'You',
-  },
-
-  compareTitle: 'The shortest way from “it works” to “try it”',
-  compareText:
-    'Vercel, Cloudflare and Lovable are great places to run things. They also start with a sign-up form, and the moment your app needs to share anything between visitors, with a second service to set up. Here is how it looks when you start from nothing.',
-  rows: [
-    'Start without an account',
-    'Publish from the agent you already use',
-    'Database and live data: chat, multiplayer, records',
-    'Cost to get your first link',
-  ],
-  us: ['Yes', 'Connect once, then just ask', 'Built into every app', 'Free'],
-  /** Vercel, Cloudflare and Lovable, in that order, a cell for each row. */
-  rivals: [
-    ['Sign-up needed', 'After signing in its tools', 'Add a database service', 'Free plan'],
-    ['Sign-up needed', 'After signing in its tools', 'Possible, with setup', 'Free plan'],
-    ['Sign-up needed', 'Built in its own editor', 'Through a connected backend', 'Free plan, limited credits'],
-  ],
-  compareNote:
-    'As of September 2026, for somebody without an account anywhere. Plans and features of other services change; check with them for the details.',
 };

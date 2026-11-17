@@ -54,8 +54,9 @@ public interface IBuildService
     ValueTask<AgentState> StateAsync(long lambda, IPAddress? caller);
 
     /// <summary>
-    /// Asks the agent to change a lambda, if this caller has any left today
-    /// and no other change of it is under way.
+    /// Asks the agent to change a lambda - or to answer a question about it,
+    /// or change one of its settings - if this caller has any left today and
+    /// no other change of it is under way.
     /// </summary>
     /// <param name="lambda">The lambda, by the id the agent files the change under</param>
     /// <param name="privateKey">The editor key, which the agent needs to change anything</param>
@@ -63,8 +64,10 @@ public interface IBuildService
     /// <param name="deploy">Whether to merge the change and put it online once it works</param>
     /// <param name="language">The language of the control center, for the agent to fall back on</param>
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
+    /// <param name="history">What was said before, as the page keeps it, for the agent to understand the message by</param>
     ValueTask<AgentState> ChangeAsync(long lambda, string privateKey, int? before, string? prompt, bool deploy,
-                                      string? model, string? password, string? language, string? feature, IPAddress? caller);
+                                      string? model, string? password, string? language, string? feature,
+                                      IReadOnlyList<ConversationTurn>? history, IPAddress? caller);
 
     /// <summary>
     /// Stops the change of a lambda that is under way. Whatever it saved so

@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
-import { BuildBox } from '@genhttp-lambda/kit/components/BuildBox';
-import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import {
-  IconBook, IconBranch, IconChevronDown, IconCode, IconDatabase, IconDraft, IconEye, IconFolder, IconGitHub, IconGlobe, IconKey, IconLayers,
-  IconLock, IconSpark, IconStar,
+  IconBook, IconBranch, IconCode, IconDatabase, IconDraft, IconEye, IconFolder, IconGitHub, IconGlobe, IconKey, IconLayers,
+  IconLock, IconStar,
 } from '@genhttp-lambda/kit/components/Icons';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { REPOSITORY } from '@genhttp-lambda/kit/installation';
 import { usePublicPage } from '@genhttp-lambda/kit/meta';
-import { askPlatform, useOrigin } from '@genhttp-lambda/kit/site';
+import { askPlatform } from '@genhttp-lambda/kit/site';
 
 import { useT } from '../i18n';
 
@@ -24,20 +22,16 @@ const FEATURE_ICONS = [IconGlobe, IconDatabase, IconFolder, IconKey, IconDraft, 
  * The front page of an installation somebody runs for themselves.
  *
  * Nothing on it is selling: whoever opens it has the platform already, or is
- * deciding whether to run it. So it says what it does in a screen, offers the
- * two ways to build - the box, where there is an agent behind it, and one's
- * own agent over MCP - and then what every app gets, how it runs and where to
- * look next.
+ * deciding whether to run it. So it says what it does in a screen, leads to
+ * the two ways to build - the workspace (/build), where there is an agent
+ * behind it, and one's own agent over MCP (/ship) - and then what every app
+ * gets, how it runs and where to look next.
  */
 export function Landing() {
   usePublicPage('/');
 
   const said = useT().landing;
-  const { origin } = useOrigin();
   const brand = useBrand();
-
-  const build = useRef<HTMLDivElement>(null);
-  const agents = useRef<HTMLDivElement>(null);
 
   // whether the box has an agent behind it; until the server says, it is
   // offered, so the page is rendered with it for whoever reads it unscripted
@@ -48,16 +42,6 @@ export function Landing() {
       .then((platform) => setAvailable(platform.build.available))
       .catch(() => setAvailable(false));
   }, []);
-
-  // anchors, so they lead somewhere without a script and for whoever reads
-  // the page with a keyboard or aloud - and scroll smoothly where one runs
-  const to = (target: React.RefObject<HTMLDivElement | null>) => (event: React.MouseEvent) => {
-    if (target.current) {
-      event.preventDefault();
-      target.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      history.replaceState(null, '', `#${target.current.id}`);
-    }
-  };
 
   return (
     <div className="relative w-full">
@@ -88,14 +72,14 @@ export function Landing() {
 
           <div className="rise mt-9 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: '200ms' }}>
             {available !== false && (
-              <a href="#build" onClick={to(build)} className="btn-primary px-6 py-3 text-base">
+              <Link to="/build" className="btn-primary px-6 py-3 text-base">
                 {said.describe}
-              </a>
+              </Link>
             )}
 
-            <a href="#agents" onClick={to(agents)} className={`${available !== false ? 'btn-ghost' : 'btn-primary'} px-5 py-3 text-base`}>
+            <Link to="/ship" className={`${available !== false ? 'btn-ghost' : 'btn-primary'} px-5 py-3 text-base`}>
               {said.connect}
-            </a>
+            </Link>
 
             <Link to="/editor/create" className="btn-ghost px-5 py-3 text-base">
               <IconCode className="h-4 w-4" />
@@ -103,46 +87,6 @@ export function Landing() {
             </Link>
           </div>
 
-          <button
-            type="button"
-            onClick={to(available !== false ? build : agents)}
-            className="rise group mx-auto mt-12 flex w-fit flex-col items-center gap-2 text-xs text-grey-700 hover:text-accent-500 dark:text-grey-300 dark:hover:text-accent-400"
-            style={{ animationDelay: '260ms' }}
-            aria-label={available !== false ? said.describe : said.connect}
-          >
-            <IconChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-          </button>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- the box */}
-      <section ref={build} id="build" className="relative z-10 scroll-mt-20 px-5 py-14">
-        <div className="mx-auto w-full max-w-2xl">
-          <Heading icon={<IconSpark className="h-5 w-5" />}>{said.buildTitle}</Heading>
-
-          {available === false ? (
-            <p className="mt-3 text-sm text-grey-700 dark:text-grey-300">{said.noAgent}</p>
-          ) : (
-            <>
-              <p className="mt-3 max-w-xl text-sm text-grey-700 dark:text-grey-300">{said.buildText}</p>
-
-              {/* the page says how to connect an agent itself, right below */}
-              <BuildBox own={false} />
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- an agent of one's own */}
-      <section ref={agents} id="agents" className="relative z-10 scroll-mt-20 px-5 py-14">
-        <div className="mx-auto w-full max-w-2xl">
-          <Heading icon={<IconLayers className="h-5 w-5" />}>{said.connectTitle}</Heading>
-
-          <p className="mb-5 mt-3 max-w-xl text-sm text-grey-700 dark:text-grey-300">{said.connectText}</p>
-
-          <ConnectAgent origin={origin} />
-
-          <p className="mt-5 text-sm text-grey-700 dark:text-grey-300">{said.connectThen}</p>
         </div>
       </section>
 

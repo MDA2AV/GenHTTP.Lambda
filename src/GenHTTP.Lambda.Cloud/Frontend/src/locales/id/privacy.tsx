@@ -34,18 +34,19 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Yang Anda minta dari agen build',
     agent: (policy) => (
       <>
-        Apa yang Anda ketik di kotak build, atau di bagian “Ubah” pada editor sebuah lambda, dikirim ke Anthropic PBC di
-        Amerika Serikat, yang menjalankan Claude, model yang menulis aplikasinya. Untuk membuat perubahan, agen juga
-        membaca lambda itu: kodenya, catatan pada versi-versinya, dan log-nya, yang berisi request ke lambda itu dan apa
-        yang dicetaknya, tetapi tidak berisi alamat IP pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Apa yang
-        dilakukan Anthropic dengan data itu diatur oleh {policy('kebijakan privasinya sendiri')}. Perlindungan data
-        pribadi di Amerika Serikat tidak setara dengan di Uni Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan
-        untuk membuat atau mengubah apa yang Anda minta (Pasal 6 ayat (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR).
-        Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.
+        Apa yang Anda ketik di halaman build, atau di bagian “Ubah” pada editor sebuah lambda, dikirim ke Anthropic PBC di
+        Amerika Serikat, yang menjalankan Claude, model yang menulis aplikasinya - dari halaman build bersama beberapa
+        pesan sebelumnya dan jawaban agen, supaya maksud Anda dipahami. Untuk menjawab atau membuat perubahan, agen juga
+        membaca lambda itu: kodenya, catatan pada versi-versinya, log-nya, yang berisi request ke lambda itu dan apa yang
+        dicetaknya, tetapi tidak berisi alamat IP pengunjungnya, dan, jika Anda menanyakannya, catatan serta jumlah
+        pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Apa yang dilakukan Anthropic dengan data itu diatur oleh{' '}
+        {policy('kebijakan privasinya sendiri')}. Perlindungan data pribadi di Amerika Serikat tidak setara dengan di Uni
+        Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan untuk membuat atau mengubah apa yang Anda minta (Pasal
+        6 ayat (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR). Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.
       </>
     ),
     agentKept:
-      'Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Permintaan itu sendiri dicatat utuh di log server, dan beberapa ratus karakter pertamanya di log layanan build; ukuran keduanya juga tetap. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
+      'Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Permintaan itu sendiri dicatat utuh di log server, dan beberapa ratus karakter pertamanya di log layanan build; ukuran keduanya juga tetap. Pesan-pesan sebelumnya, yang dikirim bersama oleh halaman build, tidak dicatat. Halaman build menyimpan link editor aplikasi Anda beserta percakapan tentang masing-masing di penyimpanan bawaan browser Anda, dan tidak di tempat lain: kami tidak menyimpan salinannya, dan siapa pun yang memakai browser yang sama dapat membukanya. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
 
     lambdasTitle: 'Apa yang dilakukan lambda ditentukan pemiliknya',
     lambdas:
@@ -56,7 +57,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookie dan browser Anda',
     storage:
-      'Hanya ada satu cookie, namanya lang. Cookie ini mengingat bahasa yang Anda pilih, supaya alamat yang tidak mencantumkan bahasa terbuka dalam bahasa itu, dan berlaku selama satu tahun. Penyimpanan bawaan browser mengingat mode terang atau gelap, beberapa pengaturan di halaman yang Anda pakai, dan, bagi administrator, token mereka. Tidak ada yang dipakai untuk melacak Anda, dan tidak ada yang dikirim ke pihak lain: tidak ada analitik untuk situs ini, tidak ada iklan, dan tidak ada yang dimuat dari situs lain, bahkan font sekalipun. Karena semuanya hanya menjalankan apa yang Anda minta, tidak diperlukan persetujuan (§ 25 ayat (2) angka 2 TDDDG, undang-undang Jerman).',
+      'Hanya ada satu cookie, namanya lang. Cookie ini mengingat bahasa yang Anda pilih, supaya alamat yang tidak mencantumkan bahasa terbuka dalam bahasa itu, dan berlaku selama satu tahun. Penyimpanan bawaan browser mengingat mode terang atau gelap, beberapa pengaturan di halaman yang Anda pakai, aplikasi yang tercantum di halaman build beserta link editor dan percakapannya, dan, bagi administrator, token mereka. Tidak ada yang dipakai untuk melacak Anda, dan tidak ada yang dikirim ke pihak lain: tidak ada analitik untuk situs ini, tidak ada iklan, dan tidak ada yang dimuat dari situs lain, bahkan font sekalipun. Karena semuanya hanya menjalankan apa yang Anda minta, tidak diperlukan persetujuan (§ 25 ayat (2) angka 2 TDDDG, undang-undang Jerman).',
 
     hostingTitle: 'Tempat semuanya disimpan',
     hosting:

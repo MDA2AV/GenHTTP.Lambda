@@ -3,7 +3,6 @@ import { kit } from '@genhttp-lambda/kit/locales/ja';
 import type { Messages } from '../en';
 import { build } from './build';
 import { imprint } from './imprint';
-import { landing } from './landing';
 import { platform } from './platform';
 import { selfHosting } from './selfHosting';
 import { ship } from './ship';
@@ -13,7 +12,6 @@ import { terms } from './terms';
 /** サイトの日本語テキスト。 */
 export const messages: Messages = {
   ...kit,
-  landing,
   build,
   ship,
   platform,

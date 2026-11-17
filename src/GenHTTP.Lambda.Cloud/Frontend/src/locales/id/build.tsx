@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Bagaimana cara mengubahnya nanti?',
-      'Buka link editor yang Anda dapat bersama website Anda, lalu jelaskan apa yang perlu diganti, sama seperti di sini. Kalau tidak suka dengan perubahannya, Anda bisa mengembalikannya seperti semula.',
+      'Langsung di sini: website Anda tetap ada di daftar pada halaman ini, jadi Anda cukup menjelaskan apa yang perlu diganti dengan cara yang sama, atau menanyakan kabarnya. Di perangkat lain, buka link editor yang Anda dapat bersama website Anda. Kalau tidak suka dengan perubahannya, Anda bisa mengembalikannya seperti semula.',
     ],
   ],
 

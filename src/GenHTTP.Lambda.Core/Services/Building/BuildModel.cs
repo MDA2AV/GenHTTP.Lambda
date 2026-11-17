@@ -7,7 +7,9 @@ public sealed record BuildStarted(
     [Summary("What to follow it by: `GET /builds/{id}`")]
     string Id,
     [Summary("How many builds are waiting ahead of it")]
-    int Queued
+    int Queued,
+    [Summary("How many builds and changes this caller has left today, this one counted")]
+    int? Left = null
 );
 
 [Summary("How a build is getting on.")]
@@ -63,7 +65,7 @@ public sealed record BuildResult(
 public sealed record AgentStep(
     [Summary("Seconds into the run")]
     int At,
-    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets), `connectivity` (asked for the lambda to connect to other servers) or `other`")]
+    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets), `connectivity` (asked for the lambda to connect to other servers), `analytics` (read who visits, or switched counting on), `source` (published the source code, or read whether it is) or `other`")]
     string Kind,
     [Summary("What the agent said, for a step of kind `say`")]
     string? Text = null,
@@ -130,7 +132,24 @@ public sealed record ChangeResult(
     [Summary("Whether that feature's preview is online, to be tried")]
     bool? Preview = null,
     [Summary("Whether the agent would not make the change; `summary` says why")]
-    bool? Declined = null
+    bool? Declined = null,
+    [Summary("Whether the agent answered a question rather than change anything - it started no feature and saved nothing; `summary` is the answer")]
+    bool? Answered = null,
+    [Summary("The settings it changed: `database`, `secrets` or `workspace` switched on, `analytics` switched on, `source` published, `connectivity` asked for, `discarded` (it deleted a feature)")]
+    IReadOnlyList<string>? Settings = null
+);
+
+/// <remarks>
+/// Kept by the page that holds the conversation - the workspace on /build -
+/// and sent along with the next message, so the agent understands "and last
+/// month?". The agent keeps nothing between runs.
+/// </remarks>
+[Summary("One earlier turn of a conversation with the agent about a lambda.")]
+public sealed record ConversationTurn(
+    [Summary("What was asked, as it was asked")]
+    string? Prompt,
+    [Summary("What the agent answered, where it did")]
+    string? Reply = null
 );
 
 [Summary("A change the agent was asked for, and how it is getting on.")]

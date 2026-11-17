@@ -23,7 +23,7 @@ export const build: Messages['build'] = {
   questions: (offline, removed) => [
     [
       'L’IA peut-elle vraiment créer mon site web gratuitement ?',
-      `Oui. Décrivez-le avec vos propres mots : l’IA le crée, le met en ligne et vous donne le lien. Sans inscription, sans carte bancaire, sans période d’essai. Il reste en ligne tant qu’il est utilisé : après ${offline} jours sans visite ni modification, il est mis hors ligne, puis supprimé après ${removed} jours.`,
+      `Oui. Décrivez-le avec vos propres mots : l’IA le crée, le met en ligne et vous donne le lien. Sans inscription, sans carte bancaire, sans période d’essai. Il reste en ligne tant qu’il est utilisé : après ${offline} jours sans visite ni modification, il est mis hors ligne, puis supprimé après ${removed} jours.`,
     ],
     [
       'Faut-il un hébergeur, un serveur ou un nom de domaine ?',
@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Comment le modifier plus tard ?',
-      'Ouvrez le lien d’édition reçu avec votre site et décrivez ce qui doit changer, comme ici. Si une modification ne vous plaît pas, vous pouvez revenir à ce qu’il y avait avant.',
+      'Directement ici : votre site reste dans la liste de cette page, il vous suffit de décrire ce qui doit changer de la même façon, ou de demander où il en est. Sur un autre appareil, ouvrez le lien d’édition reçu avec votre site. Si une modification ne vous plaît pas, vous pouvez revenir à ce qu’il y avait avant.',
     ],
   ],
 

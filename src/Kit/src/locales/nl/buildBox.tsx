@@ -2,14 +2,9 @@ import type { KitMessages } from '../en';
 
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Ik wil een website die…',
-  shortcut: 'ctrl + enter',
-  buildIt: 'Maak mijn website',
-  builtBy: 'Gemaakt door',
   password: 'wachtwoord',
   fable:
     'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je website af is, niet tot de tijd om is.',
-  onlyNew:
-    'Hier maak je nieuwe websites. Wil je een bestaande aanpassen? Open de editorlink en beschrijf onder ‘Aanpassen’ wat er anders moet.',
   ideas: [
     'een website voor onze vereniging waar leden zich voor activiteiten aanmelden',
     'een inschrijflijst voor onze buurtborrel, zodat niet iedereen hetzelfde hapje meeneemt',
@@ -21,9 +16,6 @@ export const buildBox: KitMessages['buildBox'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Er is nog één website voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} websites voor de jouwe.`,
   starting: 'Starten…',
-  asked: 'Jouw vraag',
-  leaveOpen: 'Laat deze pagina open: de link om je website later aan te passen zie je alleen hier, zodra hij klaar is.',
-  log: 'Wat de AI deed',
   online: 'Je website staat online',
   notOnline: 'Je website is gemaakt, maar staat niet online.',
   open: 'Je website openen',
@@ -47,29 +39,12 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Bekijken wat er is opgeslagen',
     services: 'Vraagt om andere diensten te mogen gebruiken',
   },
-
-  yourApp: 'Je website',
-  further: 'Om hem later aan te passen',
+  further: 'Je editorlink',
   keep:
-    'Bewaar deze link goed. Het is de enige weg terug, en hij is niet te herstellen, ook niet door ons. Zet hem in je bladwijzers voordat je dit tabblad sluit.',
-  change:
-    'Wil je je website aanpassen? Open de editorlink en beschrijf onder ‘Aanpassen’ wat er anders moet, net als hier. Je eigen AI-assistent kan het ook, zoals hieronder beschreven.',
+    'Bewaar deze link op een veilige plek. Het is de enige weg naar je website vanaf een ander apparaat, en hij is niet te herstellen, ook niet door ons.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
-    `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor om hem weer online te zetten.`,
-  openEditor: 'Editor openen',
-  another: 'Nog een website maken',
-
-  keepGoing: 'Ga verder met je eigen AI-assistent',
-  orOwn: 'Of gebruik je eigen AI-assistent',
-  ownText:
-    'Gebruik je al Claude of een andere AI-assistent? Koppel hem hier, dan maakt en wijzigt hij websites voor je op dezelfde manier. Wij hosten ze, dus je hoeft nog steeds niets in te stellen. Er is geen daglimiet.',
-  ownTitle: 'Maak je website met je AI-assistent',
-  ownOnly:
-    'Koppel Claude of een andere AI-assistent aan het adres hieronder en beschrijf de website die je wilt. Hij maakt hem, wij hosten hem op onze servers en hij staat meteen online, met een link om te delen.',
-  thenAsk:
-    'Vertel hem daarna wat je wilt, bijvoorbeeld: “Maak een website voor ons koor met een agenda van onze concerten.”',
-  howToChange: 'Zo pas je een website later ook aan: geef je assistent de editorlink en vertel wat er anders moet.',
+    `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Je kunt hem hier weer online zetten, of in de editor.`,
 
   failedToStart: 'Starten is niet gelukt.',
   noAnswer: 'Klaar, maar zonder te zeggen wat er gebeurd is.',

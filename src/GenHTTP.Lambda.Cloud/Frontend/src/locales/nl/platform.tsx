@@ -1,13 +1,12 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: 'Functies',
 
-  eyebrow: 'Functies',
+  eyebrow: 'AI-app-builder, hosting inbegrepen',
   title: 'Bouwen duurt een minuut.',
   titleAccent: 'De rest zit er al in.',
   intro:
-    'Een app die je hier maakt, is meer dan de code die een AI schreef. Wat hem nuttig houdt komt daarna: zijn items, zijn versies en waar hij voor dient, weten wie hem bezoekt, een eigen domein zodra hij aanslaat - alles op één plek, die je opent met de link die je krijgt zodra hij klaar is.',
+    'Beschrijf een app aan onze AI-agent - of aan Claude Code, Codex of Cursor - en hij staat binnen enkele minuten online, voor je gehost, met een link om te delen. Alles wat hem nuttig houdt is er al: zijn items, zijn versies en waar hij voor dient, wie hem bezoekt, en een eigen domein zodra hij aanslaat.',
   build: 'Bouw iets',
   ownAgent: 'Gebruik je eigen agent',
   free: 'Gratis. Geen account, geen creditcard.',
@@ -19,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Bouw hem, pas hem aan',
   makeText: 'Zeg wat je nodig hebt, en blijf het zeggen. Daarvoor hoeft niemand code te schrijven of te lezen.',
 
-  behindTitle: 'Achter elke app',
+  behindTitle: 'Een database, versiegeschiedenis en analytics voor elke app',
   behindText:
     'Wat een app nuttig houdt, is alles rond zijn code - er voor wie hem maakte, niet alleen voor wie code kan lezen.',
 
@@ -36,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Aanpassen',
-      title: 'Pas het aan door te vragen',
-      text: 'Elke app heeft een editor, die je opent met de privélink die je kreeg toen hij gebouwd werd. Zeg wat er anders moet, en de agent past de app aan en laat weten wanneer je kunt kijken - of geef de link met de volgende wijziging aan je eigen agent.',
-      points: ['Eén zin is genoeg', 'Vanzelf online zodra het werkt, of bewaard zodat je het eerst probeert', 'De code blijft uit beeld tenzij je hem wilt zien'],
-      alt: 'Het onderdeel Aanpassen: de club vroeg om de lessen van de trainer, en de agent meldt dat de wijziging klaar is om te proberen',
+      title: 'Vraag ernaar, pas hem aan',
+      text: 'Je apps blijven in een lijst op de bouwpagina staan, elk met een gesprek. Vraag hoe het ermee gaat - wie hem bezocht, wat mensen invulden, of er iets misgaat - of zeg wat er anders moet, en de agent antwoordt of past hem aan. Of geef de editorlink aan je eigen agent.',
+      points: ['Antwoorden over bezoekers, items en fouten', 'Vanzelf online zodra het werkt, of als concept bewaard zodat je het eerst probeert', 'De code blijft uit beeld tenzij je hem wilt zien'],
+      alt: 'De bouwpagina: de club vroeg hoeveel banen deze week geboekt waren, de agent antwoordde, en de lessen van de trainer staan klaar om te proberen in een concept',
     },
     drafts: {
       name: 'Concepten',

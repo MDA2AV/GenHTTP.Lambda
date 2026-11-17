@@ -1,13 +1,12 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: 'Fitur',
 
-  eyebrow: 'Fitur',
+  eyebrow: 'AI pembuat aplikasi + hosting',
   title: 'Membuatnya cuma semenit.',
   titleAccent: 'Selebihnya sudah tersedia.',
   intro:
-    'Aplikasi yang dibuat di sini lebih dari sekadar kode yang ditulis AI. Yang membuatnya tetap berguna datang sesudahnya: catatannya, versinya dan tujuannya, mengetahui siapa yang mengunjunginya, serta domain sendiri begitu aplikasinya mulai ramai - semuanya di satu tempat, dibuka dengan link yang Anda terima saat aplikasinya selesai dibuat.',
+    'Ceritakan aplikasi Anda kepada agen AI kami - atau kepada Claude Code, Codex atau Cursor - dan dalam hitungan menit aplikasinya sudah online, di-hosting untuk Anda, lengkap dengan link untuk dibagikan. Semua yang membuatnya tetap berguna sudah tersedia: catatannya, versinya dan tujuannya, siapa yang mengunjunginya, serta domain sendiri begitu aplikasinya mulai ramai.',
   build: 'Buat sesuatu',
   ownAgent: 'Pakai agen Anda sendiri',
   free: 'Gratis. Tanpa daftar, tanpa kartu kredit.',
@@ -19,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Buat, lalu ubah',
   makeText: 'Katakan apa yang Anda butuhkan, dan terus katakan. Tidak perlu menulis atau membaca kode untuk keduanya.',
 
-  behindTitle: 'Di balik setiap aplikasi',
+  behindTitle: 'Database, riwayat versi, dan analitik untuk setiap aplikasi',
   behindText:
     'Yang membuat aplikasi tetap berguna adalah semua yang ada di sekitar kodenya - tersedia untuk siapa pun yang membuatnya, bukan hanya yang bisa membaca kode.',
 
@@ -36,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Ubah',
-      title: 'Ubah cukup dengan meminta',
-      text: 'Setiap aplikasi punya editor, yang dibuka dengan link pribadi yang Anda terima saat aplikasinya dibuat. Katakan apa yang harus berbeda, lalu agen mengubah aplikasinya dan memberi tahu kapan Anda bisa melihatnya - atau berikan link itu ke agen Anda sendiri bersama perubahan berikutnya.',
-      points: ['Satu kalimat sudah cukup', 'Online sendiri begitu berfungsi, atau disimpan agar Anda coba dulu', 'Kodenya tidak terlihat kecuali Anda mau'],
-      alt: 'Bagian Ubah: klub meminta pelajaran dari pelatih, dan agen menyatakan perubahannya siap dicoba',
+      title: 'Tanyakan, lalu ubah',
+      text: 'Aplikasi Anda tetap tercantum di halaman build, masing-masing dengan percakapannya. Tanyakan keadaannya - siapa yang berkunjung, apa yang diisi orang, apakah ada yang salah - atau katakan apa yang harus berbeda, lalu agen menjawab atau mengubahnya. Atau berikan link editornya ke agen Anda sendiri.',
+      points: ['Jawaban tentang pengunjung, catatan, dan error', 'Online sendiri begitu berfungsi, atau disimpan sebagai draf agar Anda coba dulu', 'Kodenya tidak terlihat kecuali Anda mau'],
+      alt: 'Halaman build: klub bertanya berapa lapangan yang dipesan minggu ini, agen menjawab, dan pelajaran dari pelatih siap dicoba dalam sebuah draf',
     },
     drafts: {
       name: 'Draf',

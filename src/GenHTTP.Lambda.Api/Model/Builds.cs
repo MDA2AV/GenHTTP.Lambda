@@ -1,5 +1,7 @@
 using GenHTTP.Api.Content.Documentation;
 
+using GenHTTP.Lambda.Services.Building;
+
 namespace GenHTTP.Lambda.Api.Model;
 
 /// <summary>
@@ -49,5 +51,7 @@ public sealed record ChangeRequest(
     [Summary("The language of whoever asks, as a code like `de` or `pt-pt`, for the agent to answer in where the prompt does not tell")]
     string? Language = null,
     [Summary("The key of a feature to go on with; left out, the agent starts a new one")]
-    string? Feature = null
+    string? Feature = null,
+    [Summary("The conversation so far, oldest first, as the page keeps it - the agent is handed the newest turns that fit, each cut, to understand the message by")]
+    IReadOnlyList<ConversationTurn>? History = null
 );

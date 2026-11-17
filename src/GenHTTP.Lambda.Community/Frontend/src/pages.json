@@ -56,6 +56,118 @@
       }
     }
   },
+  "/build": {
+    "text": {
+      "en": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "id": {
+        "title": "Buat Aplikasi dengan AI",
+        "description": "Jelaskan aplikasi Anda dan agen build di instalasi ini menulisnya, menjadikannya online, dan menyimpannya di daftar Anda - untuk ditanyakan dan diubah dengan cara yang sama."
+      },
+      "de": {
+        "title": "App mit KI erstellen",
+        "description": "Beschreiben Sie eine App, und der Build-Agent dieser Installation schreibt sie, stellt sie online und führt sie in Ihrer Liste – zum Nachfragen und Ändern auf dieselbe Weise."
+      },
+      "es": {
+        "title": "Cree una app con IA",
+        "description": "Describa una app y el agente de creación de esta instalación la escribe, la pone en línea y la guarda en su lista, para consultarla y cambiarla del mismo modo."
+      },
+      "fr": {
+        "title": "Créer une app avec l’IA",
+        "description": "Décrivez une app : l’agent de création de cette installation l’écrit, la met en ligne et la garde dans votre liste, pour l’interroger et la modifier de la même façon."
+      },
+      "it": {
+        "title": "Crea un’app con l’IA",
+        "description": "Descriva un’app e l’agente di creazione di questa installazione la scrive, la mette online e la tiene nel suo elenco, per fare domande e modificarla allo stesso modo."
+      },
+      "nl": {
+        "title": "Bouw een app met AI",
+        "description": "Beschrijf een app en de bouwagent van deze installatie schrijft hem, zet hem online en houdt hem in je lijst - om er op dezelfde manier naar te vragen en hem aan te passen."
+      },
+      "pl": {
+        "title": "Zbuduj aplikację z AI",
+        "description": "Opisz aplikację, a agent budowania tej instalacji napisze ją, udostępni i zachowa na twojej liście – żebyś mógł o nią pytać i ją zmieniać w ten sam sposób."
+      },
+      "pt": {
+        "title": "Criar um App com IA",
+        "description": "Descreva um app e o agente de criação desta instalação o escreve, o coloca no ar e o mantém na sua lista - para você perguntar e mudar do mesmo jeito."
+      },
+      "pt-pt": {
+        "title": "Criar uma App com IA",
+        "description": "Descreve uma app e o agente de criação desta instalação escreve-a, põe-na online e guarda-a na tua lista - para perguntares e alterares da mesma maneira."
+      },
+      "tr": {
+        "title": "Yapay Zekâ ile Uygulama Oluşturun",
+        "description": "Bir uygulamayı anlatın; bu kurulumun oluşturma ajanı onu yazsın, yayına alsın ve listenizde tutsun - aynı şekilde hakkında soru sorup değiştirebilirsiniz."
+      },
+      "ja": {
+        "title": "AIでアプリを作る",
+        "description": "作りたいアプリを伝えると、この環境のビルドエージェントがアプリを書いて公開し、一覧に残します。あとから同じ方法で、質問や変更ができます。"
+      },
+      "ko": {
+        "title": "AI로 앱 만들기",
+        "description": "만들고 싶은 앱을 말하면 이 설치본의 빌드 에이전트가 앱을 만들어 온라인으로 올리고 내 목록에 남겨 둬요. 같은 방식으로 앱에 대해 묻고 수정할 수 있어요."
+      }
+    }
+  },
+  "/ship": {
+    "text": {
+      "en": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "id": {
+        "title": "Hubungkan Agen Coding Anda lewat MCP",
+        "description": "Hubungkan Claude Code, Codex, Cursor, atau agen MCP apa pun ke instalasi ini, lalu minta agen membuat, mempublikasikan, dan mengubah aplikasi di sini, masing-masing dengan database sendiri."
+      },
+      "de": {
+        "title": "Coding-Agent per MCP verbinden",
+        "description": "Verbinden Sie Claude Code, Codex, Cursor oder jeden MCP-Agenten mit dieser Installation, damit er hier Apps baut, veröffentlicht und ändert – jede mit eigener Datenbank."
+      },
+      "es": {
+        "title": "Conecta tu agente de programación por MCP",
+        "description": "Conecta Claude Code, Codex, Cursor o cualquier agente MCP a esta instalación para que cree, publique y cambie apps aquí, cada una con su base de datos."
+      },
+      "fr": {
+        "title": "Connecter votre agent de code via MCP",
+        "description": "Connectez Claude Code, Codex, Cursor ou tout agent MCP à cette installation pour qu’il crée, publie et modifie ici des apps, chacune avec sa base de données."
+      },
+      "it": {
+        "title": "Collega il tuo agente di coding via MCP",
+        "description": "Collega Claude Code, Codex, Cursor o qualsiasi agente MCP a questa installazione e fagli creare, pubblicare e modificare app qui, ognuna con il suo database."
+      },
+      "nl": {
+        "title": "Koppel je codeeragent via MCP",
+        "description": "Koppel Claude Code, Codex, Cursor of elke MCP-agent aan deze installatie en laat hem hier apps bouwen, publiceren en aanpassen, elk met een eigen database."
+      },
+      "pl": {
+        "title": "Podłącz agenta kodowania przez MCP",
+        "description": "Podłącz Claude Code, Codex, Cursor lub dowolnego agenta MCP do tej instalacji, by budował, publikował i zmieniał tu aplikacje, każdą z własną bazą danych."
+      },
+      "pt": {
+        "title": "Conecte seu Agente de Código via MCP",
+        "description": "Conecte Claude Code, Codex, Cursor ou qualquer agente MCP a esta instalação e peça para criar, publicar e mudar apps aqui, cada um com seu banco de dados."
+      },
+      "pt-pt": {
+        "title": "Liga o Teu Agente de Programação por MCP",
+        "description": "Liga o Claude Code, o Codex, o Cursor ou qualquer agente MCP a esta instalação e deixa-o criar, publicar e alterar apps aqui, cada uma com a sua base de dados."
+      },
+      "tr": {
+        "title": "Kodlama Ajanınızı MCP ile Bağlayın",
+        "description": "Claude Code, Codex, Cursor ya da herhangi bir MCP ajanını bu kuruluma bağlayın; her biri kendi veritabanına sahip uygulamalar oluştursun, yayınlasın ve değiştirsin."
+      },
+      "ja": {
+        "title": "コーディングエージェントをMCPで接続",
+        "description": "Claude Code、Codex、Cursor、またはMCP対応のエージェントをこの環境に接続して、アプリの作成・公開・変更を任せられます。アプリごとに専用のデータベース付き。"
+      },
+      "ko": {
+        "title": "MCP로 코딩 에이전트 연결하기",
+        "description": "Claude Code, Codex, Cursor 등 MCP 에이전트를 이 설치본에 연결해 앱을 만들고, 게시하고, 수정하세요. 앱마다 자기만의 데이터베이스가 있어요."
+      }
+    }
+  },
   "/showcase": {
     "image": "/social/showcase.png",
     "text": {

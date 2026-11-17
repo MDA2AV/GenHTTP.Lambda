@@ -37,6 +37,9 @@ public sealed class FakeAgent : IAsyncDisposable
     /// <summary>Every job it was asked for, as it was asked.</summary>
     public ConcurrentQueue<JsonObject> Received { get; } = [];
 
+    /// <summary>Every job it was asked for, as the bytes that came, in UTF-8.</summary>
+    public ConcurrentQueue<byte[]> Bodies { get; } = [];
+
     /// <summary>Every token a request came with.</summary>
     public ConcurrentQueue<string?> Tokens { get; } = [];
 
@@ -134,9 +137,13 @@ public sealed class FakeAgent : IAsyncDisposable
 
         if (request.HttpMethod == "POST" && path == "/build")
         {
-            using var reader = new StreamReader(request.InputStream, Encoding.UTF8);
+            using var bytes = new MemoryStream();
 
-            var body = (JsonObject)JsonNode.Parse(await reader.ReadToEndAsync())!;
+            await request.InputStream.CopyToAsync(bytes);
+
+            Bodies.Enqueue(bytes.ToArray());
+
+            var body = (JsonObject)JsonNode.Parse(Encoding.UTF8.GetString(bytes.ToArray()))!;
 
             Received.Enqueue(body);
 

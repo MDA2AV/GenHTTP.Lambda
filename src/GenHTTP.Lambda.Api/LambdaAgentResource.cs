@@ -26,7 +26,7 @@ namespace GenHTTP.Lambda.Api;
 /// with verbs, the way a deployment is.
 /// </remarks>
 [Tag(ApiDocumentation.Changes)]
-[Summary("The build agent of the installation, changing a lambda for whoever holds its editor key.")]
+[Summary("The build agent of the installation, changing a lambda - and answering questions about it - for whoever holds its editor key.")]
 [Remarks("""
          What the Change section of the editor does: the owner says what should be different, and the agent changes the lambda
          in a feature - a new one, or one named - and tries it at its preview. With `deploy` (the default) it merges the feature
@@ -65,8 +65,13 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
     [Summary("Asks the agent to change a lambda")]
     [Remarks("""
              The change is queued and runs in the background; `GET …/agent` follows it. The prompt is logged in full, so the
-             operator knows what people ask for, and cut past 2000 characters. A request that is not about changing the
-             application is declined, and the result says why.
+             operator knows what people ask for, and cut past 2000 characters. A question about the application is answered
+             rather than made a change of (`result.answered`), and a setting the agent may change - analytics, a kind of data,
+             an earlier version back online, a feature merged or deleted, the source published - is changed without a
+             feature (`result.settings`). A request that is not about the application is declined, and the result says why.
+
+             `history` is the conversation so far, as the page that holds it sent it: the newest turns that fit, each cut, are
+             handed to the agent as context and are not logged. The agent keeps nothing between messages.
              """)]
     [Response(ResponseStatus.Accepted, "The change was taken on.")]
     [Response(ResponseStatus.BadRequest, "The prompt says too little, or there is no such model.")]
@@ -84,9 +89,10 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
         var feature = body?.Feature is { Length: > 0 } key ? (features.Get(privateKey, key)).Feature.Key : null;
 
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
-                                             body?.Model, body?.Password, body?.Language, feature, request.Client.Address);
+                                             body?.Model, body?.Password, body?.Language, feature, body?.History, request.Client.Address);
 
-        // logged in full, as the prompts of the build page are
+        // logged in full, as the prompts of the build page are - the message
+        // only: what was said before was logged when it was asked
         logger.LogInformation("Started change {Change} of lambda {Lambda} model {Model} prompt {Prompt}", state.Job?.Id, current.PublicKey, body?.Model ?? "default", body?.Prompt?.Trim());
 
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);

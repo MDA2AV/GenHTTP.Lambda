@@ -31,7 +31,6 @@ public static class CloudInstallation
         Contact = options.Contact ?? "solutions@genhttp.dev",
         AbuseContact = options.AbuseContact ?? "abuse@genhttp.dev",
         LegalPages = true,
-        StartPage = "/build",
         Sandbox = options.Sandbox with { Label = "Free" },
         Production = options.Production with { Label = "Premium" }
     };
