@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Simpan link itu di tempat yang aman. Itu satu-satunya cara untuk masuk ke website Anda dari perangkat lain, dan tidak bisa dipulihkan. Kami pun tidak bisa.',
   copyLink: 'Salin link editor',
   lifetime: (offline, removed) =>
-    `Kami menjaganya tetap online selama masih dipakai: setelah ${offline} hari tanpa kunjungan atau perubahan, website dimatikan, dan setelah ${removed} hari dihapus. Buka editor untuk menyalakannya lagi.`,
-  openEditor: 'Buka editor',
+    `Kami menjaganya tetap online selama masih dipakai: setelah ${offline} hari tanpa kunjungan atau perubahan, website dimatikan, dan setelah ${removed} hari dihapus. Anda bisa menjadikannya online lagi di sini, atau di editornya.`,
 
   failedToStart: 'Permintaan gagal dikirim.',
   noAnswer: 'Selesai, tapi tanpa keterangan apa yang terjadi.',

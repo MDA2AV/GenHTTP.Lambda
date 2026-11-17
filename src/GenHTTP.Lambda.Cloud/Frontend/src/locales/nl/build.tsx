@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Hoe pas ik mijn website later aan?',
-      'Open de editorlink die je bij je website krijgt en beschrijf wat er anders moet, net als hier. Vind je een wijziging niet goed? Dan ga je gewoon terug naar hoe het eerst was.',
+      'Gewoon hier: je website blijft in de lijst op deze pagina staan, dus je beschrijft op dezelfde manier wat er anders moet, of vraagt hoe het ermee gaat. Op een ander apparaat open je de editorlink die je erbij krijgt. Vind je een wijziging niet goed? Dan ga je gewoon terug naar hoe het eerst was.',
     ],
   ],
 

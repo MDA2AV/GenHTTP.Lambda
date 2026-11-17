@@ -86,7 +86,6 @@ export const workspace: KitMessages['workspace'] = {
   send: '보내기',
   stop: '중지',
   stopping: '중지하는 중…',
-  enterHint: 'Enter로 보내기 · Shift + Enter로 줄바꿈',
   goOnline: '변경을 바로 온라인으로 전환',
   goOnlineOn: '변경이 잘 되는 즉시 온라인으로 전환돼요.',
   goOnlineOff: '변경은 초안으로 남겨 두니, 먼저 써 볼 수 있어요.',

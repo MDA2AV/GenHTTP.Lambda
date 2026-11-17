@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Guarde ese enlace en un lugar seguro. Es la única forma de entrar en su sitio web desde otro dispositivo y no se puede recuperar, ni siquiera nosotros podemos.',
   copyLink: 'Copiar el enlace de edición',
   lifetime: (offline, removed) =>
-    `La mantenemos en línea mientras se use: tras ${offline} días sin visitas ni cambios se desconecta, y tras ${removed} días se elimina. Abra el editor para volver a ponerla en línea.`,
-  openEditor: 'Abrir el editor',
+    `La mantenemos en línea mientras se use: tras ${offline} días sin visitas ni cambios se desconecta, y tras ${removed} días se elimina. Puede volver a ponerla en línea aquí o en su editor.`,
 
   failedToStart: 'No se ha podido enviar.',
   noAnswer: 'Terminó sin indicar qué ha pasado.',

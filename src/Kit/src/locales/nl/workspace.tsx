@@ -71,7 +71,6 @@ export const workspace: KitMessages['workspace'] = {
   send: 'Verstuur',
   stop: 'Stop',
   stopping: 'Bezig met stoppen…',
-  enterHint: 'Enter om te versturen · Shift + Enter voor een nieuwe regel',
   goOnline: 'Wijzigingen meteen online zetten',
   goOnlineOn: 'Een wijziging gaat online zodra hij werkt.',
   goOnlineOff: 'Een wijziging blijft in een concept staan, zodat je hem eerst kunt proberen.',

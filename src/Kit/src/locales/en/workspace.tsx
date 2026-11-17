@@ -91,7 +91,6 @@ export const workspace = {
   send: 'Send',
   stop: 'Stop',
   stopping: 'Stopping…',
-  enterHint: 'Enter to send · Shift + Enter for a new line',
   goOnline: 'Put changes online right away',
   goOnlineOn: 'A change goes online as soon as it works.',
   goOnlineOff: 'A change is left in a draft, for you to try first.',

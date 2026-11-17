@@ -71,7 +71,6 @@ export const workspace: KitMessages['workspace'] = {
   send: 'Enviar',
   stop: 'Detener',
   stopping: 'Deteniendo…',
-  enterHint: 'Intro para enviar · Mayús + Intro para una línea nueva',
   goOnline: 'Poner los cambios en línea enseguida',
   goOnlineOn: 'Un cambio se pone en línea en cuanto funciona.',
   goOnlineOff: 'Un cambio queda en un borrador, para que lo pruebe antes.',

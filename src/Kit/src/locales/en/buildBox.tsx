@@ -50,8 +50,7 @@ export const buildBox = {
   keep: 'Keep that link somewhere safe. It is the only way into your website from another device, and it cannot be recovered - not by us either.',
   copyLink: 'Copy the editor link',
   lifetime: (offline: number, removed: number) =>
-    `We keep it online for as long as it is used: after ${offline} days without visits or changes it is taken offline, and after ${removed} it is removed. Open the editor to put it back online.`,
-  openEditor: 'Open the editor',
+    `We keep it online for as long as it is used: after ${offline} days without visits or changes it is taken offline, and after ${removed} it is removed. You can put it back online here, or in its editor.`,
 
   failedToStart: 'That did not go through.',
   noAnswer: 'It finished without saying what happened.',

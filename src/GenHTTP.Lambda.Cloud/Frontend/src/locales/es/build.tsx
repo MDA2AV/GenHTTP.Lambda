@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       '¿Cómo la cambio más adelante?',
-      'Abra el enlace de edición que recibe con su web y describa qué debe ser diferente, igual que aquí. Si un cambio no le gusta, puede volver a como estaba antes.',
+      'Aquí mismo: su web sigue en la lista de esta página, así que describa qué debe ser diferente igual que antes, o pregunte cómo le va. Desde otro dispositivo, abra el enlace de edición que recibe con ella. Si un cambio no le gusta, puede volver a como estaba antes.',
     ],
   ],
 

@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Como eu mudo o site depois?',
-      'Abra o link de edição que você recebe com o seu site e descreva o que deve ser diferente, do mesmo jeito que aqui. Se não gostar de uma mudança, dá para voltar ao que era antes.',
+      'Aqui mesmo: seu site continua na lista desta página, então você descreve o que deve ser diferente do mesmo jeito, ou pergunta como ele está indo. Em outro dispositivo, abra o link de edição que você recebe com o site. Se não gostar de uma mudança, dá para voltar ao que era antes.',
     ],
   ],
 

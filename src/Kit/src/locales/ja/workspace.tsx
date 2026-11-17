@@ -71,7 +71,6 @@ export const workspace: KitMessages['workspace'] = {
   send: '送信',
   stop: '停止',
   stopping: '停止しています…',
-  enterHint: 'Enterで送信 · Shift + Enterで改行',
   goOnline: '変更をすぐに公開する',
   goOnlineOn: '変更は、動作するようになり次第、公開されます。',
   goOnlineOff: '変更は下書きに残り、先に試せます。',

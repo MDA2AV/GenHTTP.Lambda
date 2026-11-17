@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Guarda este link num sítio seguro. É a única forma de entrares no teu site a partir de outro dispositivo e não pode ser recuperado, nem por nós.',
   copyLink: 'Copiar o link de edição',
   lifetime: (offline, removed) =>
-    `Mantemo-lo online enquanto for usado: após ${offline} dias sem visitas nem alterações fica offline e após ${removed} dias é removido. Abre o editor para o voltares a pôr online.`,
-  openEditor: 'Abrir o editor',
+    `Mantemo-lo online enquanto for usado: após ${offline} dias sem visitas nem alterações fica offline e após ${removed} dias é removido. Podes voltar a pô-lo online aqui ou no respetivo editor.`,
 
   failedToStart: 'Não foi possível enviar o pedido.',
   noAnswer: 'Terminou sem dizer o que aconteceu.',

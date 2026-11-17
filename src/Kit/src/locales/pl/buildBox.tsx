@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej strony z innego urządzenia i nikt go nie odzyska – my też nie.',
   copyLink: 'Kopiuj link do edytora',
   lifetime: (offline, removed) =>
-    `Utrzymujemy ją online, dopóki jest używana: po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Otwórz edytor, aby znów ją uruchomić.`,
-  openEditor: 'Otwórz edytor',
+    `Utrzymujemy ją online, dopóki jest używana: po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Możesz ją znów udostępnić tutaj albo w jej edytorze.`,
 
   failedToStart: 'Nie udało się wysłać prośby.',
   noAnswer: 'Agent skończył, ale nie napisał, co się stało.',

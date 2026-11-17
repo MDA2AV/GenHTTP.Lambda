@@ -71,7 +71,6 @@ export const workspace: KitMessages['workspace'] = {
   send: 'Gönder',
   stop: 'Durdur',
   stopping: 'Durduruluyor…',
-  enterHint: 'Göndermek için Enter · Yeni satır için Shift + Enter',
   goOnline: 'Değişiklikleri hemen yayına al',
   goOnlineOn: 'Bir değişiklik çalışır çalışmaz yayına girer.',
   goOnlineOff: 'Bir değişiklik, önce sizin denemeniz için taslakta bırakılır.',

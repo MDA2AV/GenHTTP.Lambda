@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Conservi questo link in un posto sicuro. È l’unico modo per accedere al suo sito da un altro dispositivo e non si può recuperare, nemmeno da parte nostra.',
   copyLink: 'Copia il link di modifica',
   lifetime: (offline, removed) =>
-    `Lo manteniamo online finché viene usato: dopo ${offline} giorni senza visite né modifiche va offline e dopo ${removed} giorni viene eliminato. Apra l’editor per rimetterlo online.`,
-  openEditor: 'Apri l’editor',
+    `Lo manteniamo online finché viene usato: dopo ${offline} giorni senza visite né modifiche va offline e dopo ${removed} giorni viene eliminato. Può rimetterlo online qui o nel suo editor.`,
 
   failedToStart: 'La richiesta non è partita.',
   noAnswer: 'Ha finito senza dire cosa è successo.',

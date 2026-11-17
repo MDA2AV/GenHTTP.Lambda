@@ -43,7 +43,7 @@ export const build: Messages['build'] = {
     ],
     [
       'Jak zmienić stronę później?',
-      'Otwórz link do edytora, który dostajesz razem ze stroną, i opisz, co ma być inaczej – tak samo jak tutaj. Jeśli zmiana ci się nie spodoba, możesz wrócić do tego, jak było wcześniej.',
+      'Właśnie tutaj: twoja strona zostaje na liście na tej stronie, więc opisz, co ma być inaczej, w ten sam sposób, albo zapytaj, jak jej idzie. Na innym urządzeniu otwórz link do edytora, który dostajesz razem z nią. Jeśli zmiana ci się nie spodoba, możesz wrócić do tego, jak było wcześniej.',
     ],
   ],
 

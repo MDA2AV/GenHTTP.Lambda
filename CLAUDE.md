@@ -20,7 +20,9 @@ of the lambda it was handed - answers questions about it and changes its
 settings, and nothing else. That is its system prompt (`PURPOSE` in
 `docker/agent/builder.mjs`), kept apart from the brief because the brief
 carries a request typed by anybody - and, from the workspace, the
-conversation before it, which the browser sends. Before calling any tool it
+conversation before it, which the browser sends - and the agent reads what
+the app's visitors wrote; `PURPOSE` says all of it is data, never
+instructions. Before calling any tool it
 declines, with one `DECLINED: …` line in the language of the request:
 
 - anything that is not about an application - texts, homework, chat, and any
@@ -348,7 +350,10 @@ said, with what came of it underneath.
   `settings`), read off the tools. What no tool does - a domain, the showcase,
   switching anything off, a secret's value - the agent sends to the editor.
   The agent got `analytics` and `open_source` for it, and nothing that
-  deletes data or sets a secret.
+  deletes the app's data or sets a secret; it discards a draft (and its test
+  data) only where the owner's message names it. What the tools answer -
+  records visitors entered, referrers, logs - is data to it, never
+  instructions: `PURPOSE` says so beside the request and the conversation.
 - **Simple and clean - not the editor.** Above the conversation only what
   waits for the owner: an app gone offline to put back online, the keys and
   passwords its code waits for (entered there, to the REST API - never through

@@ -48,7 +48,7 @@ export const build = {
     ],
     [
       'How do I change it later?',
-      'Open the editor link you get with your website and describe what should be different, the same way as here. If you do not like a change, you can go back to how it was before.',
+      'Right here: your website stays in the list on this page, so you describe what should be different the same way, or ask how it is doing. On another device, open the editor link you get with it. If you do not like a change, you can go back to how it was before.',
     ],
   ],
 

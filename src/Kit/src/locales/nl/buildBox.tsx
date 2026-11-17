@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Bewaar deze link op een veilige plek. Het is de enige weg naar je website vanaf een ander apparaat, en hij is niet te herstellen, ook niet door ons.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
-    `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor om hem weer online te zetten.`,
-  openEditor: 'Editor openen',
+    `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Je kunt hem hier weer online zetten, of in de editor.`,
 
   failedToStart: 'Starten is niet gelukt.',
   noAnswer: 'Klaar, maar zonder te zeggen wat er gebeurd is.',

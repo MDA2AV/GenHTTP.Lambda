@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Heben Sie diesen Link gut auf. Er ist der einzige Weg zu Ihrer Website von einem anderen Gerät aus, und niemand kann ihn wiederherstellen – auch wir nicht.',
   copyLink: 'Editor-Link kopieren',
   lifetime: (offline, removed) =>
-    `Wir halten sie online, solange sie genutzt wird: Nach ${offline} Tagen ohne Besuche oder Änderungen wird sie offline genommen, nach ${removed} Tagen gelöscht. Im Editor können Sie sie wieder online stellen.`,
-  openEditor: 'Editor öffnen',
+    `Wir halten sie online, solange sie genutzt wird: Nach ${offline} Tagen ohne Besuche oder Änderungen wird sie offline genommen, nach ${removed} Tagen gelöscht. Sie können sie hier oder in ihrem Editor wieder online stellen.`,
 
   failedToStart: 'Die Anfrage kam nicht durch.',
   noAnswer: 'Fertig, aber ohne Rückmeldung, was passiert ist.',

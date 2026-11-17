@@ -44,8 +44,7 @@ export const buildBox: KitMessages['buildBox'] = {
     'Gardez ce lien en lieu sûr. C’est le seul moyen d’accéder à votre site depuis un autre appareil, et personne ne peut le récupérer, pas même nous.',
   copyLink: 'Copier le lien d’édition',
   lifetime: (offline, removed) =>
-    `Nous le gardons en ligne tant qu’il est utilisé : après ${offline} jours sans visite ni modification, il est mis hors ligne, puis supprimé après ${removed} jours. Ouvrez l’éditeur pour le remettre en ligne.`,
-  openEditor: 'Ouvrir l’éditeur',
+    `Nous le gardons en ligne tant qu’il est utilisé : après ${offline} jours sans visite ni modification, il est mis hors ligne, puis supprimé après ${removed} jours. Vous pouvez le remettre en ligne ici, ou dans son éditeur.`,
 
   failedToStart: 'La demande n’est pas passée.',
   noAnswer: 'C’est terminé, mais sans dire ce qui s’est passé.',

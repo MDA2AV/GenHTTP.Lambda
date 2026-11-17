@@ -71,7 +71,6 @@ export const workspace: KitMessages['workspace'] = {
   send: 'Kirim',
   stop: 'Berhenti',
   stopping: 'Menghentikan…',
-  enterHint: 'Enter untuk mengirim · Shift + Enter untuk baris baru',
   goOnline: 'Langsung jadikan perubahan online',
   goOnlineOn: 'Perubahan langsung online begitu berfungsi.',
   goOnlineOff: 'Perubahan disimpan di draf, agar Anda coba dulu.',
