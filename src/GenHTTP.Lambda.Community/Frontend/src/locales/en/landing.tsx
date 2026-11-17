@@ -13,14 +13,6 @@ export const landing = {
   connect: 'Connect your agent',
   write: 'Write the code yourself',
 
-  buildTitle: 'Describe it',
-  buildText: 'A sentence is enough. The build agent writes the app, puts it online and gives you the link to change it later.',
-  noAgent: 'No build agent is connected to this installation. Connect your own agent - it does the same.',
-
-  connectTitle: 'Connect your agent',
-  connectText:
-    'Your coding agent gets the platform as tools: create an app, write and check its code, try a change in a draft with a copy of the data, put it online and read its logs.',
-
   featuresTitle: 'What every app gets',
   features: [
     { title: 'An address', text: 'An address of its own on this server, named after its key - and a domain of its own once it is moved to production.' },

@@ -10,14 +10,6 @@ export const landing: Messages['landing'] = {
   connect: 'Koppel je agent',
   write: 'Schrijf de code zelf',
 
-  buildTitle: 'Beschrijf het',
-  buildText: 'Eén zin is genoeg. De build-agent schrijft de app, zet hem online en geeft je de link om hem later aan te passen.',
-  noAgent: 'Aan deze installatie is geen build-agent gekoppeld. Koppel hieronder je eigen agent - die doet hetzelfde.',
-
-  connectTitle: 'Koppel je agent',
-  connectText:
-    'Je coding-agent krijgt het platform als tools: een app maken, de code schrijven en controleren, een wijziging uitproberen in een concept met een kopie van de data, online zetten en de logs lezen.',
-
   featuresTitle: 'Wat elke app krijgt',
   features: [
     { title: 'Een adres', text: 'Een eigen adres op deze server, genoemd naar de sleutel - en een eigen domein zodra de lambda in productie draait.' },

@@ -10,14 +10,6 @@ export const landing: Messages['landing'] = {
   connect: 'Hubungkan agen Anda',
   write: 'Tulis kodenya sendiri',
 
-  buildTitle: 'Jelaskan saja',
-  buildText: 'Satu kalimat sudah cukup. Agen pembangun menulis aplikasinya, menjadikannya online, dan memberi Anda link untuk mengubahnya nanti.',
-  noAgent: 'Belum ada agen pembangun yang terhubung ke instalasi ini. Hubungkan agen Anda sendiri di bawah - hasilnya sama.',
-
-  connectTitle: 'Hubungkan agen Anda',
-  connectText:
-    'Agen pemrograman Anda mendapatkan platform ini sebagai alat: membuat aplikasi, menulis dan memeriksa kodenya, mencoba perubahan di draf dengan salinan data, menjadikannya online, dan membaca lognya.',
-
   featuresTitle: 'Yang didapat setiap aplikasi',
   features: [
     { title: 'Sebuah alamat', text: 'Alamat sendiri di server ini, dinamai sesuai kuncinya - dan domain sendiri setelah dipindahkan ke produksi.' },

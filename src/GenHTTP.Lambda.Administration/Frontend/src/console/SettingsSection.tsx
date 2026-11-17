@@ -66,28 +66,28 @@ export function SettingsSection({ access }: { access: Access }) {
         <div className="space-y-3">
           <Setting
             id="build-switch"
-            title="Offer the text box that has an app built"
+            title="Build new apps in the workspace on /build"
             on={settings.buildBox}
             saving={saving === 'buildBox'}
             onToggle={() => toggle('buildBox', (on) =>
-              on ? 'The box is back.' : 'The box is gone; the page explains how to connect an agent.')}
+              on ? 'New apps are built again.' : 'No new apps are built; the workspace leads to connecting an agent.')}
           >
             {settings.buildBox
               ? 'Visitors describe what they want and the agent of this installation creates it, as long as there is one.'
-              : 'The page only explains how to connect an agent of one’s own over MCP. Nothing is built from here.'}
+              : 'The workspace only leads to connecting an agent of one’s own over MCP. Nothing new is built from here.'}
           </Setting>
 
           <Setting
             id="change-switch"
-            title="Offer the text box in the Change section of the editor"
+            title="Let owners ask the agent about their apps"
             on={settings.changeBox}
             saving={saving === 'changeBox'}
             onToggle={() => toggle('changeBox', (on) =>
-              on ? 'The box in the Change section is back.' : 'The box in the Change section is gone; it explains how to connect an agent.')}
+              on ? 'Owners can ask the agent again.' : 'Owners can no longer ask the agent; the workspace and the Change section explain how to connect one.')}
           >
             {settings.changeBox
-              ? 'Owners say what should be different and the agent of this installation changes it, as long as there is one.'
-              : 'The section only explains how to connect an agent of one’s own over MCP.'}
+              ? 'In the workspace on /build and the Change section of the editor, owners ask questions about an app, change its settings or say what should be different, and the agent of this installation does it, as long as there is one.'
+              : 'The workspace and the Change section only explain how to connect an agent of one’s own over MCP.'}
           </Setting>
         </div>
       )}

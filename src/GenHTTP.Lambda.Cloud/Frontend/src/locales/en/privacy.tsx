@@ -37,17 +37,19 @@ export const privacy = {
     agentTitle: 'What you ask the build agent',
     agent: (policy: (text: string) => ReactNode) => (
       <>
-        What you type into the build box, or into the Change section of a lambda's editor, is sent to Anthropic PBC in
-        the United States, which runs Claude, the model that writes the app. To make a change, the agent also reads the
-        lambda - its code, the notes on its versions and its log, which holds its requests and what it printed but not
-        its visitors' IP addresses - and what it reads is sent there too. What Anthropic does with it is covered by{' '}
+        What you type into the workspace on the build page, or into the Change section of a lambda's editor, is sent to
+        Anthropic PBC in the United States, which runs Claude, the model that writes the app - in the workspace together
+        with the last few messages before it and what the agent answered, so that it understands what you mean. To answer
+        or make a change, the agent also reads the lambda - its code, the notes on its versions, its log, which holds its
+        requests and what it printed but not its visitors' IP addresses, and where you ask about them its records and the
+        counts of its visitors - and what it reads is sent there too. What Anthropic does with it is covered by{' '}
         {policy('its own privacy policy')}. The United States does not protect personal data the way the EU does. Your
         request is sent there because building or changing what you asked for needs it (Art. 6(1)(b) and Art. 49(1)(b)
         GDPR), so do not put anything into it that you would not want to share.
       </>
     ),
     agentKept:
-      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log; both have a fixed size as well. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
+      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log; both have a fixed size as well. The messages before it, which the workspace sends along, are not written down. The workspace keeps your apps' editor links and the conversation about each in your browser's own storage, and nowhere else: we do not keep a copy, and whoever uses the same browser can open them. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
 
     lambdasTitle: 'What a lambda does is up to its owner',
     lambdas:
@@ -58,7 +60,7 @@ export const privacy = {
 
     storageTitle: 'Cookies and your browser',
     storage:
-      "There is one cookie, called lang. It remembers the language you picked, so that addresses without one open in it, and it lasts a year. The browser's own storage remembers light or dark mode, a few settings of the pages you use and, for administrators, their token. None of it is used to follow you and none of it goes to anybody else: there is no analytics of this site, no advertising, and nothing is loaded from other sites, not even fonts. Since all of it only does what you asked for, it needs no consent (§ 25(2) no. 2 TDDDG).",
+      "There is one cookie, called lang. It remembers the language you picked, so that addresses without one open in it, and it lasts a year. The browser's own storage remembers light or dark mode, a few settings of the pages you use, the apps of your workspace with their editor links and conversations and, for administrators, their token. None of it is used to follow you and none of it goes to anybody else: there is no analytics of this site, no advertising, and nothing is loaded from other sites, not even fonts. Since all of it only does what you asked for, it needs no consent (§ 25(2) no. 2 TDDDG).",
 
     hostingTitle: 'Where it is kept',
     hosting:

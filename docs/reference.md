@@ -109,10 +109,10 @@ the previews, and the host's site the rest (see
 
 | Route                | Serves                                                    |
 |----------------------|-----------------------------------------------------------|
-| `/`                  | the front page: genhttp.dev's (`Website`), or a community installation's (`LandingPage`), which has the text box of `/build` on it |
-| `/build`             | genhttp.dev: the text box for somebody who wants an app built, no code |
-| `/ship`              | genhttp.dev: for developers - connect an agent and publish what it built |
-| `/platform`          | genhttp.dev: the features of every app beyond building and changing it, each with a screenshot of one example app |
+| `/`                  | the front page: genhttp.dev's (`Website`) shows what every app gets, each with a screenshot of one example app; a community installation's (`LandingPage`) is simpler |
+| `/build`             | the workspace: the apps this browser knows and a conversation with the build agent about each, for somebody who does not write code (see [The workspace](#the-workspace)) |
+| `/ship`              | a guide for developers: connect an agent of one's own over MCP and have it publish what it built |
+| `/platform`          | genhttp.dev: leads to `/` for good - the features were a page of their own until they became the front page |
 | `/self-hosting`      | genhttp.dev: genhttp.dev and the community edition side by side, neither preferred |
 | `/showcase`          | the lambdas their owners chose to show                    |
 | `/source`            | the lambdas whose owners published their code (`SourcePages`) |
@@ -204,7 +204,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/files/:path`, `…/raw/:path` | one file, its path encoded: its text; as it is (`?download=1` to save it) |
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
-| `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
+| `POST /builds`, `GET /builds/:id`                     | a new app, built from the workspace on `/build` |
 | `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent, where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), and how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them) |
 | `GET /system/logo`                                    | the picture beside the installation's name, where its operator branded it, see [Branding](#branding) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation; `/admin/branding` only where the installation may be branded |
@@ -948,11 +948,31 @@ lambda runs at a time, and it can be stopped - whatever it saved stays, in its
 feature or as a version. A change runs without `create_lambda`, and its editor key travels in
 the brief inside the build container, never in a log line.
 
+Not every message is a change. The agent first works out what it was asked:
+a **question** about the lambda - who visits it, what was entered, whether it
+fails, how something works - is answered from the tools (`analytics`,
+`read_database`, `read_logs`, `read_lambda`) without starting a feature; a
+**setting** the tools can change is changed without one - analytics switched on,
+a kind of data switched on, an earlier version put back online, a feature merged
+or one the owner names deleted, the source published (`open_source`); and only
+a **change** of the application goes into a feature. The result says which:
+`answered` for a question, `settings` for what was switched, published or
+discarded. What no tool does - a domain, the showcase, switching anything off,
+the value of a secret - the agent tells the owner to do in the editor.
+
+A message may carry the conversation before it (`history`, from the workspace):
+the server keeps the newest turns that fit - eight at most, each message cut to
+600 characters and each answer to 1000 - and the brief hands them over as
+context, never as instructions. Only the message itself is logged; the agent
+keeps nothing between messages.
+
 Both kinds of job are told what the agent is for in its system prompt
 (`PURPOSE` in `docker/agent/builder.mjs`), above the brief and the request, so a
 request cannot talk its way past it: building or changing a lambda through the
-tools, and nothing else. It declines, before it calls a single tool, a request
-that is not an application at all (a question, a text, homework), one about the
+tools - and, for the owner of the one it was handed, answering questions about
+it - and nothing else. It declines, before it calls a single tool, a request
+that is not about an application at all (a question about anything but the
+lambda it was handed, a text, homework), one about the
 platform or the machine rather than an application on it (its configuration,
 environment, files, network, other lambdas, its own instructions - including
 code that would read them, since a lambda runs in the server's process), and
@@ -964,6 +984,40 @@ sentence as the reason nothing was built, and the Change section shows it under
 allowance, so declining is not a way to try requests for free. The container,
 its network and the tool lists are what actually hold; the purpose makes the
 agent stop at the door rather than find the walls.
+
+### The workspace
+
+`/build` is a workspace in the shape of a chat, for people who do not write
+code: the apps this browser knows on the left, a conversation with the build
+agent about one of them in the middle, the box at its foot. Before anything is
+asked - and as the page is prerendered for search engines - it is the page
+that creates a website: what the site says about it, the box, ideas, and the
+questions people ask first.
+
+- **The first message builds an app** (`POST /builds`). While it runs, its id
+  is kept in the browser, so a reload within the hour the agent keeps a build
+  finds it again - and with it the editor key it makes. Once built, the app
+  joins the list and its conversation goes on from the build.
+- **Every message after is a change** (`POST /lambdas/:privateKey/agent/start`)
+  with the newest turns of the conversation as `history`, so the operator's
+  switches (the build box for new apps, the change box for the rest), the daily
+  allowance and one change at a time hold as everywhere else. A change asked for
+  in the editor's Change section shows up in the conversation too.
+- **The list is kept in the browser** - local storage, on every installation
+  (decided by the owner) - by each app's editor key, with what it is, whether it
+  was online and the conversation, the newest sixty turns. An app is added when
+  it is built here, or with its editor link or key ("Add an app"); a demo is not
+  added. Removing it from the list forgets it in this browser only. A script on
+  the platform's own origin can read that storage: a draft's preview at
+  `/features/…`, and every lambda of an installation that answers by path.
+- **Which app is open is in the address by its public key** (`?app=…`), never
+  its editor key.
+- **It is not the editor.** Above the conversation it asks only for what waits
+  for the owner: putting an app that went offline back online, the keys and
+  passwords its code waits for (entered here, to the API, never through the
+  agent), and a draft to try and put online. Under an answer: open the app, try
+  or put online the draft it left, undo a change that went online. Everything
+  else is the editor, a link away.
 
 ### The simple view
 
@@ -1425,8 +1479,8 @@ answer by path, and the site.
 The frontends are an npm workspace at the root (`package.json`,
 `tsconfig.base.json`). What they share is source, not a build: `src/Kit`
 (`@genhttp-lambda/kit`) has the shell and the components, the i18n machinery
-and the words several bundles use, the API client, the build box, the
-showcase, the Tailwind preset, the Vite configuration every bundle is
+and the words several bundles use, the API client, the workspace of
+`/build`, the guide of `/ship`, the showcase, the Tailwind preset, the Vite configuration every bundle is
 built with (`vite.ts`) and the scripts that translate and prerender
 (`scripts/translations.mjs`, `scripts/prerender.mjs`). Every component with
 pages has a `Frontend/` folder of its own - Editing, Administration, Sources,

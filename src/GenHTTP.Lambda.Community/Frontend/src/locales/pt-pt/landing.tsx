@@ -10,14 +10,6 @@ export const landing: Messages['landing'] = {
   connect: 'Ligar o teu agente',
   write: 'Escrever o código tu mesmo',
 
-  buildTitle: 'Descreve-a',
-  buildText: 'Uma frase chega. O agente de criação escreve a app, põe-na online e dá-te o link para a alterares mais tarde.',
-  noAgent: 'Nenhum agente de criação está ligado a esta instalação. Liga abaixo o teu próprio agente - ele faz o mesmo.',
-
-  connectTitle: 'Liga o teu agente',
-  connectText:
-    'O teu agente de programação recebe a plataforma como ferramentas: criar uma app, escrever e verificar o seu código, experimentar uma alteração num rascunho com uma cópia dos dados, pô-la online e ler os seus registos.',
-
   featuresTitle: 'O que cada app recebe',
   features: [
     { title: 'Um endereço', text: 'Um endereço próprio neste servidor, com o nome da respetiva chave - e um domínio próprio quando passar para produção.' },

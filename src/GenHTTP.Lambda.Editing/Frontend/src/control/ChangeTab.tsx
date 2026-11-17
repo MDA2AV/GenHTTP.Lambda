@@ -14,6 +14,7 @@ import type { Control } from './context';
 import { span } from '@genhttp-lambda/kit/ui/format';
 import { Section, Switch } from '@genhttp-lambda/kit/ui/ui';
 import { useShared } from '@genhttp-lambda/kit/ui/words';
+import { Reply } from '@genhttp-lambda/kit/workspace/Reply';
 
 type Words = ReturnType<typeof useEditorT>['change'];
 
@@ -700,7 +701,14 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const retry = !result?.answered && (!result?.ok || (version == null && !left && !gone && result.online == null));
 
   return (
-    <RunOutcome tone={tone} headline={headline} notes={notes} summary={result?.summary} detail={result?.detail} detailLabel={said.log}>
+    <RunOutcome
+      tone={tone}
+      headline={headline}
+      notes={notes}
+      summary={result?.summary ? <Reply text={result.summary} /> : null}
+      detail={result?.detail}
+      detailLabel={said.log}
+    >
           {/* left as a draft: try it, and put it online from here once it is right */}
           {left?.online && (
             <a href={absoluteAddress(left.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">

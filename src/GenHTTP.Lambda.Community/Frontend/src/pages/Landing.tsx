@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
 import {
   IconBook, IconBranch, IconCode, IconDatabase, IconDraft, IconEye, IconFolder, IconGitHub, IconGlobe, IconKey, IconLayers,
-  IconLock, IconSpark, IconStar,
+  IconLock, IconStar,
 } from '@genhttp-lambda/kit/components/Icons';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { REPOSITORY } from '@genhttp-lambda/kit/installation';
@@ -90,20 +90,6 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------- the two ways to an app */}
-      <section className="relative z-10 px-5 py-14">
-        <div className="mx-auto grid w-full max-w-4xl gap-4 sm:grid-cols-2">
-          <Way
-            to="/build"
-            icon={<IconSpark className="h-5 w-5" />}
-            title={said.buildTitle}
-            text={available === false ? said.noAgent : said.buildText}
-            action={said.describe}
-          />
-          <Way to="/ship" icon={<IconLayers className="h-5 w-5" />} title={said.connectTitle} text={said.connectText} action={said.connect} />
-        </div>
-      </section>
-
       {/* ------------------------------------------------------- what every app gets */}
       <section className="relative z-10 px-5 py-14">
         <div className="mx-auto w-full max-w-4xl">
@@ -162,20 +148,6 @@ export function Landing() {
         </div>
       </section>
     </div>
-  );
-}
-
-/** One of the two ways to an app: what it is, and the page it is done on. */
-function Way({ to, icon, title, text, action }: { to: string; icon: ReactNode; title: string; text: string; action: string }) {
-  return (
-    <Link to={to} className="surface group flex h-full flex-col p-5 transition hover:border-accent-500/50">
-      <span className="flex items-center gap-2.5 text-accent-600 dark:text-accent-400">
-        {icon}
-        <span className="text-lg font-light tracking-tight text-grey-900 dark:text-grey-100">{title}</span>
-      </span>
-      <span className="mt-2 flex-1 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{text}</span>
-      <span className="mt-4 text-sm font-medium text-accent-600 group-hover:underline dark:text-accent-400">{action} →</span>
-    </Link>
   );
 }
 

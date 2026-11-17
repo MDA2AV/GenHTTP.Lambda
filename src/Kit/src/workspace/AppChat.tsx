@@ -373,28 +373,26 @@ export function AppChat({
             />
           )}
 
-          {turns.length === 0 && !gone && (
+          {turns.length === 0 && !gone && offered && !blocked && (
             <div className="py-6 text-center">
               <h2 className="text-balance text-xl font-light tracking-tight">{said.firstTitle(name)}</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{said.firstText}</p>
 
-              {offered && !blocked && (
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {said.suggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => {
-                        setPrompt(suggestion);
-                        field.current?.focus();
-                      }}
-                      className="rounded-full border border-slate-200 px-3 py-1 text-[13px] text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-ink-800 dark:text-slate-400 dark:hover:border-ink-700 dark:hover:text-slate-200"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {said.suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => {
+                      setPrompt(suggestion);
+                      field.current?.focus();
+                    }}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-[13px] text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-ink-800 dark:text-slate-400 dark:hover:border-ink-700 dark:hover:text-slate-200"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

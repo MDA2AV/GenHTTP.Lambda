@@ -14,13 +14,17 @@ repository. Do not merge the two.
 
 ## What the build agent is for
 
-The build agent (`/build` and the editor's Change section) builds or changes a
-lambda through the platform's tools, and nothing else. That is its system
-prompt (`PURPOSE` in `docker/agent/builder.mjs`), kept apart from the brief
-because the brief carries a request typed by anybody. Before calling any tool
-it declines, with one `DECLINED: …` line in the language of the request:
+The build agent (the workspace on `/build` and the editor's Change section)
+builds or changes a lambda through the platform's tools, and - for the owner
+of the lambda it was handed - answers questions about it and changes its
+settings, and nothing else. That is its system prompt (`PURPOSE` in
+`docker/agent/builder.mjs`), kept apart from the brief because the brief
+carries a request typed by anybody - and, from the workspace, the
+conversation before it, which the browser sends. Before calling any tool it
+declines, with one `DECLINED: …` line in the language of the request:
 
-- anything that is not an application - questions, texts, homework, chat;
+- anything that is not about an application - texts, homework, chat, and any
+  question but one about the lambda whose editor key it was handed;
 - anything about the platform or the machine rather than an application on it,
   including code that would read the server's environment, files or network;
 - anything meant to do harm, to this server or to others.
@@ -46,16 +50,17 @@ repository.
 together the GenHTTP way, and there are two hosts - two editions:
 
 - **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at
-  subdomains of the hosting domain, the marketing site (landing, `/build`,
-  `/ship`, the features at `/platform`, the comparison with the community
-  edition at `/self-hosting`), the legal pages, its terms of use, its contact and abuse mailbox
+  subdomains of the hosting domain, the marketing site (the front page, which
+  shows the features, the workspace at `/build`, the guide at `/ship`, the
+  comparison with the community edition at `/self-hosting`), the legal pages, its terms of use, its contact and abuse mailbox
   and its description of itself to search engines (`CloudInstallation`,
   `CloudStructuredData`). There is no page of prices any more.
 - **Community** (`src/GenHTTP.Lambda.Community`) is what anybody runs on
   their own server, published as the Docker image `genhttp/lambda`: every
   feature of the cloud, the build agent included, behind a simpler front page
-  for developers (`LandingPage`: what it does, the build box, connecting an
-  agent, what every app gets, how it runs) with the showcase -
+  for developers (`LandingPage`: what it does, the ways to an app, what every
+  app gets, how it runs, where to look next) with the same `/build` and `/ship`
+  as the cloud - decided by the owner - and the showcase -
   translated like everything else, crisp, and selling nothing. No terms, no
   legal pages, no imprint, no organization behind it; what its operator names
   (`LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`) is shown, and nothing else.
@@ -73,32 +78,49 @@ together the GenHTTP way, and there are two hosts - two editions:
 - **Nothing in the pages names the cloud.** What differs per installation -
   where a lambda answers, the git address, where a domain has to point (the
   server resolves its own public name, `DomainResponse.Target`), the page
-  with the build box (`LambdaOptions.StartPage`: `/build` on the cloud, `/`
-  elsewhere) - is asked of the installation, never written into a bundle.
-- **The cloud has a page of features and one about self-hosting - decided
-  by the owner.** `/platform` shows what every app gets beyond being built
+  with the workspace (`LambdaOptions.StartPage`: `/build` on both editions,
+  for a host whose site has it elsewhere) - is asked of the installation,
+  never written into a bundle.
+- **The cloud's front page is its features - decided by the owner** (it was
+  `/platform` until 2026-11-17, which now leads to `/` for good,
+  `SitePagesBuilder.Moved`). It shows what every app gets beyond being built
   and changed (drafts, history, documentation, records, keys and passwords,
   analytics, a domain, the code, publishing), a section each with a
-  screenshot of the real editor - all of one example app, the court booking
-  of a tennis club that does not exist, taken on a local installation with
-  the app, its records, visitors and history made up for it, in both themes.
+  screenshot of the real editor or workspace - all of one example app, the
+  court booking of a tennis club that does not exist, taken on a local
+  installation with the app, its records, visitors and history made up for
+  it, in both themes. The front page from before - the video, the three
+  steps, the contact cards - went with it.
+- **The cloud has a page about self-hosting - decided by the owner.**
   `/self-hosting` sets genhttp.dev and the community edition side by side to
   say that the platform can be run elsewhere: **neither is preferred** -
   both drawn alike, in the same order, with the same weight of button, and
   every row a fact of each, taken from the code and the README rather than
   from memory. Its name in the menu, "Self-hosting", says the one thing a
-  visitor would not otherwise know. The community edition has neither page:
-  it sells nothing and does not name the cloud. The pages, the comparison's
-  neutrality and the screenshots were the owner's; the paths, the menu's
-  word, Showcase joining the bar a step later and the order of the sections
-  were chosen with them, and are open to change.
+  visitor would not otherwise know. The community edition has neither the
+  features nor this page: it sells nothing and does not name the cloud. The
+  pages, the comparison's neutrality and the screenshots were the owner's;
+  the paths, the menu's word and the order of the sections were chosen with
+  them, and are open to change.
+- **The menu is the same principle on both editions - decided by the
+  owner**: the front page, then Build (`/build`) and Ship (`/ship`); the cloud
+  adds Self-hosting and then the Showcase (the showcase after self-hosting,
+  the owner's ask), the community the Showcase; the panel last.
+- **`/ship` is a guide - decided by the owner**: how to connect an agent of
+  one's own and have it publish an app, in three steps (the kit's
+  `AgentGuide`: connect, what to say, what comes back), then the site's own
+  words - on the cloud a paragraph on the database and multiplayer and the
+  questions people ask, on the community the questions a developer asks
+  next. The scene, the comparison with other hosts and the domain section
+  went.
 - **Every page links to the platform's source - decided by the owner.**
   `REPOSITORY` in the kit's `installation.ts`, beside Discord: the footer of
   every page (the owner's ask), and - chosen with it - the GitHub mark in the
   bar where it has room (from `xl`, the menu below `lg`), the cloud's front
-  page, its `/ship` and `/self-hosting`, and the community's front page, whose
-  Reference card leads to `docs/reference.md` where the guide's card was. `/build` has the footer's link only: it
-  speaks to people who do not write code.
+  page and `/self-hosting`, and the community's front page, whose
+  Reference card leads to `docs/reference.md` where the guide's card was.
+  `/build` and `/ship` have the footer's link only: the one speaks to people
+  who do not write code, the other is a guide and nothing else.
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
   guide says whichever holds (`platform_guide`, `backlink`).
@@ -200,7 +222,7 @@ the environment:
   builder's `.Bundle(directory)` overrides it). No component serves another's
   bundle and there is no shared folder of pages. What they share is source,
   not a build: the kit (`src/Kit`, `@genhttp-lambda/kit`) - the shell, the
-  components, the i18n machinery, the API client, the build box,
+  components, the i18n machinery, the API client, the workspace, the guide,
   the showcase, the Tailwind preset and the Vite helper. A link into another
   bundle loads it (`claim`, `owns`).
 - **What only one installation says is the host's**: terms, contact, abuse
@@ -243,7 +265,7 @@ easier, or the reverse, find the interface that serves each of them.
 | | No-code "vibers" | Developers |
 |---|---|---|
 | Who | Have an app built and want it changed; do not write code | Have their own coding agent and code |
-| Entry | `/build`, the **Change** section of the editor | `/ship`, connecting an agent via MCP |
+| Entry | the workspace at `/build`, the **Change** section of the editor | `/ship`, connecting an agent via MCP |
 | Editor | the **simple view** (`view: Simple`) | the **full view** (`view: Full`) |
 | Agent | the built-in prompt boxes | their own, through `/mcp` |
 | Cares about | what the app does, whether it is online, what changed | control: code, files, versions, deployments, logs |
@@ -281,9 +303,63 @@ Give both a good experience. Concretely:
   switches secrets on.
 - The full view, `/ship`, the API, MCP tools, the guide and the README use the
   precise words (feature, version, merge, base).
+- **The workspace (`/build`) is a conversation, not the editor - decided by
+  the owner** (see The workspace below): request and response, with the few
+  things the owner has to do there and a link to the editor for the rest.
 - The view a lambda opens in is a default only (`view`, set at creation and via
   `PATCH`). The build agent creates `Simple` lambdas, everything else `Full`.
   Whoever switches views has chosen for themselves, in their browser.
+
+### The workspace
+
+**Asked for by the owner:** `/build` is a workspace in the shape of the chats
+people know - ChatGPT, Claude: the apps this browser knows in a sidebar, a
+conversation with the agent about the one open, the box at its foot. A
+message is a question, a setting or a change; the answer is what the agent
+said, with what came of it underneath.
+
+- **Kept in the browser, by editor key - decided by the owner** (local
+  storage on every installation, `src/Kit/src/workspace/store.ts`): an app is
+  remembered when it is built there, or added with its editor link or its key
+  (the owner's ask); the conversation is kept beside it, the newest sixty
+  turns. There are still no accounts. A script on the platform's own origin -
+  a draft's preview at `/features/…`, every lambda of an installation that
+  answers by path - can read that storage; the README says so for path mode,
+  and moving previews off the site's host is still a decision of its own. A
+  demo is not added. Which app is open is in the address by its public key
+  (`?app=`), never its editor key.
+- **Through the doors that were there.** The first message is a build
+  (`POST /builds`, its id kept in the browser while it runs, so a reload finds
+  the editor key it makes); every message after is a change of that lambda
+  (`…/agent/start`) carrying the newest turns as `history`, which the server
+  cuts (`AgentInput.History`) and the brief hands over as context, never as
+  instructions; only the message is logged. So the operator's switches -
+  building (`BuildBox`), asking about an app (`ChangeBox`, the Change section
+  as well) - the daily allowance, one change of a lambda at a time, the demo
+  and blocked guards all hold unchanged, and each message costs one of the
+  day's.
+- **A question is answered, a setting changed, only a change makes a draft.**
+  The brief has the agent tell them apart: a question is answered from the
+  tools (`analytics`, `read_database`, `read_logs`, `read_lambda`) and starts
+  no feature; a setting the tools can change (analytics on, a kind of data
+  on, an earlier version online, a draft merged or one the owner names
+  deleted, the source published) is changed without one; everything else is a
+  change in a feature as before. The result says which (`answered`,
+  `settings`), read off the tools. What no tool does - a domain, the showcase,
+  switching anything off, a secret's value - the agent sends to the editor.
+  The agent got `analytics` and `open_source` for it, and nothing that
+  deletes data or sets a secret.
+- **Simple and clean - not the editor.** Above the conversation only what
+  waits for the owner: an app gone offline to put back online, the keys and
+  passwords its code waits for (entered there, to the REST API - never through
+  the agent), a draft to try and put online, a block. Under an answer: open
+  the app, try or put online the draft it left, undo a change that went
+  online. Everything else is a link to the editor.
+- **Before anything is asked it is the page that creates a website** - its
+  H1, the box in the middle, ideas, the points and the folded questions, in
+  the markup as prerendered - and the sidebar appears once the browser knows
+  an app. The shell fills the window there (`fixed`), so the footer is part
+  of what scrolls in that state.
 
 ### The words each page is found by
 
@@ -291,20 +367,24 @@ The public pages are written in the words people type into a search engine -
 checked against what Google suggests in each language, not guessed - and each
 page has words of its own, so they do not compete:
 
-- `/` - an **AI app builder with free hosting**, for both groups. "Agentic
-  coding" is searched by developers choosing a coding agent, so it stays out
-  of the title.
+- `/` - an **AI app builder with free hosting**, for both groups, in the
+  title and as the first line of the H1 (a kicker inside it, over the
+  features page's headline); the features' words - a **database**,
+  **version history** and **analytics** for every app, which is what it has
+  and the others' pages do not say - in the description and the H2s.
+  "Agentic coding" is searched by developers choosing a coding agent, so it
+  stays out of the title.
 - `/build` - **create a website with AI**, free, **no sign-up**, in the word
   each language uses for a website (ホームページ, 홈페이지, página web …);
   searches for an "app" mostly mean a phone app.
 - `/ship` - **host a vibe-coded app**, publish it from Claude Code, Codex or
   Cursor, from **localhost**, with a database and multiplayer built in. "Ship"
   is nobody's search word, and "publish an app" means the app stores, so the
-  verb comes with "web" or "online".
-- `/platform` - the features: a **database**, **version history** and
-  **analytics** for every app, which is what it has and the others' pages do
-  not say. "AI app builder" is the front page's, so it stays out of this
-  page's title and H1.
+  verb comes with "web" or "online". The guide keeps the words in its kicker,
+  H1, steps and folded questions.
+- The community edition's pages are not written for search engines: an
+  installation is found by whoever runs it. Its titles say what each page is
+  (`/build`, `/ship`) in plain words.
 - `/self-hosting` - an **open source AI app builder**, **self-hosted** or in
   the cloud, in the phrase each language searches for ("créateur
   d'application IA", "app builder AI open source", "yapay zeka uygulama
@@ -733,8 +813,8 @@ section.
   be far apart, and a card counting one beside a card counting the other
   read as figures that did not add up.
 - This is said in the README (Analytics), `platform_guide` (`analytics`),
-  the tool's description, the privacy page and the features page (`/platform`,
-  See who visits) - keep them the same.
+  the tool's description, the privacy page and the cloud's front page (See
+  who visits) - keep them the same.
 
 ### Pushing, not polling
 
@@ -1460,14 +1540,15 @@ with `LAMBDA_ENGINE=Kestrel`.
   languages, except the admin panel** (`/admin`, its bundle in
   `src/GenHTTP.Lambda.Administration/Frontend`), which is English only; the
   shell around it reads the kit's words. That includes both sites (the cloud's
-  landing, `/build`, `/ship`, `/platform`, `/self-hosting` and legal pages; the
-  community's front page), the showcase, the published sources, the create
+  front page, `/build`, `/ship`, `/self-hosting` and legal pages; the
+  community's front page, `/build` and `/ship`), the workspace, the showcase, the published sources, the create
   page, the editor, the runner's hosting pages, the page metadata in every
   table of pages and the words of the link previews (`cards.text.js`).
 - **Every bundle has its own catalog** (`<component>/Frontend/src/locales/<language>/`),
   and the kit's (`src/Kit/src/locales`) holds what several share: the shell,
-  what is said in many places, connecting an agent, the build box, the
-  showcase and the licenses. A bundle's site catalog is the kit's words
+  what is said in many places, connecting an agent, the workspace of
+  `/build` (on `/build`, so formal in Italian and Spanish), the showcase and
+  the licenses. A bundle's site catalog is the kit's words
   with its own (`defineSite`); the kit's components read the kit's part.
 - Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Kit/src/i18n/languages.ts`,
   mirrored in `GenHTTP.Lambda.Web/SiteLanguages.cs`). English is the source;
@@ -1579,7 +1660,7 @@ touches all that apply:
 described what agents use, and they have `platform_guide`; an owner has the
 editor, in the words of the simple view. A link to `/docs` from before finds
 nothing, as `/enterprise` did - a choice made with the removal, not the
-owner's; `/.well-known/ai-catalog.json` names the API's description instead. The cloud's features page (`/platform`) says
+owner's; `/.well-known/ai-catalog.json` names the API's description instead. The cloud's front page, which shows the features, says
 *what* an app gets, not how: when a feature an owner would notice is added, or
 the editor's look changes, its section and its picture change with it.
 

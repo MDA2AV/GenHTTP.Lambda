@@ -191,8 +191,8 @@ unchanged.
 
 ## Connecting an agent
 
-The front page explains how to connect each agent. For Claude Code, a single
-command is sufficient:
+The *Publish* page (`/ship`) explains how to connect each agent. For Claude
+Code, a single command is sufficient:
 
 ```bash
 claude mcp add --transport http genhttp http://localhost:8080/mcp
@@ -212,11 +212,19 @@ shown in its editor.
 
 ## Building apps from a description: the build agent (optional)
 
-With the build agent enabled, the front page offers an input box: people
-describe the app they want, and an agent on your server writes it, publishes
-it and returns a link for changing it. No coding agent of their own is
-required. The build agent is optional and is the only part of the setup that
-runs outside the main container. It requires:
+With the build agent enabled, the *Create a website* page (`/build`) is a
+workspace in the style of a chat: people describe the app they want, and an
+agent on your server writes it and publishes it. The app then appears in a list
+beside the conversation, where they can keep asking the agent about it - how
+many people visited, what was entered, whether something fails - or for
+changes and settings, each a message. No coding agent of their own is required.
+The list is kept in the browser that built the apps; other apps are added with
+their editor link. Each message counts against the daily limit set in the
+panel's *Limits* section, and the panel's *Settings* can turn off building new
+apps, asking about existing ones, or both.
+
+The build agent is optional and is the only part of the setup that runs
+outside the main container. It requires:
 
 - a Claude subscription, with a token created by `claude setup-token`;
 - Docker on the same machine: for every build, the agent starts a short-lived
@@ -234,9 +242,10 @@ docker compose --profile agent up -d
 
 - **Apps share the platform's address.** Below `/lambda/`, an app runs on the
   same origin as the editor and the administration panel, so its pages could
-  read what those store in your browser. The editor does not send its address
-  to apps, and the panel keeps its password for the current tab only, but this
-  setup is intended for apps built by you and your team. To host apps for
+  read what those store in your browser - including the editor links that the
+  `/build` workspace remembers. The editor does not send its address to apps,
+  and the panel keeps its password for the current tab only, but this setup is
+  intended for apps built by you and your team. To host apps for
   people you do not know, give the installation a separate domain for them
   (`LAMBDA_HOSTING_URL`); each app is then a site of its own.
 - **Apps run inside the server process.** This is what makes hosting hundreds
