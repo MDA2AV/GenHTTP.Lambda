@@ -17,7 +17,6 @@ export const landing: Messages['landing'] = {
   connectTitle: 'Liga o teu agente',
   connectText:
     'O teu agente de programação recebe a plataforma como ferramentas: criar uma app, escrever e verificar o seu código, experimentar uma alteração num rascunho com uma cópia dos dados, pô-la online e ler os seus registos.',
-  connectThen: 'Depois pede-lhe algo, por exemplo: «Cria um livro de visitas, com uma página onde eu aprovo as entradas.»',
 
   featuresTitle: 'O que cada app recebe',
   features: [

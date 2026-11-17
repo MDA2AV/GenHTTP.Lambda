@@ -7,7 +7,9 @@ public sealed record BuildStarted(
     [Summary("What to follow it by: `GET /builds/{id}`")]
     string Id,
     [Summary("How many builds are waiting ahead of it")]
-    int Queued
+    int Queued,
+    [Summary("How many builds and changes this caller has left today, this one counted")]
+    int? Left = null
 );
 
 [Summary("How a build is getting on.")]

@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Vous avez créé une app avec Claude Code, Codex ou Cursor, mais elle ne tourne que sur votre machine. Demandez à votre agent de la mettre en ligne ici. Quelques minutes plus tard, elle a un lien public que tout le monde peut ouvrir, sa propre base de données et une connexion en direct avec tous ceux qui l’ont ouverte : on peut y jouer, discuter et poster à plusieurs.',
   facts: ['Gratuit', 'Sans inscription', 'Sans carte bancaire', 'Rien à installer'],
-  connect: 'Connecter votre agent',
-  seeOthers: 'Voir ce que d’autres ont publié',
 
   stepsTitle: 'De localhost à un lien public en trois étapes',
   step: (n) => `Étape ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Plus qu’un hébergement : base de données et multijoueur intégrés.',
   together:
     'La plupart des hébergeurs donnent à chaque visiteur sa propre copie de l’app, et chacun joue dans son coin : ce qu’un navigateur garde dans son localStorage, le suivant ne le voit jamais. Ici, chaque app a sa propre base de données et une connexion en direct avec tous ceux qui l’ont ouverte. Ce que fait une personne apparaît aussitôt chez les autres, et ce qu’on y poste est encore là le lendemain.',
-  together2:
-    'Pas de compte Supabase ou Firebase à créer, pas de backend à brancher, pas de serveur à louer. Demandez-le comme vous l’expliqueriez à un ami.',
-  kinds: [
-    { name: 'Jeux multijoueurs', ask: 'Permets à huit amis max de rejoindre la même partie et de voir les coups des autres en direct.' },
-    { name: 'Salons de chat', ask: 'Ajoute un salon où tous ceux qui ont le lien peuvent discuter, et garde les cent derniers messages.' },
-    { name: 'Listes partagées', ask: 'Rends la liste d’affaires à emporter modifiable par toute l’équipe en même temps.' },
-    { name: 'Classements', ask: 'Tiens un classement avec le meilleur temps de chacun et affiche le top 10 sur l’écran d’accueil.' },
-    { name: 'Mini réseaux sociaux', ask: 'Permets aux invités du mariage de poster leurs photos sur un mur commun et de liker celles des autres.' },
-  ],
-  quote: (text) => `« ${text} »`,
-
-  connectTitle: 'Connectez Claude Code, Codex ou Cursor une fois pour toutes',
-  connectText:
-    'Donnez à votre agent cette adresse, celle de notre serveur MCP. Il saura ensuite publier ici, sans clé ni connexion.',
   sayLike: 'Ensuite, dans votre projet, dites par exemple',
   asks: [
     'Publie cette app sur GenHTTP Lambda et envoie-moi le lien.',
     'Mets les meilleurs scores en commun, pour que tout le monde voie le même classement.',
   ],
-
-  domainChip: 'Quand ça décolle',
-  domainTitle: 'Donnez-lui son propre nom de domaine',
-  domainText:
-    'La même app, le même lien d’édition, mais à une adresse qui vous appartient. Plus facile à dire, plus facile à retenir, et ça fait sérieux quand on commence à la partager.',
-  domainSubject: 'Un nom de domaine pour mon app',
-  domainAsk: 'Parlons de votre domaine',
 
   questionsTitle: 'Avant la mise en ligne',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -125,40 +102,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'Ça marche chez vous.',
-  closeAccent: 'Faites que ça marche chez eux.',
   noAgent: 'Pas d’agent ? Créez votre app ici',
-  closeFacts: 'Gratuit. Sans inscription. Rien à installer.',
-
-  scene: {
-    label: 'On demande à un agent de publier une app. L’adresse passe de localhost à un lien public, et des gens arrivent.',
-    ask: 'Mets mon jeu de quiz en ligne pour que mes potes puissent jouer.',
-    live: 'C’est en ligne. Voici votre lien.',
-    publishing: 'Publication…',
-    public: 'Public',
-    onlyYou: 'Privé',
-    app: 'Quiz du vendredi soir',
-    playing: (count) => <>{count} en jeu</>,
-    you: 'Vous',
-  },
-
-  compareTitle: 'Le chemin le plus court entre « ça marche » et « essaie ça »',
-  compareText:
-    'Vercel, Cloudflare et Lovable sont d’excellents endroits pour faire tourner vos projets. Mais tout commence par un formulaire d’inscription. Et dès que votre app doit partager quoi que ce soit entre visiteurs, il faut configurer un second service. Voici ce que ça donne quand on part de zéro.',
-  rows: [
-    'Démarrer sans compte',
-    'Publier depuis votre agent habituel',
-    'Base de données et temps réel : chat, multijoueur, records',
-    'Coût du premier lien',
-  ],
-  us: ['Oui', 'Une connexion, puis on demande', 'Intégré à chaque app', 'Gratuit'],
-  rivals: [
-    ['Inscription requise', 'Après connexion à ses outils', 'Base de données à ajouter', 'Offre gratuite'],
-    ['Inscription requise', 'Après connexion à ses outils', 'Possible, avec configuration', 'Offre gratuite'],
-    ['Inscription requise', 'Dans son propre éditeur', 'Via un backend connecté', 'Offre gratuite, crédits limités'],
-  ],
-  compareNote:
-    'Situation en septembre 2026, pour quelqu’un qui n’a de compte nulle part. Les offres et fonctionnalités des autres services évoluent : vérifiez les détails auprès d’eux.',
 
 };

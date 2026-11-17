@@ -51,6 +51,8 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
 
     private bool _catalog;
 
+    private readonly Dictionary<string, string> _moved = [];
+
     #region Functionality
 
     /// <summary>
@@ -70,6 +72,22 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
     public SitePagesBuilder Catalog(bool catalog = true)
     {
         _catalog = catalog;
+        return this;
+    }
+
+    /// <summary>
+    /// A page that is somewhere else now: asked for, in any language or
+    /// none, it is sent on to where it went, in the same language.
+    /// </summary>
+    /// <param name="from">Where it was, without a language: "/platform"</param>
+    /// <param name="to">Where it is, without a language: "/"</param>
+    /// <remarks>
+    /// Permanently, so a search engine moves what it knew of the page onto
+    /// the page it went to; a page simply removed is not found instead.
+    /// </remarks>
+    public SitePagesBuilder Moved(string from, string to)
+    {
+        _moved[SiteMeta.Normalize(from)] = SiteMeta.Normalize(to);
         return this;
     }
 
@@ -99,7 +117,7 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
         }
 
         var pages = new SitePagesHandler(bundle, meta, prerender, services.GetRequiredService<ISourceService>(), services.GetRequiredService<IBrandingService>(),
-                                         files.Build(), _head, _catalog);
+                                         files.Build(), _head, _catalog, _moved);
 
         return Concerns.Chain(_concerns, pages);
     }
@@ -112,7 +130,7 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
 /// Answers the paths of a site.
 /// </summary>
 internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerender prerender, ISourceService sources, IBrandingService branding,
-                                       IHandler files, Func<SitePage, string?>? head, bool catalog) : IHandler
+                                       IHandler files, Func<SitePage, string?>? head, bool catalog, IReadOnlyDictionary<string, string> moved) : IHandler
 {
 
     #region Functionality
@@ -154,6 +172,11 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 return Answer(request, named, "application/manifest+json; charset=utf-8");
         }
 
+        if (Moved(request, path) is { } elsewhere)
+        {
+            return elsewhere;
+        }
+
         if (meta.Find(path) is { } page)
         {
             var markup = meta.Render(bundle.Index(), page, brand);
@@ -188,6 +211,34 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
         // a person is shown the application's own page for it, and anything
         // else - a crawler looking for a file, a checker - learns it is not here
         return PrefersMarkup(request) ? Revalidated(bundle.Answer(request, ResponseStatus.NotFound, brand)) : null;
+    }
+
+    /// <summary>
+    /// A page that went somewhere else, sent on there: in the language it was
+    /// asked for in, or without one, which is then sent on to the visitor's.
+    /// </summary>
+    private IResponse? Moved(IRequest request, string path)
+    {
+        if (moved.Count == 0)
+        {
+            return null;
+        }
+
+        var normalized = SiteMeta.Normalize(path);
+        var language = SiteLanguages.Of(normalized);
+        var bare = language != null ? SiteLanguages.Without(normalized) : normalized;
+
+        if (!moved.TryGetValue(bare, out var to))
+        {
+            return null;
+        }
+
+        var location = language != null ? SiteLanguages.In(language, to) : to;
+
+        return request.Respond()
+                      .Status(ResponseStatus.MovedPermanently)
+                      .Header("Location", location + RequestOrigin.Query(request))
+                      .Build();
     }
 
     private static bool PrefersMarkup(IRequest request)

@@ -1,7 +1,6 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: '기능',
 
   eyebrow: '기능',
   title: '만드는 데는 1분이면 돼요.',

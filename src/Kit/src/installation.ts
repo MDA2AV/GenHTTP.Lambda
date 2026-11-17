@@ -29,7 +29,7 @@ export interface Installation {
   abuse: string | null;
   /** Whether it has its terms, privacy policy and imprint at /terms, /privacy and /imprint. */
   legal: boolean;
-  /** The page of its site where a visitor has an app built - the one with the build box. */
+  /** The page of its site where a visitor has an app built - the workspace. */
   start: string;
 }
 
@@ -58,10 +58,9 @@ export function useInstallation(): Installation | null {
 }
 
 /**
- * Where a visitor has an app built on this installation's site: /build on
- * genhttp.dev, the front page elsewhere - and the front page until the
- * server has said, which is never wrong for long.
+ * Where a visitor has an app built on this installation's site: the
+ * workspace at /build, unless the installation says otherwise.
  */
 export function useStartPage(): string {
-  return useInstallation()?.start ?? '/';
+  return useInstallation()?.start ?? '/build';
 }

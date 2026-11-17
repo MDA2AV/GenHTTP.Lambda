@@ -17,7 +17,6 @@ export const landing: Messages['landing'] = {
   connectTitle: '에이전트 연결하기',
   connectText:
     '코딩 에이전트가 플랫폼을 도구로 사용해요. 앱 만들기, 코드 작성과 확인, 데이터 복사본이 있는 초안에서 변경 시도, 온라인으로 전환, 로그 읽기까지 할 수 있어요.',
-  connectThen: '그다음 원하는 것을 요청해 보세요. 예: “방명록을 만들어 줘. 글을 내가 승인하는 페이지도 있어야 해.”',
 
   featuresTitle: '모든 앱이 갖는 것',
   features: [

@@ -111,7 +111,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         logger.LogInformation("Started build {Build}", started.Id);
 
-        return started;
+        return started with { Left = allowance.Left(caller) };
     }
 
     /// <summary>

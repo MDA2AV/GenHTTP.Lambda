@@ -1,70 +1,70 @@
 {
   "/": {
-    "image": "/social/default.png",
+    "image": "/social/platform.png",
     "text": {
       "id": {
         "title": "Buat Aplikasi dengan AI, Hosting Gratis",
         "description": "Ceritakan aplikasi Anda: AI membuat dan meng-hosting-nya, lengkap dengan link. Pakai agen kami atau Claude Code, Codex, Cursor. Gratis, tanpa daftar.",
-        "image": "/social/id/default.jpg"
+        "image": "/social/id/platform.jpg"
       },
       "de": {
         "title": "KI-App-Builder mit kostenlosem Hosting",
         "description": "Apps mit KI erstellen: Die KI baut und hostet die App, Sie teilen den Link. Mit unserem Agenten oder Claude Code, Codex, Cursor. Kostenlos, ohne Anmeldung.",
-        "image": "/social/de/default.jpg"
+        "image": "/social/de/platform.jpg"
       },
       "en": {
         "title": "AI App Builder with Free Hosting",
-        "description": "Describe an app and AI builds it, hosts it and gives you a link to share. Use our agent or your own: Claude Code, Codex, Cursor. Free, no sign-up."
+        "description": "Describe an app and AI builds and hosts it, with a database, version history and analytics built in. Use our agent or Claude Code, Codex, Cursor. Free."
       },
       "es": {
         "title": "Crear una app con IA gratis",
         "description": "Describe una app: la IA la crea, la aloja y te da un enlace para compartir. Con nuestro agente o el tuyo: Claude Code, Codex, Cursor. Gratis, sin registro.",
-        "image": "/social/es/default.jpg"
+        "image": "/social/es/platform.jpg"
       },
       "fr": {
         "title": "Créer une app avec l’IA gratuitement",
         "description": "Décrivez une app : l’IA la crée, l’héberge et vous donne un lien. Notre agent ou le vôtre : Claude Code, Codex, Cursor. Gratuit, sans inscription.",
-        "image": "/social/fr/default.jpg"
+        "image": "/social/fr/platform.jpg"
       },
       "it": {
         "title": "Creare un’app con l’AI gratis",
         "description": "Descrivi un’app: l’AI la crea, la ospita e ti dà un link. Con il nostro agente o il tuo: Claude Code, Codex, Cursor. Gratis, senza registrazione.",
-        "image": "/social/it/default.jpg"
+        "image": "/social/it/platform.jpg"
       },
       "nl": {
         "title": "App maken met AI, inclusief gratis hosting",
         "description": "Beschrijf een app en AI bouwt hem, host hem en geeft je een link om te delen. Met onze agent of je eigen: Claude Code, Codex, Cursor. Gratis, geen account.",
-        "image": "/social/nl/default.jpg"
+        "image": "/social/nl/platform.jpg"
       },
       "pl": {
         "title": "Kreator aplikacji AI z darmowym hostingiem",
         "description": "Stwórz aplikację z AI: opisz ją, a AI ją zbuduje, zahostuje i da ci link. Nasz agent albo twój: Claude Code, Codex, Cursor. Za darmo, bez rejestracji.",
-        "image": "/social/pl/default.jpg"
+        "image": "/social/pl/platform.jpg"
       },
       "pt": {
         "title": "Criar apps com IA, com hospedagem grátis",
         "description": "Descreva um app e a IA cria, hospeda e entrega um link para compartilhar. Use o nosso agente ou o seu: Claude Code, Codex, Cursor. Grátis, sem cadastro.",
-        "image": "/social/pt/default.jpg"
+        "image": "/social/pt/platform.jpg"
       },
       "pt-pt": {
         "title": "Criar apps com IA, com alojamento grátis",
         "description": "Descreve uma app e a IA cria-a, aloja-a e dá-te um link para partilhar. Usa o nosso agente ou o teu: Claude Code, Codex, Cursor. Grátis, sem registo.",
-        "image": "/social/pt-pt/default.jpg"
+        "image": "/social/pt-pt/platform.jpg"
       },
       "tr": {
         "title": "Yapay Zekâ ile Uygulama Yapın ve Yayınlayın",
         "description": "Uygulamanızı anlatın; yapay zekâ yapsın, barındırsın, linkini versin. Ya da kendi ajanınızı kullanın: Claude Code, Codex, Cursor. Ücretsiz, üyeliksiz.",
-        "image": "/social/tr/default.jpg"
+        "image": "/social/tr/platform.jpg"
       },
       "ja": {
         "title": "AIでアプリ作成から公開まで｜無料",
         "description": "作りたいアプリを伝えるだけで、AIが作成してホスティングし、共有リンクが届きます。このサイトのエージェントでも、Claude Code・Codex・Cursorでも。無料・登録不要。",
-        "image": "/social/ja/default.jpg"
+        "image": "/social/ja/platform.jpg"
       },
       "ko": {
         "title": "AI로 앱 만들고 무료로 배포하기",
         "description": "만들고 싶은 앱을 말하면 AI가 만들고 호스팅까지 해서 공유 링크를 줘요. 저희 에이전트도, Claude Code·Codex·Cursor 같은 내 에이전트도 좋아요. 무료, 가입 없이.",
-        "image": "/social/ko/default.jpg"
+        "image": "/social/ko/platform.jpg"
       }
     }
   },
@@ -203,75 +203,6 @@
         "title": "바이브 코딩으로 만든 앱, 무료로 배포하기",
         "description": "localhost에서만 돌아가는 앱, Claude Code·Codex·Cursor에게 여기에 배포해 달라고 하세요. 몇 분이면 공개 링크가 생기고 DB와 멀티플레이도 기본이에요. 무료, 가입 없이.",
         "image": "/social/ko/ship.jpg"
-      }
-    }
-  },
-  "/platform": {
-    "image": "/social/platform.png",
-    "text": {
-      "en": {
-        "title": "Features: Database, Version History and Analytics",
-        "description": "Every app keeps its records in a database of its own, every version with a way back, its documentation and its visitors - and can get a domain of its own. Free, no sign-up."
-      },
-      "id": {
-        "title": "Fitur: Database, Riwayat Versi, dan Analitik",
-        "description": "Setiap aplikasi menyimpan catatan di database sendiri, punya riwayat versi untuk kembali, dokumentasi, data pengunjung, dan bisa punya domain sendiri. Gratis, tanpa daftar.",
-        "image": "/social/id/platform.jpg"
-      },
-      "de": {
-        "title": "Funktionen: Datenbank, Versionsverlauf und Analyse",
-        "description": "Jede App hat ihre eigene Datenbank, jede Version einen Weg zurück, dazu Dokumentation und Besucherzahlen – und kann eine eigene Domain bekommen. Kostenlos, ohne Anmeldung.",
-        "image": "/social/de/platform.jpg"
-      },
-      "es": {
-        "title": "Funciones: base de datos, historial de versiones y analítica",
-        "description": "Cada app guarda sus registros en una base de datos propia, cada versión con vuelta atrás, su documentación y sus visitas, y puede tener un dominio propio. Gratis, sin registro.",
-        "image": "/social/es/platform.jpg"
-      },
-      "fr": {
-        "title": "Fonctionnalités : base de données, versions et audience",
-        "description": "Chaque app garde ses entrées dans sa propre base de données, chaque version avec un retour possible, sa documentation et ses visiteurs, et peut avoir son domaine. Gratuit, sans inscription.",
-        "image": "/social/fr/platform.jpg"
-      },
-      "it": {
-        "title": "Funzionalità: database, cronologia delle versioni, Analytics",
-        "description": "Ogni app conserva le sue voci in un database tutto suo, ogni versione con la strada per tornare indietro, la sua documentazione e i suoi visitatori, e può avere un dominio proprio. Gratis, senza registrazione.",
-        "image": "/social/it/platform.jpg"
-      },
-      "nl": {
-        "title": "Functies: database, versiegeschiedenis en analytics",
-        "description": "Elke app bewaart zijn items in een eigen database, met elke versie en een weg terug, zijn documentatie en zijn bezoekers - en kan een eigen domein krijgen. Gratis, geen account.",
-        "image": "/social/nl/platform.jpg"
-      },
-      "pl": {
-        "title": "Funkcje: baza danych, historia wersji i analityka",
-        "description": "Każda aplikacja ma własną bazę danych, każdą wersję z drogą powrotną, dokumentację i odwiedzających – i może dostać własną domenę. Za darmo, bez rejestracji.",
-        "image": "/social/pl/platform.jpg"
-      },
-      "pt": {
-        "title": "Recursos: banco de dados, histórico de versões e analytics",
-        "description": "Todo app guarda seus registros em um banco de dados próprio, cada versão com um caminho de volta, a documentação e os visitantes - e pode ter domínio próprio. Grátis, sem cadastro.",
-        "image": "/social/pt/platform.jpg"
-      },
-      "pt-pt": {
-        "title": "Funcionalidades: base de dados, versões e análise de visitas",
-        "description": "Cada app guarda os seus registos numa base de dados própria, cada versão com caminho de volta, a sua documentação e os seus visitantes - e pode ter domínio próprio. Grátis, sem registo.",
-        "image": "/social/pt-pt/platform.jpg"
-      },
-      "tr": {
-        "title": "Özellikler: Veritabanı, Sürüm Geçmişi ve Analitik",
-        "description": "Her uygulama kayıtlarını kendi veritabanında, her sürümü geri dönüş yoluyla, belgelerini ve ziyaretçilerini tutar - ve kendi alan adını alabilir. Ücretsiz, üyeliksiz.",
-        "image": "/social/tr/platform.jpg"
-      },
-      "ja": {
-        "title": "機能：データベース、バージョン履歴、アクセス解析",
-        "description": "どのアプリにも、専用データベースの記録、元に戻せるバージョン、ドキュメント、訪問者の情報がそろい、独自ドメインも設定できます。無料、登録不要。",
-        "image": "/social/ja/platform.jpg"
-      },
-      "ko": {
-        "title": "기능: 데이터베이스, 버전 기록, 방문자 분석",
-        "description": "모든 앱이 자기만의 데이터베이스에 기록을 보관하고, 버전마다 되돌릴 수 있고, 문서와 방문자 분석도 갖춰요. 나만의 도메인도 가능해요. 무료, 가입 필요 없음.",
-        "image": "/social/ko/platform.jpg"
       }
     }
   },

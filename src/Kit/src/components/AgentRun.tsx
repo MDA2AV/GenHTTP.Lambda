@@ -22,6 +22,7 @@ import {
   IconPlus,
   IconSpark,
   IconSpinner,
+  IconStar,
   IconTable,
   IconTrash,
   IconUpload,
@@ -143,7 +144,8 @@ export function RunProgress({ run, received, doing, words }: { run: Run; receive
 
 /* ------------------------------------------------------------ how it ended */
 
-export type Tone = 'good' | 'ready' | 'warn' | 'bad' | 'quiet';
+/** How a run ended; an answer is what the agent said to a question, with no verdict of its own. */
+export type Tone = 'good' | 'ready' | 'warn' | 'bad' | 'quiet' | 'answer';
 
 const TONES: Record<Tone, { box: string; icon: string }> = {
   good: { box: 'bg-emerald-500/5', icon: 'text-emerald-600 dark:text-emerald-400' },
@@ -151,6 +153,7 @@ const TONES: Record<Tone, { box: string; icon: string }> = {
   warn: { box: 'bg-amber-500/5', icon: 'text-amber-600 dark:text-amber-400' },
   bad: { box: 'bg-red-500/5', icon: 'text-red-500 dark:text-red-400' },
   quiet: { box: '', icon: 'text-slate-400' },
+  answer: { box: '', icon: 'text-accent-500 dark:text-accent-400' },
 };
 
 /**
@@ -165,25 +168,29 @@ export function RunOutcome({
   summary,
   detail,
   detailLabel,
+  icon = true,
   children,
 }: {
   tone: Tone;
-  headline: string;
+  /** The verdict, read off the facts; left out where what the agent said is all there is to say. */
+  headline?: string | null;
   notes?: string[];
-  summary?: string | null;
+  summary?: ReactNode;
   detail?: string | null;
   detailLabel?: string;
+  /** Whether the verdict has its mark: a page that marks the agent's side of a conversation already leaves it out. */
+  icon?: boolean;
   children?: ReactNode;
 }) {
   const look = TONES[tone];
-  const Icon = tone === 'good' || tone === 'ready' ? IconCheck : tone === 'quiet' ? IconInfo : IconAlert;
+  const Icon = tone === 'good' || tone === 'ready' ? IconCheck : tone === 'answer' ? IconSpark : tone === 'quiet' ? IconInfo : IconAlert;
 
   return (
     <div className={`flex gap-3 px-4 py-4 ${look.box}`}>
-      <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${look.icon}`} />
+      {icon && <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${look.icon}`} />}
 
       <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold">{headline}</p>
+        {headline && <p className="text-[15px] font-semibold">{headline}</p>}
 
         {notes.map((note) => (
           <p key={note} className="mt-1 text-sm text-slate-600 dark:text-slate-400">
@@ -191,7 +198,11 @@ export function RunOutcome({
           </p>
         ))}
 
-        {summary && <p className="mt-3 whitespace-pre-line break-words text-[15px] leading-relaxed text-slate-800 dark:text-slate-200">{summary}</p>}
+        {summary && (
+          <div className={`${headline || notes.length > 0 ? 'mt-3' : ''} whitespace-pre-line break-words text-[15px] leading-relaxed text-slate-800 dark:text-slate-200`}>
+            {summary}
+          </div>
+        )}
 
         {detail && !summary && (
           <details className="mt-2 text-xs text-slate-500">
@@ -315,6 +326,8 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   records: IconTable,
   secrets: IconKey,
   connectivity: IconGlobe,
+  analytics: IconEye,
+  source: IconStar,
   other: IconDots,
 };
 

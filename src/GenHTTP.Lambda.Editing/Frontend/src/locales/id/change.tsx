@@ -88,6 +88,8 @@ export const change: EditorMessages['change'] = {
     records: 'Membaca database',
     secrets: 'Melihat kunci dan kata sandi',
     connectivity: 'Meminta izin untuk terhubung ke server lain',
+    analytics: 'Looking at the analytics',
+    source: 'Publishing the source code',
     other: (tool) => `Memakai ${tool}`,
   },
   marks: {

@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Você criou um app com o Claude Code, o Codex ou o Cursor, mas ele só roda na sua máquina. Peça para o seu agente publicar aqui. Em poucos minutos, o app ganha um link público para qualquer pessoa, um banco de dados próprio e uma conexão ao vivo com todo mundo que está com ele aberto: as pessoas podem jogar, conversar e postar juntas.',
   facts: ['Grátis', 'Sem cadastro', 'Sem cartão de crédito', 'Nada para instalar'],
-  connect: 'Conectar seu agente',
-  seeOthers: 'Ver o que outros publicaram',
 
   stepsTitle: 'Do localhost a um link público em três passos',
   step: (n) => `Passo ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Mais que hospedagem: banco de dados e multiplayer incluídos.',
   together:
     'A maioria das hospedagens entrega uma cópia do app para cada visitante, e cada um joga sozinho: o que um navegador guarda no localStorage, o próximo nunca vê. Aqui, todo app tem banco de dados próprio e uma conexão ao vivo com todo mundo que está com ele aberto. O que uma pessoa faz aparece na hora para as outras, e o que elas postam continua lá amanhã.',
-  together2:
-    'Sem cadastro no Supabase ou no Firebase, sem backend para integrar, sem servidor para alugar. Peça do jeito que você explicaria para um amigo.',
-  kinds: [
-    { name: 'Jogos multiplayer', ask: 'Deixa até oito amigos entrarem na mesma rodada e verem as jogadas uns dos outros ao vivo.' },
-    { name: 'Salas de chat', ask: 'Adiciona uma sala onde todo mundo com o link pode conversar, e guarda as últimas cem mensagens.' },
-    { name: 'Listas compartilhadas', ask: 'Transforma a lista do que levar em uma lista que a equipe toda edita ao mesmo tempo.' },
-    { name: 'Rankings', ask: 'Cria um ranking com o melhor tempo de cada um e mostra o top 10 na tela inicial.' },
-    { name: 'Mini redes sociais', ask: 'Deixa os convidados do casamento postarem fotos num mural e curtirem as dos outros.' },
-  ],
-  quote: (text) => `“${text}”`,
-
-  connectTitle: 'Conecte o Claude Code, o Codex ou o Cursor uma vez',
-  connectText:
-    'Passe para o seu agente o endereço do nosso servidor MCP. A partir daí, ele sabe publicar aqui, sem chave e sem login.',
   sayLike: 'Depois, no seu projeto, diga algo como',
   asks: [
     'Publica este app no GenHTTP Lambda e me manda o link.',
     'Deixa os recordes compartilhados, para todo mundo ver o mesmo ranking.',
   ],
-
-  domainChip: 'Quando fizer sucesso',
-  domainTitle: 'Um domínio próprio para o seu app',
-  domainText:
-    'O mesmo app, o mesmo link de edição, mas em um endereço que é seu. Mais fácil de falar, mais fácil de lembrar, e com cara de profissional quando as pessoas começarem a compartilhar.',
-  domainSubject: 'Um domínio para o meu app',
-  domainAsk: 'Pergunte sobre seu domínio',
 
   questionsTitle: 'Antes de publicar',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -120,40 +97,6 @@ export const ship: Messages['ship'] = {
       <>Poucas coisas, como algo que prejudique ou engane pessoas. Os {terms('termos')} são curtos e em linguagem simples.</>,
     ],
   ],
-
-  closeTitle: 'Funciona na sua máquina.',
-  closeAccent: 'Agora, na de todo mundo.',
   noAgent: 'Sem agente? Crie aqui',
-  closeFacts: 'Grátis. Sem cadastro. Nada para instalar.',
-
-  scene: {
-    label: 'Um agente recebe o pedido de publicar um app. O endereço muda de localhost para um link público, e as pessoas entram.',
-    ask: 'Coloca meu quiz no ar para os meus amigos entrarem.',
-    live: 'Pronto, está no ar. Aqui está o link.',
-    publishing: 'Publicando…',
-    public: 'Público',
-    onlyYou: 'Só você',
-    app: 'Quiz de sexta',
-    playing: (count) => <>{count} jogando</>,
-    you: 'Você',
-  },
-
-  compareTitle: 'O caminho mais curto entre “funciona” e “testa aí”',
-  compareText:
-    'Vercel, Cloudflare e Lovable são ótimos lugares para rodar coisas. Mas todos começam com um cadastro. E, quando seu app precisa compartilhar algo entre visitantes, você ainda tem que configurar outro serviço. Veja como fica quando você começa do zero.',
-  rows: [
-    'Começar sem conta',
-    'Publicar pelo agente que você já usa',
-    'Banco de dados e dados ao vivo: chat, multiplayer, recordes',
-    'Custo até o primeiro link',
-  ],
-  us: ['Sim', 'Conecte uma vez e é só pedir', 'Já vem em todo app', 'Grátis'],
-  rivals: [
-    ['Precisa de cadastro', 'Com login nas ferramentas deles', 'Com um banco de dados à parte', 'Plano grátis'],
-    ['Precisa de cadastro', 'Com login nas ferramentas deles', 'Possível, com configuração', 'Plano grátis'],
-    ['Precisa de cadastro', 'Criado no editor deles', 'Por um backend conectado', 'Plano grátis, créditos limitados'],
-  ],
-  compareNote:
-    'Em setembro de 2026, para quem não tem conta em lugar nenhum. Planos e recursos de outros serviços mudam; confira os detalhes com eles.',
 
 };

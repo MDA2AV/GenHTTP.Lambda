@@ -56,6 +56,118 @@
       }
     }
   },
+  "/build": {
+    "text": {
+      "en": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "id": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "de": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "es": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "fr": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "it": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "nl": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "pl": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "pt": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "pt-pt": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "tr": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "ja": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      },
+      "ko": {
+        "title": "Build an App with AI",
+        "description": "Describe an app and the build agent of this installation writes it, puts it online and keeps it in your list - to ask about and change in the same way."
+      }
+    }
+  },
+  "/ship": {
+    "text": {
+      "en": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "id": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "de": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "es": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "fr": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "it": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "nl": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "pl": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "pt": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "pt-pt": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "tr": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "ja": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      },
+      "ko": {
+        "title": "Connect Your Coding Agent over MCP",
+        "description": "Connect Claude Code, Codex, Cursor or any MCP agent to this installation and have it build, publish and change apps here, each with its own database."
+      }
+    }
+  },
   "/showcase": {
     "image": "/social/showcase.png",
     "text": {

@@ -85,6 +85,8 @@ export const change: EditorMessages['change'] = {
     records: 'データベースの確認',
     secrets: 'キーとパスワードの確認',
     connectivity: '他のサーバーへの接続の依頼',
+    analytics: 'Looking at the analytics',
+    source: 'Publishing the source code',
     other: (tool) => `${tool}の実行`,
   },
   marks: {

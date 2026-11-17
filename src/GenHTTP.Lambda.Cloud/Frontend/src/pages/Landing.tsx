@@ -1,68 +1,108 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
-import { IconChat, IconChevronDown, IconGitHub, IconLayers, IconMail } from '@genhttp-lambda/kit/components/Icons';
+import {
+  IconBook, IconCheck, IconCode, IconDatabase, IconDraft, IconEye, IconGlobe, IconHistory, IconKey, IconPencil, IconSpark, IconStar,
+} from '@genhttp-lambda/kit/components/Icons';
 import { Reveal } from '@genhttp-lambda/kit/components/Reveal';
-import { DISCORD, REPOSITORY } from '@genhttp-lambda/kit/installation';
+import { Link } from '@genhttp-lambda/kit/i18n/links';
+import { REPOSITORY } from '@genhttp-lambda/kit/installation';
+import { usePublicPage } from '@genhttp-lambda/kit/meta';
 
+import { Screen } from '../components/Screen';
 import { CONTACT_MAIL } from '../contact';
 import { useT } from '../i18n';
-import { Link } from '@genhttp-lambda/kit/i18n/links';
-import { usePublicPage } from '@genhttp-lambda/kit/meta';
-import { useOrigin } from '@genhttp-lambda/kit/site';
+import type { Messages } from '../locales/en';
+
+type Said = Messages['platform'];
+
+type Key = keyof Said['features'];
+
+/** How each feature is drawn: its icon, and the picture its section shows. */
+const LOOKS: Record<Key, { icon: (p: { className?: string }) => ReactNode; screen?: Omit<ScreenOf, 'alt'> }> = {
+  build: { icon: IconSpark, screen: { name: 'app', single: true, width: 1800, height: 1140, address: 'kestrel-courts.genhttp.run' } },
+  change: { icon: IconPencil, screen: { name: 'change', width: 1800, height: 1050, address: 'genhttp.dev/build?app=kestrel-courts' } },
+  drafts: { icon: IconDraft, screen: { name: 'draft', single: true, width: 1800, height: 1140, address: 'genhttp.dev/features/3fa9c1…/' } },
+  history: { icon: IconHistory, screen: { name: 'history', width: 1800, height: 1050, address: 'genhttp.dev/editor/••••••/history' } },
+  about: { icon: IconBook, screen: { name: 'about', width: 1800, height: 1050, address: 'genhttp.dev/editor/••••••/docs' } },
+  records: { icon: IconDatabase, screen: { name: 'records', width: 1800, height: 1050, address: 'genhttp.dev/editor/••••••/database' } },
+  keys: { icon: IconKey, screen: { name: 'keys', width: 1422, height: 375, address: 'genhttp.dev/editor/••••••/secrets' } },
+  analytics: { icon: IconEye, screen: { name: 'analytics', width: 1800, height: 1050, address: 'genhttp.dev/editor/••••••/analytics' } },
+  domain: { icon: IconGlobe },
+  code: { icon: IconCode, screen: { name: 'code', width: 1800, height: 1050, address: 'genhttp.dev/editor/••••••/code' } },
+  publish: { icon: IconStar, screen: { name: 'source', width: 1800, height: 1050, address: 'genhttp.dev/en/source/kestrel-courts' } },
+};
+
+interface ScreenOf {
+  name: string;
+  single?: boolean;
+  width: number;
+  height: number;
+  address: string;
+  alt: string;
+}
+
+/** The three parts of the page, and the features in each, in the order they are read. */
+const GROUPS: { id: string; features: Key[] }[] = [
+  { id: 'make', features: ['build', 'change'] },
+  { id: 'behind', features: ['drafts', 'history', 'about', 'records', 'keys', 'analytics', 'domain'] },
+  { id: 'yours', features: ['code', 'publish'] },
+];
 
 /**
- * The front page, written for somebody who has an agent and an idea rather
- * than a compiler. The C# is still underneath and the editor still shows it,
- * but nobody has to read it to get something online - so the page talks about
- * the thing they want to exist, the link they get, and the fact that they can
- * keep coming back to change it.
+ * The front page of genhttp.dev - an AI app builder with free hosting, for
+ * both groups - told as what every app gets: building and changing it
+ * briefly, since /build and /ship say that at length, and then what keeps an
+ * app useful once people use it - each in a section of its own, with a
+ * screenshot of the real editor. It was the features page (/platform) until
+ * the owner made it the front page, and /platform leads here now.
+ *
+ * Every picture shows one example app, so the page reads as one app's story
+ * rather than as a catalogue: a tennis club's court booking. They are
+ * screenshots of the real editor and workspace, taken on an installation run
+ * for them; the app, its records, its visitors and its history were made up
+ * for it.
  */
-
-/** The pictures of the three steps, in the order the words are in. */
-const STEP_IMAGES = ['/media/prompt.webp', '/media/app.webp', '/media/editor.webp'];
-
 export function Landing() {
   usePublicPage('/');
 
-  const t = useT();
-  const said = t.landing;
-
+  const said = useT().platform;
   const location = useLocation();
-  const rest = useRef<HTMLDivElement>(null);
-  const agents = useRef<HTMLDivElement>(null);
-  const { origin } = useOrigin();
 
-  /*
-   * Snapping belongs to whatever actually scrolls, and that is the document -
-   * a class on a div inside it does nothing. It is set here and taken away
-   * again, because the editor and the panels want to be scrolled normally.
-   */
+  // a link from another page may name a section; it is there once laid out
   useEffect(() => {
-    document.documentElement.classList.add('snap-page');
+    const id = location.hash.slice(1);
 
-    return () => document.documentElement.classList.remove('snap-page');
-  }, []);
-
-  /*
-   * A link from the header carries a hash, which the router does not act on by
-   * itself. Waited a frame because the sections are revealed as they arrive and
-   * scrolling to one that has not been laid out yet lands short of it.
-   */
-  useEffect(() => {
-    if (location.hash !== '#agents') {
+    if (!id) {
       return;
     }
 
-    const timer = window.setTimeout(() => agents.current?.scrollIntoView({ block: 'start' }), 80);
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 80);
 
     return () => window.clearTimeout(timer);
   }, [location]);
 
+  // anchors, so they lead somewhere without a script - and scroll smoothly where one runs
+  const jump = (id: string) => (event: React.MouseEvent) => {
+    const target = document.getElementById(id);
+
+    if (target) {
+      event.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', `#${id}`);
+    }
+  };
+
+  const titles: Record<string, { title: string; text: string }> = {
+    make: { title: said.makeTitle, text: said.makeText },
+    behind: { title: said.behindTitle, text: said.behindText },
+    yours: { title: said.yoursTitle, text: said.yoursText },
+  };
+
+  let index = 0;
+
   return (
-    <div className="relative w-full">
-      {/* as tall as the page, so it never ends, and travelling with it */}
+    <div className="relative w-full overflow-x-clip">
       <div className="aurora-field" aria-hidden="true">
         <div className="aurora aurora-a" />
         <div className="aurora aurora-b" />
@@ -70,274 +110,247 @@ export function Landing() {
         <div className="aurora-clearing" />
       </div>
 
-      {/*
-        The first screen is one sentence and one button. Everything else is
-        below it, because a visitor who is already convinced should not have to
-        read past the example to find the way in. It reaches up behind the bar,
-        so the colour is the page's and not a panel's.
-      */}
-      <section className="snap-stop relative z-10 -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
-        <div className="relative mx-auto w-full max-w-4xl text-center">
-          <p className="rise text-balance text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
+      {/* ------------------------------------------------------------- the hero */}
+
+      <section className="relative z-10 -mt-[3.75rem] px-5 pb-14 pt-[calc(3.75rem+3.5rem)] text-center sm:px-6 sm:pt-[calc(3.75rem+5rem)]">
+        {/* what the page is found by leads the heading, in the words people search for */}
+        <h1 className="rise mx-auto max-w-5xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
+          <span className="mb-5 block text-balance text-xs font-medium uppercase leading-normal tracking-[0.2em] text-accent-600 dark:text-accent-400">
             {said.eyebrow}
-          </p>
+          </span>
+          <span className="block">{said.title}</span>
+          <span className="block text-accent-700 dark:text-accent-400">{said.titleAccent}</span>
+        </h1>
 
-          <h1
-            className="rise mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
-            style={{ animationDelay: '60ms' }}
-          >
-            {said.headline}
-            {/* a line of its own rather than after a break, so each sentence
-                is balanced on its own lines (see index.css) */}
-            <span className="block text-accent-700 dark:text-accent-400">{said.headlineAccent}</span>
-          </h1>
+        <p
+          className="rise mx-auto mt-6 max-w-2xl text-base leading-relaxed text-grey-800 sm:text-lg dark:text-grey-200"
+          style={{ animationDelay: '120ms' }}
+        >
+          {said.intro}
+        </p>
 
-          <p
-            className="rise mx-auto mt-5 max-w-2xl text-base leading-relaxed text-grey-800 sm:mt-7 sm:text-lg dark:text-grey-200"
-            style={{ animationDelay: '120ms' }}
-          >
-            {said.intro}
-          </p>
-
-          <div
-            className="rise mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:mt-10"
-            style={{ animationDelay: '200ms' }}
-          >
-            <Link to="/build" className="btn-primary px-7 py-3.5 text-base">
-              {said.build}
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => agents.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="btn-ghost px-5 py-3.5 text-base"
-            >
-              {said.ownAgent}
-            </button>
-          </div>
-
-          <p
-            className="rise mt-5 text-sm text-grey-700 dark:text-grey-300"
-            style={{ animationDelay: '260ms' }}
-          >
-            {said.free}
-          </p>
+        <div className="rise mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: '200ms' }}>
+          <Link to="/build" className="btn-primary px-7 py-3.5 text-base">
+            {said.build}
+          </Link>
+          <Link to="/ship" className="btn-ghost px-5 py-3.5 text-base">
+            {said.ownAgent}
+          </Link>
         </div>
 
-        {/* the way down, for anyone who would rather see it first */}
-        <button
-          type="button"
-          onClick={() => rest.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className="rise group absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-xs text-grey-700 hover:text-accent-500 dark:text-grey-300 dark:hover:text-accent-400"
-          style={{ animationDelay: '320ms' }}
-        >
-          {said.seeIt}
-          <IconChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-        </button>
+        <p className="rise mt-5 text-sm text-grey-700 dark:text-grey-300" style={{ animationDelay: '260ms' }}>
+          {said.free}
+        </p>
       </section>
 
-      {/* ------------------------------------------------------------ the video */}
-
-      <div ref={rest} className="snap-stop relative z-10 mx-auto w-full max-w-5xl px-5 pb-24 pt-10">
+      {/* the app's editor, which every section below is a part of */}
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 sm:px-6">
         <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            {said.videoTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.videoText}
-          </p>
-        </Reveal>
-
-        <Reveal delay={120} className="mt-8">
-          <figure className="surface overflow-hidden rounded-xl shadow-lg">
-            <video
-              className="block aspect-[16/10] w-full bg-ink-950"
-              src="/media/build.mp4"
-              poster="/media/build-poster.webp"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="metadata"
-            />
-          </figure>
-          <p className="mt-3 text-center text-xs text-grey-500">
-            {said.videoNote}
-          </p>
-        </Reveal>
-
-        <Reveal delay={200}>
-          <div className="mt-8 flex justify-center">
-            <Link to="/build" className="btn-primary px-6 py-3">
-              {said.tryIt}
-            </Link>
-          </div>
+          <Screen
+            name="overview"
+            width={1800}
+            height={1050}
+            alt={said.heroAlt}
+            address="genhttp.dev/editor/••••••"
+            zoom={said.zoom}
+            close={said.close}
+          />
+          <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-grey-600 dark:text-grey-400">{said.example}</p>
         </Reveal>
       </div>
 
-      {/* ------------------------------------------------------- not a one-shot */}
+      {/* ---------------------------------------------------- every feature, at a glance */}
 
-      <div className="snap-stop relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
+      <nav aria-label={said.contents} className="relative z-10 mx-auto w-full max-w-4xl px-5 pt-16 sm:px-6">
+        <p className="text-center text-xs font-medium uppercase tracking-[0.2em] text-grey-600 dark:text-grey-400">{said.contents}</p>
+        <ul className="mt-5 flex flex-wrap justify-center gap-2">
+          {GROUPS.flatMap((group) => group.features).map((key) => {
+            const Icon = LOOKS[key].icon;
+
+            return (
+              <li key={key}>
+                <a
+                  href={`#${key}`}
+                  onClick={jump(key)}
+                  className="chip rounded-full border border-grey-300 bg-white/70 px-3.5 py-1.5 text-[13px] text-grey-800 backdrop-blur transition-colors hover:border-accent-500/60 hover:text-accent-600 dark:border-ink-800 dark:bg-ink-900/70 dark:text-grey-200 dark:hover:border-accent-400/60 dark:hover:text-accent-400"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {said.features[key].name}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* ------------------------------------------------------------- the parts */}
+
+      {GROUPS.map((group) => (
+        <section key={group.id} id={group.id} aria-labelledby={`${group.id}-title`} className="relative z-10 mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-24 sm:px-6 lg:pt-32">
+          <Reveal>
+            <div className="border-t border-grey-300 pt-8 dark:border-ink-800">
+              <h2 id={`${group.id}-title`} className="text-3xl font-bold tracking-tight sm:text-4xl">
+                {titles[group.id].title}
+              </h2>
+              <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">{titles[group.id].text}</p>
+            </div>
+          </Reveal>
+
+          <div className="mt-14 space-y-20 lg:mt-16 lg:space-y-28">
+            {group.features.map((key) => (
+              <Feature key={key} id={key} said={said} flip={index++ % 2 === 1} />
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* ----------------------------------------------------------------- close */}
+
+      <section className="relative z-10 px-5 pb-24 pt-28 text-center sm:px-6 lg:pt-36">
         <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            {said.oneShotTitle}
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {said.closeTitle} <span className="text-accent-600 dark:text-accent-400">{said.closeAccent}</span>
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.oneShotText}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link to="/build" className="btn-primary px-7 py-3.5 text-base">
+              {said.closeBuild}
+            </Link>
+            <Link to="/ship" className="btn-ghost px-5 py-3.5 text-base">
+              {said.closeShip}
+            </Link>
+          </div>
+          <p className="mx-auto mt-8 max-w-xl text-sm leading-relaxed text-grey-700 dark:text-grey-300">
+            {said.openSource(
+              (text) => (
+                <Link to="/self-hosting" className="text-accent-600 hover:underline dark:text-accent-400">
+                  {text}
+                </Link>
+              ),
+              (text) => (
+                <a href={REPOSITORY} target="_blank" rel="noreferrer" className="text-accent-600 hover:underline dark:text-accent-400">
+                  {text}
+                </a>
+              ),
+            )}
           </p>
         </Reveal>
+      </section>
+    </div>
+  );
+}
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {said.steps.map((step, i) => (
-            <Reveal key={step.title} delay={100 + i * 90}>
-              <figure className="surface flex h-full flex-col overflow-hidden rounded-xl">
-                <img
-                  src={STEP_IMAGES[i]}
-                  alt={step.alt}
-                  loading="lazy"
-                  className="aspect-[16/10] w-full border-b border-grey-300 object-cover object-top dark:border-ink-800"
-                />
-                <figcaption className="p-5">
-                  <div className="flex items-baseline gap-3">
-                    <span className="font-mono text-sm text-accent-500 dark:text-accent-400">{i + 1}</span>
-                    <h3 className="font-semibold">{step.title}</h3>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{step.body}</p>
-                </figcaption>
-              </figure>
-            </Reveal>
+/**
+ * One feature: its name, what it does and three points beside its picture,
+ * which change sides from one section to the next on a wide screen and come
+ * after the words on a narrow one.
+ */
+function Feature({ id, said, flip }: { id: Key; said: Said; flip: boolean }) {
+  const feature = said.features[id];
+  const look = LOOKS[id];
+  const Icon = look.icon;
+
+  const picture = look.screen ? (
+    <Screen
+      {...look.screen}
+      alt={feature.alt}
+      zoom={said.zoom}
+      close={said.close}
+      badge={
+        id === 'drafts' ? (
+          <span className="chip shrink-0 rounded-full bg-amber-500/15 text-amber-600 dark:bg-amber-400/15 dark:text-amber-400">{said.draftBadge}</span>
+        ) : undefined
+      }
+    />
+  ) : (
+    <OwnDomain alt={feature.alt} premium={said.domainOwn} />
+  );
+
+  return (
+    <article id={id} aria-labelledby={`${id}-title`} className="grid scroll-mt-24 items-center gap-8 lg:grid-cols-12 lg:gap-14">
+      {/* min-w-0: an address in a frame is no reason for a column to be wider than the screen */}
+      <Reveal className={`min-w-0 lg:col-span-5 ${flip ? 'lg:order-2' : ''}`}>
+        <span className="chip rounded-full bg-accent-500/10 text-accent-700 dark:bg-accent-400/10 dark:text-accent-400">
+          <Icon className="h-3.5 w-3.5" />
+          {feature.name}
+        </span>
+        <h3 id={`${id}-title`} className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+          {feature.title}
+        </h3>
+        <p className="mt-3 text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">{feature.text}</p>
+        <ul className="mt-5 space-y-2.5">
+          {feature.points.map((point) => (
+            <li key={point} className="flex gap-2.5 text-sm text-grey-800 dark:text-grey-200">
+              <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              {point}
+            </li>
           ))}
+        </ul>
+        {id === 'domain' && (
+          <a
+            href={`mailto:${CONTACT_MAIL}?subject=${encodeURIComponent(said.domainSubject)}`}
+            className="btn mt-6 border border-logo-500/50 text-logo-700 hover:bg-logo-500/10 dark:border-logo-400/40 dark:text-logo-400 dark:hover:bg-logo-400/10"
+          >
+            {said.domainAsk}
+          </a>
+        )}
+      </Reveal>
+
+      <Reveal delay={120} className={`min-w-0 lg:col-span-7 ${flip ? 'lg:order-1' : ''}`}>
+        {picture}
+      </Reveal>
+    </article>
+  );
+}
+
+/**
+ * The domain, drawn rather than shot: what changes is the address in the
+ * bar, which a screenshot of the editor would not show - the app's address
+ * here above, the club's own below, the same page in both.
+ */
+function OwnDomain({ alt, premium }: { alt: string; premium: string }) {
+  return (
+    <figure className="surface p-6 shadow-xl shadow-grey-900/5 sm:p-10 dark:shadow-black/30" role="img" aria-label={alt}>
+      <div aria-hidden="true" className="mx-auto max-w-md space-y-3">
+        <Bar muted>kestrel-courts.genhttp.run</Bar>
+        <div className="flex justify-center text-logo-500 dark:text-logo-400">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M12 4v16M6 14l6 6 6-6" />
+          </svg>
         </div>
+        <Bar premium={premium}>book.kestrellane.club</Bar>
 
-        {/* what the third step sounds like, since it is the part people do not expect */}
-        <Reveal delay={200}>
-          <div className="mx-auto mt-10 max-w-2xl space-y-3">
-            <p className="text-center text-xs uppercase tracking-wide text-grey-500">{said.weekLater}</p>
-            <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-sm bg-accent-500 px-4 py-2.5 text-sm text-white">
-              {said.weekAsk}
-            </div>
-            <div className="surface w-fit max-w-[90%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-grey-800 dark:text-grey-200">
-              {said.weekAnswer}
-            </div>
+        {/* the same page at both: the club's booking, in a few strokes */}
+        <div className="mt-6 border border-grey-200 dark:border-ink-800">
+          <div className="flex items-center gap-2 bg-[#1f5c45] px-3 py-2 text-[11px] font-semibold text-white">
+            <span className="h-3 w-3 rounded-full bg-[#d9e85a]" />
+            Kestrel Lane Tennis Club
           </div>
-        </Reveal>
-
-        {/* the rest of what an app keeps, which the features page shows */}
-        <Reveal delay={260}>
-          <p className="mx-auto mt-10 max-w-xl text-center text-sm leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.more((text) => (
-              <Link to="/platform" className="text-accent-600 hover:underline dark:text-accent-400">
-                {text}
-              </Link>
+          <div className="grid grid-cols-4 gap-1.5 bg-white p-3 dark:bg-ink-900">
+            {Array.from({ length: 12 }, (_, i) => (
+              <span
+                key={i}
+                className={`h-4 ${[1, 2, 5, 7, 8, 11].includes(i) ? 'bg-[#f7e3d9] dark:bg-[#5a3a2e]' : 'border border-dashed border-grey-300 dark:border-ink-700'}`}
+              />
             ))}
-          </p>
-        </Reveal>
-      </div>
-
-      {/* ------------------------------------------------------- your own agent */}
-
-      <div
-        id="agents"
-        ref={agents}
-        className="snap-stop relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-10"
-      >
-        <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            {said.agentsTitle}
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.agentsText}
-          </p>
-        </Reveal>
-
-        <Reveal delay={120}>
-          <div className="mx-auto mt-8 max-w-4xl">
-            <ConnectAgent origin={origin} />
           </div>
-        </Reveal>
-
-        <Reveal delay={300}>
-          <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">
-            {said.thenAsk((text) => <em>{text}</em>)}
-          </p>
-          <p className="mt-2 text-center text-sm text-grey-700 dark:text-grey-300">
-            {said.hostIt((text) => (
-              <Link to="/ship" className="text-accent-600 hover:underline dark:text-accent-400">
-                {text}
-              </Link>
-            ))}
-          </p>
-        </Reveal>
-      </div>
-
-      {/* ----------------------------------------------------------- open source */}
-
-      <div className="snap-stop relative z-10 mx-auto w-full max-w-4xl px-5 pb-24 pt-10">
-        <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">{said.openTitle}</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.openText}
-          </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/self-hosting" className="btn-ghost px-5 py-3">
-              <IconLayers />
-              {said.openCompare}
-            </Link>
-            <a href={REPOSITORY} target="_blank" rel="noreferrer" className="btn-ghost px-5 py-3">
-              <IconGitHub />
-              {said.openCode}
-            </a>
-          </div>
-        </Reveal>
-      </div>
-
-      {/* --------------------------------------------------------------- contact */}
-
-      <div className="snap-stop relative z-10 mx-auto w-full max-w-4xl px-5 pb-16 pt-10">
-        <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">{said.contactTitle}</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            {said.contactText}
-          </p>
-        </Reveal>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Reveal delay={100}>
-            <a
-              href={`mailto:${CONTACT_MAIL}`}
-              className="surface group flex h-full items-start gap-4 rounded-xl p-5 transition hover:border-accent-500/60"
-            >
-              <IconMail className="mt-0.5 h-6 w-6 shrink-0 text-accent-500 dark:text-accent-400" />
-              <span>
-                <span className="block font-semibold">{said.mailTitle}</span>
-                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">{said.mailText}</span>
-                <span className="mt-2 block text-sm text-accent-500 group-hover:underline dark:text-accent-400">
-                  {CONTACT_MAIL}
-                </span>
-              </span>
-            </a>
-          </Reveal>
-
-          <Reveal delay={180}>
-            <a
-              href={DISCORD}
-              target="_blank"
-              rel="noreferrer"
-              className="surface group flex h-full items-start gap-4 rounded-xl p-5 transition hover:border-accent-500/60"
-            >
-              <IconChat className="mt-0.5 h-6 w-6 shrink-0 text-accent-500 dark:text-accent-400" />
-              <span>
-                <span className="block font-semibold">{said.discordTitle}</span>
-                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">{said.discordText}</span>
-                <span className="mt-2 block text-sm text-accent-500 group-hover:underline dark:text-accent-400">
-                  {said.discordLink}
-                </span>
-              </span>
-            </a>
-          </Reveal>
         </div>
       </div>
+    </figure>
+  );
+}
+
+function Bar({ children, muted, premium }: { children: ReactNode; muted?: boolean; premium?: string }) {
+  return (
+    <div
+      className={`flex items-center gap-2.5 border px-3 py-2.5 font-mono text-[13px] sm:text-sm ${
+        muted
+          ? 'border-grey-300 bg-white text-grey-600 dark:border-ink-800 dark:bg-ink-900 dark:text-grey-400'
+          : 'border-logo-500/50 bg-white text-grey-900 dark:border-logo-400/40 dark:bg-ink-900 dark:text-grey-100'
+      }`}
+    >
+      <IconGlobe className={`h-4 w-4 shrink-0 ${muted ? 'text-grey-500' : 'text-logo-500 dark:text-logo-400'}`} />
+      <span className={`min-w-0 flex-1 truncate ${muted ? 'line-through decoration-grey-400/70' : ''}`}>{children}</span>
+      {premium && <span className="chip shrink-0 rounded-full bg-logo-500/10 text-logo-700 dark:bg-logo-400/10 dark:text-logo-400">{premium}</span>}
     </div>
   );
 }

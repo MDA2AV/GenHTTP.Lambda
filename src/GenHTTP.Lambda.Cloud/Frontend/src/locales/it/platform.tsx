@@ -1,7 +1,6 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: 'Funzionalità',
 
   eyebrow: 'Funzionalità',
   title: 'Crearla richiede un minuto.',

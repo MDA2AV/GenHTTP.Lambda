@@ -81,6 +81,10 @@ export const change = {
     secrets: 'Looking at the secrets',
     /** The agent asked for the lambda to connect to other servers, which the operator of the site allows. */
     connectivity: 'Asking to connect to other servers',
+    /** The agent read who visits the app, or - asked to - switched counting visits on. */
+    analytics: 'Looking at the analytics',
+    /** The agent published the app's source code, or looked at whether it is. */
+    source: 'Publishing the source code',
     other: (tool: string) => `Using ${tool}`,
   },
   marks: {

@@ -1,7 +1,6 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: '機能',
 
   eyebrow: '機能',
   title: '作るのは1分。',

@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Creaste una app con Claude Code, Codex o Cursor y solo funciona en tu máquina. Pídele a tu agente que la publique aquí. En unos minutos tendrá un enlace público que cualquiera puede abrir, su propia base de datos y una conexión en vivo con todos los que la tienen abierta, para que la gente juegue, chatee y comparta cosas en ella.',
   facts: ['Gratis', 'Sin registro', 'Sin tarjeta', 'Nada que instalar'],
-  connect: 'Conecta tu agente',
-  seeOthers: 'Mira lo que publicaron otros',
 
   stepsTitle: 'Sube tu app web a internet en tres pasos',
   step: (n) => `Paso ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'No es solo hosting. Base de datos y multijugador incluidos.',
   together:
     'La mayoría de los servicios de hosting le dan a cada visitante su propia copia de la app, y cada uno juega solo: lo que un navegador guarda en localStorage, el siguiente nunca lo ve. Aquí cada app tiene su propia base de datos y una conexión en vivo con todos los que la tienen abierta. Lo que hace una persona lo ven los demás al instante, y lo que publican sigue ahí mañana.',
-  together2:
-    'Sin Supabase ni Firebase en los que registrarte, sin backend que conectar, sin servidor que alquilar. Pídelo como se lo explicarías a un amigo.',
-  kinds: [
-    { name: 'Juegos multijugador', ask: 'Haz que hasta ocho amigos puedan unirse a la misma partida y ver en vivo las jugadas de los demás.' },
-    { name: 'Salas de chat', ask: 'Añade una sala donde todos los que tengan el enlace puedan hablar, y guarda los últimos cien mensajes.' },
-    { name: 'Listas compartidas', ask: 'Convierte la lista del viaje en una que todo el equipo pueda editar a la vez.' },
-    { name: 'Rankings', ask: 'Guarda un ranking con el mejor tiempo de cada uno y muestra el top 10 en la pantalla de inicio.' },
-    { name: 'Pequeñas redes sociales', ask: 'Deja que los invitados de la boda suban fotos a un muro y den like a las de los demás.' },
-  ],
-  quote: (text) => `«${text}»`,
-
-  connectTitle: 'Conecta Claude Code, Codex o Cursor una sola vez',
-  connectText:
-    'Dale a tu agente esta dirección, la de nuestro servidor MCP. A partir de ahí ya sabe publicar aquí, sin clave y sin iniciar sesión.',
   sayLike: 'Después, en tu proyecto, pídele algo como',
   asks: [
     'Publica esta app en GenHTTP Lambda y pásame el enlace.',
     'Haz que los récords se compartan, así todos ven el mismo ranking.',
   ],
-
-  domainChip: 'Cuando despegue',
-  domainTitle: 'Dale un dominio propio',
-  domainText:
-    'La misma app y el mismo enlace de edición, pero en una dirección que es tuya. Más fácil de decir y de recordar, y se ve más profesional cuando la gente empieza a compartirla.',
-  domainSubject: 'Un dominio para mi app',
-  domainAsk: 'Pregúntanos por tu dominio',
 
   questionsTitle: 'Antes de publicar',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -120,40 +97,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'En tu máquina funciona.',
-  closeAccent: 'Que funcione en la de todos.',
   noAgent: '¿No tienes agente? Créala aquí',
-  closeFacts: 'Gratis. Sin registro. Nada que instalar.',
-
-  scene: {
-    label: 'Alguien le pide a un agente que publique una app. La dirección pasa de localhost a un enlace público y empieza a llegar gente.',
-    ask: 'Publica mi juego de trivia para que mis amigos puedan unirse.',
-    live: 'Ya está en línea. Aquí tienes tu enlace.',
-    publishing: 'Publicando…',
-    public: 'Público',
-    onlyYou: 'Solo tú',
-    app: 'Trivia del viernes',
-    playing: (count) => <>{count} jugando</>,
-    you: 'Tú',
-  },
-
-  compareTitle: 'El camino más corto de «funciona» a «pruébalo»',
-  compareText:
-    'Vercel, Cloudflare y Lovable son muy buenas opciones para ejecutar cosas. Pero empiezan con un formulario de registro y, en cuanto tu app necesita compartir algo entre visitantes, añaden otro servicio que configurar. Así se ve si empiezas desde cero.',
-  rows: [
-    'Empezar sin cuenta',
-    'Publicar desde el agente que ya usas',
-    'Base de datos y tiempo real: chat, multijugador, récords',
-    'Lo que cuesta tu primer enlace',
-  ],
-  us: ['Sí', 'Conecta una vez y pide', 'Incluido en cada app', 'Gratis'],
-  rivals: [
-    ['Requiere registro', 'Tras iniciar sesión en sus herramientas', 'Añadir un servicio de base de datos', 'Plan gratuito'],
-    ['Requiere registro', 'Tras iniciar sesión en sus herramientas', 'Posible, con configuración', 'Plan gratuito'],
-    ['Requiere registro', 'Desde su propio editor', 'Con un backend conectado', 'Plan gratuito, créditos limitados'],
-  ],
-  compareNote:
-    'Datos de septiembre de 2026, para alguien sin cuenta en ningún servicio. Los planes y funciones de otros servicios cambian; consulta los detalles con cada uno.',
 
 };

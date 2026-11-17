@@ -77,6 +77,8 @@ export const change: EditorMessages['change'] = {
     records: 'A ler a base de dados',
     secrets: 'A ver as chaves e palavras-passe',
     connectivity: 'A pedir para ligar a outros servidores',
+    analytics: 'Looking at the analytics',
+    source: 'Publishing the source code',
     other: (tool) => `A usar ${tool}`,
   },
   marks: {

@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Anda sudah membuat aplikasi dengan Claude Code, Codex, atau Cursor, tapi baru bisa jalan di komputer Anda sendiri. Minta agen Anda men-deploy-nya di sini. Beberapa menit kemudian, aplikasinya punya link publik untuk siapa saja, database sendiri, dan koneksi live ke semua orang yang sedang membukanya, jadi orang bisa main, chat, dan posting bersama di dalamnya.',
   facts: ['Gratis', 'Tanpa daftar', 'Tanpa kartu kredit', 'Tanpa instalasi'],
-  connect: 'Hubungkan agen Anda',
-  seeOthers: 'Lihat karya orang lain',
 
   stepsTitle: 'Tiga langkah dari localhost ke link publik',
   step: (n) => `Langkah ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Bukan sekadar hosting. Database dan multiplayer sudah termasuk.',
   together:
     'Kebanyakan hosting memberi setiap pengunjung salinan aplikasi sendiri-sendiri, jadi semua orang main sendirian: apa yang disimpan satu browser di localStorage tidak pernah terlihat oleh browser lain. Di sini, setiap aplikasi punya database sendiri dan koneksi live ke semua orang yang sedang membukanya. Apa yang dilakukan satu orang langsung terlihat oleh yang lain, dan apa yang mereka posting masih ada besok.',
-  together2:
-    'Tidak perlu daftar Supabase atau Firebase, tidak perlu menyambungkan backend, tidak perlu sewa server. Minta saja, seperti Anda menjelaskannya ke teman.',
-  kinds: [
-    { name: 'Game multiplayer', ask: 'Buat supaya maksimal delapan teman bisa ikut ronde yang sama dan melihat langkah masing-masing secara live.' },
-    { name: 'Ruang chat', ask: 'Tambahkan ruang chat untuk semua orang yang punya link-nya, dan simpan seratus pesan terakhir.' },
-    { name: 'Daftar bersama', ask: 'Ubah daftar barang bawaan jadi daftar yang bisa diedit seluruh tim sekaligus.' },
-    { name: 'Papan peringkat', ask: 'Buat papan peringkat berisi waktu terbaik tiap orang, dan tampilkan sepuluh besar di layar awal.' },
-    { name: 'Jejaring sosial mini', ask: 'Buat supaya tamu pernikahan bisa posting foto di satu dinding dan saling kasih like.' },
-  ],
-  quote: (text) => `“${text}”`,
-
-  connectTitle: 'Hubungkan Claude Code, Codex, atau Cursor, sekali saja',
-  connectText:
-    'Berikan alamat MCP server kami ke agen Anda. Setelah itu, agen Anda tahu cara men-deploy aplikasi di sini. Tanpa API key, tanpa login.',
   sayLike: 'Lalu, di proyek Anda, tinggal bilang seperti ini',
   asks: [
     'Publikasikan aplikasi ini di GenHTTP Lambda, lalu kirim link-nya ke saya.',
     'Buat skor tertingginya tersimpan bersama, jadi semua orang melihat papan peringkat yang sama.',
   ],
-
-  domainChip: 'Kalau mulai populer',
-  domainTitle: 'Pakai domain sendiri',
-  domainText:
-    'Aplikasi yang sama, link editor yang sama, tapi di alamat milik Anda. Lebih gampang diucapkan, lebih mudah diingat, dan terlihat meyakinkan saat orang mulai membagikannya.',
-  domainSubject: 'Domain untuk aplikasi saya',
-  domainAsk: 'Tanya soal domain',
 
   questionsTitle: 'Sebelum men-deploy',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -124,41 +101,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'Di laptop Anda sudah jalan.',
-  closeAccent: 'Sekarang giliran mereka.',
   noAgent: 'Belum punya agen? Buat di sini',
-  closeFacts: 'Gratis. Tanpa daftar. Tanpa instalasi.',
-
-  scene: {
-    label:
-      'Agen diminta memublikasikan sebuah aplikasi. Alamatnya berubah dari localhost jadi link publik, lalu orang-orang bergabung.',
-    ask: 'Publikasikan game kuis saya supaya teman-teman bisa ikut main.',
-    live: 'Sudah online. Ini link-nya.',
-    publishing: 'Memublikasikan…',
-    public: 'Publik',
-    onlyYou: 'Hanya Anda',
-    app: 'Kuis Jumat malam',
-    playing: (count) => <>{count} pemain</>,
-    you: 'Anda',
-  },
-
-  compareTitle: 'Cara tercepat dari “sudah jalan” ke “coba deh”',
-  compareText:
-    'Vercel, Cloudflare, dan Lovable adalah tempat yang bagus untuk menjalankan aplikasi. Tapi semuanya dimulai dengan formulir pendaftaran. Begitu aplikasi Anda perlu berbagi data antarpengunjung, Anda juga harus menyiapkan layanan kedua. Beginilah perbandingannya kalau Anda mulai dari nol.',
-  rows: [
-    'Mulai tanpa akun',
-    'Publikasikan dari agen yang sudah Anda pakai',
-    'Database dan data live: chat, multiplayer, rekor',
-    'Biaya sampai dapat link pertama',
-  ],
-  us: ['Ya', 'Hubungkan sekali, lalu tinggal minta', 'Sudah ada di setiap aplikasi', 'Gratis'],
-  rivals: [
-    ['Harus daftar', 'Setelah login ke tool-nya', 'Tambah layanan database', 'Paket gratis'],
-    ['Harus daftar', 'Setelah login ke tool-nya', 'Bisa, perlu setup', 'Paket gratis'],
-    ['Harus daftar', 'Dibuat di editornya sendiri', 'Lewat backend yang terhubung', 'Paket gratis, kredit terbatas'],
-  ],
-  compareNote:
-    'Per September 2026, untuk orang yang belum punya akun di mana pun. Paket dan fitur layanan lain bisa berubah, jadi cek langsung ke mereka untuk detailnya.',
 
 };

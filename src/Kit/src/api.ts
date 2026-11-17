@@ -455,11 +455,12 @@ export interface AgentStep {
    * What it did. feature is starting one, update changing its notes or its
    * base, merge making it a version, discard deleting it; data is switching a
    * kind of data on, records reading the database, secrets listing them;
-   * connectivity asking for the lambda to connect to other servers.
+   * connectivity asking for the lambda to connect to other servers;
+   * analytics reading who visits, or switching that on; source publishing the code.
    */
   kind:
     | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
-    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'other';
+    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'analytics' | 'source' | 'other';
   /** The kind of data switched on, for "data": database, secrets or workspace. */
   data?: string | null;
   /** What the agent said, for "say". */
@@ -511,6 +512,10 @@ export interface ChangeResult {
   reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | 'declined' | null;
   /** The agent would not make the change; summary is what it said. */
   declined?: boolean | null;
+  /** It answered a question rather than change anything; summary is the answer. */
+  answered?: boolean | null;
+  /** The settings it changed: database, secrets or workspace switched on, analytics, source, connectivity, discarded. */
+  settings?: string[] | null;
   /** What the agent said at the end, for the owner. */
   summary?: string | null;
   /** In English, for when there are no words of our own for it. */
@@ -570,6 +575,8 @@ export interface ChangeRequest {
   language?: string;
   /** The feature to go on with; left out, the agent starts a new one. */
   feature?: string;
+  /** The conversation so far, oldest first, as the workspace keeps it - for the agent to understand the message by. */
+  history?: { prompt: string; reply?: string | null }[];
 }
 
 /** Whether a change is still waiting or working. */
@@ -1525,7 +1532,7 @@ export const api = {
   /** The text box on /build, and the agent behind it. Whether there is one is in `platform`. */
   builds: {
     start: (prompt: string, model?: string, password?: string) =>
-      request<{ id: string; queued: number }>('/builds', send({ prompt, model, password })),
+      request<{ id: string; queued: number; left?: number | null }>('/builds', send({ prompt, model, password })),
     progress: (id: string) =>
       request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number; seconds: number; limit?: number | null }>(`/builds/${id}`),
   },

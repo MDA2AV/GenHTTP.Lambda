@@ -6,8 +6,6 @@ export const ship: Messages['ship'] = {
   intro:
     'Je hebt een app gebouwd met Claude Code, Codex of Cursor, maar hij draait alleen op je eigen computer. Vraag je agent om hem hier online te zetten. Een paar minuten later heeft hij een openbare link die iedereen kan openen, een eigen database en een live verbinding met iedereen die hem open heeft. Mensen kunnen er dus samen spelen, chatten en posten.',
   facts: ['Gratis', 'Geen account', 'Geen creditcard', 'Niets te installeren'],
-  connect: 'Koppel je agent',
-  seeOthers: 'Bekijk wat anderen bouwden',
 
   stepsTitle: 'Je app online zetten in drie stappen',
   step: (n) => `Stap ${n}`,
@@ -29,32 +27,11 @@ export const ship: Messages['ship'] = {
   togetherTitle: 'Niet alleen hosting. Een database en multiplayer, ingebouwd.',
   together:
     'De meeste hosts geven elke bezoeker een eigen kopie van je app, en iedereen speelt in zijn eentje: wat de ene browser in localStorage bewaart, ziet de volgende nooit. Hier heeft elke app een eigen database en een live verbinding met iedereen die hem open heeft. Doet iemand een zet, dan zien alle anderen die meteen. En wat ze posten, staat er morgen nog.',
-  together2:
-    'Geen Supabase of Firebase waarvoor je je moet aanmelden, geen backend om te koppelen, geen server om te huren. Vraag het gewoon zoals je het aan een vriend zou uitleggen.',
-  kinds: [
-    { name: 'Multiplayergames', ask: 'Laat tot acht vrienden meedoen aan dezelfde ronde en elkaars zetten live zien.' },
-    { name: 'Chatrooms', ask: 'Voeg een chatroom toe waar iedereen met de link kan praten, en bewaar de laatste honderd berichten.' },
-    { name: 'Gedeelde lijsten', ask: 'Maak van de paklijst een lijst die het hele team tegelijk kan bewerken.' },
-    { name: 'Ranglijsten', ask: 'Houd een ranglijst bij met ieders beste tijd en zet de top tien op het startscherm.' },
-    { name: 'Kleine sociale netwerken', ask: "Laat bruiloftsgasten foto's op één prikbord zetten en elkaars foto's liken." },
-  ],
-  quote: (text) => `“${text}”`,
-
-  connectTitle: 'Koppel Claude Code, Codex of Cursor één keer',
-  connectText:
-    'Geef je agent dit adres van onze MCP-server. Vanaf dan weet hij hoe hij hier publiceert, zonder sleutel en zonder inloggen.',
   sayLike: 'Zeg dan in je project iets als',
   asks: [
     'Publiceer deze app op GenHTTP Lambda en stuur me de link.',
     'Zorg dat de highscores gedeeld worden, zodat iedereen dezelfde ranglijst ziet.',
   ],
-
-  domainChip: 'Als het aanslaat',
-  domainTitle: 'Geef hem een eigen domeinnaam',
-  domainText:
-    'Dezelfde app, dezelfde editorlink, maar op een adres dat van jou is. Makkelijker om hardop te zeggen, makkelijker om te onthouden. En het staat een stuk professioneler als mensen hem gaan delen.',
-  domainSubject: 'Een domein voor mijn app',
-  domainAsk: 'Vraag naar een eigen domein',
 
   questionsTitle: 'Voordat je app online gaat',
   questions: (offline, removed, showcase, terms, selfHosting) => [
@@ -123,40 +100,6 @@ export const ship: Messages['ship'] = {
       </>,
     ],
   ],
-
-  closeTitle: 'Het werkt op jouw computer.',
-  closeAccent: 'Nu ook op die van hen.',
   noAgent: 'Geen agent? Bouw het hier',
-  closeFacts: 'Gratis. Geen aanmelding. Niets te installeren.',
-
-  scene: {
-    label: 'Een agent krijgt de vraag om een app te publiceren. Het adres verandert van localhost in een openbare link, en er komen mensen bij.',
-    ask: 'Zet mijn quizspel online, zodat mijn vrienden mee kunnen doen.',
-    live: 'Hij staat live. Hier is je link.',
-    publishing: 'Publiceren…',
-    public: 'Openbaar',
-    onlyYou: 'Alleen jij',
-    app: 'Vrijdagavondquiz',
-    playing: (count) => <>{count} online</>,
-    you: 'Jij',
-  },
-
-  compareTitle: 'De kortste weg van “het werkt” naar “probeer het maar”',
-  compareText:
-    'Vercel, Cloudflare en Lovable zijn prima plekken om dingen te draaien. Maar ze beginnen met een aanmeldformulier. En zodra je app iets moet delen tussen bezoekers, komt er een tweede dienst bij die je moet instellen. Zo ziet het eruit als je vanaf nul begint.',
-  rows: [
-    'Beginnen zonder account',
-    'Publiceren vanuit de agent die je al gebruikt',
-    'Database en live data: chat, multiplayer, records',
-    'Kosten van je eerste link',
-  ],
-  us: ['Ja', 'Eén keer koppelen, dan gewoon vragen', 'Zit in elke app', 'Gratis'],
-  rivals: [
-    ['Account nodig', 'Na inloggen in hun tools', 'Databasedienst toevoegen', 'Gratis plan'],
-    ['Account nodig', 'Na inloggen in hun tools', 'Kan, met wat setup', 'Gratis plan'],
-    ['Account nodig', 'Gebouwd in hun eigen editor', 'Via een gekoppelde backend', 'Gratis plan, beperkte credits'],
-  ],
-  compareNote:
-    'Bijgewerkt in september 2026, voor iemand die nergens een account heeft. Abonnementen en functies van andere diensten veranderen. Kijk bij hen voor de details.',
 
 };

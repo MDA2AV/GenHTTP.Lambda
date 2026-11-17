@@ -89,6 +89,8 @@ export const change: EditorMessages['change'] = {
     records: 'Leest de database',
     secrets: 'Bekijkt de sleutels en wachtwoorden',
     connectivity: 'Vraagt toestemming om met andere servers te verbinden',
+    analytics: 'Looking at the analytics',
+    source: 'Publishing the source code',
     other: (tool) => `Gebruikt ${tool}`,
   },
   marks: {

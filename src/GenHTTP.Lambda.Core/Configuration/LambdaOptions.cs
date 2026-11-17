@@ -274,10 +274,11 @@ public sealed record LambdaOptions
 
     /// <summary>
     /// The page of the installation's site where a visitor has an app built
-    /// - the one with the build box - which the pages every installation
-    /// shares lead to: <c>/build</c> on genhttp.dev, the front page elsewhere.
+    /// - the workspace - which the pages every installation shares lead to:
+    /// <c>/build</c> on both editions, for a host whose site has it elsewhere
+    /// to say so.
     /// </summary>
-    public string StartPage { get; init; } = "/";
+    public string StartPage { get; init; } = "/build";
 
     /// <summary>
     /// Whether the operator may give the installation a name and a logo of

@@ -579,7 +579,7 @@ function Progress({ control, job }: { control: Control; job: ChangeJob }) {
  * saved, which went online, whether it compiles - rather than off what the
  * model said, because a model says it deployed things it never deployed.
  */
-function verdict(job: ChangeJob, active: number | undefined, feature: string | null, said: Words): { tone: Tone; headline: string; notes: string[] } {
+function verdict(job: ChangeJob, active: number | undefined, feature: string | null, said: Words): { tone: Tone; headline: string | null; notes: string[] } {
   const result = job.result;
   const version = result?.version ?? undefined;
 
@@ -613,6 +613,17 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
       headline: said.results.feature(feature),
       notes: [result.preview ? said.results.tryIt : said.results.previewOffline, ...merged, ...cut],
     };
+  }
+
+  // an earlier version put back online, which saves nothing new
+  if (result.ok && version == null && result.online != null) {
+    return { tone: 'good', headline: said.results.online(result.online), notes: cut };
+  }
+
+  // a question answered, or a setting changed: what the agent said is all
+  // there is to say, and it says it in the summary
+  if (result.answered || (result.ok && version == null)) {
+    return { tone: 'answer', headline: null, notes: [] };
   }
 
   if (!result.ok || version == null) {
@@ -686,7 +697,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const live = online != null && lambda.activeVersion === online;
   const deployable = version != null && online == null && result?.compiles !== false && lambda.activeVersion !== version;
   const undoable = live && before != null && before !== online;
-  const retry = !result?.ok || (version == null && !left && !gone);
+  const retry = !result?.answered && (!result?.ok || (version == null && !left && !gone && result.online == null));
 
   return (
     <RunOutcome tone={tone} headline={headline} notes={notes} summary={result?.summary} detail={result?.detail} detailLabel={said.log}>
@@ -855,6 +866,10 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.secrets}</>;
     case 'connectivity':
       return <>{words.connectivity}</>;
+    case 'analytics':
+      return <>{words.analytics}</>;
+    case 'source':
+      return <>{words.source}</>;
     default:
       return <>{words.other(step.tool ?? '')}</>;
   }

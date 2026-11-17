@@ -17,7 +17,6 @@ export const landing: Messages['landing'] = {
   connectTitle: 'Hubungkan agen Anda',
   connectText:
     'Agen pemrograman Anda mendapatkan platform ini sebagai alat: membuat aplikasi, menulis dan memeriksa kodenya, mencoba perubahan di draf dengan salinan data, menjadikannya online, dan membaca lognya.',
-  connectThen: 'Lalu minta sesuatu padanya, misalnya: “Buatkan buku tamu, dengan halaman untuk menyetujui entri.”',
 
   featuresTitle: 'Yang didapat setiap aplikasi',
   features: [

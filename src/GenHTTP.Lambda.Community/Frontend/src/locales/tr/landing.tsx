@@ -17,7 +17,6 @@ export const landing: Messages['landing'] = {
   connectTitle: 'Ajanınızı bağlayın',
   connectText:
     'Kodlama ajanınız platformu araç olarak kullanır: uygulama oluşturur, kodunu yazıp kontrol eder, bir değişikliği verilerin kopyasıyla bir taslakta dener, yayına alır ve günlüklerini okur.',
-  connectThen: 'Sonra ondan bir şey isteyin, örneğin: “Bir ziyaretçi defteri yap, girişleri onaylayabileceğim bir sayfası olsun.”',
 
   featuresTitle: 'Her uygulamanın sahip olduğu her şey',
   features: [

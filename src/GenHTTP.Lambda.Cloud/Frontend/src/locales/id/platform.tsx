@@ -1,7 +1,6 @@
 import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
-  menu: 'Fitur',
 
   eyebrow: 'Fitur',
   title: 'Membuatnya cuma semenit.',
