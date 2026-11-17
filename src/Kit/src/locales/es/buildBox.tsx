@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Mirando lo que ha guardado',
     services: 'Pidiendo usar otros servicios',
   },
-  further: 'Para cambiarla más adelante',
+  further: 'Su enlace de edición',
   keep:
-    'Guarde ese enlace. Es la única forma de volver a entrar y no se puede recuperar, ni siquiera nosotros podemos. Añádalo a sus marcadores antes de cerrar esta pestaña.',
+    'Guarde ese enlace en un lugar seguro. Es la única forma de entrar en su sitio web desde otro dispositivo y no se puede recuperar, ni siquiera nosotros podemos.',
   copyLink: 'Copiar el enlace de edición',
   lifetime: (offline, removed) =>
     `La mantenemos en línea mientras se use: tras ${offline} días sin visitas ni cambios se desconecta, y tras ${removed} días se elimina. Abra el editor para volver a ponerla en línea.`,

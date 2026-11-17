@@ -82,6 +82,9 @@ export function AppChat({
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [merging, setMerging] = useState<Feature | null>(null);
+
+  /** The draft the next message goes to, where the owner chose one; a new one otherwise. */
+  const [target, setTarget] = useState<Feature | null>(null);
   const [forgetting, setForgetting] = useState(false);
 
   const field = useRef<HTMLTextAreaElement>(null);
@@ -266,6 +269,7 @@ export function AppChat({
         password: model === 'opus' ? undefined : password,
         language,
         history,
+        feature: target && features.some((feature) => feature.key === target.key) ? target.key : undefined,
       });
 
       if (state.job) {
@@ -275,6 +279,7 @@ export function AppChat({
       touch(key);
       following_down.current = true;
       setPrompt('');
+      setTarget(null);
       take(state);
       setRound((n) => n + 1);
     } catch (error) {
@@ -306,7 +311,8 @@ export function AppChat({
     try {
       await action();
     } catch (error) {
-      setProblem(error instanceof Error && error.message ? error.message : said.attention.failed);
+      // the platform's refusals are said for developers; what went wrong here is said in the page's words
+      setProblem(error instanceof Error && !(error instanceof ApiError) && error.message ? error.message : said.attention.failed);
     } finally {
       setBusy(false);
       await read();
@@ -319,8 +325,20 @@ export function AppChat({
     active: summary?.lambda.deployedAt ? summary.lambda.activeVersion : null,
     features,
     busy,
-    deploy: (version) => void act(() => api.deploy(key, version)),
+    deploy: (version) =>
+      void act(async () => {
+        const deployed = await api.deploy(key, version);
+
+        if (!deployed.success) {
+          throw new Error(said.attention.failed);
+        }
+      }),
     putOnline: (feature) => setMerging(feature),
+    ask: (text, feature) => {
+      setTarget(feature);
+      setPrompt(text);
+      window.requestAnimationFrame(() => field.current?.focus());
+    },
   };
 
   const again = (turn: Turn) => {
@@ -367,8 +385,9 @@ export function AppChat({
               // the draft the last message left is offered under its answer already
               offered={turns.at(-1)?.result?.feature ?? null}
               busy={busy}
-              onDeploy={() => void act(() => api.deploy(key))}
+              onDeploy={() => hand.deploy()}
               onPutOnline={setMerging}
+              onBringUp={(feature) => hand.ask(said.attention.bringUpAsk, feature)}
               onSaved={read}
             />
           )}
@@ -419,6 +438,15 @@ export function AppChat({
           {problem && (
             <p className="mb-2 flex items-start gap-2 px-1 text-sm text-red-600 dark:text-red-400">
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" /> {problem}
+            </p>
+          )}
+
+          {target && (
+            <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-slate-500">
+              <span className="font-medium text-accent-700 dark:text-accent-400">{said.attention.inDraft(target.name)}</span>
+              <button type="button" onClick={() => setTarget(null)} className="underline hover:text-slate-800 dark:hover:text-slate-200">
+                {said.attention.leaveDraft}
+              </button>
             </p>
           )}
 
@@ -691,6 +719,7 @@ function Attention({
   busy,
   onDeploy,
   onPutOnline,
+  onBringUp,
   onSaved,
 }: {
   privateKey: string;
@@ -701,6 +730,7 @@ function Attention({
   busy: boolean;
   onDeploy: () => void;
   onPutOnline: (feature: Feature) => void;
+  onBringUp: (feature: Feature) => void;
   onSaved: () => Promise<void>;
 }) {
   const said = useT().workspace.attention;
@@ -740,14 +770,20 @@ function Attention({
       )}
 
       {drafts.map((draft) => (
-        <Notice key={draft.key} tone="ready" title={said.draftTitle(draft.name)} text={said.draftText}>
+        <Notice key={draft.key} tone="ready" title={said.draftTitle(draft.name)} text={draft.mergeable ? said.draftText : said.outOfDate}>
           <a href={absoluteAddress(draft.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
             <IconExternal className="h-3.5 w-3.5" />
             {said.tryIt}
           </a>
-          <button type="button" onClick={() => onPutOnline(draft)} disabled={busy || !draft.mergeable} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            {said.putOnline}
-          </button>
+          {draft.mergeable ? (
+            <button type="button" onClick={() => onPutOnline(draft)} disabled={busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+              {said.putOnline}
+            </button>
+          ) : (
+            <button type="button" onClick={() => onBringUp(draft)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+              {said.bringUp}
+            </button>
+          )}
         </Notice>
       ))}
     </div>
@@ -780,8 +816,8 @@ function KeyField({ privateKey, name, enabled, onSaved }: { privateKey: string; 
       await api.secrets.set(privateKey, name, value);
       setValue('');
       await onSaved();
-    } catch (error) {
-      setProblem(error instanceof ApiError ? error.message : said.failed);
+    } catch {
+      setProblem(said.failed);
     } finally {
       setSaving(false);
     }

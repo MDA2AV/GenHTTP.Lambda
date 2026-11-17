@@ -34,10 +34,12 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Was Sie dem Build-Agenten sagen',
     agent: (policy) => (
       <>
-        Was Sie auf der Seite „App bauen“ oder im Bereich „Ändern“ im Editor eines Lambdas in das Eingabefeld tippen,
-        geht an Anthropic PBC in den USA. Anthropic betreibt Claude, das Modell, das die App schreibt. Um eine Änderung
-        vorzunehmen, liest der Agent außerdem das Lambda – seinen Code, die Notizen zu seinen Versionen und sein Log,
-        das seine Requests und seine Ausgaben enthält, aber nicht die IP-Adressen seiner Besucher. Auch was er dabei liest,
+        Was Sie auf der Seite „App bauen“ oder im Bereich „Ändern“ im Editor eines Lambdas eintippen, geht an Anthropic
+        PBC in den USA. Anthropic betreibt Claude, das Modell, das die App schreibt – von der Bauen-Seite zusammen mit
+        den letzten Nachrichten davor und dem, was der Agent geantwortet hat, damit er versteht, was Sie meinen. Um zu
+        antworten oder eine Änderung vorzunehmen, liest der Agent außerdem das Lambda – seinen Code, die Notizen zu
+        seinen Versionen, sein Log, das seine Requests und seine Ausgaben enthält, aber nicht die IP-Adressen seiner
+        Besucher, und, wenn Sie danach fragen, seine Einträge und die Zahlen seiner Besucher. Auch was er dabei liest,
         wird dorthin geschickt. Was Anthropic damit macht, steht in{' '}
         {policy('der Datenschutzerklärung von Anthropic')}. Die USA schützen personenbezogene Daten nicht so wie die EU.
         Ihre Anfrage wird dorthin geschickt, weil das nötig ist, um zu bauen oder zu ändern, was Sie möchten
@@ -46,7 +48,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die Anfrage selbst wird vollständig in das Log des Servers geschrieben, ihre ersten paar hundert Zeichen zusätzlich in das Log des Build-Dienstes; beide haben ebenfalls eine feste Größe. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
+      'Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die Anfrage selbst wird vollständig in das Log des Servers geschrieben, ihre ersten paar hundert Zeichen zusätzlich in das Log des Build-Dienstes; beide haben ebenfalls eine feste Größe. Die Nachrichten davor, die die Bauen-Seite mitschickt, werden nicht aufgezeichnet. Die Bauen-Seite bewahrt die Editor-Links Ihrer Apps und das Gespräch zu jeder im eigenen Speicher Ihres Browsers auf und sonst nirgends: Wir behalten keine Kopie, und wer denselben Browser nutzt, kann sie öffnen. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
 
     lambdasTitle: 'Was ein Lambda tut, entscheidet sein Besitzer',
     lambdas:
@@ -57,7 +59,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookies und Ihr Browser',
     storage:
-      'Es gibt ein einziges Cookie. Es heißt lang, merkt sich die Sprache, die Sie gewählt haben, damit sich Adressen ohne Sprachangabe in dieser Sprache öffnen, und hält ein Jahr. Im Speicher Ihres Browsers liegen außerdem das helle oder dunkle Design, ein paar Einstellungen der Seiten, die Sie nutzen, und bei Administratoren ihr Token. Nichts davon dient dazu, Sie zu verfolgen, und nichts davon geht an andere: Es gibt keine Analyse dieser Website, keine Werbung, und nichts wird von fremden Seiten geladen, nicht einmal Schriftarten. Weil all das nur tut, was Sie selbst wollen, ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).',
+      'Es gibt ein einziges Cookie. Es heißt lang, merkt sich die Sprache, die Sie gewählt haben, damit sich Adressen ohne Sprachangabe in dieser Sprache öffnen, und hält ein Jahr. Im Speicher Ihres Browsers liegen außerdem das helle oder dunkle Design, ein paar Einstellungen der Seiten, die Sie nutzen, die Apps auf der Bauen-Seite mit ihren Editor-Links und Gesprächen und bei Administratoren ihr Token. Nichts davon dient dazu, Sie zu verfolgen, und nichts davon geht an andere: Es gibt keine Analyse dieser Website, keine Werbung, und nichts wird von fremden Seiten geladen, nicht einmal Schriftarten. Weil all das nur tut, was Sie selbst wollen, ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).',
 
     hostingTitle: 'Wo die Daten liegen',
     hosting:

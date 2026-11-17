@@ -1,20 +1,12 @@
 import type { Messages } from '../en';
-import type { ReactNode } from 'react';
 
-/**
- * /build of an installation somebody runs for themselves: the workspace,
- * where its build agent - if it has one - builds an app from a sentence and
- * answers about it afterwards. Plain words, for developers and for whoever
- * they let use it.
- */
 export const build: Messages['build'] = {
-  title: 'Build an app by describing it',
+  title: 'App bauen, indem Sie sie beschreiben',
   intro:
-    'Tell the build agent of this installation what you need. It writes the app, puts it online here and keeps it in your list - to ask about and change later, in the same way.',
-  /** Under the box: the two other ways to an app, each a link around its words. */
-  other: (ship: (text: string) => ReactNode, code: (text: string) => ReactNode) => (
+    'Sagen Sie dem Build-Agenten dieser Installation, was Sie brauchen. Er schreibt die App, stellt sie hier online und führt sie in Ihrer Liste – um später auf dieselbe Weise nachzufragen und sie zu ändern.',
+  other: (ship, create) => (
     <>
-      Or {ship('connect your own agent')}, or {code('write the code yourself')}.
+      Oder {ship('verbinden Sie Ihren eigenen Agenten')} oder {create('schreiben Sie den Code selbst')}.
     </>
   ),
 };

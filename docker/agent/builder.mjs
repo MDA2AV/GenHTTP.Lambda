@@ -1149,6 +1149,9 @@ function settle(job, { wrote, saved, online, compiles, feature, started, setting
   job.result = {
     ok: true,
     ...facts,
+    // a feature it started and wrote nothing into is no draft to try: what
+    // it did was a setting, or putting an earlier version back
+    ...(wrote ? {} : { feature: undefined, featureName: undefined, preview: undefined }),
     reason: cut,
     summary: summary ? clip(summary, 1200) : undefined
   };
@@ -1442,19 +1445,36 @@ function historyOf(history) {
   return turns.length > 0 ? turns : undefined;
 }
 
-/** The body of a request, as JSON, or nothing if it was too large or not JSON. */
+/**
+ * The most a request may come to, in bytes: a message of 2000 characters and
+ * the conversation before it, which the server cuts to 8000 more - three
+ * bytes a character in Japanese or Korean - with room to spare.
+ */
+const LONGEST_BODY = 64 * 1024;
+
+/**
+ * The body of a request, as JSON, or nothing if it was too large or not JSON.
+ * Collected as bytes and decoded once, since a character may be split
+ * between two chunks.
+ */
 const read = req => new Promise(resolve => {
-  let body = '';
+  const chunks = [];
+  let size = 0;
 
   req.on('data', d => {
-    body += d;
-    // a message of 2000 characters and the conversation before it, which
-    // the server has cut to fit well inside this
-    if (body.length > 24000) { req.destroy(); resolve(null); }
+    size += d.length;
+
+    if (size > LONGEST_BODY) {
+      req.destroy();
+      resolve(null);
+      return;
+    }
+
+    chunks.push(d);
   });
 
   req.on('end', () => {
-    try { resolve(JSON.parse(body)); } catch { resolve(null); }
+    try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { resolve(null); }
   });
 });
 

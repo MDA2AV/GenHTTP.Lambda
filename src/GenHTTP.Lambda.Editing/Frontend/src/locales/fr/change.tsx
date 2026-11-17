@@ -91,8 +91,8 @@ export const change: EditorMessages['change'] = {
     records: 'Lecture de la base de données',
     secrets: 'Coup d’œil aux secrets',
     connectivity: 'Demande de connexion à d’autres serveurs',
-    analytics: 'Looking at the analytics',
-    source: 'Publishing the source code',
+    analytics: 'Consultation de l’audience',
+    source: 'Publication du code source',
     other: (tool) => `Utilisation de ${tool}`,
   },
   marks: {

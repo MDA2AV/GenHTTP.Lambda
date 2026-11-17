@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Przeglądanie tego, co zostało zapisane',
     services: 'Prośba o korzystanie z innych usług',
   },
-  further: 'Aby zmienić ją później',
+  further: 'Twój link do edytora',
   keep:
-    'Zachowaj ten link. To jedyna droga powrotu i nikt go nie odzyska – my też nie. Dodaj go do zakładek, zanim zamkniesz tę kartę.',
+    'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej strony z innego urządzenia i nikt go nie odzyska – my też nie.',
   copyLink: 'Kopiuj link do edytora',
   lifetime: (offline, removed) =>
     `Utrzymujemy ją online, dopóki jest używana: po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Otwórz edytor, aby znów ją uruchomić.`,

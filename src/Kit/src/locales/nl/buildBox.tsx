@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Bekijken wat er is opgeslagen',
     services: 'Vraagt om andere diensten te mogen gebruiken',
   },
-  further: 'Om hem later aan te passen',
+  further: 'Je editorlink',
   keep:
-    'Bewaar deze link goed. Het is de enige weg terug, en hij is niet te herstellen, ook niet door ons. Zet hem in je bladwijzers voordat je dit tabblad sluit.',
+    'Bewaar deze link op een veilige plek. Het is de enige weg naar je website vanaf een ander apparaat, en hij is niet te herstellen, ook niet door ons.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
     `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor om hem weer online te zetten.`,

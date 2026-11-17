@@ -2,11 +2,11 @@ import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
 
-  eyebrow: 'Özellikler',
+  eyebrow: 'Uygulama yapan yapay zekâ, hosting dahil',
   title: 'Yapmak bir dakika sürer.',
   titleAccent: 'Gerisi hazır geliyor.',
   intro:
-    'Burada yapılan bir uygulama, bir yapay zekânın yazdığı koddan fazlasıdır. Onu işe yarar kılan şey sonrasında gelir: kayıtları, sürümleri ve ne işe yaradığı, onu kimlerin ziyaret ettiğini bilmek, tutunduğunda kendi alan adı - hepsi, uygulama yapıldığında aldığınız linkle açılan tek bir yerde.',
+    'Uygulamanızı yapay zekâ ajanımıza - ya da Claude Code, Codex veya Cursor’a - anlatın; dakikalar içinde yayında olsun, sizin için barındırılsın, paylaşabileceğiniz bir linki olsun. Onu işe yarar kılan her şey hazır: kayıtları, sürümleri ve ne işe yaradığı, onu kimlerin ziyaret ettiği ve tutunduğunda kendi alan adı.',
   build: 'Bir şey yapın',
   ownAgent: 'Kendi ajanınızı kullanın',
   free: 'Ücretsiz. Üyelik yok, kredi kartı yok.',
@@ -18,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Yapın, değiştirin',
   makeText: 'İhtiyacınızı söyleyin ve söylemeye devam edin. İkisi için de kimsenin kod yazması ya da okuması gerekmez.',
 
-  behindTitle: 'Her uygulamanın arkasında',
+  behindTitle: 'Her uygulama için veritabanı, sürüm geçmişi ve analitik',
   behindText:
     'Bir uygulamayı işe yarar kılan, kodunun çevresindeki her şeydir - yalnızca kod okuyabilenler için değil, uygulamayı yapan herkes için orada.',
 
@@ -35,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Değiştir',
-      title: 'İsteyerek değiştirin',
-      text: 'Her uygulamanın, yapıldığında aldığınız özel linkle açılan bir editörü vardır. Neyin farklı olması gerektiğini söyleyin; ajan uygulamayı değiştirir ve ne zaman bakacağınızı bildirir - ya da linki bir sonraki değişiklikle birlikte kendi ajanınıza verin.',
-      points: ['Bir cümle yeterli', 'Çalışınca kendiliğinden yayına girer ya da önce denemeniz için saklanır', 'İstemediğiniz sürece kod görünmez'],
-      alt: 'Değiştir bölümü: kulüp antrenörün derslerini istedi ve ajan değişikliğin denemeye hazır olduğunu söylüyor',
+      title: 'Sorun, değiştirin',
+      text: 'Uygulamalarınız oluşturma sayfasında listelenir, her birinin bir sohbeti vardır. Nasıl gittiğini sorun - kimler ziyaret etti, insanlar ne girdi, bir şey ters mi gidiyor - ya da neyin farklı olması gerektiğini söyleyin; ajan yanıtlar ya da değiştirir. Ya da editör linkini kendi ajanınıza verin.',
+      points: ['Ziyaretçiler, kayıtlar ve hatalar hakkında yanıtlar', 'Çalışınca kendiliğinden yayına girer ya da önce denemeniz için taslak olarak saklanır', 'İstemediğiniz sürece kod görünmez'],
+      alt: 'Oluşturma sayfası: kulüp bu hafta kaç kortun ayrıldığını sordu, ajan yanıtladı ve antrenörün dersleri bir taslakta denemeye hazır',
     },
     drafts: {
       name: 'Taslaklar',

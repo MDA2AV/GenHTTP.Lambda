@@ -28,6 +28,7 @@ export const platform = {
   makeTitle: 'Build it, change it',
   makeText: 'Say what you need, and keep saying it. Nobody has to write or read code for either.',
 
+  /** A heading that carries what the front page is found by: a database, version history and analytics - in the words people search for them with in the language. */
   behindTitle: 'A database, version history and analytics for every app',
   behindText:
     'What keeps an app useful is everything around its code - there for whoever made it, not only for whoever can read code.',
@@ -50,9 +51,9 @@ export const platform = {
     change: {
       name: 'Change',
       title: 'Ask about it, change it',
-      text: 'Your apps stay in your workspace on the build page. Ask how one is doing - who visited, what people entered, whether something is wrong - or say what should be different, and the agent answers or changes it. Or hand its editor link to your own agent.',
+      text: 'Your apps stay listed on the build page, each with a conversation. Ask how one is doing - who visited, what people entered, whether something is wrong - or say what should be different, and the agent answers or changes it. Or hand its editor link to your own agent.',
       points: ['Answers about visitors, records and errors', 'Online by itself once it works, or kept as a draft to try first', 'The code stays out of sight unless you want it'],
-      alt: 'The workspace: the club asked how many courts were booked this week, the agent answered, and the coach’s lessons are ready to try in a draft',
+      alt: 'The build page: the club asked how many courts were booked this week, the agent answered, and the coach’s lessons are ready to try in a draft',
     },
     drafts: {
       name: 'Drafts',

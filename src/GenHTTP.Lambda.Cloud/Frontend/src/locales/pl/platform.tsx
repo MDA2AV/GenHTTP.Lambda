@@ -2,11 +2,11 @@ import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
 
-  eyebrow: 'Funkcje',
+  eyebrow: 'Kreator aplikacji AI z hostingiem',
   title: 'Zbudowanie zajmuje minutę.',
   titleAccent: 'Cała reszta jest już w środku.',
   intro:
-    'Aplikacja zrobiona tutaj to coś więcej niż kod napisany przez AI. O jej przydatności decyduje to, co jest potem: jej wpisy, wersje i opis tego, do czego służy, wiedza o tym, kto ją odwiedza, oraz własna domena, gdy aplikacja się przyjmie – wszystko w jednym miejscu, otwieranym linkiem, który dostajesz po jej zbudowaniu.',
+    'Opisz aplikację naszemu agentowi AI – albo Claude Code, Codex czy Cursorowi – a po kilku minutach jest online, z hostingiem i linkiem do udostępnienia. Wszystko, co sprawia, że jest przydatna, już tam jest: jej wpisy, wersje i opis tego, do czego służy, wiedza o tym, kto ją odwiedza, oraz własna domena, gdy aplikacja się przyjmie.',
   build: 'Zbuduj coś',
   ownAgent: 'Użyj własnego agenta',
   free: 'Za darmo. Bez rejestracji, bez karty kredytowej.',
@@ -18,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Zbuduj ją i zmieniaj',
   makeText: 'Powiedz, czego potrzebujesz, i mów to dalej. Nikt nie musi do tego pisać ani czytać kodu.',
 
-  behindTitle: 'W każdej aplikacji',
+  behindTitle: 'Baza danych, historia wersji i analityka w każdej aplikacji',
   behindText:
     'O przydatności aplikacji decyduje wszystko, co jest wokół jej kodu – to jest dla każdego, kto ją zrobił, nie tylko dla tych, którzy czytają kod.',
 
@@ -35,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Zmień',
-      title: 'Zmieniaj ją, prosząc o to',
-      text: 'Każda aplikacja ma edytor, otwierany prywatnym linkiem, który dostajesz po jej zbudowaniu. Powiedz, co ma być inaczej, a agent zmieni aplikację i da znać, kiedy zajrzeć – albo daj link własnemu agentowi razem z kolejną zmianą.',
-      points: ['Wystarczy jedno zdanie', 'Udostępniana sama, gdy działa, albo zatrzymana, żebyś najpierw ją wypróbował', 'Kod pozostaje poza zasięgiem wzroku, dopóki go nie zechcesz'],
-      alt: 'Sekcja Zmień: klub poprosił o lekcje trenera, a agent mówi, że zmiana jest gotowa do wypróbowania',
+      title: 'Pytaj o nią, zmieniaj ją',
+      text: 'Twoje aplikacje zostają na liście na stronie budowania, każda z własną rozmową. Zapytaj, jak jej idzie – kto ją odwiedził, co wpisali ludzie, czy coś jest nie tak – albo powiedz, co ma być inaczej, a agent odpowie lub wprowadzi zmianę. Możesz też podać link do jej edytora własnemu agentowi.',
+      points: ['Odpowiedzi o odwiedzających, wpisach i błędach', 'Udostępniana sama, gdy działa, albo zatrzymana jako szkic, żebyś najpierw ją wypróbował', 'Kod pozostaje poza zasięgiem wzroku, dopóki go nie zechcesz'],
+      alt: 'Strona budowania: klub zapytał, ile kortów zarezerwowano w tym tygodniu, agent odpowiedział, a lekcje trenera czekają na wypróbowanie w szkicu',
     },
     drafts: {
       name: 'Szkice',

@@ -61,6 +61,14 @@ export const workspace = {
     putOnlineTitle: 'Put this draft online?',
     putOnlineText: 'Everybody who opens your app sees the change from now on. What was online before stays in its history, to go back to.',
     putOnlineFailed: 'The draft does not work yet, so it was not put online. Ask the agent to fix it.',
+    /** A draft begun before the app last changed, which has to take that change in before it can go online. */
+    outOfDate: 'Out of date: your app changed after this draft began.',
+    bringUp: 'Bring it up to date',
+    /** What the button above puts into the box, for the agent to do in that draft. */
+    bringUpAsk: 'Bring this draft up to date with what is online now, and keep its changes.',
+    /** Above the box, while the next message goes to a draft rather than a new one. */
+    inDraft: (name: string) => `In the draft “${name}”`,
+    leaveDraft: 'Start a new draft instead',
     blockedTitle: 'This app was blocked by whoever runs this site',
     blockedText: 'It is offline, and nothing about it can be changed. Open the editor to read why.',
     failed: 'That did not work. Try again in a moment.',

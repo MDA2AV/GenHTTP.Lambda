@@ -2,11 +2,11 @@ import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
 
-  eyebrow: 'Funcionalidades',
+  eyebrow: 'Apps com IA e alojamento grátis',
   title: 'Construir demora um minuto.',
   titleAccent: 'O resto já vem incluído.',
   intro:
-    'Uma app feita aqui é mais do que o código que uma IA escreveu. O que a torna útil vem depois: os seus registos, as suas versões e para que serve, saber quem a visita, um domínio próprio quando ganha adeptos - tudo num só sítio, aberto com o link que recebes quando ela é criada.',
+    'Descreve uma app ao nosso agente de IA - ou ao Claude Code, Codex ou Cursor - e ela fica online em minutos, alojada por nós, com um link para partilhar. Tudo o que a torna útil já lá está: os seus registos, as suas versões e para que serve, quem a visita, e um domínio próprio quando ganha adeptos.',
   build: 'Construir algo',
   ownAgent: 'Usar o teu próprio agente',
   free: 'Grátis. Sem registo, sem cartão de crédito.',
@@ -18,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Constrói, altera',
   makeText: 'Diz o que precisas, e continua a dizê-lo. Ninguém tem de escrever nem de ler código para isso.',
 
-  behindTitle: 'Por trás de cada app',
+  behindTitle: 'Base de dados, histórico de versões e análise de visitas para cada app',
   behindText:
     'O que torna uma app útil é tudo o que existe à volta do seu código - ao dispor de quem a fez, e não só de quem sabe ler código.',
 
@@ -35,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Alterar',
-      title: 'Altera-a só a pedir',
-      text: 'Cada app tem um editor, aberto com o link de edição que recebeste quando ela foi criada. Diz o que deve ser diferente, e o agente altera a app e avisa-te quando podes ver - ou entrega o link ao teu próprio agente com a alteração seguinte.',
-      points: ['Uma frase chega', 'Fica online sozinha quando funciona, ou guardada para a experimentares primeiro', 'O código fica fora da vista, a menos que o queiras ver'],
-      alt: 'A secção Alterar: o clube pediu as aulas do treinador, e o agente diz que a alteração está pronta a experimentar',
+      title: 'Pergunta sobre ela, altera-a',
+      text: 'As tuas apps ficam na lista da página de criação, cada uma com uma conversa. Pergunta como vai uma - quem a visitou, o que as pessoas introduziram, se algo está errado - ou diz o que deve ser diferente, e o agente responde ou altera-a. Ou entrega o link de edição ao teu próprio agente.',
+      points: ['Respostas sobre visitantes, registos e erros', 'Fica online sozinha quando funciona, ou guardada como rascunho para a experimentares primeiro', 'O código fica fora da vista, a menos que o queiras ver'],
+      alt: 'A página de criação: o clube perguntou quantos campos foram reservados esta semana, o agente respondeu, e as aulas do treinador estão prontas a experimentar num rascunho',
     },
     drafts: {
       name: 'Rascunhos',

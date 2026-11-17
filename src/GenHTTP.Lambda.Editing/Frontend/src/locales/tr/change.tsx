@@ -86,8 +86,8 @@ export const change: EditorMessages['change'] = {
     records: 'Veritabanı okunuyor',
     secrets: 'Anahtarlara ve parolalara bakılıyor',
     connectivity: 'Başka sunuculara bağlanma izni isteniyor',
-    analytics: 'Looking at the analytics',
-    source: 'Publishing the source code',
+    analytics: 'Analitiğe bakılıyor',
+    source: 'Kaynak kod yayınlanıyor',
     other: (tool) => `${tool} aracı kullanılıyor`,
   },
   marks: {

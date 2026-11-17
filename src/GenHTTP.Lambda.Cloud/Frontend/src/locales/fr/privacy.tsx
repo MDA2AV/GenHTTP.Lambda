@@ -37,10 +37,12 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Ce que vous demandez à l’agent de création',
     agent: (policy) => (
       <>
-        Ce que vous tapez dans le champ de création, ou dans la section Modifier de l’éditeur d’une lambda, est envoyé à
-        Anthropic PBC, aux États-Unis, qui exploite Claude, le modèle qui écrit l’app. Pour faire une modification,
-        l’agent lit aussi la lambda (son code, les notes de ses versions et son journal, qui contient ses requêtes et ce
-        qu’elle a affiché, mais pas les adresses IP de ses visiteurs), et ce qu’il lit y est lui aussi envoyé. Ce
+        Ce que vous tapez sur la page de création, ou dans la section Modifier de l’éditeur d’une lambda, est envoyé à
+        Anthropic PBC, aux États-Unis, qui exploite Claude, le modèle qui écrit l’app – depuis la page de création avec
+        les quelques messages précédents et les réponses de l’agent, afin qu’il comprenne ce que vous voulez dire. Pour
+        répondre ou faire une modification, l’agent lit aussi la lambda (son code, les notes de ses versions, son
+        journal, qui contient ses requêtes et ce qu’elle a affiché, mais pas les adresses IP de ses visiteurs, et, si
+        vous les demandez, ses entrées et le nombre de ses visiteurs), et ce qu’il lit y est lui aussi envoyé. Ce
         qu’Anthropic en fait relève de {policy('sa propre politique de confidentialité')}. Les États-Unis ne protègent
         pas les données personnelles comme l’UE. Votre demande y est envoyée parce qu’elle est nécessaire pour créer ou
         modifier ce que vous voulez (art. 6.1.b et art. 49.1.b du RGPD) : n’y mettez donc rien que vous ne
@@ -48,7 +50,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit. La demande elle-même est écrite en entier dans le journal du serveur, et ses premières centaines de caractères dans celui du service de création ; tous deux ont eux aussi une taille fixe. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
+      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit. La demande elle-même est écrite en entier dans le journal du serveur, et ses premières centaines de caractères dans celui du service de création ; tous deux ont eux aussi une taille fixe. Les messages précédents, que la page de création envoie avec elle, ne sont pas enregistrés. La page de création conserve les liens d’édition de vos apps et la conversation de chacune dans le stockage propre à votre navigateur, et nulle part ailleurs : nous n’en gardons aucune copie, et quiconque utilise le même navigateur peut les ouvrir. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
 
     lambdasTitle: 'Ce que fait une lambda dépend de son propriétaire',
     lambdas:
@@ -59,7 +61,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookies et navigateur',
     storage:
-      'Il y a un seul cookie, appelé lang. Il retient la langue que vous avez choisie, pour que les adresses qui n’en indiquent pas s’ouvrent dans cette langue, et il dure un an. Le stockage local du navigateur retient le mode clair ou sombre, quelques réglages des pages que vous utilisez et, pour les administrateurs, leur jeton. Rien de tout cela ne sert à vous suivre et rien n’est transmis à qui que ce soit : pas de mesure d’audience de ce site, pas de publicité, et rien n’est chargé depuis d’autres sites, pas même les polices. Comme tout cela sert uniquement à ce que vous avez demandé, aucun consentement n’est nécessaire (§ 25, al. 2, n° 2 de la loi allemande TDDDG).',
+      'Il y a un seul cookie, appelé lang. Il retient la langue que vous avez choisie, pour que les adresses qui n’en indiquent pas s’ouvrent dans cette langue, et il dure un an. Le stockage local du navigateur retient le mode clair ou sombre, quelques réglages des pages que vous utilisez, les apps listées sur la page de création avec leurs liens d’édition et leurs conversations et, pour les administrateurs, leur jeton. Rien de tout cela ne sert à vous suivre et rien n’est transmis à qui que ce soit : pas de mesure d’audience de ce site, pas de publicité, et rien n’est chargé depuis d’autres sites, pas même les polices. Comme tout cela sert uniquement à ce que vous avez demandé, aucun consentement n’est nécessaire (§ 25, al. 2, n° 2 de la loi allemande TDDDG).',
 
     hostingTitle: 'Où tout cela est stocké',
     hosting:

@@ -83,8 +83,8 @@ export const change: EditorMessages['change'] = {
     records: '데이터베이스 읽기',
     secrets: '키와 비밀번호 살펴보기',
     connectivity: '다른 서버에 연결하도록 요청하고 있어요',
-    analytics: 'Looking at the analytics',
-    source: 'Publishing the source code',
+    analytics: '분석을 확인하고 있어요',
+    source: '코드를 공개하고 있어요',
     other: (tool) => `${tool} 사용`,
   },
   marks: {

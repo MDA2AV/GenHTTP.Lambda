@@ -1,58 +1,51 @@
 import type { Messages } from '../en';
-import type { ReactNode } from 'react';
 
-/**
- * /ship of an installation somebody runs for themselves: how to connect an
- * agent of one's own over MCP and have it build and publish apps here - a
- * guide in three steps, for developers, selling nothing.
- */
 export const ship: Messages['ship'] = {
-  eyebrow: 'Connect your agent',
-  title: 'Publish from the agent you already use.',
+  eyebrow: 'エージェントを接続',
+  title: 'いつものエージェントから公開できます。',
   intro:
-    'Claude Code, Codex, Cursor or any agent that speaks MCP gets this installation as tools: it builds an app, tries a change in a draft, puts it online and reads its logs. Every app answers at an address of its own, with its own database.',
-  stepsTitle: 'Three steps to an app online',
-  step: (n: number) => `Step ${n}`,
+    'Claude Code、Codex、Cursor、またはMCPに対応したエージェントなら、この環境をツールとして使えます。アプリを作り、変更を下書きで試し、公開し、ログを読むところまで任せられます。どのアプリも専用のアドレスで動き、専用のデータベースを持ちます。',
+  stepsTitle: 'アプリを公開するまでの3ステップ',
+  step: (n) => `ステップ${n}`,
   steps: [
     {
-      title: 'Connect once',
-      body: 'Add the address of this installation’s MCP server to your agent. It needs no key: whoever holds an app’s editor key can change that app, and nothing else.',
+      title: '最初に一度だけ接続',
+      body: 'この環境のMCPサーバーのアドレスを、お使いのエージェントに追加します。キーは不要です。アプリの編集用キーを持っている人は、そのアプリだけを変更できます。',
     },
     {
-      title: 'Ask it to build or publish',
-      body: 'Describe a new app, or ask it to publish the one in your project. It writes the code, checks that it compiles and puts it online.',
+      title: '作成または公開を頼む',
+      body: '新しいアプリの内容を伝えるか、プロジェクトにあるアプリの公開を頼みます。エージェントがコードを書き、コンパイルできることを確かめて、公開します。',
     },
     {
-      title: 'Keep the editor link',
-      body: 'You get the app’s address and its editor link. The address is for everybody; the editor link is how you - or your agent - change the app later.',
+      title: '編集用リンクを保管',
+      body: 'アプリのアドレスと編集用リンクが届きます。アドレスは誰でも使えます。編集用リンクは、あなた（またはあなたのエージェント）があとでアプリを変更するための入口です。',
     },
   ],
-  sayLike: 'Then say something like',
-  asks: ['Build a guestbook, with a page where I approve the entries.', 'Publish this app here and send me the link.'],
-  /** The way to the workspace on /build, for whoever has no agent of their own. */
-  noAgent: 'No agent? Use the build agent',
+  sayLike: 'そのあと、たとえばこう伝えます',
+  asks: ['ゲストブックを作って。投稿を承認するページも付けて。', 'このアプリをここで公開して、リンクを送って。'],
+  noAgent: 'エージェントがない場合は、ビルドエージェントを使う',
 
-  questionsTitle: 'Good to know',
-  questions: (code: (text: string) => ReactNode): [string, ReactNode][] => [
+  questionsTitle: '知っておくと便利なこと',
+  questions: (create) => [
     [
-      'Which agents can connect?',
-      'Any agent that can add a remote MCP server over HTTP: Claude Code, Claude, Codex, Cursor, VS Code and others, at the address above.',
+      'どのエージェントなら接続できますか？',
+      'HTTPでリモートMCPサーバーを追加できるエージェントなら使えます。Claude Code、Claude、Codex、Cursor、VS Codeなどが、上のアドレスで接続できます。',
     ],
     [
-      'How do I change an app later?',
-      'Give your agent the app’s editor link with the next change, or open the link yourself: the editor shows its versions, code, records and logs. A change is tried in a draft, with a copy of the data, before it goes online.',
+      'あとからアプリを変更するには？',
+      '次の変更のときに、アプリの編集用リンクをエージェントに渡すか、ご自身でリンクを開いてください。エディターでは、バージョン、コード、記録、ログを確認できます。変更は、データのコピーを使った下書きで試してから公開されます。',
     ],
     [
-      'Can I work on an app with git?',
-      'Yes. Every app is a git repository: clone it from its editor, push a commit to main to save a version, or push a branch to start a draft with a preview of its own.',
+      'gitでアプリを扱えますか？',
+      'はい。どのアプリもgitリポジトリです。エディターからクローンし、mainにコミットをプッシュするとバージョンが保存され、ブランチをプッシュすると専用のプレビュー付きの下書きが始まります。',
     ],
     [
-      'Where do API keys and passwords go?',
-      'Not into the code. The agent reads them by name, and you enter the values in the editor, where nobody reads them back - not the agent either.',
+      'APIキーやパスワードはどこに入れますか？',
+      'コードには入れません。エージェントは名前でそれを読み取り、値はエディターで入力します。入力した値は、エージェントも含めて誰も読み返せません。',
     ],
     [
-      'Can I write an app without an agent?',
-      <>Yes: {code('write the code yourself')}, starting from one of the demos. An app is a C# GenHTTP handler, compiled on this server.</>,
+      'エージェントなしでアプリを書けますか？',
+      <>はい。デモのひとつを出発点にして、{create('自分でコードを書く')}ことができます。アプリはC#のGenHTTPハンドラーで、このサーバー上でコンパイルされます。</>,
     ],
   ],
 };

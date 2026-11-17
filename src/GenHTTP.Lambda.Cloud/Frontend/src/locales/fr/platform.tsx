@@ -2,11 +2,11 @@ import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
 
-  eyebrow: 'Fonctionnalités',
+  eyebrow: 'Créateur d’apps IA, hébergement compris',
   title: 'La création prend une minute.',
   titleAccent: 'Le reste est déjà intégré.',
   intro:
-    'Une app créée ici, ce n’est pas seulement le code écrit par une IA. Ce qui la rend utile vient après : ses entrées, ses versions et son objectif, savoir qui la visite, un domaine à elle quand elle prend son essor – le tout au même endroit, ouvert avec le lien que vous recevez à sa création.',
+    'Décrivez une app à notre agent IA – ou à Claude Code, Codex ou Cursor – et elle est en ligne en quelques minutes, hébergée pour vous, avec un lien à partager. Tout ce qui la rend utile est déjà là : ses entrées, ses versions et son objectif, ses visiteurs, et un domaine à elle quand elle prend son essor.',
   build: 'Créer quelque chose',
   ownAgent: 'Utiliser votre propre agent',
   free: 'Gratuit. Sans inscription, sans carte bancaire.',
@@ -18,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'La créer, la modifier',
   makeText: 'Dites ce dont vous avez besoin, et continuez à le dire. Personne n’a besoin d’écrire ni de lire du code pour cela.',
 
-  behindTitle: 'Derrière chaque app',
+  behindTitle: 'Une base de données, l’historique des versions et l’audience de chaque app',
   behindText:
     'Ce qui rend une app utile, c’est tout ce qui entoure son code – là pour celui qui l’a créée, pas seulement pour celui qui sait lire du code.',
 
@@ -35,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Modifier',
-      title: 'Modifiez-la en demandant',
-      text: 'Chaque app a un éditeur, ouvert avec le lien d’édition reçu à sa création. Dites ce qui doit changer : l’agent modifie l’app et vous prévient quand regarder. Ou donnez le lien à votre propre agent avec la prochaine modification.',
-      points: ['Une phrase suffit', 'En ligne automatiquement dès que ça marche, ou gardée pour que vous l’essayiez d’abord', 'Le code reste caché, sauf si vous le voulez'],
-      alt: 'La section Modifier : le club a demandé les cours du coach, et l’agent indique que la modification est prête à être essayée',
+      title: 'Posez des questions, modifiez-la',
+      text: 'Vos apps restent listées sur la page de création, chacune avec sa conversation. Demandez où elle en est – qui l’a visitée, ce que les gens ont saisi, si quelque chose ne va pas – ou dites ce qui doit changer, et l’agent répond ou la modifie. Ou donnez son lien d’édition à votre propre agent.',
+      points: ['Des réponses sur les visiteurs, les entrées et les erreurs', 'En ligne automatiquement dès que ça marche, ou gardée comme brouillon pour que vous l’essayiez d’abord', 'Le code reste caché, sauf si vous le voulez'],
+      alt: 'La page de création : le club a demandé combien de courts étaient réservés cette semaine, l’agent a répondu, et les cours du coach sont prêts à être essayés dans un brouillon',
     },
     drafts: {
       name: 'Brouillons',

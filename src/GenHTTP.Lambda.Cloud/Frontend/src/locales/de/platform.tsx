@@ -2,11 +2,11 @@ import type { Messages } from '../en';
 
 export const platform: Messages['platform'] = {
 
-  eyebrow: 'Funktionen',
+  eyebrow: 'KI-App-Builder, Hosting inklusive',
   title: 'Gebaut ist sie in einer Minute.',
   titleAccent: 'Alles andere ist schon eingebaut.',
   intro:
-    'Eine App von hier ist mehr als der Code, den eine KI geschrieben hat. Nützlich bleibt sie durch das, was danach kommt: ihre Einträge, ihre Versionen und ihr Zweck, das Wissen, wer sie besucht, und eine eigene Domain, sobald sie ankommt – alles an einem Ort, geöffnet mit dem Link, den Sie beim Erstellen bekommen.',
+    'Beschreiben Sie unserem KI-Agenten eine App – oder Claude Code, Codex oder Cursor –, und sie ist in Minuten online, für Sie gehostet, mit einem Link zum Teilen. Alles, was sie nützlich hält, ist schon da: ihre Einträge, ihre Versionen und ihr Zweck, wer sie besucht, und eine eigene Domain, sobald sie ankommt.',
   build: 'Etwas bauen',
   ownAgent: 'Eigenen Agenten nutzen',
   free: 'Kostenlos. Ohne Anmeldung, ohne Kreditkarte.',
@@ -18,7 +18,7 @@ export const platform: Messages['platform'] = {
   makeTitle: 'Bauen und ändern',
   makeText: 'Sagen Sie, was Sie brauchen, und sagen Sie es immer wieder. Dafür muss niemand Code schreiben oder lesen.',
 
-  behindTitle: 'In jeder App',
+  behindTitle: 'Eine Datenbank, Versionsverlauf und Analyse für jede App',
   behindText:
     'Nützlich macht eine App alles rund um ihren Code – für alle da, die sie gemacht haben, nicht nur für Menschen, die Code lesen können.',
 
@@ -35,10 +35,10 @@ export const platform: Messages['platform'] = {
     },
     change: {
       name: 'Ändern',
-      title: 'Ändern auf Zuruf',
-      text: 'Jede App hat einen Editor, der sich mit dem privaten Link öffnet, den Sie beim Bauen bekommen haben. Sagen Sie, was anders sein soll, und der Agent ändert die App und meldet sich, wenn Sie nachsehen können – oder geben Sie den Link mit der nächsten Änderung an Ihren eigenen Agenten.',
-      points: ['Ein Satz genügt', 'Von selbst online, sobald es funktioniert, oder zum Ausprobieren aufgehoben', 'Der Code bleibt außer Sicht, solange Sie ihn nicht sehen wollen'],
-      alt: 'Der Bereich Ändern: Der Verein hat nach den Trainerstunden gefragt, und der Agent meldet, dass die Änderung zum Ausprobieren bereit ist',
+      title: 'Fragen und ändern',
+      text: 'Ihre Apps bleiben auf der Bauen-Seite aufgelistet, jede mit einem Gespräch. Fragen Sie, wie es einer App geht – wer sie besucht hat, was Leute eingegeben haben, ob etwas nicht stimmt –, oder sagen Sie, was anders sein soll, und der Agent antwortet oder ändert sie. Oder geben Sie ihren Editor-Link an Ihren eigenen Agenten.',
+      points: ['Antworten zu Besuchern, Einträgen und Fehlern', 'Von selbst online, sobald es funktioniert, oder als Entwurf zum Ausprobieren aufgehoben', 'Der Code bleibt außer Sicht, solange Sie ihn nicht sehen wollen'],
+      alt: 'Die Bauen-Seite: Der Verein hat gefragt, wie viele Plätze diese Woche gebucht waren, der Agent hat geantwortet, und die Trainerstunden sind in einem Entwurf zum Ausprobieren bereit',
     },
     drafts: {
       name: 'Entwürfe',

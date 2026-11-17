@@ -32,7 +32,7 @@ export const ship = {
   noAgent: 'No agent? Use the build agent',
 
   questionsTitle: 'Good to know',
-  questions: (code: (text: string) => ReactNode): [string, ReactNode][] => [
+  questions: (create: (text: string) => ReactNode): [string, ReactNode][] => [
     [
       'Which agents can connect?',
       'Any agent that can add a remote MCP server over HTTP: Claude Code, Claude, Codex, Cursor, VS Code and others, at the address above.',
@@ -51,7 +51,7 @@ export const ship = {
     ],
     [
       'Can I write an app without an agent?',
-      <>Yes: {code('write the code yourself')}, starting from one of the demos. An app is a C# GenHTTP handler, compiled on this server.</>,
+      <>Yes: {create('write the code yourself')}, starting from one of the demos. An app is a C# GenHTTP handler, compiled on this server.</>,
     ],
   ],
 };

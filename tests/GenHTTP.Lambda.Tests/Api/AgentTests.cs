@@ -252,6 +252,21 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task ABuildSaysHowManyAreLeftToday()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, perDay: 3);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, build.StatusCode);
+
+        var started = await build.GetContentAsync<BuildStarted>();
+
+        Assert.AreEqual(2, started.Left, "the workspace shows what is left before any app is known");
+    }
+
+    [TestMethod]
     public async Task AChangeNeedsToSayWhat()
     {
         await using var agent = FakeAgent.Start();
@@ -485,6 +500,34 @@ public sealed class AgentTests
         Assert.IsFalse(sent.Any(turn => turn!["reply"]?.GetValue<string>() == "Nothing was asked"), "a turn that asked nothing is left out");
 
         Assert.AreEqual("And last month?", agent.Received.Single()["prompt"]!.GetValue<string>(), "the message is the message");
+    }
+
+    /// <summary>
+    /// The runner takes a body of a bounded size. A message in Japanese with
+    /// the conversation before it, every letter escaped as six characters,
+    /// came to several times what it was, and the runner dropped it.
+    /// </summary>
+    [TestMethod]
+    public async Task AConversationInAnyLanguageFitsWhatTheRunnerTakes()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var history = Enumerable.Range(0, 8).Select(_ => new ConversationTurn(new string('あ', 600), new string('い', 1000))).ToList();
+
+        using var started = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest(new string('う', 2000), History: history));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, started.StatusCode);
+
+        var body = agent.Bodies.Single();
+        var text = System.Text.Encoding.UTF8.GetString(body);
+
+        Assert.IsLessThan(64 * 1024, body.Length, "what the runner takes, in bytes (LONGEST_BODY in builder.mjs)");
+        Assert.DoesNotContain("\\u3042", text, "the words travel as they are, not as escapes");
+        Assert.Contains(new string('う', 2000), text);
     }
 
     [TestMethod]

@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Sieht sich an, was sie gespeichert hat',
     services: 'Bittet darum, andere Dienste zu nutzen',
   },
-  further: 'Um sie später zu ändern',
+  further: 'Ihr Editor-Link',
   keep:
-    'Heben Sie diesen Link gut auf. Er ist der einzige Weg zurück, und niemand kann ihn wiederherstellen – auch wir nicht. Setzen Sie ein Lesezeichen, bevor Sie den Tab schließen.',
+    'Heben Sie diesen Link gut auf. Er ist der einzige Weg zu Ihrer Website von einem anderen Gerät aus, und niemand kann ihn wiederherstellen – auch wir nicht.',
   copyLink: 'Editor-Link kopieren',
   lifetime: (offline, removed) =>
     `Wir halten sie online, solange sie genutzt wird: Nach ${offline} Tagen ohne Besuche oder Änderungen wird sie offline genommen, nach ${removed} Tagen gelöscht. Im Editor können Sie sie wieder online stellen.`,

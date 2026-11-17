@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.Encodings.Web;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Api.Content;
@@ -29,6 +30,21 @@ namespace GenHTTP.Lambda.Services.Building;
 public sealed class AgentClient : IDisposable
 {
     private static readonly JsonSerializerOptions Format = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// How a job is written for the runner: the words as they are, rather
+    /// than every letter outside ASCII as six characters of an escape.
+    /// </summary>
+    /// <remarks>
+    /// The runner takes a body of a bounded size, and a request in Japanese
+    /// with the conversation before it came to several times that once
+    /// escaped, and was dropped. Nothing here is put into a page, so there is
+    /// nothing for the escaping to protect.
+    /// </remarks>
+    private static readonly JsonSerializerOptions Sent = new(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     private readonly HttpClient? _client;
 
@@ -231,7 +247,7 @@ public sealed class AgentClient : IDisposable
 
         try
         {
-            using var response = await client.PostAsJsonAsync("build", job);
+            using var response = await client.PostAsJsonAsync("build", job, Sent);
 
             if (!response.IsSuccessStatusCode)
             {

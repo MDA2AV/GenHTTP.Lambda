@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Kaydedilenlere bakılıyor',
     services: 'Başka hizmetleri kullanma izni isteniyor',
   },
-  further: 'Daha sonra değiştirmek için',
+  further: 'Editör linkiniz',
   keep:
-    'Bu linki saklayın. Uygulamanıza geri dönmenin tek yolu bu ve kaybolursa biz de kurtaramayız. Sekmeyi kapatmadan önce yer imlerine ekleyin.',
+    'Bu linki güvenli bir yerde saklayın. Web sitenize başka bir cihazdan girmenin tek yolu bu ve kaybolursa biz de kurtaramayız.',
   copyLink: 'Editör linkini kopyala',
   lifetime: (offline, removed) =>
     `Kullanıldığı sürece yayında tutarız: ${offline} gün boyunca ziyaret veya değişiklik olmazsa yayından kaldırılır, ${removed} gün sonra da silinir. Yeniden yayına almak için editörü açın.`,

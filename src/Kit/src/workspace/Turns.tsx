@@ -199,6 +199,8 @@ export interface AppHand {
   busy: boolean;
   deploy: (version?: number) => void;
   putOnline: (feature: Feature) => void;
+  /** Puts a message into the box, for the agent to do in a draft. */
+  ask: (text: string, feature: Feature) => void;
 }
 
 /**
@@ -311,9 +313,16 @@ export function ChangeAnswer({ turn, following, app, onAgain }: { turn: Turn; fo
           </a>
         )}
 
-        {draft && result?.compiles !== false && (
+        {draft && result?.compiles !== false && draft.mergeable && (
           <button type="button" onClick={() => app.putOnline(draft)} disabled={app.busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             {said.attention.putOnline}
+          </button>
+        )}
+
+        {/* begun before the app last changed: it takes that change in first, which is the agent's to do */}
+        {draft && !draft.mergeable && (
+          <button type="button" onClick={() => app.ask(said.attention.bringUpAsk, draft)} title={said.attention.outOfDate} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+            {said.attention.bringUp}
           </button>
         )}
 

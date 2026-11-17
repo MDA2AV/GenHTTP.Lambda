@@ -1,58 +1,51 @@
 import type { Messages } from '../en';
-import type { ReactNode } from 'react';
 
-/**
- * /ship of an installation somebody runs for themselves: how to connect an
- * agent of one's own over MCP and have it build and publish apps here - a
- * guide in three steps, for developers, selling nothing.
- */
 export const ship: Messages['ship'] = {
-  eyebrow: 'Connect your agent',
-  title: 'Publish from the agent you already use.',
+  eyebrow: 'Collega il tuo agente',
+  title: 'Pubblica dall’agente che usi già.',
   intro:
-    'Claude Code, Codex, Cursor or any agent that speaks MCP gets this installation as tools: it builds an app, tries a change in a draft, puts it online and reads its logs. Every app answers at an address of its own, with its own database.',
-  stepsTitle: 'Three steps to an app online',
-  step: (n: number) => `Step ${n}`,
+    'Claude Code, Codex, Cursor o qualsiasi agente che parla MCP ottiene questa installazione come strumenti: crea un’app, prova una modifica in una bozza, la mette online e ne legge i log. Ogni app risponde a un indirizzo suo, con un database suo.',
+  stepsTitle: 'Tre passi per un’app online',
+  step: (n) => `Passo ${n}`,
   steps: [
     {
-      title: 'Connect once',
-      body: 'Add the address of this installation’s MCP server to your agent. It needs no key: whoever holds an app’s editor key can change that app, and nothing else.',
+      title: 'Collega una volta sola',
+      body: 'Aggiungi al tuo agente l’indirizzo del server MCP di questa installazione. Non serve nessuna chiave: chi ha la chiave di modifica di un’app può modificare quell’app, e nient’altro.',
     },
     {
-      title: 'Ask it to build or publish',
-      body: 'Describe a new app, or ask it to publish the one in your project. It writes the code, checks that it compiles and puts it online.',
+      title: 'Chiedigli di creare o pubblicare',
+      body: 'Descrivi una nuova app, o chiedigli di pubblicare quella del tuo progetto. Scrive il codice, controlla che compili e la mette online.',
     },
     {
-      title: 'Keep the editor link',
-      body: 'You get the app’s address and its editor link. The address is for everybody; the editor link is how you - or your agent - change the app later.',
+      title: 'Conserva il link di modifica',
+      body: 'Ricevi l’indirizzo dell’app e il suo link di modifica. L’indirizzo è per tutti; il link di modifica è il modo in cui tu - o il tuo agente - modifichi l’app in seguito.',
     },
   ],
-  sayLike: 'Then say something like',
-  asks: ['Build a guestbook, with a page where I approve the entries.', 'Publish this app here and send me the link.'],
-  /** The way to the workspace on /build, for whoever has no agent of their own. */
-  noAgent: 'No agent? Use the build agent',
+  sayLike: 'Poi scrivi qualcosa come',
+  asks: ['Crea un libro degli ospiti, con una pagina in cui approvo i messaggi.', 'Pubblica qui questa app e mandami il link.'],
+  noAgent: 'Non hai un agente? Usa l’agente di creazione',
 
-  questionsTitle: 'Good to know',
-  questions: (code: (text: string) => ReactNode): [string, ReactNode][] => [
+  questionsTitle: 'Da sapere',
+  questions: (create) => [
     [
-      'Which agents can connect?',
-      'Any agent that can add a remote MCP server over HTTP: Claude Code, Claude, Codex, Cursor, VS Code and others, at the address above.',
+      'Quali agenti possono collegarsi?',
+      'Qualsiasi agente che sappia aggiungere un server MCP remoto via HTTP: Claude Code, Claude, Codex, Cursor, VS Code e altri, all’indirizzo qui sopra.',
     ],
     [
-      'How do I change an app later?',
-      'Give your agent the app’s editor link with the next change, or open the link yourself: the editor shows its versions, code, records and logs. A change is tried in a draft, with a copy of the data, before it goes online.',
+      'Come modifico un’app in seguito?',
+      'Dai al tuo agente il link di modifica dell’app con la modifica successiva, oppure apri tu il link: l’editor mostra le sue versioni, il codice, le voci e i log. Una modifica viene provata in una bozza, con una copia dei dati, prima di andare online.',
     ],
     [
-      'Can I work on an app with git?',
-      'Yes. Every app is a git repository: clone it from its editor, push a commit to main to save a version, or push a branch to start a draft with a preview of its own.',
+      'Posso lavorare su un’app con git?',
+      'Sì. Ogni app è un repository git: clonala dal suo editor, fai push di un commit su main per salvare una versione, oppure fai push di un branch per avviare una bozza con un’anteprima tutta sua.',
     ],
     [
-      'Where do API keys and passwords go?',
-      'Not into the code. The agent reads them by name, and you enter the values in the editor, where nobody reads them back - not the agent either.',
+      'Dove vanno le chiavi API e le password?',
+      'Non nel codice. L’agente le legge per nome, e i valori li inserisci tu nell’editor, dove nessuno li rilegge - nemmeno l’agente.',
     ],
     [
-      'Can I write an app without an agent?',
-      <>Yes: {code('write the code yourself')}, starting from one of the demos. An app is a C# GenHTTP handler, compiled on this server.</>,
+      'Posso scrivere un’app senza un agente?',
+      <>Sì: {create('scrivi il codice da te')}, partendo da una delle demo. Un’app è un handler GenHTTP in C#, compilato su questo server.</>,
     ],
   ],
 };

@@ -39,9 +39,9 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Melihat yang sudah disimpannya',
     services: 'Meminta izin untuk menggunakan layanan lain',
   },
-  further: 'Untuk mengubahnya nanti',
+  further: 'Link editor Anda',
   keep:
-    'Simpan baik-baik. Ini satu-satunya cara untuk masuk lagi, dan tidak bisa dipulihkan. Kami pun tidak bisa. Bookmark dulu sebelum menutup tab ini.',
+    'Simpan link itu di tempat yang aman. Itu satu-satunya cara untuk masuk ke website Anda dari perangkat lain, dan tidak bisa dipulihkan. Kami pun tidak bisa.',
   copyLink: 'Salin link editor',
   lifetime: (offline, removed) =>
     `Kami menjaganya tetap online selama masih dipakai: setelah ${offline} hari tanpa kunjungan atau perubahan, website dimatikan, dan setelah ${removed} hari dihapus. Buka editor untuk menyalakannya lagi.`,

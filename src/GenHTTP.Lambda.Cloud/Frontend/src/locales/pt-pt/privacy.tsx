@@ -34,18 +34,20 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'O que pedes ao agente de criação',
     agent: (policy) => (
       <>
-        O que escreves na caixa de criação, ou na secção Alterar do editor de uma lambda, é enviado à Anthropic PBC, nos
-        Estados Unidos, a empresa por trás do Claude, o modelo que escreve a app. Para fazer uma alteração, o agente
-        também lê a lambda (o código, as notas das versões e o log, que contém os pedidos e o que a lambda escreveu na
-        consola, mas não os endereços IP dos visitantes), e o que lê também é enviado para lá. O que a Anthropic faz com
-        isso rege-se pela {policy('sua própria política de privacidade')}. Os Estados Unidos não protegem os dados
-        pessoais da mesma forma que a UE. O teu pedido é enviado para lá porque é necessário para criar ou alterar o que
-        pediste (art. 6.º, n.º 1, alínea b), e art. 49.º, n.º 1, alínea b), do RGPD), por isso não ponhas nele nada que
-        não queiras partilhar.
+        O que escreves na página de criação, ou na secção Alterar do editor de uma lambda, é enviado à Anthropic PBC, nos
+        Estados Unidos, a empresa por trás do Claude, o modelo que escreve a app - a partir da página de criação, juntamente
+        com as últimas mensagens anteriores e com o que o agente respondeu, para que perceba o que queres dizer. Para
+        responder ou fazer uma alteração, o agente também lê a lambda (o código, as notas das versões, o log, que contém os
+        pedidos e o que a lambda escreveu na consola, mas não os endereços IP dos visitantes, e, quando perguntas por eles,
+        os registos e as contagens dos visitantes), e o que lê também é enviado para lá. O que a Anthropic faz com isso
+        rege-se pela {policy('sua própria política de privacidade')}. Os Estados Unidos não protegem os dados pessoais da
+        mesma forma que a UE. O teu pedido é enviado para lá porque é necessário para criar ou alterar o que pediste (art.
+        6.º, n.º 1, alínea b), e art. 49.º, n.º 1, alínea b), do RGPD), por isso não ponhas nele nada que não queiras
+        partilhar.
       </>
     ),
     agentKept:
-      'O agente guarda o teu pedido, muitas vezes por outras palavras, como nota da versão que escreve. O pedido em si é registado na íntegra no log do servidor, e as primeiras centenas de caracteres no log do serviço de criação; ambos têm também um tamanho fixo. Se usares o teu próprio agente, como o Claude ou o Claude Code, o que lhe disseres vai para o fornecedor desse agente, e não para nós: só recebemos o código e as notas que ele envia para cá.',
+      'O agente guarda o teu pedido, muitas vezes por outras palavras, como nota da versão que escreve. O pedido em si é registado na íntegra no log do servidor, e as primeiras centenas de caracteres no log do serviço de criação; ambos têm também um tamanho fixo. As mensagens anteriores, que a página de criação envia juntamente, não são registadas. A página de criação guarda os links de edição das tuas apps e a conversa sobre cada uma no armazenamento do teu próprio browser, e em mais lado nenhum: não guardamos cópia, e quem usar o mesmo browser pode abri-los. Se usares o teu próprio agente, como o Claude ou o Claude Code, o que lhe disseres vai para o fornecedor desse agente, e não para nós: só recebemos o código e as notas que ele envia para cá.',
 
     lambdasTitle: 'Quem decide o que uma lambda faz é o dono dela',
     lambdas:
@@ -56,7 +58,7 @@ export const privacy: Messages['privacy'] = {
 
     storageTitle: 'Cookies e o teu browser',
     storage:
-      'Há um único cookie, chamado lang. Guarda o idioma que escolheste, para que os endereços que não indicam idioma abram nesse idioma, e dura um ano. O armazenamento do próprio browser guarda o modo claro ou escuro, algumas definições das páginas que usas e, no caso dos administradores, o respetivo token. Nada disto é usado para te seguir, e nada vai para mais ninguém: não há ferramentas de análise deste site, nem publicidade, e nada é carregado de outros sites, nem sequer os tipos de letra. Como tudo isto só serve para fazer o que pediste, não é necessário consentimento (§ 25(2), n.º 2, da lei alemã TDDDG).',
+      'Há um único cookie, chamado lang. Guarda o idioma que escolheste, para que os endereços que não indicam idioma abram nesse idioma, e dura um ano. O armazenamento do próprio browser guarda o modo claro ou escuro, algumas definições das páginas que usas, as apps listadas na página de criação com os respetivos links de edição e conversas e, no caso dos administradores, o respetivo token. Nada disto é usado para te seguir, e nada vai para mais ninguém: não há ferramentas de análise deste site, nem publicidade, e nada é carregado de outros sites, nem sequer os tipos de letra. Como tudo isto só serve para fazer o que pediste, não é necessário consentimento (§ 25(2), n.º 2, da lei alemã TDDDG).',
 
     hostingTitle: 'Onde fica guardado',
     hosting:

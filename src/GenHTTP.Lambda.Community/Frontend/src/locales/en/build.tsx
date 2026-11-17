@@ -11,9 +11,9 @@ export const build = {
   intro:
     'Tell the build agent of this installation what you need. It writes the app, puts it online here and keeps it in your list - to ask about and change later, in the same way.',
   /** Under the box: the two other ways to an app, each a link around its words. */
-  other: (ship: (text: string) => ReactNode, code: (text: string) => ReactNode) => (
+  other: (ship: (text: string) => ReactNode, create: (text: string) => ReactNode) => (
     <>
-      Or {ship('connect your own agent')}, or {code('write the code yourself')}.
+      Or {ship('connect your own agent')}, or {create('write the code yourself')}.
     </>
   ),
 };
