@@ -374,10 +374,13 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
                                                  new IntegrationDetail("Connections", $"{PoolSize} at most per lambda and draft")
                                              ]);
 
-    public string Guide(GuideContext context) =>
-        """
-        - Here: PostgreSQL, a schema of the lambda's own, reached as a role that reaches nothing else. Names fold to lower case, as unquoted names do there - map a property to a column of another name with HasColumnName("due_date"). A draft's copy holds the tables, views and sequences, not functions, triggers or types of your own. Past the data's room (see limits), the lambda's next connections only read.
-        """;
+    /// <remarks>
+    /// As short as SQLite's: it counts against the guide's room, and what an
+    /// operator needs to know beyond what changes an agent's code is in
+    /// <c>docs/postgresql.md</c>.
+    /// </remarks>
+    public string Guide(GuideContext context)
+        => "- Here: PostgreSQL. Names fold to lower case; a draft copies tables, sequences and views only; past the data's room (see limits) it only reads.";
 
     #endregion
 

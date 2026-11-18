@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
@@ -62,6 +63,57 @@ public sealed class PostgreSqlTests
         Assert.AreEqual("PostgreSQL", listed[0].Name);
         Assert.IsFalse(listed[0].Default, "chosen by the host");
         Assert.IsFalse(listed.SelectMany(i => i.Details).Any(d => d.Value.Contains("Password", StringComparison.OrdinalIgnoreCase)), "never what grants access");
+
+        var guide = await Guide.ReadAsync(fixture);
+
+        Assert.Contains("Here: PostgreSQL", Guide.Section(guide, "database"), "what the integration adds to its section");
+        Assert.IsLessThan(24_000, Encoding.UTF8.GetByteCount(guide), "within the guide's room, as on SQLite");
+    }
+
+    /// <summary>
+    /// PostgreSQL cannot hold a schema to a size, so a lambda past its room
+    /// is handed connections that only read: it keeps serving what it has,
+    /// starts as before, and writes nothing more - not even a delete, which
+    /// the docs say.
+    /// </summary>
+    [TestMethod]
+    public async Task ADatabasePastItsRoomOnlyReads()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { Sandbox = o.Sandbox with { DataBytes = 512 * 1024 } }, database.Integration);
+
+        var lambda = await fixture.CreateLambdaAsync("full");
+
+        await NeutralNotes.SaveAsync(fixture, lambda.PrivateKey);
+
+        await NeutralNotes.ServedAsync(fixture, "/lambda/full/add?text=first");
+
+        // a megabyte of what does not compress, in one connection opened while there was room
+        var id = fixture.Meta.GetId(lambda.PrivateKey);
+
+        await database.QueryAsync($"""
+            INSERT INTO lambda_{id}.notes (id, text, created)
+            SELECT md5(n::text), string_agg(md5(n::text || m::text), ''), '2026-01-01T00:00:00Z'
+            FROM generate_series(1, 512) n, generate_series(1, 64) m GROUP BY n
+            """);
+
+        // reading what the database holds measures it again
+        using (var store = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/data/database"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, store.StatusCode);
+        }
+
+        using (var refused = await fixture.GetAsync("/lambda/full/add?text=second"))
+        {
+            Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "past its room, it writes nothing more");
+        }
+
+        Assert.AreEqual("513", await NeutralNotes.ServedAsync(fixture, "/lambda/full/count"), "and reads what it has");
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        Assert.AreEqual("513", await NeutralNotes.ServedAsync(fixture, "/lambda/full/count"), "a migration that has nothing to write starts as before");
     }
 
     [TestMethod]

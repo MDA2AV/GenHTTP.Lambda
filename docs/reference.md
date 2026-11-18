@@ -794,7 +794,10 @@ role is first used, and kept nowhere. Each lambda and draft has a pool of its
 own (10 connections by default), closed after a minute unused. PostgreSQL
 cannot hold a schema to a size, so the room governs rather than enforces: a
 connection opened while the database is past its room only reads
-(`default_transaction_read_only`), which code could switch back. A feature's
+(`default_transaction_read_only`), which code could switch back - and which
+refuses a delete as well, so a lambda past its room stays there until it is
+given more room or its database is switched off, and a migration that has to
+write fails as it starts. A feature's
 copy is made by the lambda's role in one transaction that sees the source at
 one moment: its sequences, its tables with what they declare of themselves
 (`LIKE … INCLUDING ALL`), their rows, the foreign keys between them and its

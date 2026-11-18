@@ -126,7 +126,12 @@ that waits on it. Keep it close.
   files together. PostgreSQL cannot hold a schema to a size, so it governs
   rather than enforces: once a database is past its room, the app's next
   connections only read, and writes fail with *cannot execute … in a
-  read-only transaction*. Code could switch that back.
+  read-only transaction*. Code could switch that back. Unlike on SQLite, that
+  includes deleting: an app past its room cannot delete its way back under
+  it, and a migration that has to write fails as it starts. Give it more room
+  - another tier, or the tier's limit in the panel - or switch its database
+  off, which deletes it. Its size is measured every few seconds, so a single
+  connection may write past the room before that.
 - **A draft's copy** holds the tables with their indexes, constraints and
   identities, their rows, the sequences, the foreign keys between them and
   the views - not functions, triggers or types an app made itself. The guide

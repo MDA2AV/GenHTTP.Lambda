@@ -989,10 +989,12 @@ public static class CodeGuard
             "CreateInstance", "CreateDelegate", "DynamicInvoke", "TypeDescriptor");
 
         // the connection Database.GetConnection() hands out is the only one: these
-        // would make another, point one at another file, or load native code into it
+        // would make another, point one at another file or database - which
+        // ChangeDatabase does on a server, as the lambda's own role - or load
+        // native code into it
         Add("use Database.GetConnection() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
             "SqliteFactory", "DbProviderFactories", "DbProviderFactory", "DbDataSource", "CreateDataSource", "LoadExtension",
-            "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString");
+            "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString", "ChangeDatabase");
 
         // dynamic binds members at runtime, by the type an object turns out to
         // have - which is everything this guard reads the code for, skipped
