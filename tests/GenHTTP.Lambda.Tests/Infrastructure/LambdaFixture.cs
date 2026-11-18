@@ -93,6 +93,14 @@ internal sealed class LambdaFixture : IAsyncDisposable
         => Platform.Services.GetRequiredService<DemoSeeder>().SeedAsync();
 
     /// <summary>
+    /// Compiles the lambdas of the tiers kept warm, which the application
+    /// does in the background at startup and a test has to ask for so it can
+    /// wait for it.
+    /// </summary>
+    public ValueTask WarmUpAsync()
+        => Platform.Services.GetRequiredService<LambdaWarmup>().WarmUpAsync();
+
+    /// <summary>
     /// Puts a lambda into the demo tier, the way only the seeder would.
     /// </summary>
     public async ValueTask MakeDemoAsync(string publicKey)

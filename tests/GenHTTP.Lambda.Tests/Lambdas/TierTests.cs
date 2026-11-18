@@ -43,6 +43,7 @@ public sealed class TierTests
         Assert.IsFalse(sandbox.OwnDomain);
         Assert.IsFalse(sandbox.Connectivity);
         Assert.IsTrue(sandbox.Blockable);
+        Assert.IsFalse(sandbox.WarmedUp, "compiled on its first request");
 
         var production = fixture.Limits.PolicyOf(LambdaTier.Production);
 
@@ -53,6 +54,7 @@ public sealed class TierTests
         Assert.IsTrue(production.OwnDomain);
         Assert.IsTrue(production.Connectivity, "as the premium tier did");
         Assert.IsTrue(production.Showcased);
+        Assert.IsTrue(production.WarmedUp, "compiled as the server starts");
 
         var system = fixture.Limits.PolicyOf(LambdaTier.System);
 
@@ -62,12 +64,14 @@ public sealed class TierTests
         Assert.IsFalse(system.Blockable);
         Assert.IsFalse(system.Showcased);
         Assert.IsFalse(system.DeletedByOwner);
+        Assert.IsTrue(system.WarmedUp);
         Assert.IsTrue(system.Assignable, "which the operator moves a lambda to");
         Assert.AreEqual(production.MaxDataBytes, system.MaxDataBytes, "sane limits, not none");
 
         var demo = fixture.Limits.PolicyOf(LambdaTier.Demo);
 
         Assert.IsTrue(demo.ReadOnly);
+        Assert.IsFalse(demo.WarmedUp, "the seeder compiles what changed, the rest waits for its first request");
         Assert.IsFalse(demo.Assignable);
         Assert.IsFalse(demo.Connectivity, "a demo never connects");
         Assert.AreEqual(sandbox.MaxVersionBytes, demo.MaxVersionBytes, "and is held to what anybody's lambda may have");

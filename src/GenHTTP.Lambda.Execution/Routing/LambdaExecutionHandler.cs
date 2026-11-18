@@ -7,7 +7,6 @@ using GenHTTP.Modules.IO;
 using Microsoft.Extensions.Logging;
 
 using GenHTTP.Lambda.Services.Deployment;
-using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Settings;
@@ -46,7 +45,7 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILogg
         // what it is built with, read on every request: a lambda whose
         // workspace or connectivity changed is built again on this one - its
         // tier is not compiled in, the room of its data is read as it writes
-        var settings = new BuildSettings(lambda.WorkspaceEnabled, lambda.Connectivity);
+        var settings = lambda.Settings;
 
         if (lambda.Feature is not { } feature)
         {

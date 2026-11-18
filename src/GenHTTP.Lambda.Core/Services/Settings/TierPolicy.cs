@@ -26,8 +26,13 @@ namespace GenHTTP.Lambda.Services.Settings;
 /// showcase, never deleted by whoever holds its editor key, and never offered as the tier that allows more
 /// </param>
 /// <param name="ReadOnly">Whether only the installation changes it, whoever holds its editor key - a demo</param>
+/// <param name="WarmedUp">
+/// Whether what it has online is compiled as the server starts, so that its first visitor after a restart does not
+/// wait for it - rather than on its first request
+/// </param>
 public sealed record TierPolicy(LambdaTier Tier, string? Label, long MaxVersionBytes, long MaxDataBytes, int AnalyticsDays,
-                                bool Connectivity, bool OwnDomain, bool ExpiresWhenUnused, bool Installation, bool ReadOnly)
+                                bool Connectivity, bool OwnDomain, bool ExpiresWhenUnused, bool Installation, bool ReadOnly,
+                                bool WarmedUp)
 {
 
     /// <summary>
@@ -91,7 +96,7 @@ public static class TierPolicies
 
         return tier switch
         {
-            LambdaTier.Sandbox => Make(tier, sandbox, ownDomain: false, expires: true, installation: false),
+            LambdaTier.Sandbox => Make(tier, sandbox, ownDomain: false, expires: true, installation: false, warm: false),
 
             // never less than a sandbox, however the two were configured:
             // the panel refuses that, a host's options do not
@@ -100,20 +105,22 @@ public static class TierPolicies
                 BuildBytes = Math.Max(limits.Production.BuildBytes, sandbox.BuildBytes),
                 DataBytes = Math.Max(limits.Production.DataBytes, sandbox.DataBytes),
                 AnalyticsDays = Math.Max(limits.Production.AnalyticsDays, sandbox.AnalyticsDays)
-            }, ownDomain: true, expires: false, installation: false),
+            }, ownDomain: true, expires: false, installation: false, warm: true),
 
-            LambdaTier.System => Make(tier, limits.System, ownDomain: true, expires: false, installation: true),
+            LambdaTier.System => Make(tier, limits.System, ownDomain: true, expires: false, installation: true, warm: true),
 
             // held to what a sandbox may have, and never connecting: a demo
             // teaches what anybody's lambda can do
-            LambdaTier.Demo => Make(tier, sandbox with { Connectivity = false, Label = null }, ownDomain: false, expires: false, installation: true, readOnly: true),
+            LambdaTier.Demo => Make(tier, sandbox with { Connectivity = false, Label = null }, ownDomain: false, expires: false, installation: true, warm: false,
+                                    readOnly: true),
 
             _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "This tier has no policy.")
         };
     }
 
-    private static TierPolicy Make(LambdaTier tier, TierSettings settings, bool ownDomain, bool expires, bool installation, bool readOnly = false)
+    private static TierPolicy Make(LambdaTier tier, TierSettings settings, bool ownDomain, bool expires, bool installation, bool warm,
+                                   bool readOnly = false)
         => new(tier, settings.Label, settings.BuildBytes, settings.DataBytes, settings.AnalyticsDays, settings.Connectivity,
-               ownDomain, expires, installation, readOnly);
+               ownDomain, expires, installation, readOnly, warm);
 
 }

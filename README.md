@@ -280,9 +280,11 @@ docker compose --profile agent up -d
   default, one that is neither visited nor changed for 30 days is taken
   offline, and removed 90 days after that. Moving an app to *production* in the
   panel (*All lambdas*, the app's page, *Manage*, *Tier*) keeps it online, with more room and
-  a custom domain. On an installation run for a team rather than for
+  a custom domain, and has it compiled as the server starts, so its first visitor
+  after a restart does not wait for that. On an installation run for a team rather than for
   strangers, set *New lambdas start in* to *Production* under *Limits*; how
-  long sandbox apps last is set there as well.
+  long sandbox apps last is set there as well. Every app is then compiled in the
+  background after each restart, one after another.
 
 ## Telemetry
 

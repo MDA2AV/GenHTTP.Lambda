@@ -128,7 +128,21 @@ public sealed record LambdaActivation(int Version, DateTime Started, string? Ori
 /// </param>
 public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt,
                                     bool WorkspaceEnabled = true, ResolvedFeature? Feature = null, DateTime? AnalyticsSince = null,
-                                    bool Connectivity = false);
+                                    bool Connectivity = false)
+{
+
+    /// <summary>
+    /// What it is built with: whether it has a workspace, and whether it may
+    /// connect to other servers.
+    /// </summary>
+    /// <remarks>
+    /// Said once, for whatever asks for its handler: a build is served as it
+    /// was only to settings that match, so the warm-up at startup and a
+    /// request putting these together apart would build it twice.
+    /// </remarks>
+    public BuildSettings Settings => new(WorkspaceEnabled, Connectivity);
+
+}
 
 /// <summary>
 /// The preview of a feature a request was addressed to.

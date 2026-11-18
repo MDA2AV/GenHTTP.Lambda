@@ -90,8 +90,8 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
     }
 
     /// <summary>
-    /// Starts the server, the background jobs and the demos, and serves
-    /// until the process is asked to stop.
+    /// Starts the server, the background jobs, the warm-up of the lambdas
+    /// and the demos, and serves until the process is asked to stop.
     /// </summary>
     /// <returns>The exit code of the process</returns>
     public async Task<int> RunAsync()
@@ -127,6 +127,10 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
         await host.StartAsync();
 
         platform.StartBackgroundJobs();
+
+        // after the server is up, for the same reason as the demos below, and
+        // before them: these are the apps people use
+        platform.WarmUp();
 
         // after the server is up: the demos have to be compiled, and doing it first
         // would be seconds spent refusing connections
