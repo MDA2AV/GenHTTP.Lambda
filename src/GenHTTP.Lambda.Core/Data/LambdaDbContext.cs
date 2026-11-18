@@ -6,8 +6,9 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GenHTTP.Lambda.Data;
 
 /// <summary>
-/// Entity framework access to the SQLite file holding the lambda meta data.
-/// The schema itself is maintained by Evolve, see <see cref="Migrator" />.
+/// Entity framework access to the platform's store of the lambdas' meta data,
+/// in whichever database the installation keeps it. The schema itself is
+/// maintained by Evolve, see <see cref="Migrator" />.
 /// </summary>
 public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) : DbContext(options)
 {
@@ -45,7 +46,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
     /// SQLite keeps a date as text and forgets which zone it was in, so it
     /// came back unspecified and went out as JSON without a zone - which a
     /// browser reads as its own local time, and a version saved a minute ago
-    /// in Vienna was shown as two hours old.
+    /// in Vienna was shown as two hours old. Written as UTC as well, since
+    /// PostgreSQL keeps a time with its zone and refuses one that has none;
+    /// SQLite writes the same text either way.
     /// </remarks>
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -54,11 +57,11 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
     }
 
     private sealed class UtcConverter() : ValueConverter<DateTime, DateTime>(
-        value => value,
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
     private sealed class NullableUtcConverter() : ValueConverter<DateTime?, DateTime?>(
-        value => value,
+        value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null,
         value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null);
 
     protected override void OnModelCreating(ModelBuilder builder)

@@ -6,9 +6,11 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -29,7 +31,7 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// </remarks>
 public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, IDatabaseVault databaseVault, IWorkspaceVault workspaces,
                                 ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, IBrandingService branding, ServerRegistry server,
-                                LambdaOptions options)
+                                IIntegrationService integrations, LambdaOptions options)
 {
 
     /// <summary>
@@ -305,9 +307,18 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             options.CaptureLambdaOutput,
             options.CrawlerLists,
             options.Development,
-            branding.Current.Own
+            branding.Current.Own,
+            Integration(IntegrationKinds.Database),
+            Integration(IntegrationKinds.Files),
+            Integration(IntegrationKinds.Secrets)
         );
     }
+
+    /// <summary>
+    /// Which integration keeps one kind of data, by its name alone.
+    /// </summary>
+    private string Integration(string kind)
+        => integrations.List().FirstOrDefault(i => i.Info.Kind == kind)?.Info.Name.ToLowerInvariant() ?? "unknown";
 
     /// <summary>
     /// What the data of the lambdas takes: their databases and workspaces as

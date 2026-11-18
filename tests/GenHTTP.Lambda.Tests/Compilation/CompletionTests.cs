@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Services.Deployment.Compilation;
+using GenHTTP.Lambda.Integrations.Sqlite;
 
 namespace GenHTTP.Lambda.Tests.Compilation;
 
@@ -94,6 +95,6 @@ public sealed class CompletionTests
     }
 
     private static IReadOnlyList<ResolvedCompletion> At(string code, int line, int column)
-        => CompletionResolver.Resolve(code, line, column);
+        => CompletionResolver.Resolve(code, line, column, SqliteDatabase.Binding);
 
 }

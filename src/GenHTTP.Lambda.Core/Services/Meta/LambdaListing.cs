@@ -121,7 +121,9 @@ public sealed class LambdaListing(IDbContextFactory<LambdaDbContext> databases, 
     {
         if (!string.IsNullOrWhiteSpace(wanted.Search))
         {
-            var term = wanted.Search.Trim();
+            // keys and domains are kept in lower case, which a search is put
+            // in too - some databases compare the letters as they are
+            var term = wanted.Search.Trim().ToLowerInvariant();
 
             // the key and the domain are what an administrator has to go on
             // that is not the code itself, and what the panel shows

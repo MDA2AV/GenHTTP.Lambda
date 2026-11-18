@@ -4,6 +4,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 
+using GenHTTP.Lambda.Integrations.Databases;
+
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
@@ -45,7 +47,7 @@ public static class DefinitionResolver
     /// <param name="line">The line it is on, counting from zero</param>
     /// <param name="column">The column it is at, counting from zero</param>
     /// <returns>Where to go, or null if there is nowhere to go</returns>
-    public static ResolvedDefinition? Resolve(IReadOnlyList<LambdaFile> files, string file, int line, int column)
+    public static ResolvedDefinition? Resolve(IReadOnlyList<LambdaFile> files, string file, int line, int column, DatabaseBinding binding)
     {
         if (files.Count == 0)
         {
@@ -64,8 +66,8 @@ public static class DefinitionResolver
             }
 
             trees.Add(one.Name == LambdaSource.EntryName
-                    ? SourceBuilder.Wrap(SourceBuilder.ParseSnippet(one.Code), string.Empty, string.Empty, scope)
-                    : SourceBuilder.WrapFile(SourceBuilder.ParseFile(one.Code, one.Name), scope, one.Name));
+                    ? SourceBuilder.Wrap(SourceBuilder.ParseSnippet(one.Code), string.Empty, scope, binding)
+                    : SourceBuilder.WrapFile(SourceBuilder.ParseFile(one.Code, one.Name), scope, one.Name, binding));
         }
 
         if (trees.Count == 0)
@@ -73,7 +75,7 @@ public static class DefinitionResolver
             return null;
         }
 
-        var compilation = CSharpCompilation.Create(scope, trees, ReferenceProvider.Resolve(), Options);
+        var compilation = CSharpCompilation.Create(scope, trees, ReferenceProvider.Resolve(binding), Options);
 
         foreach (var tree in trees)
         {

@@ -10,6 +10,11 @@
         <Project Path="src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
         <Project Path="src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
     </Folder>
+    <Folder Name="/integrations/">
+        <Project Path="src/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj" />
+    </Folder>
     <Folder Name="/hosts/">
         <Project Path="src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
         <Project Path="src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />

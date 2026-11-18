@@ -1533,7 +1533,9 @@ public sealed class McpTests
 
         Assert.Contains("new Evolve(connection", database);
         Assert.Contains("Synchronous only", database);
-        Assert.Contains("UseSqlite(connection, contextOwnsConnection: true)", database);
+        Assert.Contains("options.UseDatabase(connection)", database, "the code names no database, so it runs on whichever keeps it");
+        Assert.DoesNotContain("UseSqlite", database);
+        Assert.DoesNotContain("SqliteConnection", database);
         Assert.Contains("never ToListAsync, SaveChangesAsync", database, "named, as what not to call");
         Assert.Contains("EnsureCreated", database, "the schema is Evolve's");
 

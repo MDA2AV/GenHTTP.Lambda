@@ -13,13 +13,15 @@ using GenHTTP.Lambda.Sources;
 using GenHTTP.Modules.Layouting;
 
 // the LAMBDA_* variables, with the lambdas below /lambda/ on this address
-// unless LAMBDA_HOSTING_URL names a domain for them, and the daily usage
-// report on unless LAMBDA_USAGE_REPORTS=false
-var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true);
+// unless LAMBDA_HOSTING_URL names a domain for them, the daily usage report
+// on unless LAMBDA_USAGE_REPORTS=false, and the data in SQLite unless
+// LAMBDA_DATABASE=postgresql
+var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
 // whoever runs it may give it a name and a logo of their own, in the panel
 await using var platform = LambdaPlatform.Create()
                                          .Options(settings.Platform with { Branding = true })
+                                         .Database(CommunityDatabase.Of(settings.Database))
                                          .Build();
 
 var site = Layout.Create()

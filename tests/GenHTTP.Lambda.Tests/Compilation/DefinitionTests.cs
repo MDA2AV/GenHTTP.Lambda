@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Integrations.Sqlite;
 
 namespace GenHTTP.Lambda.Tests.Compilation;
 
@@ -28,7 +29,7 @@ public sealed class DefinitionTests
     public void AClassUsedInTheSnippetIsFoundInTheFileItWasWrittenIn()
     {
         // "new Greeter()" on the first line of the snippet
-        var at = DefinitionResolver.Resolve(Files, "lambda.cs", 0, "var greeter = new ".Length);
+        var at = DefinitionResolver.Resolve(Files, "lambda.cs", 0, "var greeter = new ".Length, SqliteDatabase.Binding);
 
         Assert.IsNotNull(at, "a class the lambda declares has somewhere to go");
         Assert.AreEqual("Greeter.cs", at.File);
@@ -41,7 +42,7 @@ public sealed class DefinitionTests
         // "greeter.Greet(" on the third line of the snippet
         var at = DefinitionResolver.Resolve(Files, "lambda.cs", 2, """
             return Inline.Create().Get(() => greeter.
-            """.TrimEnd().Length);
+            """.TrimEnd().Length, SqliteDatabase.Binding);
 
         Assert.IsNotNull(at);
         Assert.AreEqual("Greeter.cs", at.File);
@@ -52,7 +53,7 @@ public sealed class DefinitionTests
     public void SomethingFromTheFrameworkHasNowhereToGo()
     {
         // "Inline" is the platform's, not the lambda's
-        var at = DefinitionResolver.Resolve(Files, "lambda.cs", 2, "return ".Length);
+        var at = DefinitionResolver.Resolve(Files, "lambda.cs", 2, "return ".Length, SqliteDatabase.Binding);
 
         Assert.IsNull(at, "there is no file of this lambda to open, so it says so");
     }
@@ -62,7 +63,7 @@ public sealed class DefinitionTests
     {
         var at = DefinitionResolver.Resolve(Files, "lambda.cs", 2, """
             return Inline.Create().Get(() => gr
-            """.TrimEnd().Length - 2);
+            """.TrimEnd().Length - 2, SqliteDatabase.Binding);
 
         Assert.IsNotNull(at);
         Assert.AreEqual("lambda.cs", at.File);
@@ -72,8 +73,8 @@ public sealed class DefinitionTests
     [TestMethod]
     public void NothingUnderTheCaretIsNotAnError()
     {
-        Assert.IsNull(DefinitionResolver.Resolve(Files, "lambda.cs", 1, 0));
-        Assert.IsNull(DefinitionResolver.Resolve(Files, "nope.cs", 0, 0));
-        Assert.IsNull(DefinitionResolver.Resolve([], "lambda.cs", 0, 0));
+        Assert.IsNull(DefinitionResolver.Resolve(Files, "lambda.cs", 1, 0, SqliteDatabase.Binding));
+        Assert.IsNull(DefinitionResolver.Resolve(Files, "nope.cs", 0, 0, SqliteDatabase.Binding));
+        Assert.IsNull(DefinitionResolver.Resolve([], "lambda.cs", 0, 0, SqliteDatabase.Binding));
     }
 }

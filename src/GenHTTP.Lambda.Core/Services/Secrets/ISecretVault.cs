@@ -1,4 +1,4 @@
-using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations.Secrets;
 
 namespace GenHTTP.Lambda.Services.Secrets;
 
@@ -10,7 +10,8 @@ namespace GenHTTP.Lambda.Services.Secrets;
 /// <remarks>
 /// Apart from <see cref="ISecretService"/>, which is what the API and MCP call
 /// and never hands out a value. This one does - to the lambda the value belongs
-/// to - so the doors into the platform use the other one.
+/// to - so the doors into the platform use the other one. Where the values are
+/// kept is the secrets integration's.
 /// </remarks>
 public interface ISecretVault
 {
@@ -23,7 +24,7 @@ public interface ISecretVault
     /// <summary>
     /// What is stored for the lambda, or for a feature's copy, by name.
     /// </summary>
-    IReadOnlyList<SecretEntity> List(long lambdaId, long? featureId);
+    IReadOnlyList<SecretEntry> List(long lambdaId, long? featureId);
 
     /// <summary>
     /// How many secrets the lambda has, or a feature's copy of them.
@@ -33,7 +34,7 @@ public interface ISecretVault
     /// <summary>
     /// Stores a value under a name, replacing the one there.
     /// </summary>
-    SecretEntity Store(long lambdaId, long? featureId, string name, string value);
+    SecretEntry Store(long lambdaId, long? featureId, string name, string value);
 
     /// <summary>
     /// Removes a secret, and says whether there was one.
@@ -44,6 +45,11 @@ public interface ISecretVault
     /// Replaces a feature's copy of the secrets with the lambda's own.
     /// </summary>
     void Copy(long lambdaId, long featureId);
+
+    /// <summary>
+    /// Removes a feature's copy of the secrets.
+    /// </summary>
+    void RemoveCopy(long lambdaId, long featureId);
 
     /// <summary>
     /// Deletes every secret of a lambda, its features' copies included.

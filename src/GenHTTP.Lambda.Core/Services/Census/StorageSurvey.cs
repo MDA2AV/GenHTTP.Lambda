@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Workspace;
@@ -172,8 +173,9 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
     /// <remarks>
     /// Its database and its workspace are asked about where the walk found
     /// them, and measured as its allowance measures them - asking about the
-    /// others would make their folders. A folder of a lambda that is gone is
-    /// left out of the lambdas but counted in its part.
+    /// others would make their folders. A database kept elsewhere than the
+    /// data directory is asked about where it is switched on. A folder of a
+    /// lambda that is gone is left out of the lambdas but counted in its part.
     /// </remarks>
     private List<LambdaStorage> Describe(Dictionary<long, Owned> owned)
     {
@@ -183,16 +185,25 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
                               .Select(l => new { l.Id, l.PublicKey, l.Tier })
                               .ToList();
 
+        var keeping = database.DataStores.AsNoTracking()
+                              .Where(s => s.Kind == DataKinds.DatabaseId && s.Enabled)
+                              .Select(s => s.LambdaId)
+                              .ToHashSet();
+
         var described = new List<LambdaStorage>(owned.Count);
 
         foreach (var lambda in lambdas)
         {
-            if (owned.GetValueOrDefault(lambda.Id) is not { } found)
+            var found = owned.GetValueOrDefault(lambda.Id);
+
+            if (found == null && !keeping.Contains(lambda.Id))
             {
                 continue;
             }
 
-            var data = (found.Database ? databaseVault.SizeOf(lambda.Id, null) : 0)
+            found ??= new Owned();
+
+            var data = (found.Database || keeping.Contains(lambda.Id) ? databaseVault.SizeOf(lambda.Id, null) : 0)
                      + (found.Workspace ? workspaces.SizeOf(lambda.Id, null) : 0);
 
             described.Add(new LambdaStorage(lambda.PublicKey, lambda.Tier, data, limits.PolicyOf(lambda.Tier).MaxDataBytes,

@@ -1,0 +1,22 @@
+using System.Data.Common;
+
+using Microsoft.EntityFrameworkCore;
+
+namespace Platform;
+
+/// <summary>
+/// What a context of Entity Framework Core is configured with, as on the
+/// platform: <c>options.UseDatabase(connection)</c>, here on the SQLite file
+/// the app keeps its records in.
+/// </summary>
+public static class DatabaseOptions
+{
+    /// <summary>Configures a context on the connection Database.GetConnection() opened, which the context then owns.</summary>
+    public static DbContextOptionsBuilder UseDatabase(this DbContextOptionsBuilder options, DbConnection connection)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    /// <summary>Configures a context on the connection Database.GetConnection() opened, which the context then owns.</summary>
+    public static DbContextOptionsBuilder<TContext> UseDatabase<TContext>(this DbContextOptionsBuilder<TContext> options, DbConnection connection)
+        where TContext : DbContext
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+}

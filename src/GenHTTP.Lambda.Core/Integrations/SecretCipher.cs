@@ -5,7 +5,7 @@ using GenHTTP.Lambda.Configuration;
 
 using Microsoft.Extensions.Logging;
 
-namespace GenHTTP.Lambda.Services.Secrets;
+namespace GenHTTP.Lambda.Integrations.Internal;
 
 /// <summary>
 /// Seals the values of secrets before they are stored, and opens them again
@@ -55,7 +55,19 @@ public sealed class SecretCipher
     public SecretCipher(LambdaOptions options, ILogger<SecretCipher> logger)
     {
         _master = new Lazy<byte[]>(() => LoadMaster(options, logger), LazyThreadSafetyMode.ExecutionAndPublication);
+
+        Source = options.SecretsKey != null ? "given to the server (LAMBDA_SECRETS_KEY)" : options.SecretsKeyFile;
     }
+
+    #endregion
+
+    #region Get-/Setters
+
+    /// <summary>
+    /// Where the installation's key comes from, as the operator is told:
+    /// the setting, or the file beside the data - never the key.
+    /// </summary>
+    public string Source { get; }
 
     #endregion
 

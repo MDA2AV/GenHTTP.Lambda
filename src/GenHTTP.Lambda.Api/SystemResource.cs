@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -20,7 +21,7 @@ namespace GenHTTP.Lambda.Api;
 [Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
 [Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
 public sealed class SystemResource(ILimitsService limits, IBuildService builds, ILambdaAddresses addresses, IBrandingService branding,
-                                    LambdaOptions options)
+                                    IDatabaseProvider database, LambdaOptions options)
 {
 
     [ResourceMethod]
@@ -43,7 +44,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             limits.PolicyOf(current.DefaultTier).MaxVersionBytes,
             (int)current.OfflineAfter.TotalHours,
             (int)current.RemovedAfter.TotalDays,
-            ModuleCatalog.Imports,
+            ModuleCatalog.ImportsFor(database.Binding),
             CompletionCatalog.Items,
             new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
             addresses.Template,

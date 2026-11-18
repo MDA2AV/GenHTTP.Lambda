@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        What the platform asks of the infrastructure it keeps data in - a
+        database, files, secrets - and nothing else: the contracts an
+        integration implements, with no business logic of the platform's.
+        An integration takes this project and none of the platform's, so it
+        can be built, shipped and exchanged on its own.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Integrations</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Integrations</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <!-- what a context of Entity Framework is configured with, and the connections handed out -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+
+        <!-- what files are served as -->
+        <PackageReference Include="GenHTTP.Api" />
+
+    </ItemGroup>
+
+</Project>

@@ -1436,6 +1436,20 @@ export interface UsageReportStatus {
   report?: string | null;
 }
 
+/** What the installation keeps some of its data in: its database, its files or its secrets. */
+export interface Integration {
+  /** What it keeps: the database, the lambdas' files, or their secrets. */
+  kind: 'database' | 'files' | 'secrets';
+  /** What it is called, such as SQLite or PostgreSQL. */
+  name: string;
+  /** What it does here, in a sentence. */
+  summary: string;
+  /** Where it keeps what it keeps - never a password, a key or a connection string. */
+  details: { label: string; value: string }[];
+  /** Whether it is the platform's own, used because the host chose none. */
+  default: boolean;
+}
+
 /** What a lambda of one tier may have, and what the tier is called, as the operator set it. */
 export interface TierLimits {
   /** How large a version may be: its code and its resources together. */
@@ -1635,6 +1649,8 @@ export const api = {
       request<AdminLimits>('/admin/limits', withToken(token, { method: 'PUT', body: JSON.stringify(limits) })),
 
     usageReport: (token: string) => request<UsageReportStatus>('/admin/usage-report', withToken(token)),
+
+    integrations: (token: string) => request<Integration[]>('/admin/integrations', withToken(token)),
 
     branding: (token: string) => request<AdminBranding>('/admin/branding', withToken(token)).then(branded),
 

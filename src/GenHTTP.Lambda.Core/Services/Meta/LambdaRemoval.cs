@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// it, or the sweep finds it abandoned - and both have to leave nothing behind.
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
-                                  IDatabaseVault databaseVault, IDomainRegistry domains, IStorageService storage, IAnalyticsStore analytics)
+                                  IDatabaseVault databaseVault, IWorkspaceVault workspaces, IDomainRegistry domains, IStorageService storage,
+                                  IAnalyticsStore analytics)
 {
 
     public void Remove(LambdaDbContext database, LambdaEntity lambda)
@@ -43,7 +45,8 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
 
         database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
-        database.Secrets.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
+        // wherever they are kept, before the lambda they belong to goes
+        secrets.Clear(lambda.Id);
 
         database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDelete();
 
@@ -53,8 +56,10 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
 
         secrets.Invalidate(lambda.Id);
 
-        // its connections let go of before its files go
-        databaseVault.Forget(lambda.Id);
+        // its data, wherever it is kept, with the copies of its features
+        databaseVault.Clear(lambda.Id);
+
+        workspaces.DeleteAll(lambda.Id);
 
         if (lambda.Domain != null)
         {

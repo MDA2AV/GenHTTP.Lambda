@@ -16,7 +16,8 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Database)]
 [Summary("The database of a lambda, read as its owner reads it: its tables, and the records in them.")]
 [Remarks("""
-         Every lambda may have a SQLite database, which its code reaches with `Database.GetConnection()`. Its schema is made
+         Every lambda may have a database of its own, which its code reaches with `Database.GetConnection()` - whichever
+         database the installation keeps it in (`GET /admin/integrations` tells its operator). Its schema is made
          by migrations the lambda ships in `resources/migrations/`, applied as it starts; its records are written by the
          lambda. This API only reads it - there is no way to change a record from outside the lambda.
 
@@ -34,7 +35,7 @@ public sealed class DatabaseResource(IDatabaseService databases)
     [Summary("Lists the tables of the database")]
     [Remarks("""
              And whether the lambda has a database at all, how much room it takes, and whether its code connects to it. Tables
-             SQLite keeps for itself are left out; the one Evolve keeps of the migrations it applied is marked (`migrations`).
+             the database keeps for itself are left out; the one Evolve keeps of the migrations it applied is marked (`migrations`).
              While the database is switched off, the answer says so and lists nothing.
              """)]
     [return: Summary("The database and its tables")]

@@ -3,6 +3,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
+using GenHTTP.Lambda.Integrations.Databases;
+
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
@@ -40,7 +42,7 @@ public static class CompletionResolver
     /// <param name="code">The snippet as the editor has it</param>
     /// <param name="line">The line the caret is on, counting from zero</param>
     /// <param name="column">The column the caret is at, counting from zero</param>
-    public static IReadOnlyList<ResolvedCompletion> Resolve(string code, int line, int column)
+    public static IReadOnlyList<ResolvedCompletion> Resolve(string code, int line, int column, DatabaseBinding binding)
     {
         (code, column) = Complete(code, line, column);
 
@@ -48,9 +50,9 @@ public static class CompletionResolver
 
         var scope = "Lambda_completion";
 
-        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, string.Empty, scope);
+        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, scope, binding);
 
-        var compilation = CSharpCompilation.Create(scope, [wrapped], ReferenceProvider.Resolve(), Options);
+        var compilation = CSharpCompilation.Create(scope, [wrapped], ReferenceProvider.Resolve(binding), Options);
 
         var model = compilation.GetSemanticModel(wrapped);
 

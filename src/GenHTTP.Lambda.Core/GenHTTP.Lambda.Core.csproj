@@ -26,7 +26,6 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
 
         <PackageReference Include="Evolve" />
         <PackageReference Include="MaxMind.Db" />
@@ -34,8 +33,17 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- what the platform keeps its data in, and the database it has unless its host chooses another -->
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- the schema of the platform's own stores, in each dialect a database provider may speak (see Migrator) -->
         <EmbeddedResource Include="Data/Migrations/*.sql" />
+        <EmbeddedResource Include="Data/PostgreSql/*.sql" />
         <EmbeddedResource Include="Services/Analytics/Migrations/*.sql" />
+        <EmbeddedResource Include="Services/Analytics/PostgreSql/*.sql" />
         <!-- the crawlers analytics tell apart from people, as of the release - refreshed at runtime, see CrawlerJob -->
         <EmbeddedResource Include="Resources/Crawlers/crawler-user-agents.json" WithCulture="false" />
         <!-- WithCulture is required: MSBuild would read the "cs" in "Template.cs.txt" as Czech -->

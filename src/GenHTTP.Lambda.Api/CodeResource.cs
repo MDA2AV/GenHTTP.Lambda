@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -27,7 +28,7 @@ namespace GenHTTP.Lambda.Api;
          check compiles when it is deployed. Positions count lines and columns from zero.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class CodeResource(IMetaService meta)
+public sealed class CodeResource(IMetaService meta, IDatabaseProvider database)
 {
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/code/check")]
@@ -58,7 +59,7 @@ public sealed class CodeResource(IMetaService meta)
 
         // binding with Roslyn, asked while somebody types: tens to hundreds of
         // milliseconds that a reactor would not be serving anybody (see Offload)
-        var tokens = await Offload.Run(() => SemanticClassifier.Classify(Select(request)));
+        var tokens = await Offload.Run(() => SemanticClassifier.Classify(Select(request), database.Binding));
 
         return new SemanticsResponse([.. tokens.Select(t => new SemanticToken(t.Line, t.Column, t.Length, t.Kind))]);
     }
@@ -72,7 +73,7 @@ public sealed class CodeResource(IMetaService meta)
     {
         meta.RequireId(privateKey);
 
-        var found = await Offload.Run(() => CompletionResolver.Resolve(Select(request), request.Line, request.Column));
+        var found = await Offload.Run(() => CompletionResolver.Resolve(Select(request), request.Line, request.Column, database.Binding));
 
         return new CompletionsResponse([.. found.Select(c => new ResolvedCompletionResponse(c.Label, c.Kind, c.Detail, c.Documentation))]);
     }
@@ -96,7 +97,8 @@ public sealed class CodeResource(IMetaService meta)
         var found = await Offload.Run(() => DefinitionResolver.Resolve(files,
                                                                        request.File ?? files.FirstOrDefault()?.Name ?? LambdaSource.EntryName,
                                                                        request.Line,
-                                                                       request.Column));
+                                                                       request.Column,
+                                                                       database.Binding));
 
         return found == null
              ? new DefinitionResponse(null, 0, 0, 0)

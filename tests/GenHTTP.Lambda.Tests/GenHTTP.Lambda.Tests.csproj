@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <!-- NU1608: the PostgreSQL integration, through the community host runs a release candidate of Npgsql's provider on EF Core 11.0.0, see Directory.Packages.props -->
+        <NoWarn>$(NoWarn);NU1608</NoWarn>
+
 
         <RootNamespace>GenHTTP.Lambda.Tests</RootNamespace>
         <AssemblyName>GenHTTP.Lambda.Tests</AssemblyName>

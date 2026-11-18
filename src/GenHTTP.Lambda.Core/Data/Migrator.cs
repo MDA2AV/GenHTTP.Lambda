@@ -1,50 +1,69 @@
 using System.Reflection;
 
-using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Integrations.Databases;
 
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Data;
 
 /// <summary>
-/// Brings the SQLite file up to date using the SQL scripts embedded
-/// in <c>Data/Migrations</c> (applied by Evolve).
+/// Brings the stores of the platform up to date, from the SQL scripts
+/// embedded for the dialect the database provider speaks (applied by Evolve).
 /// </summary>
+/// <remarks>
+/// The schema is the platform's, the SQL it is written in the database's - so
+/// it is kept once per dialect, and every change to it is a migration in each:
+/// <c>Data/Migrations</c> for SQLite, <c>Data/PostgreSql</c> for PostgreSQL,
+/// and the analytics' beside them. Each set is numbered on its own. The SQLite
+/// scripts keep the names they were recorded by in every database made before
+/// there was another set (see the project file).
+/// </remarks>
 public static class Migrator
 {
-    private const string MigrationNamespace = "GenHTTP.Lambda.Data.Migrations";
 
-    public static void Migrate(LambdaOptions options, ILogger logger)
+    /// <summary>
+    /// Where the migrations of each store are embedded, by dialect.
+    /// </summary>
+    private static readonly Dictionary<(string Store, string Dialect), string> Locations = new()
     {
-        Directory.CreateDirectory(options.DataDirectory);
+        [(DatabaseStores.Platform, "sqlite")] = "GenHTTP.Lambda.Data.Migrations",
+        [(DatabaseStores.Platform, "postgresql")] = "GenHTTP.Lambda.Data.PostgreSql",
+        [(DatabaseStores.Analytics, "sqlite")] = "GenHTTP.Lambda.Services.Analytics.Migrations",
+        [(DatabaseStores.Analytics, "postgresql")] = "GenHTTP.Lambda.Services.Analytics.PostgreSql"
+    };
 
-        using var connection = new SqliteConnection(options.ConnectionString);
+    /// <summary>
+    /// Migrates the platform's own store.
+    /// </summary>
+    public static void Migrate(IDatabaseProvider database, ILogger logger) => Migrate(database, DatabaseStores.Platform, logger);
 
-        connection.Open();
-
-        // write ahead logging survives in the database file and keeps
-        // readers from blocking the occasional editor write
-        using (var pragma = connection.CreateCommand())
+    /// <summary>
+    /// Migrates one store of the platform.
+    /// </summary>
+    public static void Migrate(IDatabaseProvider database, string store, ILogger logger)
+    {
+        if (!Locations.TryGetValue((store, database.Dialect), out var location))
         {
-            pragma.CommandText = "PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;";
-            pragma.ExecuteNonQuery();
+            throw new InvalidOperationException($"The platform has no schema for its {store} store in the dialect '{database.Dialect}' its database speaks. "
+                                              + $"The dialects it has one in: {string.Join(", ", Locations.Keys.Where(k => k.Store == store).Select(k => k.Dialect))}.");
         }
+
+        using var connection = database.Open(store);
 
         var evolve = new EvolveDb.Evolve(connection, message => logger.LogDebug("{Message}", message))
         {
             Locations = [],
             EmbeddedResourceAssemblies = [Assembly.GetExecutingAssembly()],
-            EmbeddedResourceFilters = [MigrationNamespace],
+            EmbeddedResourceFilters = [location],
             IsEraseDisabled = true,
             MetadataTableName = "schema_versions"
         };
 
-        logger.LogInformation("Migrating database {Database}", options.DatabaseFile);
+        logger.LogInformation("Migrating store {Store}", store);
 
         evolve.Migrate();
 
-        logger.LogInformation("Migrated database {Database}", options.DatabaseFile);
+        logger.LogInformation("Migrated store {Store}", store);
     }
 
 }

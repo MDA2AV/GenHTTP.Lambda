@@ -4,9 +4,14 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
 
+using System.Data.Common;
+
 using GenHTTP.Api.Content;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Workspace;
+
+using Microsoft.EntityFrameworkCore;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -116,11 +121,11 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
-        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Resources, scope, request.Settings.Workspace) };
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Resources, scope, request.Binding, request.Settings.Workspace) };
 
         foreach (var other in others)
         {
-            trees.Add(SourceBuilder.WrapFile(other.Tree, scope, other.File.Name));
+            trees.Add(SourceBuilder.WrapFile(other.Tree, scope, other.File.Name, request.Binding));
         }
 
         // a lambda that may not connect to other servers is not handed the
@@ -128,7 +133,7 @@ internal static class LambdaCompiler
         var compilation = CSharpCompilation.Create(
             scope,
             trees,
-            ReferenceProvider.Resolve(request.Settings.Connectivity),
+            ReferenceProvider.Resolve(request.Settings.Connectivity, request.Binding),
             CompilationOptions
         );
 
@@ -184,7 +189,7 @@ internal static class LambdaCompiler
     /// snippet holds in memory.
     /// </summary>
     /// <remarks>
-    /// The secrets, the database and the room it takes are connected first,
+    /// The secrets, the database and the workspace are connected first,
     /// because the top of a snippet is where an API key is most often read, a
     /// database migrated and a workspace prepared.
     /// </remarks>
@@ -200,19 +205,21 @@ internal static class LambdaCompiler
             Connect(lambda, SourceBuilder.DatabaseType, request.Database);
         }
 
-        if (request.DatabaseSize != null)
+        if (request.Context != null)
         {
-            Connect(lambda, SourceBuilder.WorkspaceType, request.DatabaseSize);
+            Connect(lambda, SourceBuilder.ScopeType, request.Context, SourceBuilder.ContextSource);
         }
 
-        if (request.WorkspaceChanged != null)
+        if (request.Workspace is { } files)
         {
-            Connect(lambda, SourceBuilder.WorkspaceType, request.WorkspaceChanged, SourceBuilder.ChangedHook);
-        }
-
-        if (request.DataRoom != null)
-        {
-            Connect(lambda, SourceBuilder.WorkspaceType, request.DataRoom, SourceBuilder.RoomSource);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Exists, SourceBuilder.WorkspaceFields.Exists);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Read, SourceBuilder.WorkspaceFields.Read);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Write, SourceBuilder.WorkspaceFields.Write);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Delete, SourceBuilder.WorkspaceFields.Delete);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.List, SourceBuilder.WorkspaceFields.List);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Folders, SourceBuilder.WorkspaceFields.Folders);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.CreateFolder, SourceBuilder.WorkspaceFields.CreateFolder);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.Tree, SourceBuilder.WorkspaceFields.Tree);
         }
 
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
@@ -247,11 +254,13 @@ internal static class LambdaCompiler
     /// code does not add another assembly to the process.
     /// </summary>
     /// <remarks>
-    /// The directories and the settings are part of it because they are compiled
-    /// in: the same code with its workspace switched off, with or without
-    /// connectivity, or as the preview of a feature, is another assembly - in
-    /// another tier it is not, since the room of its data is read as it runs. Beyond those it is the
-    /// C# files and nothing else. The resources are read from their directory
+    /// The directory of the resources, the settings and what the database is
+    /// declared as are part of it because they are compiled in: the same code
+    /// with its workspace switched off, with or without connectivity, or as
+    /// the preview of a feature, is another assembly - in another tier it is
+    /// not, since the room of its data is read as it runs, nor for another
+    /// workspace, which it reaches through the platform. Beyond those it is
+    /// the C# files and nothing else. The resources are read from their directory
     /// while the lambda runs - only where that directory is gets compiled in -
     /// and the rest of the code is never built, so a version that only
     /// changes those builds its handler from the assembly already loaded.
@@ -265,8 +274,8 @@ internal static class LambdaCompiler
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
-        Append(hash, request.Workspace);
-        Append(hash, $"\n{request.Resources}");
+        Append(hash, request.Resources);
+        Append(hash, $"\n{request.Binding.Connection.FullName}\n{string.Join(',', request.Binding.Namespaces)}");
         Append(hash, $"\n{request.Settings.Workspace}\n{request.Settings.Connectivity}");
 
         foreach (var file in request.Files.Where(f => f.IsCompiled))
@@ -400,18 +409,17 @@ internal static class LambdaCompiler
 /// What the compiler needs to build a snippet.
 /// </summary>
 /// <param name="Files">The source files as written by the user</param>
-/// <param name="Workspace">The directory the lambda may read and write</param>
 /// <param name="Resources">The directory the lambda's resources were written to</param>
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Settings">Whether the lambda has a workspace and whether it may connect to other servers, compiled into it</param>
+/// <param name="Binding">How the lambda is bound to its database, as the database integration says</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 /// <param name="Database">What the lambda connects to its database with, once it runs</param>
-/// <param name="DatabaseSize">What its workspace reads the room the database takes with, once it runs</param>
-/// <param name="WorkspaceChanged">What its workspace calls once it wrote, once it runs</param>
-/// <param name="DataRoom">What its workspace reads the room of its data with - as its tier allows it now - once it runs</param>
-internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Resources, string AssemblyDirectory, string Name, bool Run,
-                                          BuildSettings Settings, Func<string, bool, string?>? Secrets = null,
-                                          Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null,
-                                          Func<long>? DatabaseSize = null, Action? WorkspaceChanged = null, Func<long>? DataRoom = null);
+/// <param name="Context">What a context of Entity Framework is configured with on its connection, once it runs</param>
+/// <param name="Workspace">What it reads and writes its files through, once it runs</param>
+internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Resources, string AssemblyDirectory, string Name, bool Run,
+                                          BuildSettings Settings, DatabaseBinding Binding, Func<string, bool, string?>? Secrets = null,
+                                          Func<DbConnection>? Database = null, Action<DbContextOptionsBuilder, DbConnection>? Context = null,
+                                          WorkspaceBinding? Workspace = null);

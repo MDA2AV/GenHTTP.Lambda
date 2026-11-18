@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 using SQLitePCL;
 
-namespace GenHTTP.Lambda.Services.Databases;
+namespace GenHTTP.Lambda.Integrations.Sqlite;
 
 /// <summary>
 /// What a connection to the database of a lambda may do, enforced by SQLite

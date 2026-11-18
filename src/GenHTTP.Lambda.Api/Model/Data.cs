@@ -11,7 +11,7 @@ namespace GenHTTP.Lambda.Api.Model;
 /// </remarks>
 [Summary("One kind of data of a lambda, and how full it is.")]
 public sealed record DataStoreResponse(
-    [Summary("Which kind: `database`, the SQLite database it keeps its records in; `workspace`, the files it reads and writes; or `secrets`, the API keys and passwords it reads and nobody sees")]
+    [Summary("Which kind: `database`, the database it keeps its records in; `workspace`, the files it reads and writes; or `secrets`, the API keys and passwords it reads and nobody sees")]
     string Kind,
     [Summary("Whether the lambda has it switched on")]
     bool Enabled,
@@ -95,7 +95,7 @@ public sealed record DatabaseTableResponse(
 public sealed record DatabaseColumnResponse(
     [Summary("Its name")]
     string Name,
-    [Summary("The type it was declared with, as written: `INTEGER`, `TEXT`, or anything else SQLite accepts")]
+    [Summary("The type it was declared with, as the database names it: `INTEGER`, `TEXT`, or anything else it accepts")]
     string Type,
     [Summary("Whether it was declared `NOT NULL`")]
     bool NotNull,

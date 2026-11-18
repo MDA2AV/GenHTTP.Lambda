@@ -2,6 +2,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using GenHTTP.Lambda.Integrations.Databases;
+
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
@@ -38,15 +40,15 @@ public static class SemanticClassifier
     /// <summary>
     /// Classifies every name the compiler can resolve in the given snippet.
     /// </summary>
-    public static IReadOnlyList<ClassifiedToken> Classify(string code)
+    public static IReadOnlyList<ClassifiedToken> Classify(string code, DatabaseBinding binding)
     {
         var snippet = SourceBuilder.ParseSnippet(code);
 
         var scope = "Lambda_classification";
 
-        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, string.Empty, scope);
+        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, scope, binding);
 
-        var compilation = CSharpCompilation.Create(scope, [wrapped], ReferenceProvider.Resolve(), Options);
+        var compilation = CSharpCompilation.Create(scope, [wrapped], ReferenceProvider.Resolve(binding), Options);
 
         var model = compilation.GetSemanticModel(wrapped);
 

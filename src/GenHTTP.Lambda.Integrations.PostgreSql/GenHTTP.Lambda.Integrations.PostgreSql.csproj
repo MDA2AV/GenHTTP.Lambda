@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        A database for installations that keep their data in PostgreSQL: the
+        platform's records and analytics in schemas of their own, and every
+        lambda's database a schema of its own under a role of its own. Offered
+        by the community edition, not by genhttp.dev.
+
+        NU1608: the provider for EF Core 11 is a release candidate that pins
+        the RC of EF Core it was built against, and is run on EF Core 11.0.0
+        here - see Directory.Packages.props.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Integrations.PostgreSql</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Integrations.PostgreSql</AssemblyName>
+        <NoWarn>$(NoWarn);NU1608</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Npgsql" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+    </ItemGroup>
+
+</Project>

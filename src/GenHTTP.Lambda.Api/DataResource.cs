@@ -24,7 +24,7 @@ namespace GenHTTP.Lambda.Api;
          A version is the program and is replaced by the next one. Data is what the program keeps, shared by every version
          and left alone by deploying, rolling back and merging. There are three kinds:
 
-         - `database`: a SQLite database, which the code reaches with `Database.GetConnection()`. Off until it is switched
+         - `database`: a database of its own, which the code reaches with `Database.GetConnection()`. Off until it is switched
            on. Its tables are under `…/database`.
          - `workspace`: files the code reads and writes. On unless its owner switched it off. They are under `…/files`.
          - `secrets`: API keys and passwords the code reads with `Secret.Read("NAME")`, which nobody else can read. Off

@@ -1,6 +1,6 @@
-using GenHTTP.Lambda.Data.Entities;
+using System.Data.Common;
 
-using Microsoft.Data.Sqlite;
+using GenHTTP.Lambda.Data.Entities;
 
 namespace GenHTTP.Lambda.Services.Databases;
 
@@ -11,8 +11,9 @@ namespace GenHTTP.Lambda.Services.Databases;
 /// </summary>
 /// <remarks>
 /// Apart from <see cref="IDatabaseService"/>, which is what the API and MCP
-/// read tables and rows with. This one makes, copies and deletes files and
-/// hands out connections, so the doors into the platform use the other one.
+/// read tables and rows with. This one has databases made, copied and deleted
+/// and hands out connections, so the doors into the platform use the other
+/// one. What a database physically is, is the database integration's.
 /// </remarks>
 public interface IDatabaseVault
 {
@@ -20,10 +21,10 @@ public interface IDatabaseVault
     /// <summary>
     /// What a compiled lambda is handed to connect to its database with.
     /// </summary>
-    Func<SqliteConnection> ConnectorFor(long lambdaId, long? featureId);
+    Func<DbConnection> ConnectorFor(long lambdaId, long? featureId);
 
     /// <summary>
-    /// Makes the database of a lambda: an empty file, where there is none.
+    /// Makes the database of a lambda, empty, where there is none.
     /// </summary>
     void Create(long lambdaId);
 
@@ -44,12 +45,6 @@ public interface IDatabaseVault
     void Clear(long lambdaId);
 
     /// <summary>
-    /// Lets go of the connections to the databases of a lambda that is being
-    /// deleted, before its files are.
-    /// </summary>
-    void Forget(long lambdaId);
-
-    /// <summary>
     /// Forgets what is held in memory for a lambda, so the next connection
     /// reads what is stored.
     /// </summary>
@@ -59,7 +54,7 @@ public interface IDatabaseVault
     /// A connection that only reads, to the database of a lambda or a
     /// feature's copy of it - or nothing where there is none.
     /// </summary>
-    SqliteConnection? OpenForReading(long lambdaId, long? featureId);
+    DbConnection? OpenForReading(long lambdaId, long? featureId);
 
     /// <summary>
     /// Whether the lambda's database is there.
@@ -84,9 +79,10 @@ public interface IDatabaseVault
     Func<long> DataRoomFor(long lambdaId, long? featureId);
 
     /// <summary>
-    /// Writes the database of a lambda into a file of its own, whole.
+    /// Writes the database of a lambda into a SQLite file of its own, whole,
+    /// for an exported project.
     /// </summary>
-    /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database</returns>
+    /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database or it cannot be</returns>
     string? Export(long lambdaId);
 
 }

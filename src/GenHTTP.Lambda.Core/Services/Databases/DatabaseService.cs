@@ -1,22 +1,33 @@
 using System.Collections.Concurrent;
+using System.Data.Common;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
 
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace GenHTTP.Lambda.Services.Databases;
 
+/// <summary>
+/// What the owner and the agents read of a lambda's database.
+/// </summary>
+/// <remarks>
+/// What a database holds is asked of the database integration, which knows
+/// where its catalog is; what is shown of it - a page of rows, a text cut
+/// short, a number a browser reads exactly - is decided here, the same for
+/// every database.
+/// </remarks>
 public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IFeatureService features,
-                                            IStorageService storage, DatabaseVault vault) : IDatabaseService
+                                            IStorageService storage, DatabaseVault vault, IDatabaseProvider provider) : IDatabaseService
 {
 
     /// <summary>
@@ -55,7 +66,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
         {
             using var connection = vault.OpenForReading(lambdaId, featureId);
 
-            return connection == null ? [] : Describe(connection);
+            return connection == null ? [] : Describe(provider, connection);
         }, cancellation);
 
         return new DatabaseOverview(true, vault.SizeOf(lambdaId, featureId), vault.RoomOf(lambdaId, featureId, tier), tables, used);
@@ -80,7 +91,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
             using var connection = vault.OpenForReading(lambdaId, featureId)
                                 ?? throw LambdaException.NotFound($"There is no table called '{name}': the database is empty.");
 
-            return Read(connection, name, Math.Max(0, offset), Math.Clamp(limit, 1, MaxLimit), order, descending);
+            return Read(provider, connection, name, Math.Max(0, offset), Math.Clamp(limit, 1, MaxLimit), order, descending);
         }, cancellation);
     }
 
@@ -107,41 +118,26 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     /// The tables and views, with their columns and how many rows each holds.
     /// </summary>
     /// <remarks>
-    /// What SQLite keeps for itself - its sequences, its statistics, the
-    /// tables behind a full text index - is left out: none of it is anything
-    /// the app wrote.
+    /// What the database keeps for itself is left out by the integration:
+    /// none of it is anything the app wrote.
     /// </remarks>
-    private static List<DatabaseTable> Describe(SqliteConnection connection)
+    private static List<DatabaseTable> Describe(IDatabaseProvider provider, DbConnection connection)
     {
-        var found = new List<(string Name, string Kind)>();
-
-        using (var command = connection.CreateCommand())
-        {
-            command.CommandText = "SELECT name, type FROM pragma_table_list WHERE schema = 'main' AND type IN ('table', 'view', 'virtual') AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY type = 'view', name";
-
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                found.Add((reader.GetString(0), reader.GetString(1) == "view" ? "view" : "table"));
-            }
-        }
-
         var tables = new List<DatabaseTable>();
 
-        foreach (var (name, kind) in found)
+        foreach (var found in provider.Tables(connection))
         {
-            var columns = Columns(connection, name);
+            var columns = Columns(provider, connection, found.Name);
 
-            tables.Add(new DatabaseTable(name, kind, Count(connection, name), columns, IsChangelog(name, columns)));
+            tables.Add(new DatabaseTable(found.Name, found.View ? "view" : "table", Count(provider, connection, found.Name), columns, IsChangelog(found.Name, columns)));
         }
 
         return tables;
     }
 
-    private static DatabaseRows Read(SqliteConnection connection, string table, int offset, int limit, string? order, bool descending)
+    private static DatabaseRows Read(IDatabaseProvider provider, DbConnection connection, string table, int offset, int limit, string? order, bool descending)
     {
-        var columns = Columns(connection, table);
+        var columns = Columns(provider, connection, table);
 
         if (columns.Count == 0)
         {
@@ -155,18 +151,20 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         var direction = descending ? "DESC" : "ASC";
 
-        // written in, where no column is named: what a rowid table holds is
-        // numbered in that order, and a view or a table without one is left
-        // in whatever order SQLite hands it over
-        var by = sorted != null ? $"ORDER BY {Quote(sorted)} {direction}" : HasRowId(connection, table) ? $"ORDER BY rowid {direction}" : string.Empty;
+        // the order rows were written in, where no column is named and the
+        // database keeps one - else whatever order it hands them over in
+        var natural = sorted == null ? provider.NaturalOrder(connection, table) : null;
+
+        var by = sorted != null ? $"ORDER BY {provider.Quote(sorted)} {direction}" : natural != null ? $"ORDER BY {natural} {direction}" : string.Empty;
 
         var rows = new List<IReadOnlyList<object?>>();
 
         using (var command = connection.CreateCommand())
         {
-            command.CommandText = $"SELECT * FROM {Quote(table)} {by} LIMIT $limit OFFSET $offset";
-            command.Parameters.AddWithValue("$limit", limit);
-            command.Parameters.AddWithValue("$offset", offset);
+            command.CommandText = $"SELECT * FROM {provider.Quote(table)} {by} LIMIT @limit OFFSET @offset";
+
+            Add(command, "@limit", limit);
+            Add(command, "@offset", offset);
 
             using var reader = command.ExecuteReader();
 
@@ -183,95 +181,96 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
             }
         }
 
-        return new DatabaseRows(table, columns, rows, Count(connection, table) ?? rows.Count + offset, offset, limit, sorted, descending);
+        return new DatabaseRows(table, columns, rows, Count(provider, connection, table) ?? rows.Count + offset, offset, limit, sorted, descending);
     }
 
-    private static List<DatabaseColumn> Columns(SqliteConnection connection, string table)
-    {
-        var columns = new List<DatabaseColumn>();
-
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT name, type, \"notnull\", pk, dflt_value FROM pragma_table_info($table)";
-        command.Parameters.AddWithValue("$table", table);
-
-        using var reader = command.ExecuteReader();
-
-        while (reader.Read())
-        {
-            columns.Add(new DatabaseColumn(reader.GetString(0), reader.IsDBNull(1) ? string.Empty : reader.GetString(1), reader.GetInt64(2) != 0,
-                                           reader.GetInt64(3) > 0, reader.IsDBNull(4) ? null : reader.GetString(4)));
-        }
-
-        return columns;
-    }
+    private static List<DatabaseColumn> Columns(IDatabaseProvider provider, DbConnection connection, string table)
+        => [.. provider.Columns(connection, table).Select(c => new DatabaseColumn(c.Name, c.Type, c.NotNull, c.PrimaryKey, c.Default))];
 
     /// <summary>
     /// How many rows a table holds, or nothing where counting took longer
     /// than reading a database is allowed to.
     /// </summary>
-    private static long? Count(SqliteConnection connection, string table)
+    private static long? Count(IDatabaseProvider provider, DbConnection connection, string table)
     {
         try
         {
             using var command = connection.CreateCommand();
 
-            command.CommandText = $"SELECT count(*) FROM {Quote(table)}";
+            command.CommandText = $"SELECT count(*) FROM {provider.Quote(table)}";
 
-            return (long)command.ExecuteScalar()!;
+            return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
-        catch (SqliteException)
+        catch (DbException)
         {
             return null;
         }
     }
 
-    private static bool HasRowId(SqliteConnection connection, string table)
-    {
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT type = 'table' AND wr = 0 FROM pragma_table_list WHERE schema = 'main' AND name = $table";
-        command.Parameters.AddWithValue("$table", table);
-
-        return command.ExecuteScalar() is long yes && yes != 0;
-    }
-
     /// <summary>
     /// A value as it can travel as JSON: numbers as numbers where a browser
     /// reads them exactly, text cut short where it is long, bytes by their
-    /// length.
+    /// length - and anything else a database may hold as the text it reads as.
     /// </summary>
-    private static object? Value(SqliteDataReader reader, int column)
+    private static object? Value(DbDataReader reader, int column)
     {
         if (reader.IsDBNull(column))
         {
             return null;
         }
 
-        switch (reader.GetFieldType(column))
+        var type = reader.GetFieldType(column);
+
+        if (type == typeof(long) || type == typeof(int) || type == typeof(short) || type == typeof(byte))
         {
-            case var type when type == typeof(long):
-                {
-                    var value = reader.GetInt64(column);
+            var value = Convert.ToInt64(reader.GetValue(column), CultureInfo.InvariantCulture);
 
-                    // beyond 2^53 a JavaScript number is no longer the number
-                    return Math.Abs(value) <= (1L << 53) ? value : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
-            case var type when type == typeof(double):
-                {
-                    var value = reader.GetDouble(column);
-
-                    return double.IsFinite(value) ? value : value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
-            case var type when type == typeof(byte[]):
-                return new BinaryValue(reader.GetBytes(column, 0, null, 0, 0));
-            default:
-                {
-                    var text = reader.GetString(column);
-
-                    return text.Length > MaxText ? new TruncatedText(text[..MaxText], text.Length) : text;
-                }
+            // beyond 2^53 a JavaScript number is no longer the number
+            return Math.Abs(value) <= (1L << 53) ? value : value.ToString(CultureInfo.InvariantCulture);
         }
+
+        if (type == typeof(double) || type == typeof(float))
+        {
+            var value = Convert.ToDouble(reader.GetValue(column), CultureInfo.InvariantCulture);
+
+            return double.IsFinite(value) ? value : value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (type == typeof(byte[]))
+        {
+            return new BinaryValue(reader.GetBytes(column, 0, null, 0, 0));
+        }
+
+        if (type == typeof(bool))
+        {
+            return reader.GetBoolean(column);
+        }
+
+        var text = type == typeof(string) ? reader.GetString(column) : Text(reader.GetValue(column));
+
+        return text.Length > MaxText ? new TruncatedText(text[..MaxText], text.Length) : text;
+    }
+
+    /// <summary>
+    /// What a value of a type JSON has no number for reads as: a decimal
+    /// exactly, a time in ISO 8601, the rest as it prints.
+    /// </summary>
+    private static string Text(object value) => value switch
+    {
+        DateTime time => time.ToString("O", CultureInfo.InvariantCulture),
+        DateTimeOffset time => time.ToString("O", CultureInfo.InvariantCulture),
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? string.Empty
+    };
+
+    private static void Add(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+
+        parameter.ParameterName = name;
+        parameter.Value = value;
+
+        command.Parameters.Add(parameter);
     }
 
     /// <summary>
@@ -280,8 +279,6 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     private static bool IsChangelog(string name, List<DatabaseColumn> columns)
         => name.Equals("changelog", StringComparison.OrdinalIgnoreCase)
         && columns.Any(c => c.Name == "checksum") && columns.Any(c => c.Name == "installed_on");
-
-    private static string Quote(string name) => $"\"{name.Replace("\"", "\"\"")}\"";
 
     #endregion
 

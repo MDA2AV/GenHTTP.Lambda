@@ -34,12 +34,12 @@ public sealed class Tally
 }
 
 /// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
-public sealed class PollContext(SqliteConnection connection) : DbContext
+public sealed class PollContext(DbConnection connection) : DbContext
 {
     public DbSet<Tally> Tallies => Set<Tally>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite(connection, contextOwnsConnection: true);
+        => options.UseDatabase(connection);
 
     // the table is the migration's; this says how to read it
     protected override void OnModelCreating(ModelBuilder model)

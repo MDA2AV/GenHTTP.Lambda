@@ -1,9 +1,9 @@
+using System.Data.Common;
 using System.Globalization;
-using System.Reflection;
 
-using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Integrations.Databases;
 
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Analytics;
@@ -13,48 +13,33 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// counts visits, a row per lambda, day and value.
 /// </summary>
 /// <remarks>
-/// A SQLite file of its own beside the platform's (<see cref="LambdaOptions.AnalyticsFile"/>),
-/// laid out as a star - see the migration for why. Spoken to with plain
-/// commands rather than Entity Framework: a writing is a few hundred upserts
-/// in one transaction, and a reading a handful of sums over a range of a key,
-/// neither of which a model would make clearer.
+/// A store of its own beside the platform's (<see cref="DatabaseStores.Analytics"/>,
+/// <c>analytics.db</c> on SQLite), laid out as a star - see the migration for
+/// why. Spoken to with plain commands rather than Entity Framework: a writing
+/// is a few hundred upserts in one transaction, and a reading a handful of sums
+/// over a range of a key, neither of which a model would make clearer. Written
+/// in SQL that every database the platform supports accepts, so the commands
+/// are the same whatever keeps them; only the schema is written per dialect.
 ///
-/// Synchronous, as SQLite is: written by the background job, and read for an
-/// owner a lambda's year at most, by its key.
+/// Synchronous, as the platform's services are: written by the background
+/// job, and read for an owner a lambda's year at most, by its key.
 /// </remarks>
 public sealed class AnalyticsStore : IAnalyticsStore
 {
-    private const string MigrationNamespace = "GenHTTP.Lambda.Services.Analytics.Migrations";
-
     /// <summary>
     /// How many days are kept, today included: a year, whatever a tier shows of it.
     /// </summary>
     public const int Kept = 366;
 
-    private readonly string _connection;
+    private readonly IDatabaseProvider _database;
 
     #region Initialization
 
-    public AnalyticsStore(LambdaOptions options, ILogger<AnalyticsStore> logger)
+    public AnalyticsStore(IDatabaseProvider database, ILogger<AnalyticsStore> logger)
     {
-        Directory.CreateDirectory(options.DataDirectory);
+        _database = database;
 
-        _connection = $"Data Source={options.AnalyticsFile};Default Timeout=30;Pooling=True";
-
-        using var connection = Open();
-
-        Execute(connection, "PRAGMA journal_mode = WAL;");
-
-        var evolve = new EvolveDb.Evolve(connection, message => logger.LogDebug("{Message}", message))
-        {
-            Locations = [],
-            EmbeddedResourceAssemblies = [Assembly.GetExecutingAssembly()],
-            EmbeddedResourceFilters = [MigrationNamespace],
-            IsEraseDisabled = true,
-            MetadataTableName = "schema_versions"
-        };
-
-        evolve.Migrate();
+        Migrator.Migrate(database, DatabaseStores.Analytics, logger);
     }
 
     #endregion
@@ -81,36 +66,36 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         using var transaction = connection.BeginTransaction();
 
-        using (var lambdas = Command(connection, "INSERT OR IGNORE INTO lambdas (id, created) VALUES ($lambda, $created)", "$lambda", "$created"))
+        using (var lambdas = Command(connection, "INSERT INTO lambdas (id, created) VALUES (@lambda, @created) ON CONFLICT (id) DO NOTHING", "@lambda", "@created"))
         {
             foreach (var lambda in tally.Lambdas)
             {
-                lambdas.Parameters["$lambda"].Value = lambda;
-                lambdas.Parameters["$created"].Value = now.ToString("O", CultureInfo.InvariantCulture);
+                lambdas.Parameters["@lambda"].Value = lambda;
+                lambdas.Parameters["@created"].Value = now.ToString("O", CultureInfo.InvariantCulture);
                 lambdas.ExecuteNonQuery();
             }
         }
 
         using (var days = Command(connection, """
                    INSERT INTO days (lambda, year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis)
-                   VALUES ($lambda, $year, $month, $day, $hits, $views, $botViews, $visitors, $failed, $rejected, $bytes, $millis)
+                   VALUES (@lambda, @year, @month, @day, @hits, @views, @botViews, @visitors, @failed, @rejected, @bytes, @millis)
                    ON CONFLICT (lambda, year, month, day) DO UPDATE SET
-                       hits = hits + excluded.hits, views = views + excluded.views, bot_views = bot_views + excluded.bot_views,
-                       visitors = visitors + excluded.visitors, failed = failed + excluded.failed, rejected = rejected + excluded.rejected,
-                       bytes = bytes + excluded.bytes, millis = millis + excluded.millis
-                   """, [.. DayKey, "$hits", "$views", "$botViews", "$visitors", "$failed", "$rejected", "$bytes", "$millis"]))
+                       hits = days.hits + excluded.hits, views = days.views + excluded.views, bot_views = days.bot_views + excluded.bot_views,
+                       visitors = days.visitors + excluded.visitors, failed = days.failed + excluded.failed, rejected = days.rejected + excluded.rejected,
+                       bytes = days.bytes + excluded.bytes, millis = days.millis + excluded.millis
+                   """, [.. DayKey, "@hits", "@views", "@botViews", "@visitors", "@failed", "@rejected", "@bytes", "@millis"]))
         {
             foreach (var (lambda, day, totals) in tally.Days)
             {
                 Day(days, lambda, day);
-                days.Parameters["$hits"].Value = totals.Hits;
-                days.Parameters["$views"].Value = totals.Views;
-                days.Parameters["$botViews"].Value = totals.BotViews;
-                days.Parameters["$visitors"].Value = totals.Visitors;
-                days.Parameters["$failed"].Value = totals.Failed;
-                days.Parameters["$rejected"].Value = totals.Rejected;
-                days.Parameters["$bytes"].Value = totals.Bytes;
-                days.Parameters["$millis"].Value = totals.Millis;
+                days.Parameters["@hits"].Value = totals.Hits;
+                days.Parameters["@views"].Value = totals.Views;
+                days.Parameters["@botViews"].Value = totals.BotViews;
+                days.Parameters["@visitors"].Value = totals.Visitors;
+                days.Parameters["@failed"].Value = totals.Failed;
+                days.Parameters["@rejected"].Value = totals.Rejected;
+                days.Parameters["@bytes"].Value = totals.Bytes;
+                days.Parameters["@millis"].Value = totals.Millis;
                 days.ExecuteNonQuery();
             }
         }
@@ -123,12 +108,12 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             using var upsert = Command(connection, $"""
                 INSERT INTO {table} (lambda, year, month, day, value, hits, views, bot_views)
-                VALUES ($lambda, $year, $month, $day, $value, $hits, $views, $botViews)
+                VALUES (@lambda, @year, @month, @day, @value, @hits, @views, @botViews)
                 ON CONFLICT (lambda, year, month, day, value) DO UPDATE SET
-                    hits = hits + excluded.hits, views = views + excluded.views, bot_views = bot_views + excluded.bot_views
-                """, [.. DayKey, "$value", "$hits", "$views", "$botViews"]);
+                    hits = {table}.hits + excluded.hits, views = {table}.views + excluded.views, bot_views = {table}.bot_views + excluded.bot_views
+                """, [.. DayKey, "@value", "@hits", "@views", "@botViews"]);
 
-            using var known = Command(connection, $"SELECT value FROM {table} WHERE lambda = $lambda AND year = $year AND month = $month AND day = $day", DayKey);
+            using var known = Command(connection, $"SELECT value FROM {table} WHERE lambda = @lambda AND year = @year AND month = @month AND day = @day", DayKey);
 
             // the busiest first, so where a day runs out of room it is the
             // values that came up least that are gathered under other
@@ -159,10 +144,10 @@ public sealed class AnalyticsStore : IAnalyticsStore
                     }
 
                     Day(upsert, cell.Lambda, cell.Day);
-                    upsert.Parameters["$value"].Value = value;
-                    upsert.Parameters["$hits"].Value = hits;
-                    upsert.Parameters["$views"].Value = views;
-                    upsert.Parameters["$botViews"].Value = botViews;
+                    upsert.Parameters["@value"].Value = value;
+                    upsert.Parameters["@hits"].Value = hits;
+                    upsert.Parameters["@views"].Value = views;
+                    upsert.Parameters["@botViews"].Value = botViews;
                     upsert.ExecuteNonQuery();
                 }
             }
@@ -182,15 +167,15 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         foreach (var table in Tables)
         {
-            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = $lambda", "$lambda");
+            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda", "@lambda");
 
-            delete.Parameters["$lambda"].Value = lambda;
+            delete.Parameters["@lambda"].Value = lambda;
             delete.ExecuteNonQuery();
         }
 
-        using (var row = Command(connection, "DELETE FROM lambdas WHERE id = $lambda", "$lambda"))
+        using (var row = Command(connection, "DELETE FROM lambdas WHERE id = @lambda", "@lambda"))
         {
-            row.Parameters["$lambda"].Value = lambda;
+            row.Parameters["@lambda"].Value = lambda;
             row.ExecuteNonQuery();
         }
 
@@ -226,7 +211,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         foreach (var table in Tables)
         {
-            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = $lambda AND (year, month, day) < ($year, $month, $day)", DayKey);
+            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda AND (year, month, day) < (@year, @month, @day)", DayKey);
 
             foreach (var lambda in lambdas)
             {
@@ -256,7 +241,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         using (var days = Ranged(connection, lambda, from, to, """
                    SELECT year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis FROM days
-                   WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
+                   WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
                    """))
         using (var reader = days.ExecuteReader())
         {
@@ -284,12 +269,13 @@ public sealed class AnalyticsStore : IAnalyticsStore
         foreach (var dimension in AnalyticsDimensions.All)
         {
             using var values = Ranged(connection, lambda, from, to, $"""
-                SELECT value, SUM(hits) AS hits, SUM(views) AS views, SUM(bot_views) AS bot_views FROM {AnalyticsDimensions.TableOf(dimension)}
-                WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
-                GROUP BY value ORDER BY views DESC, hits DESC, value LIMIT $most
+                SELECT value, CAST(SUM(hits) AS BIGINT) AS hits, CAST(SUM(views) AS BIGINT) AS views, CAST(SUM(bot_views) AS BIGINT) AS bot_views
+                FROM {AnalyticsDimensions.TableOf(dimension)}
+                WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
+                GROUP BY value ORDER BY views DESC, hits DESC, value LIMIT @most
                 """);
 
-            values.Parameters.AddWithValue("$most", most);
+            Add(values, "@most", most);
 
             using var reader = values.ExecuteReader();
 
@@ -314,9 +300,10 @@ public sealed class AnalyticsStore : IAnalyticsStore
         using var connection = Open();
 
         using var sum = Ranged(connection, lambda, from, to, """
-            SELECT IFNULL(SUM(hits), 0), IFNULL(SUM(views), 0), IFNULL(SUM(bot_views), 0), IFNULL(SUM(visitors), 0), IFNULL(SUM(failed), 0),
-                   IFNULL(SUM(rejected), 0), IFNULL(SUM(bytes), 0), IFNULL(SUM(millis), 0) FROM days
-            WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
+            SELECT CAST(COALESCE(SUM(hits), 0) AS BIGINT), CAST(COALESCE(SUM(views), 0) AS BIGINT), CAST(COALESCE(SUM(bot_views), 0) AS BIGINT),
+                   CAST(COALESCE(SUM(visitors), 0) AS BIGINT), CAST(COALESCE(SUM(failed), 0) AS BIGINT), CAST(COALESCE(SUM(rejected), 0) AS BIGINT),
+                   CAST(COALESCE(SUM(bytes), 0) AS BIGINT), CAST(COALESCE(SUM(millis), 0) AS DOUBLE PRECISION) FROM days
+            WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
             """);
 
         using var reader = sum.ExecuteReader();
@@ -331,9 +318,9 @@ public sealed class AnalyticsStore : IAnalyticsStore
     {
         using var connection = Open();
 
-        using var first = Command(connection, "SELECT year, month, day FROM days WHERE lambda = $lambda ORDER BY year, month, day LIMIT 1", "$lambda");
+        using var first = Command(connection, "SELECT year, month, day FROM days WHERE lambda = @lambda ORDER BY year, month, day LIMIT 1", "@lambda");
 
-        first.Parameters["$lambda"].Value = lambda;
+        first.Parameters["@lambda"].Value = lambda;
 
         using var reader = first.ExecuteReader();
 
@@ -346,32 +333,17 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
     private static IEnumerable<string> Tables => AnalyticsDimensions.All.Select(AnalyticsDimensions.TableOf).Prepend("days");
 
-    private SqliteConnection Open()
-    {
-        var connection = new SqliteConnection(_connection);
-
-        connection.Open();
-
-        return connection;
-    }
-
-    private static void Execute(SqliteConnection connection, string sql)
-    {
-        using var command = connection.CreateCommand();
-
-        command.CommandText = sql;
-        command.ExecuteNonQuery();
-    }
+    private DbConnection Open() => _database.Open(DatabaseStores.Analytics);
 
     /// <summary>
     /// The parameters that name a day of a lambda.
     /// </summary>
-    private static readonly string[] DayKey = ["$lambda", "$year", "$month", "$day"];
+    private static readonly string[] DayKey = ["@lambda", "@year", "@month", "@day"];
 
     /// <summary>
     /// A command with the parameters given, to be set and executed as often as needed.
     /// </summary>
-    private static SqliteCommand Command(SqliteConnection connection, string sql, params string[] parameters)
+    private static DbCommand Command(DbConnection connection, string sql, params string[] parameters)
     {
         var command = connection.CreateCommand();
 
@@ -379,38 +351,48 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         foreach (var name in parameters)
         {
-            command.Parameters.Add(new SqliteParameter(name, null));
+            Add(command, name, DBNull.Value);
         }
 
         return command;
     }
 
-    private static SqliteCommand Ranged(SqliteConnection connection, long lambda, DateOnly from, DateOnly to, string sql)
+    private static DbCommand Ranged(DbConnection connection, long lambda, DateOnly from, DateOnly to, string sql)
     {
         var command = connection.CreateCommand();
 
         command.CommandText = sql;
 
-        command.Parameters.AddWithValue("$lambda", lambda);
-        command.Parameters.AddWithValue("$fromYear", from.Year);
-        command.Parameters.AddWithValue("$fromMonth", from.Month);
-        command.Parameters.AddWithValue("$fromDay", from.Day);
-        command.Parameters.AddWithValue("$toYear", to.Year);
-        command.Parameters.AddWithValue("$toMonth", to.Month);
-        command.Parameters.AddWithValue("$toDay", to.Day);
+        Add(command, "@lambda", lambda);
+        Add(command, "@fromYear", from.Year);
+        Add(command, "@fromMonth", from.Month);
+        Add(command, "@fromDay", from.Day);
+        Add(command, "@toYear", to.Year);
+        Add(command, "@toMonth", to.Month);
+        Add(command, "@toDay", to.Day);
 
         return command;
     }
 
-    private static void Day(SqliteCommand command, long lambda, DateOnly day)
+    private static void Add(DbCommand command, string name, object value)
     {
-        command.Parameters["$lambda"].Value = lambda;
-        command.Parameters["$year"].Value = day.Year;
-        command.Parameters["$month"].Value = day.Month;
-        command.Parameters["$day"].Value = day.Day;
+        var parameter = command.CreateParameter();
+
+        parameter.ParameterName = name;
+        parameter.Value = value;
+
+        command.Parameters.Add(parameter);
     }
 
-    private static HashSet<string> Strings(SqliteCommand command)
+    private static void Day(DbCommand command, long lambda, DateOnly day)
+    {
+        command.Parameters["@lambda"].Value = lambda;
+        command.Parameters["@year"].Value = day.Year;
+        command.Parameters["@month"].Value = day.Month;
+        command.Parameters["@day"].Value = day.Day;
+    }
+
+    private static HashSet<string> Strings(DbCommand command)
     {
         var values = new HashSet<string>(StringComparer.Ordinal);
 
@@ -424,7 +406,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
         return values;
     }
 
-    private static AnalyticsTotals Totals(SqliteDataReader reader, int at)
+    private static AnalyticsTotals Totals(DbDataReader reader, int at)
         => new(reader.GetInt64(at), reader.GetInt64(at + 1), reader.GetInt64(at + 2), reader.GetInt64(at + 3), reader.GetInt64(at + 4),
                reader.GetInt64(at + 5), reader.GetInt64(at + 6), reader.GetDouble(at + 7));
 

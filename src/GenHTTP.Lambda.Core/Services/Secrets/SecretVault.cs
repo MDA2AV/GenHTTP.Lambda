@@ -2,12 +2,12 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Data;
-using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Secrets;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Meta;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Secrets;
 
@@ -22,13 +22,17 @@ namespace GenHTTP.Lambda.Services.Secrets;
 /// agent calls is <see cref="ISecretService"/>.
 ///
 /// A lambda reads its secrets while it serves requests, so what it reads is
-/// held in memory, sealed, per lambda and feature, and opened on each read;
-/// every change goes through here and makes the next read load them again.
-/// The code of the lambda is handed a function to read with rather than the
-/// values, so a secret changed in the editor is what the next request reads,
-/// without the lambda being built again.
+/// held in memory per lambda and feature, as the secrets integration hands it
+/// over; every change goes through here and makes the next read load them
+/// again. The code of the lambda is handed a function to read with rather than
+/// the values, so a secret changed in the editor is what the next request
+/// reads, without the lambda being built again.
+///
+/// What is decided here is the platform's: whether the lambda has secrets
+/// switched on, what a name may be, how large a value and how many of them.
+/// Where they are kept is the integration's (<see cref="ISecretProvider"/>).
 /// </remarks>
-public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<SecretVault> logger) : ISecretVault
+public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> databases, ISecretProvider provider) : ISecretVault
 {
 
     /// <summary>
@@ -47,17 +51,13 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// </summary>
     public const int MaxValue = 32 * 1024;
 
-    private const string FingerprintSetting = "secrets-key";
-
-    private readonly ConcurrentDictionary<Scope, Snapshot> _snapshots = [];
+    private readonly ConcurrentDictionary<DataScope, Snapshot> _snapshots = [];
 
     /// <summary>
     /// How often the secrets of a lambda changed, so a snapshot loaded while
     /// one did is known to be old.
     /// </summary>
     private readonly ConcurrentDictionary<long, long> _generations = [];
-
-    private int _fingerprinted;
 
     #region Reading, from inside a lambda
 
@@ -71,18 +71,18 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// for code that works with and without a value.
     /// </remarks>
     public Func<string, bool, string?> ReaderFor(long lambdaId, long? featureId)
-        => (name, required) => Read(new Scope(lambdaId, featureId), name, required);
+        => (name, required) => Read(new DataScope(lambdaId, featureId), name, required);
 
-    private string? Read(Scope scope, string name, bool required)
+    private string? Read(DataScope scope, string name, bool required)
     {
         var snapshot = Current(scope);
 
-        if (!snapshot.Enabled)
+        if (snapshot.Values == null)
         {
             return required ? throw new InvalidOperationException(DataKinds.SecretsOff) : null;
         }
 
-        if (name == null || !snapshot.Values.TryGetValue(name, out var sealedValue))
+        if ((name == null ? null : snapshot.Values.Read(name)) is not { } value)
         {
             if (!required)
             {
@@ -95,10 +95,10 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
                                          + "with set_secret (MCP) or with PUT /api/v1/lambdas/{privateKey}/secrets/{name}. Names are case sensitive.");
         }
 
-        return cipher.Open(snapshot.Key!, name, sealedValue);
+        return value;
     }
 
-    private Snapshot Current(Scope scope)
+    private Snapshot Current(DataScope scope)
     {
         var generation = _generations.GetValueOrDefault(scope.LambdaId);
 
@@ -117,10 +117,10 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     }
 
     /// <summary>
-    /// Reads the sealed secrets of a lambda or feature, synchronously: a lambda
-    /// reads a secret with a plain call, from wherever it happens to be.
+    /// Reads the secrets of a lambda or feature, synchronously: a lambda reads
+    /// a secret with a plain call, from wherever it happens to be.
     /// </summary>
-    private Snapshot Load(Scope scope, long generation)
+    private Snapshot Load(DataScope scope, long generation)
     {
         using var database = databases.CreateDbContext();
 
@@ -129,26 +129,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
                               .Select(s => (bool?)s.Enabled)
                               .FirstOrDefault() ?? DataKinds.Secrets.Default;
 
-        if (!enabled)
-        {
-            return new Snapshot(generation, false, null, new Dictionary<string, byte[]>());
-        }
-
-        var salt = database.Lambdas.AsNoTracking()
-                           .Where(l => l.Id == scope.LambdaId)
-                           .Select(l => l.SecretSalt)
-                           .FirstOrDefault();
-
-        var values = database.Secrets.AsNoTracking()
-                             .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
-                             .ToDictionary(s => s.Name, s => s.Value, StringComparer.Ordinal);
-
-        if (values.Count > 0)
-        {
-            CheckFingerprint(database);
-        }
-
-        return new Snapshot(generation, true, salt != null && values.Count > 0 ? cipher.KeyOf(salt) : null, values);
+        return new Snapshot(generation, enabled ? provider.Load(scope) : null);
     }
 
     #endregion
@@ -158,25 +139,13 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// What is stored for the lambda, or for a feature's copy, by name.
     /// </summary>
-    public IReadOnlyList<SecretEntity> List(long lambdaId, long? featureId)
-    {
-        using var database = databases.CreateDbContext();
-
-        return database.Secrets.AsNoTracking()
-                       .Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId)
-                       .OrderBy(s => s.Name)
-                       .ToList();
-    }
+    public IReadOnlyList<SecretEntry> List(long lambdaId, long? featureId)
+        => [.. provider.List(new DataScope(lambdaId, featureId)).OrderBy(s => s.Name, StringComparer.Ordinal)];
 
     /// <summary>
     /// How many secrets the lambda has, or a feature's copy of them.
     /// </summary>
-    public int Count(long lambdaId, long? featureId)
-    {
-        using var database = databases.CreateDbContext();
-
-        return database.Secrets.Count(s => s.LambdaId == lambdaId && s.FeatureId == featureId);
-    }
+    public int Count(long lambdaId, long? featureId) => provider.List(new DataScope(lambdaId, featureId)).Count;
 
     /// <summary>
     /// Stores a value under a name, replacing the one there.
@@ -185,48 +154,24 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Whether the lambda has secrets switched on is the caller's to check;
     /// the demos are set up here with the check deliberately left out.
     /// </remarks>
-    public SecretEntity Store(long lambdaId, long? featureId, string name, string value)
+    public SecretEntry Store(long lambdaId, long? featureId, string name, string value)
     {
         Validate(name, value);
 
-        using var database = databases.CreateDbContext();
+        var scope = new DataScope(lambdaId, featureId);
 
-        var lambda = database.Lambdas.FirstOrDefault(l => l.Id == lambdaId)
-                  ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        var kept = provider.List(scope);
 
-        // the lambda's half of its key, made the first time it needs one
-        lambda.SecretSalt ??= SecretCipher.NewSalt();
-
-        CheckFingerprint(database);
-
-        var sealedValue = cipher.Seal(cipher.KeyOf(lambda.SecretSalt), name, value);
-
-        var existing = database.Secrets.FirstOrDefault(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name);
-
-        var now = DateTime.UtcNow;
-
-        if (existing == null)
+        if (kept.Count >= MaxSecrets && !kept.Any(s => s.Name == name))
         {
-            if (database.Secrets.Count(s => s.LambdaId == lambdaId && s.FeatureId == featureId) >= MaxSecrets)
-            {
-                throw LambdaException.Conflict($"A lambda may keep {MaxSecrets} secrets. Delete one it no longer needs first.");
-            }
-
-            existing = new SecretEntity { LambdaId = lambdaId, FeatureId = featureId, Name = name, Value = sealedValue, Created = now, Changed = now };
-
-            database.Secrets.Add(existing);
-        }
-        else
-        {
-            existing.Value = sealedValue;
-            existing.Changed = now;
+            throw LambdaException.Conflict($"A lambda may keep {MaxSecrets} secrets. Delete one it no longer needs first.");
         }
 
-        database.SaveChanges();
+        var stored = provider.Store(scope, name, value);
 
         Invalidate(lambdaId);
 
-        return existing;
+        return stored;
     }
 
     /// <summary>
@@ -234,61 +179,40 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// </summary>
     public bool Remove(long lambdaId, long? featureId, string name)
     {
-        using var database = databases.CreateDbContext();
-
-        var removed = database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name)
-                              .ExecuteDelete();
+        var removed = provider.Delete(new DataScope(lambdaId, featureId), name);
 
         Invalidate(lambdaId);
 
-        return removed > 0;
+        return removed;
     }
 
     /// <summary>
     /// Replaces a feature's copy of the secrets with the lambda's own.
     /// </summary>
-    /// <remarks>
-    /// Copied sealed: the copy is the lambda's, under the lambda's key, so
-    /// nothing is opened to make it.
-    /// </remarks>
     public void Copy(long lambdaId, long featureId)
     {
-        using var database = databases.CreateDbContext();
-
-        database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId).ExecuteDelete();
-
-        var own = database.Secrets.AsNoTracking()
-                          .Where(s => s.LambdaId == lambdaId && s.FeatureId == null)
-                          .ToList();
-
-        database.Secrets.AddRange(own.Select(s => new SecretEntity
-        {
-            LambdaId = lambdaId,
-            FeatureId = featureId,
-            Name = s.Name,
-            Value = s.Value,
-            Created = s.Created,
-            Changed = s.Changed
-        }));
-
-        database.SaveChanges();
+        provider.Copy(new DataScope(lambdaId), new DataScope(lambdaId, featureId));
 
         Invalidate(lambdaId);
     }
 
     /// <summary>
-    /// Deletes every secret of a lambda, its features' copies included, and
-    /// its half of the key with them - secrets stored later are sealed with a
-    /// new one.
+    /// Removes a feature's copy of the secrets.
+    /// </summary>
+    public void RemoveCopy(long lambdaId, long featureId)
+    {
+        provider.Delete(new DataScope(lambdaId, featureId));
+
+        Invalidate(lambdaId);
+    }
+
+    /// <summary>
+    /// Deletes every secret of a lambda, its features' copies included -
+    /// secrets stored later start afresh.
     /// </summary>
     public void Clear(long lambdaId)
     {
-        using var database = databases.CreateDbContext();
-
-        database.Secrets.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
-
-        database.Lambdas.Where(l => l.Id == lambdaId)
-                      .ExecuteUpdate(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null));
+        provider.DeleteAll(lambdaId);
 
         Invalidate(lambdaId);
     }
@@ -358,54 +282,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
 
     #endregion
 
-    #region Key
-
-    /// <summary>
-    /// Remembers which installation key sealed what the database holds, and
-    /// says so loudly when the server runs with another one.
-    /// </summary>
-    /// <remarks>
-    /// Without this, a server moved without its key would find out one secret
-    /// at a time, in the logs of the lambdas that read them.
-    /// </remarks>
-    private void CheckFingerprint(LambdaDbContext database)
-    {
-        if (Interlocked.Exchange(ref _fingerprinted, 1) == 1)
-        {
-            return;
-        }
-
-        try
-        {
-            var mine = cipher.Fingerprint();
-
-            var stored = database.Settings.AsNoTracking().FirstOrDefault(s => s.Key == FingerprintSetting);
-
-            if (stored == null)
-            {
-                using var writer = databases.CreateDbContext();
-
-                writer.Settings.Add(new SettingEntity { Key = FingerprintSetting, Value = mine });
-                writer.SaveChanges();
-            }
-            else if (stored.Value != mine)
-            {
-                logger.LogError("The secrets in this database were sealed with another key than the one this server has (LAMBDA_SECRETS_KEY or secrets.key), "
-                              + "so none of them can be read. Start the server with the key the database was written with.");
-            }
-        }
-        catch (Exception e)
-        {
-            // the check is a courtesy; reading the secrets says the same thing later
-            logger.LogWarning(e, "Failed to check which key the secrets were sealed with");
-        }
-    }
-
-    #endregion
-
-    private readonly record struct Scope(long LambdaId, long? FeatureId);
-
-    /// <param name="Key">The key of the lambda, while it has anything to open with it</param>
-    private sealed record Snapshot(long Generation, bool Enabled, byte[]? Key, IReadOnlyDictionary<string, byte[]> Values);
+    /// <param name="Values">What the lambda reads its secrets from, or nothing while its secrets are switched off</param>
+    private sealed record Snapshot(long Generation, ISecretSet? Values);
 
 }
