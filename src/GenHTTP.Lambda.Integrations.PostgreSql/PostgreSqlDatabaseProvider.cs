@@ -376,7 +376,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
     public string Guide(GuideContext context) =>
         """
-        - Here it is PostgreSQL: a schema of the lambda's own, reached as a role that reaches nothing else. Names fold to lower case, as unquoted names do there - map a property to a column of another name with HasColumnName("due_date"). A draft's copy holds the tables, views and sequences, not functions, triggers or types of your own. Past the data's room (see limits), the lambda's next connections only read.
+        - Here: PostgreSQL, a schema of the lambda's own, reached as a role that reaches nothing else. Names fold to lower case, as unquoted names do there - map a property to a column of another name with HasColumnName("due_date"). A draft's copy holds the tables, views and sequences, not functions, triggers or types of your own. Past the data's room (see limits), the lambda's next connections only read.
         """;
 
     #endregion

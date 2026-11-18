@@ -1,0 +1,40 @@
+# The community edition with its data in PostgreSQL rather than SQLite files:
+# the platform's records, its analytics and the database of every app, in a
+# PostgreSQL server beside it. Laid over docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# Choose it when the installation starts: what SQLite kept is not moved over.
+# See docs/postgresql.md for a server of your own and what to know before.
+
+services:
+
+  lambda:
+    environment:
+      LAMBDA_DATABASE: postgresql
+      # the user needs to create schemas in this database and roles on the
+      # server - the one the image makes may do both
+      LAMBDA_POSTGRES_CONNECTION: Host=postgres;Database=lambda;Username=lambda;Password=${POSTGRES_PASSWORD:-change-me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: lambda
+      POSTGRES_USER: lambda
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    # every app keeps up to ten connections while it is busy
+    command: ["postgres", "-c", "max_connections=200"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lambda -d lambda"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

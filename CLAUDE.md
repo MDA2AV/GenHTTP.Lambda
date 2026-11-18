@@ -194,6 +194,9 @@ the environment:
 | Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
 | Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
 | Engine, ports, TLS, the environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
+| What data is kept in: the contracts | `GenHTTP.Lambda.Integrations` | - | - |
+| SQLite, the default database | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
+| PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
 
 - **A host's `Program.cs` is the composition, and stays short and plain**:
   read the settings, build the platform, put the components into a layout,
@@ -530,10 +533,11 @@ hosting URL. What follows is about subdomains unless it says otherwise.
 - **Off by default.** Names are environment variable names (letters, digits,
   underscore, no leading digit, case sensitive), because an exported project
   reads `Secret.Read("X")` from `$X`. Values are not exported.
-- Stored in SQLite, sealed with AES-GCM under a key made from the
-  installation's key (`LAMBDA_SECRETS_KEY`, or `secrets.key` in the data
-  directory - never in the database) and a random per-lambda salt; the name is
-  associated data. Backup and migration = the database + the installation's
+- Kept by the secrets integration (see Integrations below); the platform's own
+  (`InternalSecrets`) stores them in the platform's database, sealed with
+  AES-GCM under a key made from the installation's key (`LAMBDA_SECRETS_KEY`,
+  or `secrets.key` in the data directory - never in the database) and a random
+  per-lambda salt; the name is associated data. Backup and migration = the database + the installation's
   key. Do not put the installation's key in the database, and do not describe
   the encryption as isolating lambdas from each other: they share a process.
 - Read at runtime through a function handed to the compiled lambda, never
@@ -549,10 +553,11 @@ hosting URL. What follows is about subdomains unless it says otherwise.
 
 ### Databases
 
-- **A SQLite file per lambda**, reached with `Database.GetConnection()` (an open
-  Microsoft.Data.Sqlite connection, pooled, one per request, disposed of).
-  **Off by default**; switching it on makes an empty file, switching it off
-  deletes it and the features' copies. Either switch restarts the lambda on its
+- **A database per lambda**, kept by the database integration (see
+  Integrations below) - a SQLite file, or a PostgreSQL schema - reached with
+  `Database.GetConnection()` (an open `DbConnection`, pooled, one per request,
+  disposed of). **Off by default**; switching it on makes it empty, switching
+  it off deletes it and the features' copies. Either switch restarts the lambda on its
   next request, so its startup migrations run against what is there.
 - **Schema by Evolve migrations** shipped as resources in `resources/migrations/`, applied as
   the lambda starts - never Entity Framework's migrations, `EnsureCreated` or
@@ -561,18 +566,37 @@ hosting URL. What follows is about subdomains unless it says otherwise.
 - **Records through Entity Framework Core - decided.** A lambda writes a
   `DbContext` of its own that maps the tables the migrations make, on the
   connection it is handed: `new Records(Database.GetConnection())`, configured
-  with `UseSqlite(connection, contextOwnsConnection: true)`, one per request.
-  Plain SQL on the connection stays possible. The demos use EF Core, and agents
-  are steered to it. They are steered to use it **synchronously** - `ToList`,
-  `SaveChanges`, never the `Async` forms: SQLite answers synchronously anyway
-  and the Ioxide engine has its own async model. This is a hint, not enforced.
+  with `options.UseDatabase(connection)`, one per request. Plain SQL on the
+  connection stays possible. The demos use EF Core, and agents are steered to
+  it. They are steered to use it **synchronously** - `ToList`, `SaveChanges`,
+  never the `Async` forms: the platform's model is synchronous and the Ioxide
+  engine has its own async model. This is a hint, not enforced.
+- **A lambda names no database - decided by the owner.** "They should just use
+  EF Core and Evolve, with the connection retrieved from the integration, so
+  the lambda does not know anything about the underlying provider." So lambdas,
+  the demos and every text that teaches agents use a `DbConnection`,
+  `options.UseDatabase(connection)` (generated into every lambda, configured by
+  the integration), migrations of plain SQL every database accepts (`TEXT`,
+  `INTEGER`, `BIGINT`, `BOOLEAN`, `DOUBLE PRECISION`; keys the code makes, no
+  `AUTOINCREMENT` or `SERIAL`; unquoted names), times as ISO 8601 text, and a
+  unique violation told by looking whether the row is there - never an error
+  code of one database. Names match whatever their case: PostgreSQL folds the
+  names EF asks for to lower case (`LowerCaseNames`). A demo's applied
+  migration is never edited for it (its data persists): a flag kept as
+  `INTEGER` gets `HasConversion<int>()` instead. Code written before against
+  SQLite (`SqliteConnection`, `UseSqlite`, `SqliteException`) keeps compiling
+  where SQLite keeps the database (`DatabaseBinding`), and nowhere else.
 - **No connection of the lambda's own** (another file, the workspace, a
   connection string - EF's `UseSqlite(string)` included). The code guard
-  refuses them - making a `SqliteConnection` is checked on the compilation, so a
+  refuses them - making any `DbConnection` is checked on the compilation, so a
   target-typed `new()` or a derived class is caught, and so is `UseSqlite`
-  without a connection - and the connection handed out carries an authorizer
-  (`ConnectionGuard`) that refuses `ATTACH`, `VACUUM INTO`, the directory
-  pragmas and lifting `max_page_count`, which is the quota. Of EF, only the
+  without a connection - and the client library of a database is handed to the
+  compiler only where its integration names it (`ReferenceProvider`), so a
+  lambda on SQLite cannot name Npgsql, which the community image carries. On
+  SQLite, the connection handed out carries an authorizer (`ConnectionGuard`,
+  in the SQLite integration) that refuses `ATTACH`, `VACUUM INTO`, the
+  directory pragmas and lifting `max_page_count`, which is the quota; on
+  PostgreSQL the lambda's role reaches its own schemas and nothing else. Of EF, only the
   root namespace and `Metadata.Builders`, `ChangeTracking` and
   `Storage.ValueConversion` are reachable - its `Infrastructure`, `Storage` and
   `Internal` hold a context's services and options, and with them another
@@ -585,8 +609,11 @@ hosting URL. What follows is about subdomains unless it says otherwise.
   platform's database on the same volume. Do not bring it back without the
   owner asking.
 - **The export carries it** as `database/database.db`, an ordinary SQLite file:
-  the owner takes their data away with their code.
-- A feature gets a copy (SQLite backup, consistent); merging throws it away.
+  the owner takes their data away with their code. An exported project keeps
+  its records in SQLite whatever kept them here (the code names no database);
+  where PostgreSQL kept them, the export carries none, and `pg_dump` of the
+  lambda's schema takes them along.
+- A feature gets a copy, consistent at one moment; merging throws it away.
 - The editor **reads** it - tables, columns, rows - and never edits it. A change
   to records is a change to the app.
 
@@ -1041,7 +1068,7 @@ how it shows them did.
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
   (Server, Storage, Log); **Configuration** (Settings, Branding - where the
-  host lets the operator brand the installation); **Platform** (Limits,
+  host lets the operator brand the installation - Integrations); **Platform** (Limits,
   Guide); **Misc** (Usage report) - the last three the owner's ask. A new
   section joins the group it belongs to. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
@@ -1357,7 +1384,11 @@ services. The rules that matter:
   component is outside every folder of the services.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
-- Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.
+- Database: EF Core over the database integration, migrated by Evolve from
+  `Data/Migrations/V<n>__*.sql` on SQLite and `Data/PostgreSql/V<n>__*.sql` on
+  PostgreSQL (the analytics likewise). **A change to the platform's schema is
+  a migration in every set**, each numbered on its own - the PostgreSQL set
+  started at the schema SQLite had reached, written once.
   Existing migrations are never edited. **Before pushing a new migration check
   the highest `V` on `origin/main`** - a duplicate fails every test in CI. New
   files under `src/GenHTTP.Lambda.Core/Data/` are hidden by the `data/` rule in
@@ -1404,18 +1435,95 @@ services. The rules that matter:
   console, is installed by a service the platform owns (`ConsoleCapture`), so
   tests own it as well.
 
+### Integrations
+
+**Asked for by the owner:** what the platform keeps its data in is an
+integration that can be exchanged - the database, the files, the secrets - so
+that PostgreSQL, object storage like S3 or Vault can take the place of the
+defaults without the rules changing. Observability and logging are not
+integrations (yet - the owner's words: "not for now").
+
+- **Three kinds, one of each per installation**, behind the contracts of
+  `GenHTTP.Lambda.Integrations` (`IDatabaseProvider`, `IFileProvider`,
+  `ISecretProvider`), a project that takes nothing of the platform's. A host
+  chooses them on the platform's builder (`.Database(...)`, `.Files(...)`,
+  `.Secrets(...)`, each an `IIntegrationBuilder<T>` built with an
+  `IntegrationContext`), and the platform has its own for what it is given
+  nothing for: SQLite files (`GenHTTP.Lambda.Integrations.Sqlite`), local
+  directories and secrets sealed in its own database (`LocalFiles`,
+  `InternalSecrets` in Core's `Integrations/` folder - they are the platform's
+  own: one is a directory, the other needs its database). An integration with
+  a system of its own is a project of its own. **Moving data from one to
+  another is not done - decided by the owner**: an installation chooses as it
+  starts.
+- **An integration keeps; the platform decides - decided by the owner** ("the
+  layer should not include business logic"). Whether a lambda has a kind of
+  data, its room, what a name or a value may be, how many secrets, what a
+  workspace refuses, who may read what - all of it stays in the services
+  (`DatabaseVault`, `SecretVault`, `WorkspaceService`, `LambdaWorkspace`),
+  which ask the integration only once they have decided. Addressed by ids
+  (`DataScope`), never by keys. Synchronous but for an upload; copying a
+  whole database or workspace is synchronous in the integration and done
+  through `Offload` by the platform, so no integration needs a hop of its own.
+- **Used by the platform itself as well - asked for by the owner.** The
+  platform's records (the store `platform`, `LambdaDbContext`) and its
+  analytics (`analytics`) are kept by the database integration too, in the
+  dialect it speaks (`IDatabaseProvider.Dialect`) - see Database below; the
+  branding and the guide's section are rows of those records.
+- **Towards a lambda, no change when an integration changes - asked for by the
+  owner.** Its database through `Database.GetConnection()` and `UseDatabase`
+  (see Databases), its secrets through `Secret.Read`, and its files through
+  the generated `Workspace` class, which **calls functions the platform hands
+  it and touches no directory itself - decided by the owner, in this change**:
+  an S3 provider needs no change to lambdas. **`Workspace.Root` went with it**
+  - a path means nothing on object storage, and none of the published sources
+  used it (the owner leaned to removing it; see the PR for the grep over the
+  rest). `Resources.Root` stays: resources are the version's own files,
+  written to disk on every deploy, and not an integration's.
+- **An integration may add to the guide** (`IIntegration.Guide`): lines at the
+  end of the section of its kind - what SQLite refuses, what PostgreSQL folds
+  and copies. What it adds counts against the guide's 24 KB like the rest.
+- **The operator sees which are used - asked for by the owner, on both
+  editions**: the panel's **Integrations** section (group Configuration, read
+  only, cards) over `GET /admin/integrations`, from what each says of itself
+  (`Describe`) - never a password, a key or a connection string. The usage
+  report names them (`database`, `files`, `secrets`), never where they are.
+- **PostgreSQL is the community edition's - decided by the owner**: genhttp.dev
+  keeps SQLite, and its host refuses `LAMBDA_DATABASE=postgresql`
+  (`LambdaSettings.FromEnvironment(..., databases)` takes what a host offers).
+  Chosen with it, open to change: one database the operator gives
+  (`LAMBDA_POSTGRES_CONNECTION`), the schemas `platform` and `analytics`, a
+  schema per lambda (`lambda_{id}`) and per draft (`lambda_{id}_feature_{f}`),
+  owned by the installation's user, and a role per lambda (`{prefix}_{id}`)
+  that may use and create in its own schemas and nothing else - its password
+  made anew on every start and kept nowhere; a pool per lambda and draft
+  (`LAMBDA_POSTGRES_POOL_SIZE`, 10); the room governed by opening read-only
+  connections once a database is past it, since PostgreSQL cannot hold a
+  schema to a size; a draft's copy made from the catalog in one repeatable
+  read transaction (tables, sequences, keys, views - not functions, triggers
+  or types). The provider for EF Core 11 is a release candidate, taken with
+  the owner's consent (NU1608 suppressed where it surfaces); move to 11.0.0
+  once it is released.
+- A new kind of integration, or a new one of a kind, keeps to this: the
+  contract says what it keeps and nothing it decides, the services keep the
+  rules, the guide and the panel are told through `Guide` and `Describe`, and
+  `docs/reference.md` (Integrations) says how to add one.
+
 ### Serving, and the threads it runs on
 
 On Ioxide a request runs on a **reactor**: one thread per core that owns that
 core's connections and resumes each request inline where its I/O completed.
 Whatever a request does there, every other connection of that core waits for.
 .NET `async` works on it (ioxide posts continuations back to the reactor), but
-the platform's database is SQLite, which answers synchronously whatever the
-method is called - so the code is written the way it runs:
+the platform's database answers synchronously - SQLite whatever the method is
+called, and PostgreSQL is asked the same way - so the code is written the way
+it runs:
 
 - **Synchronous by default - decided.** Services, resources and MCP tools are
   plain methods returning plain values, and every query is a synchronous EF
-  call (`ToList`, `FirstOrDefault`, `SaveChanges`, `CreateDbContext`). A
+  call (`ToList`, `FirstOrDefault`, `SaveChanges`, `CreateDbContext`) - on
+  PostgreSQL too, its wait on the network accepted by whoever chooses it
+  rather than an asynchronous path beside the synchronous one. A
   method is `async` only where it awaits something that really leaves the
   thread: compiling, packing, copying a workspace or a database, reading a
   lambda's own database for the editor (it may be slow by design), a request
@@ -1552,7 +1660,11 @@ npm run build      # at the root: type checks and builds every bundle; CI runs i
 - The fixture puts the components together the way the cloud host does, on a
   test host, with a stand-in bundle per component (`LambdaFixture.BundleOf`);
   path addressing is tested with `Addressing = LambdaAddressing.Paths`
-  (`PathHostingTests`). Build the frontend before the server when a page is
+  (`PathHostingTests`). The PostgreSQL integration is tested against a real
+  server where `LAMBDA_TEST_POSTGRES` names one (`TestDatabase`: a database
+  and a role prefix per test, dropped after) - CI starts one beside the tests,
+  and the tests are inconclusive without it. A server is outside the process,
+  so this is no fake. Build the frontend before the server when a page is
   checked by hand: a project copies its bundle into the host's output when it
   is built.
 

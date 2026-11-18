@@ -67,9 +67,19 @@ jobs:
       - name: Build
         run: dotnet build GenHTTP.Lambda.slnx -c Release
 
+      # a server for the tests of the PostgreSQL integration, which are
+      # inconclusive without one; room for the pools of the lambdas of every
+      # test running at once
+      - name: Start PostgreSQL
+        run: |
+          docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:17 -c max_connections=400
+          for attempt in $(seq 1 30); do docker exec postgres pg_isready -U postgres && break; sleep 1; done
+
       # the tests compile and run lambdas, so they need the Roslyn reference
       # assemblies that ship with the SDK - no extra setup beyond the build
       - name: Test
+        env:
+          LAMBDA_TEST_POSTGRES: Host=localhost;Username=postgres;Password=postgres
         run: dotnet test GenHTTP.Lambda.slnx --no-build -c Release --logger "console;verbosity=normal"
 
   cloud:

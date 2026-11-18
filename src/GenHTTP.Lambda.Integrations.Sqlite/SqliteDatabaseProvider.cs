@@ -338,7 +338,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
                                              ]);
 
     public string Guide(GuideContext context)
-        => "- Here it is SQLite, a file of the lambda's own: ATTACH and VACUUM INTO are refused, and past the data's room (see limits) writes fail with \"database or disk is full\".";
+        => "- Here: SQLite. ATTACH and VACUUM INTO are refused; past the data's room (see limits) writes fail with \"database or disk is full\".";
 
     #endregion
 

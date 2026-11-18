@@ -83,9 +83,9 @@ tested in a draft before it goes live.
 
 - **An address** below `/lambda/` on your server or at a subdomain of its own,
   and a custom domain once the app is moved to *production* in the panel.
-- **Data that is independent of versions**: a SQLite database for records, a
-  folder for saved files, and secrets for the API keys and passwords of the
-  services it uses. Secret values are entered in the editor; the agent only
+- **Data that is independent of versions**: a database for records, a folder
+  for saved files, and secrets for the API keys and passwords of the services
+  it uses. Secret values are entered in the editor; the agent only
   ever sees their names.
 - **Drafts and versions**: a change is tested in a draft with a copy of the
   data and then published, and earlier versions remain available for
@@ -117,6 +117,8 @@ docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
 
 - **One container, one port, one volume.** No other services are required:
   the platform's data and every app's database are SQLite files in `/data`.
+  If you would rather keep the databases in PostgreSQL, see
+  [PostgreSQL](#postgresql).
 - **`LAMBDA_PUBLIC_URL`** is the address at which you and your agents reach
   the server, and the apps' addresses are derived from it. If it is not set,
   the server answers at any host name and the addresses use
@@ -145,6 +147,7 @@ docker compose up -d
 | `LAMBDA_ABUSE_CONTACT` | An email address the pages offer for reporting a harmful app. |
 | `LAMBDA_AGENT_URL`, `LAMBDA_AGENT_TOKEN` | The address of the build agent and the secret shared with it (see below). |
 | `LAMBDA_USAGE_REPORTS` | Set to `false` to stop sending the daily usage report (see [Telemetry](#telemetry)). |
+| `LAMBDA_DATABASE`, `LAMBDA_POSTGRES_CONNECTION` | Keep the databases in PostgreSQL instead of SQLite files (see [PostgreSQL](#postgresql)). |
 
 Further settings, covering limits, logging, TLS and analytics, are described
 in [the reference](docs/reference.md#configuration).
@@ -164,6 +167,26 @@ can do the same through the REST API (`PUT /api/v1/admin/branding`) or the MCP
 tool `customize_installation`. The links to the project's source code and
 community remain.
 
+### PostgreSQL
+
+Instead of SQLite files in the volume, the installation can keep the
+platform's records, its analytics and every app's database in one PostgreSQL
+database - each app in a schema of its own, reached under a database role
+that can access nothing else:
+
+```bash
+docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
+  -e LAMBDA_DATABASE=postgresql \
+  -e LAMBDA_POSTGRES_CONNECTION="Host=db;Database=lambda;Username=lambda;Password=..." \
+  genhttp/lambda
+```
+
+`samples/community` has a Compose overlay that runs PostgreSQL beside the
+server. Choose the database before you create apps: data is not moved from
+one to the other. The apps themselves need no change, since their code does
+not depend on the database. [docs/postgresql.md](docs/postgresql.md) covers
+the privileges the user needs, connections, and what differs from SQLite.
+
 ### HTTPS
 
 The image serves plain HTTP on port 8080. Place it behind your existing
@@ -177,7 +200,7 @@ The installation stores all of its data in the volume at `/data`: its
 database, every version of every app, the apps' records and files, their git
 history, and `secrets.key`, the key the apps' secrets are encrypted with. Back
 up the entire volume, including `secrets.key`. Without that file, the stored
-secrets cannot be decrypted.
+secrets cannot be decrypted. With PostgreSQL, back up the database as well.
 
 ### Updating
 

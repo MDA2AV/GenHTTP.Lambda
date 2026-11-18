@@ -22,8 +22,11 @@ on next.
 - which options are enabled: how apps are addressed (by path or by
   subdomain), a hosting domain, the build agent and its input boxes, the
   administration panel, terms, contact addresses, legal pages, the number of
-  MCP origins, the logging options, and whether the operator gave the
-  installation a name or logo of its own (never the name or the logo);
+  MCP origins, the logging options, whether the operator gave the
+  installation a name or logo of its own (never the name or the logo), and
+  what keeps its data: the database (`sqlite` or `postgresql`), the apps'
+  files and their secrets, by name only - never where they are or how they
+  are reached;
 - the number of apps by tier (`sandbox`, `production`, `system` - and `free`
   and `premium`, the sandbox and production under the names they had before,
   which older collectors read), online, blocked, created and active in the

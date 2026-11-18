@@ -34,6 +34,20 @@ docker compose --profile agent up -d
 Every build runs in a container of its own, which reaches this server and
 Anthropic and nothing else, and is thrown away when it ends.
 
+## With PostgreSQL
+
+The databases - the platform's records, its analytics and every app's - in a
+PostgreSQL server beside it rather than in SQLite files. Choose it before you
+create apps; nothing is moved from one to the other.
+
+```bash
+POSTGRES_PASSWORD=a-long-random-password \
+  docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+```
+
+[docs/postgresql.md](../../docs/postgresql.md) has a server of your own, and
+what differs from SQLite.
+
 ## Elsewhere than localhost
 
 Set `LAMBDA_PUBLIC_URL` to the address people reach the server at - the

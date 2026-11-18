@@ -199,7 +199,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## database
 
-            The lambda's own, for its records. enable_data 'database' makes it empty; switching it on or off restarts the lambda on its next request; while off, Database.GetConnection() throws. demo-crud shows it all: {{entry}} migrates, Store.cs maps and queries, resources/migrations/ holds the schema. The code names no database: the same code runs whichever keeps it.
+            The lambda's own, for its records. enable_data 'database' makes it empty; switching it on or off restarts the lambda on its next request; while off, Database.GetConnection() throws. demo-crud shows it all: {{entry}} migrates, Store.cs maps and queries, resources/migrations/ holds the schema. Name no database: the code runs on any.
 
             The schema is Evolve migrations in resources/migrations/ (V1__Create_tasks.sql, V2__Add_due_date.sql), applied at the top of {{entry}} before anything is served:
 
@@ -213,16 +213,16 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - At the top level, a using declaration (using var) does not compile.
             - Never change an applied migration - Evolve refuses to start; a schema change is the next file. A preview migrates its feature's copy first.
             - A rollback runs older code on a newer schema: prefer additive changes - new tables, columns with a default - over dropping or renaming what an older version reads.
-            - Plain SQL any database accepts: TEXT, INTEGER, BIGINT, BOOLEAN, DOUBLE PRECISION; keys you make (a Guid as TEXT) or natural ones - no AUTOINCREMENT or SERIAL; unquoted lower case names.
+            - Plain SQL: TEXT, INTEGER, BIGINT, BOOLEAN, DOUBLE PRECISION; keys you make (Guid text), no AUTOINCREMENT or SERIAL; unquoted names.
 
-            Records go through Entity Framework Core: a DbContext of yours mapping those tables on the connection handed in - class Records(DbConnection connection) : DbContext with options.UseDatabase(connection) in OnConfiguring, used as using var db = new Records(Database.GetConnection()) per request or call, never kept in a shared field.
+            Records go through Entity Framework Core: a DbContext of yours mapping those tables on the connection handed in - class Records(DbConnection connection) : DbContext, options.UseDatabase(connection) in OnConfiguring, using var db = new Records(Database.GetConnection()) per request, never in a shared field.
 
             - Synchronous only: ToList, Find, SaveChanges, ExecuteUpdate - never ToListAsync, SaveChangesAsync or any other Async form.
             - Inside a DbContext, Database is the context's own: hand the connection in.
             - EnsureCreated, Migrate and EF's migrations are refused: a new property needs a migration first.
             - ExecuteUpdate(s => s.SetProperty(v => v.Votes, v => v.Votes + 1)) counts every request without a lock; add a row that may not exist inside db.Database.BeginTransaction().
-            - A taken unique value fails SaveChanges with a DbUpdateException: look whether the row is there now, and answer 409 (demo-registration). Keep times as ISO 8601 UTC text through a converter, as demo-crud does.
-            - Of EF's namespaces only the root, Metadata.Builders, ChangeTracking and Storage.ValueConversion; refused too: a connection of your own, a connection string.{{stored}}
+            - A taken unique value fails SaveChanges with a DbUpdateException: if the row is there now, answer 409 (demo-registration). Times as ISO 8601 UTC text through a converter (demo-crud).
+            - Of EF's namespaces only the root, Metadata.Builders, ChangeTracking and Storage.ValueConversion; a connection of your own is refused.{{stored}}
 
             ## workspace
 

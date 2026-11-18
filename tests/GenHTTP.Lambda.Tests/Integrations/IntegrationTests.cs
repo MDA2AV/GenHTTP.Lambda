@@ -103,8 +103,8 @@ public sealed class IntegrationTests
 
         Assert.Contains("options.UseDatabase(connection)", database);
         Assert.Contains("DbConnection", database);
-        Assert.Contains("Plain SQL any database accepts", database);
-        Assert.Contains("Here it is SQLite", database, "what the integration adds to its section");
+        Assert.Contains("Plain SQL", database);
+        Assert.Contains("Here: SQLite", database, "what the integration adds to its section");
 
         var workspace = Guide.Section(await Guide.ReadAsync(fixture), "workspace");
 
