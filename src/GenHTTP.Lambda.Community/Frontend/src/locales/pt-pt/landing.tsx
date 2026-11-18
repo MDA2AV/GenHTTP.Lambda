@@ -13,7 +13,7 @@ export const landing: Messages['landing'] = {
   featuresTitle: 'O que cada app recebe',
   features: [
     { title: 'Um endereço', text: 'Um endereço próprio neste servidor, com o nome da respetiva chave - e um domínio próprio quando passar para produção.' },
-    { title: 'Registos', text: 'Uma base de dados SQLite própria, com as tabelas criadas por migrações, lida e escrita com o Entity Framework Core.' },
+    { title: 'Registos', text: 'Uma base de dados própria - SQLite, ou PostgreSQL se a escolheres - com as tabelas criadas por migrações, lida e escrita com o Entity Framework Core.' },
     { title: 'Ficheiros', text: 'Uma pasta para o que a app guarda: uploads, exportações, tudo o que não é um registo.' },
     { title: 'Chaves e palavras-passe', text: 'Guardadas cifradas no servidor. O agente diz quais precisa, tu introduzi-las, e ninguém as volta a ler.' },
     { title: 'Rascunhos e versões', text: 'Uma alteração é experimentada num rascunho com uma cópia dos dados e depois posta online. As versões anteriores ficam guardadas, a um clique de voltar atrás.' },

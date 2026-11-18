@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Datenbank',
-      what: 'Eine SQLite-Datenbank, in der das Lambda seine Datensätze aufbewahrt, erreichbar über Database.GetConnection().',
+      what: 'Eine eigene Datenbank, in der das Lambda seine Einträge aufbewahrt, erreichbar über Database.GetConnection().',
       count: (items) => (items === 1 ? '1 Tabelle' : `${items} Tabellen`),
       confirmOff: 'Datenbank ausschalten?',
       switchedOn: 'Die Datenbank ist eingeschaltet und leer. Beim nächsten Request startet das Lambda neu, dann mit Datenbank.',

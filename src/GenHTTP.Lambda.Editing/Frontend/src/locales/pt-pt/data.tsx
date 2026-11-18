@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Base de dados',
-      what: 'Uma base de dados SQLite onde a lambda guarda os seus registos, acessível com Database.GetConnection().',
+      what: 'Uma base de dados própria onde a lambda guarda os seus registos, acessível com Database.GetConnection().',
       count: (items) => (items === 1 ? '1 tabela' : `${items} tabelas`),
       confirmOff: 'Desligar a base de dados?',
       switchedOn: 'A base de dados está ligada, e vazia. No próximo pedido, a lambda volta a arrancar já com ela.',

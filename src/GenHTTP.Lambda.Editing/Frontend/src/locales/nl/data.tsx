@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'Een SQLite-database waarin de lambda zijn records bewaart, bereikbaar met Database.GetConnection().',
+      what: 'Een eigen database waarin de lambda zijn records bewaart, bereikbaar met Database.GetConnection().',
       count: (items) => (items === 1 ? '1 tabel' : `${items} tabellen`),
       confirmOff: 'De database uitzetten?',
       switchedOn: 'De database staat aan, en is leeg. Bij zijn volgende request start de lambda opnieuw, met de database erbij.',
