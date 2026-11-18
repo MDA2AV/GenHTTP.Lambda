@@ -313,12 +313,21 @@ public sealed class LambdaPlatform : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         // the lambda being compiled is finished, the rest are not started:
-        // the services it compiles with are disposed of next
+        // the services it compiles with are disposed of next. For a while
+        // only - a lambda whose startup hangs must not hold the shutdown
+        // until the process is killed
         await Stopping.CancelAsync();
 
         if (Warming != null)
         {
-            await Warming;
+            try
+            {
+                await Warming.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (TimeoutException)
+            {
+                Loggers.CreateLogger<LambdaPlatform>().LogWarning("Stopped without waiting for the warm-up of a lambda");
+            }
         }
 
         Stopping.Dispose();

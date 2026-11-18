@@ -1268,12 +1268,15 @@ own demos, which nobody assigns (the seeder does) and which are read only.
   from the move (`tier_changed`), never from a visit before it.
 - **Production and system are compiled as the server starts - asked for by
   the owner**, so their first visitor after a restart does not wait for it
-  (`TierPolicy.WarmedUp`, `LambdaWarmup`): in the background once the server
-  answers, never before, and one lambda after another, the one visited last
-  first. Compiling stays one snippet at a time (memory), so asking for all at
-  once would build nothing sooner and put every warm-up ahead of a visitor
-  whose lambda is not warm yet; one at a time, a request waits for one
-  compilation at most. Each is asked for as a request asks for it
+  (`TierPolicy.WarmedUp`, `LambdaWarmup`), in the background once the server
+  answers rather than delaying its start - the owner's words. Chosen with it,
+  open to change: one lambda after another, the one visited last first.
+  Compiling stays one snippet at a time (memory), so asking for all at once
+  would build nothing sooner and put every warm-up ahead of a visitor whose
+  lambda is not warm yet; one at a time, a request waits for one compilation
+  at most. Compiling several at once would take a guard per lambda in the
+  deployment service and more memory on every way a lambda is built. Each is
+  asked for as a request asks for it
   (`ResolvedLambda.Settings`), so the build is the one the first request
   finds; one that fails is said in the log and left to its first request.
   The sandbox and the demos are compiled on their first request as before.
