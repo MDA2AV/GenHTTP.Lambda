@@ -210,6 +210,21 @@ Agents that can make HTTP requests or use git can work that way instead: the
 REST API is documented at `/api/v1/scalar/`, and each app's git address is
 shown in its editor.
 
+### Rules for agents
+
+Every agent, the build agent included, starts by reading the platform's guide
+(the MCP tool `platform_guide`). You can add a section of your own to it, with
+how apps are built on your installation - the architecture you prefer, the
+language apps are written in, the colours of your organisation, data they
+must not keep: in the administration panel, under *Platform* → *Guide*, which
+also shows the guide as agents read it, or through the REST API
+(`PUT /api/v1/admin/guide`). Your section comes last, after the platform's
+own: agents follow it wherever the guide leaves them the choice, and it
+cannot change what the platform requires or enforces, such as its limits or
+the rules about connecting to other servers. It is limited to 6 KB, since agents read the whole guide with
+every call. Agents working in a git clone read its `AGENTS.md` instead, which
+does not include your section.
+
 ## Building apps from a description: the build agent (optional)
 
 With the build agent enabled, the *Create a website* page (`/build`) is a

@@ -10,6 +10,7 @@ import { BrandingSection } from '../console/BrandingSection';
 import { diskState, type Access } from '../console/context';
 import { ConnectivitySection } from '../console/ConnectivitySection';
 import { DashboardSection } from '../console/DashboardSection';
+import { GuideSection } from '../console/GuideSection';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LimitsSection } from '../console/LimitsSection';
@@ -24,7 +25,7 @@ import { askPlatform } from '@genhttp-lambda/kit/site';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
 type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding'
-  | 'usage';
+  | 'usage' | 'guide';
 
 /*
  * The sections in groups, as the editor has them, because a dozen in one
@@ -35,7 +36,9 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * out, and the addresses refused. Then how the machine is doing: the
  * process, the room on its volume, and what it logs. Then how the operator
  * set it up: the site's switches, the limits, the name and logo it shows -
- * where its host lets them give it some - and the report it sends.
+ * where its host lets them give it some - and the report it sends. Last,
+ * what the platform tells the agents that build on it: the guide, with the
+ * operator's own rules in it.
  */
 const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
   { id: 'start', label: null, sections: [
@@ -59,6 +62,9 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
     { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
     { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
     { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
+  ] },
+  { id: 'platform', label: 'Platform', sections: [
+    { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
   ] },
 ];
 
@@ -235,6 +241,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <BrandingSection access={access} />
           ) : section === 'usage' ? (
             <UsageReportSection access={access} />
+          ) : section === 'guide' ? (
+            <GuideSection access={access} />
           ) : (
             <DashboardSection access={access} />
           )}
