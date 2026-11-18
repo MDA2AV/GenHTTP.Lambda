@@ -589,6 +589,12 @@ public sealed class McpTests
         Assert.Contains("anonymous", guide, "returning an anonymous type from a route is the first thing anybody hits");
         Assert.Contains("Inline.Create", guide);
 
+        // any handler GenHTTP offers, which its documentation describes - not
+        // a few the guide happens to name
+        Assert.Contains("any IHandler or IHandlerBuilder", guide);
+        Assert.Contains("https://genhttp.org/documentation/content/", guide);
+        Assert.Contains("Webservices", Guide.Section(guide, "compiling"), "and it names the modules that are here");
+
         // an agent shipping a front end has to be told it can put it in a
         // folder, or it will flatten everything into the root and wonder why
         Assert.Contains("Resources.App(\"web\") serves resources/web/", Guide.Section(guide, "resources"),

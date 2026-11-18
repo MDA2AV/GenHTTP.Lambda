@@ -88,7 +88,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
         return $$"""
             # Platform guide
 
-            A lambda is C# that returns a GenHTTP handler, served at {{address}} (its publicUrl). {{entry}} is its top-level code - no Main, no project - returning an IHandler or a builder of one: Inline.Create(), Layout.Create(), Resources.App("web"), Websocket.Functional(). "platform_guide, X" in a tool means the section ## X.
+            A lambda is C# that returns a GenHTTP handler, served at {{address}} (its publicUrl). {{entry}} is its top-level code - no Main, no project - and returns any IHandler or IHandlerBuilder - from the GenHTTP modules listed under compiling, or your own. GenHTTP's documentation describes them: https://genhttp.org/documentation/content/. "platform_guide, X" in a tool means the section ## X.
 
             ```csharp
             return Inline.Create().Get(() => new Greeting("hello"));
@@ -168,7 +168,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## compiling
 
-            - Imported in every file: {{Imports()}}. Anything else needs a using - System.Text.RegularExpressions and System.Net.Http among them.
+            - Imported in every file: {{Imports()}}. Those are the GenHTTP modules available; ReverseProxy and DependencyInjection are refused. Anything else needs a using - System.Text.RegularExpressions and System.Net.Http among them.
             - No source generators run: [GeneratedRegex] fails with CS8795, and so does whatever else a generator would write - keep a new Regex(...) in a static field. A local build of a clone runs them.
             - Refused: reflection, dynamic, processes, the environment, the file system beyond Workspace and Resources - lambdas share one process. A type of yours named like a refused one is fine.
             - Never wait for a task - .Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny, SemaphoreSlim.Wait() are refused: a request's thread is the one its task finishes on. Await (routes may be async), use await semaphore.WaitAsync() or a lock without an await inside, or the synchronous method.
@@ -334,21 +334,22 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
     private string Home(string origin) => $"{options.PublicUrl ?? origin}/";
 
     /// <summary>
-    /// The namespaces every file imports, GenHTTP's said as a whole.
+    /// The namespaces every file imports, each family said once - GenHTTP's
+    /// modules by their names, which are what an agent looks up in its
+    /// documentation.
     /// </summary>
-    /// <remarks>
-    /// GenHTTP's are its API and every module the compiler is handed - which
-    /// an agent needs to know are there, not to read one by one.
-    /// </remarks>
     private static string Imports()
     {
-        const string system = "System.";
+        var others = ModuleCatalog.Imports.Where(i => i != "System" && !i.StartsWith("System.", StringComparison.Ordinal) && !i.StartsWith("GenHTTP.", StringComparison.Ordinal));
 
-        var others = ModuleCatalog.Imports.Where(i => i != "System" && !i.StartsWith(system, StringComparison.Ordinal) && !i.StartsWith("GenHTTP.", StringComparison.Ordinal));
-        var below = ModuleCatalog.Imports.Where(i => i.StartsWith(system, StringComparison.Ordinal)).Select(i => i[system.Length..]);
-
-        return $"System, System.{{{string.Join(", ", below)}}}, {string.Join(", ", others)}, and GenHTTP's API and modules";
+        return string.Join(", ", (string[])["System", Family("System."), .. others, Family("GenHTTP.Api."), Family("GenHTTP.Modules.")]);
     }
+
+    /// <summary>
+    /// The imports below a namespace, said once: <c>System.{IO, Linq}</c>.
+    /// </summary>
+    private static string Family(string prefix)
+        => $"{prefix}{{{string.Join(", ", ModuleCatalog.Imports.Where(i => i.StartsWith(prefix, StringComparison.Ordinal)).Select(i => i[prefix.Length..]))}}}";
 
     /// <summary>
     /// What a lambda in the given tier may use, as the guide says it.
