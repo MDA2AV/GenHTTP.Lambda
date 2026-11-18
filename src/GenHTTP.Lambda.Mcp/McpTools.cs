@@ -14,7 +14,6 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Analytics;
-using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -22,6 +21,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Guide;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
@@ -72,7 +72,7 @@ namespace GenHTTP.Lambda.Mcp;
 /// MCP module writes both. A refusal of the platform is said as text, marked
 /// as an error, like the module's own refusal of arguments that do not fit.
 /// The one exception is platform_guide, a document read from beginning to end
-/// and sent once, as Markdown (see <see cref="PlatformGuide"/>).
+/// and sent once, as Markdown (see <c>GuideDocument</c>).
 ///
 /// Every tool that did something logs what it did, as the API does - reads
 /// included, since what an agent looks at is how it goes about its work. See
@@ -82,10 +82,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                               IDatabaseService databases, IShowcaseService showcases, ISourceService sources, IAnalyticsService analytics,
                               IConnectivityService connectivity,
                               ITelemetryService telemetry, ILogBook book,
-                              LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IBrandingService branding, ILogger<McpTools> logger)
+                              LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IGuideService guide, ILogger<McpTools> logger)
 {
-
-    private readonly PlatformGuide _guide = new(options, tiers, addresses);
 
     #region Tools
 
@@ -325,7 +323,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         logger.LogInformation("Read platform guide");
 
-        return _guide.Write(RequestOrigin.Of(request), branding.Current.Name);
+        return guide.Write(RequestOrigin.Of(request));
     }
 
     #endregion

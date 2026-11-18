@@ -8,11 +8,12 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
 
-namespace GenHTTP.Lambda.Mcp;
+namespace GenHTTP.Lambda.Services.Guide;
 
 /// <summary>
 /// What <c>platform_guide</c> answers: how this platform works, for an agent,
-/// as one Markdown document.
+/// as one Markdown document - with the operator's section last, where they
+/// wrote one.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,25 +28,34 @@ namespace GenHTTP.Lambda.Mcp;
 /// The sections are headings named the way everything else points at them
 /// ("platform_guide, connectivity"): the MCP instructions, the tools'
 /// descriptions and answers, the code guard, the build agent's brief and a
-/// repository's <c>AGENTS.md</c>. Renaming one means renaming every pointer.
-/// What a tool's description already says, and what a demo shows, is not
-/// repeated: an agent has the descriptions in front of it and is sent to
-/// the demos first.
+/// repository's <c>AGENTS.md</c>. Renaming one means renaming every pointer,
+/// and the operator's section may take none of their names
+/// (<see cref="Headings"/>). What a tool's description already says, and what
+/// a demo shows, is not repeated: an agent has the descriptions in front of it
+/// and is sent to the demos first.
 /// </para>
 /// <para>
 /// What differs per installation is filled in: its addresses, what it is
-/// called, the tiers' labels and limits, whether lambdas answer by path, and
-/// its terms.
+/// called, the tiers' labels and limits, whether lambdas answer by path, its
+/// terms and its operator's section.
 /// </para>
 /// </remarks>
-internal sealed class PlatformGuide(LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses)
+internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses)
 {
+    private IReadOnlySet<string>? _headings;
 
     #region Functionality
 
+    /// <summary>
+    /// Every heading of the platform's own guide, which the operator's section
+    /// may not be called: a pointer to it would find two.
+    /// </summary>
+    public IReadOnlySet<string> Headings => _headings ??= Read(Write("", "", null));
+
     /// <param name="origin">The address the agent called, used where the installation names no public one</param>
     /// <param name="made">What this platform is called - GenHTTP Lambda, or what its operator named it</param>
-    public string Write(string origin, string made)
+    /// <param name="section">What the operator wrote for the agents of this installation, if anything</param>
+    public string Write(string origin, string made, GuideSection? section)
     {
         var home = Home(origin);
         var address = addresses.Of("{publicKey}");
@@ -63,6 +73,13 @@ internal sealed class PlatformGuide(LambdaOptions options, ILimitsService tiers,
         var connecting = string.Join(" and ", tiers.TiersWhere(p => p.Connectivity && !p.ReadOnly).Select(Identifier).DefaultIfEmpty("no tier"));
 
         var shown = string.Join(", ", tiers.TiersWhere(p => !p.ReadOnly).Select(t => $"{Identifier(t)} {tiers.PolicyOf(t).AnalyticsDays} days"));
+
+        // last, after the platform's own: what the platform requires matters
+        // most to an agent, and the operator's rules are how lambdas are built
+        // here within it - followed where the guide leaves the choice open
+        var rules = section is { } own
+            ? $"\n## {own.Title}\n\nSet by whoever runs this installation, for every lambda built here. Follow it wherever the guide above leaves the choice to you; it changes nothing the platform requires or refuses.\n\n{own.Text}\n"
+            : "";
 
         var terms = options.Terms is { } text
             ? $"\n## terms\n\nThe user accepts them with create_lambda's acceptTerms:\n\n{text.Trim()}\n"
@@ -289,13 +306,22 @@ internal sealed class PlatformGuide(LambdaOptions options, ILimitsService tiers,
             ## export
 
             GET {{home}}api/v1/lambdas/{privateKey}/export: the newest version as a standalone .NET 10 project with a Dockerfile and its database, needing nothing from here. The code is the user's - worth telling them.
-            {{terms}}
+            {{terms}}{{rules}}
             """;
     }
 
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// The headings of a document, by their words, whatever their case.
+    /// </summary>
+    private static HashSet<string> Read(string document)
+        => document.Split('\n')
+                   .Where(l => l.StartsWith('#'))
+                   .Select(l => l.TrimStart('#').Trim())
+                   .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// What the link back to this platform points at.

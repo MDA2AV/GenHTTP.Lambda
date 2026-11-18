@@ -19,7 +19,7 @@ These, and nothing else:
 
 | tool | what it does |
 | --- | --- |
-| `platform_guide` | how lambdas work here - read it first when building |
+| `platform_guide` | how lambdas work here, and the rules of this installation's operator - read it first when building |
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key - building only, with `view: "Simple"` |
 | `read_lambda` | the status, what is written about it, the recent history, the open features and the files of a lambda - read it first when changing |
