@@ -276,8 +276,9 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Summary("Moves a lambda to another tier")]
     [Remarks("""
              The tier is what the lambda is for, and decides its limits, whether it may answer at a domain of its own, whether it
-             is taken offline and deleted when nobody uses it, and whether it connects to other servers while nothing was decided
-             about it - as `GET /admin/limits` sets each. Only the policy changes: the lambda keeps running, nothing of its data
+             is taken offline and deleted when nobody uses it, whether it connects to other servers while nothing was decided
+             about it - as `GET /admin/limits` sets each - and whether what it has online is compiled as the server starts
+             (production and system) rather than on its first request. Only the policy changes: the lambda keeps running, nothing of its data
              is moved, and it is built again only where the move changes whether it may connect. A tier without domains keeps
              the domain configured but stops serving it; what the lambda has beyond the new tier's limits is kept and can still
              be read and put online, and only what it saves or writes next is held to them. Moved to a tier that takes unused

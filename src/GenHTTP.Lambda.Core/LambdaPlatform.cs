@@ -72,6 +72,13 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
     private bool OwnsLoggers { get; }
 
+    /// <summary>
+    /// Stops the warm-up between two lambdas once the platform is going away.
+    /// </summary>
+    private CancellationTokenSource Stopping { get; } = new();
+
+    private Task? Warming { get; set; }
+
     #endregion
 
     #region Initialization
@@ -178,6 +185,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IBrandingService, BrandingService>();
         services.AddSingleton<IGuideService, GuideService>();
         services.AddSingleton<DemoSeeder>();
+        services.AddSingleton<LambdaWarmup>();
         services.AddSingleton<AgentClient>();
         services.AddSingleton<BuildAllowance>();
         services.AddSingleton<ModelGate>();
@@ -270,8 +278,60 @@ public sealed class LambdaPlatform : IAsyncDisposable
 #pragma warning restore RS0030
     }
 
+    /// <summary>
+    /// Compiles what the lambdas of production and the system tier have
+    /// online, once the server is already answering (see <see cref="LambdaWarmup"/>).
+    /// </summary>
+    /// <remarks>
+    /// Not awaited, for the same reason as the demos: the installation
+    /// answers while it compiles, and a request to a lambda not compiled yet
+    /// is served as it always was.
+    /// </remarks>
+    public void WarmUp()
+    {
+        var warmup = Services.GetRequiredService<LambdaWarmup>();
+
+        var stopping = Stopping.Token;
+
+        // started in the background at startup, not a hop a request waits
+        // for - the compiling in it goes through Offload where it happens
+#pragma warning disable RS0030
+        Warming = Task.Run(async () =>
+        {
+            try
+            {
+                await warmup.WarmUpAsync(stopping);
+            }
+            catch (Exception e)
+            {
+                Loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "The lambdas could not be warmed up");
+            }
+        });
+#pragma warning restore RS0030
+    }
+
     public async ValueTask DisposeAsync()
     {
+        // the lambda being compiled is finished, the rest are not started:
+        // the services it compiles with are disposed of next. For a while
+        // only - a lambda whose startup hangs must not hold the shutdown
+        // until the process is killed
+        await Stopping.CancelAsync();
+
+        if (Warming != null)
+        {
+            try
+            {
+                await Warming.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (TimeoutException)
+            {
+                Loggers.CreateLogger<LambdaPlatform>().LogWarning("Stopped without waiting for the warm-up of a lambda");
+            }
+        }
+
+        Stopping.Dispose();
+
         await Scheduler.DisposeAsync();
 
         await Services.DisposeAsync();

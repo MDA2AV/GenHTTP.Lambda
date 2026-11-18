@@ -1224,6 +1224,7 @@ for, assigned by the operator and never chosen by the owner:
 | Domain of its own | no | yes | yes |
 | Analytics shown | 7 days | the year | the year |
 | Connects by default | no | yes | yes |
+| Compiled as the server starts | no - on its first request | yes | yes |
 
 `Demo` stays beside them - **decided by the owner** - as the installation's
 own demos, which nobody assigns (the seeder does) and which are read only.
@@ -1265,6 +1266,24 @@ own demos, which nobody assigns (the seeder does) and which are read only.
   data is full), and what it saves, merges or pushes next is held to the new
   limits. Moved into the sandbox, a lambda - and its previews - is measured
   from the move (`tier_changed`), never from a visit before it.
+- **Production and system are compiled as the server starts - asked for by
+  the owner**, so their first visitor after a restart does not wait for it
+  (`TierPolicy.WarmedUp`, `LambdaWarmup`), in the background once the server
+  answers rather than delaying its start - the owner's words. Chosen with it,
+  open to change: one lambda after another, the one visited last first.
+  Compiling stays one snippet at a time (memory), so asking for all at once
+  would build nothing sooner and put every warm-up ahead of a visitor whose
+  lambda is not warm yet; one at a time, a request waits for one compilation
+  at most. Compiling several at once would take a guard per lambda in the
+  deployment service and more memory on every way a lambda is built. Each is
+  asked for as a request asks for it
+  (`ResolvedLambda.Settings`), so the build is the one the first request
+  finds; one that fails is said in the log and left to its first request.
+  The sandbox and the demos are compiled on their first request as before.
+  Its cost, said in the reference: an installation whose new lambdas start in
+  production compiles and loads every lambda as it starts, and each
+  lambda's startup (migrations, calls it makes) runs then rather than on a
+  visit.
 - **The simple view offers the tier above** (`tierPolicy.above`, production
   for a sandbox) in a tile beside the latest change, named by its label; its
   only action is a mail to the installation's contact (`LambdaOptions.Contact`)
@@ -1418,7 +1437,7 @@ method is called - so the code is written the way it runs:
   it is bounded by its tier's allowance, and saving one is rare. `Task.Run` is
   refused, so every hop is marked in `Offload` and can be given a scheduler of
   its own there; work started in the background rather than awaited (the
-  scheduler's jobs, seeding the demos) is not a hop and suppresses RS0030
+  scheduler's jobs, seeding the demos, warming up the lambdas) is not a hop and suppresses RS0030
   where it starts, saying why.
 - **Locks are plain locks (`Lock`), never held across an await.** What compiles
   under a lambda's or a feature's turn compiles first and takes the turn to

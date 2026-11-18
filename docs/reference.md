@@ -1605,7 +1605,10 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached - one handler for what a
-  lambda has online, and one for the preview of each of its features. An
+  lambda has online, and one for the preview of each of its features - on
+  the first request, or as the server starts for the tiers kept warm
+  (`LambdaWarmup` in `Services/Meta`, see [Tiers](#tiers)). One snippet is
+  compiled at a time. An
   assembly stays loaded for the life of the process, so a build is known by
   its compiled C#: a version that changes only resources or the rest of its
   code - documentation, tests - gets a new handler from the assembly already
@@ -2424,12 +2427,12 @@ A lambda's tier is what it is for, and only the operator moves a lambda
 between them - on its page in the panel, **Tier**
 (`PUT /admin/lambdas/{publicKey}/tier`). Its owner cannot choose.
 
-| Tier         | For                                   | Kept while unused | Domain of its own | Connects by default | Blocked | Showcase | Deleted with its editor key |
-|--------------|---------------------------------------|-------------------|-------------------|---------------------|---------|----------|-----------------------------|
-| `Sandbox`    | trying something; where a new lambda starts | no - offline after 30 days, removed after 90 | no | no | yes | yes | yes |
-| `Production` | an app people use                     | yes               | yes               | yes                 | yes     | yes      | yes |
-| `System`     | what the installation itself depends on, such as the collector of usage reports | yes | yes | yes | never | never | no - only by the operator |
-| `Demo`       | the installation's demos, read only, never assigned by hand | yes | no | never | never | never | no |
+| Tier         | For                                   | Kept while unused | Domain of its own | Connects by default | Compiled as the server starts | Blocked | Showcase | Deleted with its editor key |
+|--------------|---------------------------------------|-------------------|-------------------|---------------------|-------------------------------|---------|----------|-----------------------------|
+| `Sandbox`    | trying something; where a new lambda starts | no - offline after 30 days, removed after 90 | no | no | no - on its first request | yes | yes | yes |
+| `Production` | an app people use                     | yes               | yes               | yes                 | yes                           | yes     | yes      | yes |
+| `System`     | what the installation itself depends on, such as the collector of usage reports | yes | yes | yes | yes | never | never | no - only by the operator |
+| `Demo`       | the installation's demos, read only, never assigned by hand | yes | no | never | no - the seeder compiles what changed | never | never | no |
 
 What a tier means is said in one place (`TierPolicies`, see
 [How it is put together](#how-it-is-put-together)); how much a lambda in it may
@@ -2444,6 +2447,18 @@ requests to it like to every other. It is also where running a lambda apart
 from the others or ahead of them would hang, which nothing does yet: every
 lambda shares the process.
 
+- **Production and system lambdas are warm after a restart.** What they have
+  online is compiled as the server starts (`TierPolicy.WarmedUp`,
+  `LambdaWarmup`), so their first visitor does not wait for it: in the
+  background once the server answers, one lambda after another - the one
+  visited last first - through the same single compilation every deployment
+  takes, so a request to a lambda not warm yet waits for one compilation at
+  most and is served as before. `Warmed up 3 lambda(s) in 2140 ms` is logged
+  at the end, a lambda that fails as a warning; it is then built on its first
+  request, as every other lambda is. A blocked or offline lambda is not
+  compiled. An installation whose new lambdas start in production compiles
+  and loads all of them on every start, and a lambda's startup - its
+  migrations, a call it makes - runs then rather than on its first visit.
 - **Moving a lambda changes its policy and nothing else.** It keeps running:
   the room of its data is read as it writes, and a build made without
   connectivity keeps serving where the new tier connects by default - it is
