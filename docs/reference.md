@@ -2154,10 +2154,17 @@ lambda, and switching that on when the user asks, and
 `list_demos` for reading something that already works. Where the installation
 may be branded and has an admin token, `customize_installation` names it and
 gives it a logo, for an agent its operator handed the token (see
-[Branding](#branding)). `platform_guide` is the one to call first
-- it opens with how versions, features and data live, then says what a snippet
-has to return, what is imported, what is refused, and the handful of things
-that catch people out.
+[Branding](#branding)). `platform_guide` is the one to call first. It answers
+with one Markdown document, sent once as text rather than as an object (which
+the MCP module sends twice), written for a model and held under 24 KB by a
+test - at 65 KB, clients wrote it to a file instead of the conversation. It
+opens with what a lambda is and how versions, features and data live, then
+git and the REST API, code and resources, paths, compiling, requests and the
+data, and ends with documentation, pages meant to be found, the link back,
+the limits and the terms. Its sections are headings named the way the tools,
+the instructions and the briefs point at them ("platform_guide,
+connectivity"), and what a tool's description or a demo already says is not
+repeated in it.
 
 Agents used to leave a version behind for every attempt, and put every attempt
 online. A lambda that exists is now changed in a feature: `write_code`,
@@ -2260,10 +2267,10 @@ passwords and personal data out of the files, where they never belong anyway.
 
 What a build tool makes the resources or code from is kept in a folder of the
 code (see [What it is built from](#what-it-is-built-from)), and the agents are
-told so under `code` in the guide (`builtWithATool`) - the flow, building
-where the files are laid out as in a clone, a `.gitignore`, a README that says
-how it is built, nothing secret in it, and the pitfalls (what a build writes
-refers to its files relatively; what it wrote anew is saved with it) - in
+told so under `code` in the guide (`builtWithATool`) - the flow, a
+`.gitignore`, a README that says how it is built, and the pitfalls (what a
+build writes refers to its files relatively; what it wrote anew is saved with
+it) - in
 `AGENTS.md` of a clone, and in the tool descriptions. `write_code`, which
 replaces every file, says so when what it replaced had a folder of code the
 save has none of - `change_code` keeps every file it is not told about - and

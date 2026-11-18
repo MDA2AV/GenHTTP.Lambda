@@ -569,17 +569,17 @@ public sealed class BrandingTests
 
         await RenameAsync(fixture, "Acme & Co");
 
-        var guide = await GuideAsync(fixture);
+        var backlink = await BacklinkAsync(fixture);
 
-        Assert.Contains("\"Made with Acme & Co\"", guide["ask"]!.GetValue<string>(), "the line names the installation it links to");
-        Assert.Contains("<a href=\"https://apps.example.com/\">Made with Acme &amp; Co</a>", guide["how"]!.GetValue<string>(),
+        Assert.Contains("\"Made with Acme & Co\"", backlink, "the line names the installation it links to");
+        Assert.Contains("<a href=\"https://apps.example.com/\">Made with Acme &amp; Co</a>", backlink,
                         "written as markup an agent puts into a page as it is");
 
-        Assert.Contains("given this name with your next change", guide["renamed"]!.GetValue<string>(), "a line from before the rename is brought up to date");
+        Assert.Contains("given this name with your next change", backlink, "a line from before the rename is brought up to date");
 
         using var reset = await SendAsync(fixture, HttpMethod.Delete, "/api/v1/admin/branding");
 
-        Assert.Contains(">Made with GenHTTP Lambda</a>", (await GuideAsync(fixture))["how"]!.GetValue<string>(), "and the platform where nobody named it");
+        Assert.Contains(">Made with GenHTTP Lambda</a>", await BacklinkAsync(fixture), "and the platform where nobody named it");
     }
 
     [TestMethod]
@@ -865,18 +865,7 @@ public sealed class BrandingTests
         return (JsonObject)JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
     }
 
-    private static async Task<JsonNode> GuideAsync(LambdaFixture fixture)
-    {
-        using var response = await PostMcpAsync(fixture, new JsonObject
-        {
-            ["jsonrpc"] = "2.0",
-            ["id"] = 1,
-            ["method"] = "tools/call",
-            ["params"] = new JsonObject { ["name"] = "platform_guide", ["arguments"] = new JsonObject() }
-        });
-
-        return JsonNode.Parse(await response.Content.ReadAsStringAsync())!["result"]!["structuredContent"]!["backlink"]!;
-    }
+    private static async Task<string> BacklinkAsync(LambdaFixture fixture) => Guide.Section(await Guide.ReadAsync(fixture), "backlink");
 
     private static async Task<HttpResponseMessage> PostMcpAsync(LambdaFixture fixture, JsonObject message)
     {

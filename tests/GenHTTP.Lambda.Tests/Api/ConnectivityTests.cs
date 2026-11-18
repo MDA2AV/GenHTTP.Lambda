@@ -396,10 +396,10 @@ public sealed class ConnectivityTests
 
         Assert.AreEqual("Requested", where["connectivity"]!["status"]!.GetValue<string>(), "with only the key, it reads where it stands");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var guide = Guide.Section(await Guide.ReadAsync(fixture), "connectivity");
 
-        Assert.Contains("request_connectivity", guide["connectivity"]!["asking"]!.GetValue<string>());
-        Assert.Contains("fetch()", guide["connectivity"]!["browserFirst"]!.GetValue<string>(), "what a browser may fetch is fetched there");
+        Assert.Contains("request_connectivity", guide);
+        Assert.Contains("fetch()", guide, "what a browser may fetch is fetched there");
     }
 
     #endregion

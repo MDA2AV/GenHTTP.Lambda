@@ -386,11 +386,12 @@ public sealed class DocumentationTests
         StringAssert.Contains(instructions, "update", "and say to keep them up to date");
         StringAssert.Contains(instructions, "in proportion", "without a test suite for a small lambda");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", []))["documentationAndTests"]!;
+        var guide = Guide.Section(await Guide.ReadAsync(fixture), "documentationAndTests");
 
-        foreach (var part in (string[])["product", "decisions", "testing", "howMuch", "when", "use"])
+        // what goes into each page, how much, when it is written and what it is for
+        foreach (var said in (string[])["docs/product.md", "docs/decisions.md", "tests/README.md", "In proportion", "When:", "Use:"])
         {
-            Assert.IsNotNull(guide[part], $"the guide says {part}");
+            StringAssert.Contains(guide, said, $"the guide says {said}");
         }
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;

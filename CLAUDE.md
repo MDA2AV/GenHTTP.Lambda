@@ -924,7 +924,7 @@ to read, star and download.
   version is described by its change line.
 - **Just the source.** No issues, pull requests, wikis or projects, and nothing
   on `/source` acts on the lambda. Whoever wants to build on it downloads it;
-  `platform_guide` (`openSource.startingFromOne`) tells an agent how a download
+  `platform_guide` (`openSource`, starting from one) tells an agent how a download
   becomes a lambda again.
 - `/source` is a component of its own (`SourcePages`, with its bundle in
   `src/GenHTTP.Lambda.Sources/Frontend`),
@@ -1139,7 +1139,7 @@ panel.
 - The panel's **Blocked addresses** section lists the blocks with why, the
   lambda, until when and what each refused, marks the operator's own and lifts
   them. This is said in the reference (Blocking), `platform_guide`
-  (`theLambda.blocked`), the API's introduction, the terms and the privacy
+  (`lifecycle`), the API's introduction, the terms and the privacy
   page - keep them the same.
 
 ### Connectivity
@@ -1678,6 +1678,19 @@ would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
 meant to be found). The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
+
+**`platform_guide` is written for agents, not people - asked for by the
+owner**, after agents complained it was too large (65 KB, which clients wrote
+to a file; issue 140). It is written as a whole and reads from beginning to
+end (`PlatformGuide` in `GenHTTP.Lambda.Mcp`): terse, no words only a person
+needs, each rule said once where the agent decides it, and no internal
+detail that has no consequence for the agent. What a tool's description or a
+demo already says is not repeated. Chosen with it, open to change: it is one
+Markdown string rather than an object, so the MCP module sends it once as
+text instead of twice with every quote escaped; its sections are headings
+named as the pointers say ("platform_guide, connectivity"), and a renamed one
+renames every pointer; a test holds it under 24 KB
+(`TheGuideFitsIntoOneToolResult`), so a new rule makes room for itself.
 
 ### The API description
 
