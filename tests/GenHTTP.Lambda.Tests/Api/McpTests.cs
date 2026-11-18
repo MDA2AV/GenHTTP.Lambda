@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -563,13 +564,13 @@ public sealed class McpTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var paths = Guide.Section(await Guide.ReadAsync(fixture), "paths");
 
         // the preview of a feature answers below /features/ on the platform,
         // where a path starting with / or the full address leaves it
-        Assert.Contains("relative", guide["paths"]!["rule"]!.GetValue<string>());
-        Assert.Contains("/features/", guide["paths"]!["why"]!.GetValue<string>());
-        Assert.Contains("http://{publicKey}.localhost:8080/", guide["paths"]!["why"]!.GetValue<string>(), "and where the lambda itself answers");
+        Assert.Contains("Link relatively", paths);
+        Assert.Contains("/features/", paths);
+        Assert.Contains("http://{publicKey}.localhost:8080/", paths, "and where the lambda itself answers");
 
         var initialized = await CallAsync(fixture, "initialize", new JsonObject());
 
@@ -582,7 +583,7 @@ public sealed class McpTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject())).ToJsonString();
+        var guide = await Guide.ReadAsync(fixture);
 
         Assert.Contains("Workspace", guide);
         Assert.Contains("anonymous", guide, "returning an anonymous type from a route is the first thing anybody hits");
@@ -590,18 +591,64 @@ public sealed class McpTests
 
         // an agent shipping a front end has to be told it can put it in a
         // folder, or it will flatten everything into the root and wonder why
-        Assert.Contains("Resources.App(\\u0022site\\u0022)", guide,
+        Assert.Contains("Resources.App(\"web\") serves resources/web/", Guide.Section(guide, "resources"),
                         "the guide has to say a folder can be served by naming it");
 
         // an agent has no Data panel, so the guide has to name the tool that
         // puts a file there - and say that the front end is not what goes there
-        Assert.Contains("upload_file", guide, "the guide has to name the tool that puts a file in the workspace");
+        Assert.Contains("upload_file", Guide.Section(guide, "workspace"), "the guide has to name the tool that puts a file in the workspace");
 
-        var parsed = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var lifecycle = Guide.Section(guide, "lifecycle");
 
-        Assert.Contains("Resources.App", parsed["servingAFrontEnd"]!["rule"]!.GetValue<string>(),
+        Assert.Contains("the front end in resources/web/ served by Resources.App(\"web\")", lifecycle,
                         "the front end is part of the program, and shipped with it");
-        Assert.Contains("workspace", parsed["servingAFrontEnd"]!["notFromTheWorkspace"]!.GetValue<string>());
+        Assert.Contains("never the front end in the workspace", lifecycle);
+    }
+
+    [TestMethod]
+    public async Task TheGuideFitsIntoOneToolResult()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { Terms = "Do no harm to the server or to others." });
+
+        var answer = await Guide.AnswerAsync(fixture);
+
+        var guide = Guide.Text(answer);
+
+        // at 65 KB, agents' clients wrote it to a file to be read apart - and
+        // as an object it went over the wire twice, as text and structured
+        Assert.IsLessThan(24_000, Encoding.UTF8.GetByteCount(guide), "small enough for a tool result an agent reads in full");
+        Assert.IsNull(answer["result"]!["structuredContent"], "sent once, as text");
+
+        Assert.StartsWith("# Platform guide", guide, "a document read from beginning to end");
+
+        // every section the tools, the instructions and the briefs point to
+        foreach (var section in (string[])["lifecycle", "git", "restApi", "code", "builtWithATool", "resources", "paths", "compiling", "requests",
+                                           "database", "workspace", "secrets", "connectivity", "liveUpdates", "toolsForAgents", "describingAnApi",
+                                           "documentationAndTests", "beingFound", "backlink", "limits", "analytics", "showcase", "openSource", "terms"])
+        {
+            Assert.IsNotEmpty(Guide.Section(guide, section).Trim(), $"the guide has a section {section}");
+        }
+
+        Assert.Contains("Do no harm", Guide.Section(guide, "terms"), "and the installation's terms");
+    }
+
+    [TestMethod]
+    public async Task TheGuideSaysWhereThePlatformDiffersFromWhatAnAgentAssumes()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = await Guide.ReadAsync(fixture);
+
+        // what an agent building a lambda had to find out with a lambda of
+        // its own that logged what it was sent (issue 140)
+        Assert.Contains("never its name", Guide.Section(guide, "lifecycle"), "a feature is named to the tools by its key");
+        Assert.Contains("No source generators run", Guide.Section(guide, "compiling"), "which a local build of a clone does run");
+
+        var requests = Guide.Section(guide, "requests");
+
+        Assert.Contains("a record or a Stream parameter alike", requests, "a body taken releases the headers before the method runs");
+        Assert.Contains("X-Forwarded-For", requests, "and what the sender writes is not where a request came from");
+        Assert.Contains("\"title\":\"NotFound\"", requests, "and how an error is answered");
     }
 
     [TestMethod]
@@ -609,34 +656,33 @@ public sealed class McpTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var guide = await Guide.ReadAsync(fixture);
 
         // said before anything else about files, because it decides where
         // every one of them goes and how a change is made
-        var names = guide.Select(p => p.Key).ToList();
+        Assert.IsLessThan(guide.IndexOf("\n## resources\n", StringComparison.Ordinal), guide.IndexOf("\n## lifecycle\n", StringComparison.Ordinal),
+                          "the lifecycle comes before the details");
 
-        Assert.IsLessThan(names.IndexOf("resources"), names.IndexOf("lifecycle"), "the lifecycle comes before the details");
+        var lifecycle = Guide.Section(guide, "lifecycle");
 
-        var lifecycle = guide["lifecycle"]!;
+        Assert.Contains("Never changes once saved", lifecycle);
+        Assert.Contains("keeps serving the version online", lifecycle, "a lambda in use is changed in a feature");
+        Assert.Contains("merge_feature", lifecycle);
+        Assert.Contains("a copy of its files and of the lambda's data", lifecycle);
+        Assert.Contains("update_feature", lifecycle, "and how to get a feature that fell behind merged");
+        Assert.Contains("Nothing merges or rebases for you", lifecycle);
 
-        Assert.Contains("never changes", lifecycle["versions"]!["immutable"]!.GetValue<string>());
-        Assert.Contains("online", lifecycle["features"]!["when"]!.GetValue<string>(), "a lambda in use is changed in a feature");
-        Assert.Contains("merge_feature", lifecycle["features"]!["how"]!.GetValue<string>());
-        Assert.Contains("copy", lifecycle["features"]!["data"]!.GetValue<string>());
-        Assert.Contains("update_feature", lifecycle["features"]!["rebasing"]!.GetValue<string>(), "and how to get a feature that fell behind merged");
-        Assert.Contains("Nothing merges or rebases for you", lifecycle["features"]!["rebasing"]!.GetValue<string>());
+        Assert.Contains("shared by every version", lifecycle);
+        Assert.Contains("untouched by saves, deploys, rollbacks and merges", lifecycle);
+        Assert.Contains("enable_data switches on what you build needs", lifecycle, "an agent switches on what it builds needs");
+        Assert.Contains("only the owner does it", lifecycle, "and never switches anything off, which deletes it");
 
-        Assert.Contains("every version", lifecycle["data"]!["what"]!.GetValue<string>());
-        Assert.Contains("merge", lifecycle["data"]!["lifetime"]!.GetValue<string>());
-        Assert.Contains("enable_data", lifecycle["data"]!["optIn"]!.GetValue<string>(), "an agent switches on what it builds needs");
-        Assert.Contains("only the owner", lifecycle["data"]!["optIn"]!.GetValue<string>(), "and never switches anything off, which deletes it");
+        Assert.Contains("the whole front end", lifecycle);
+        Assert.Contains("accounts", lifecycle);
+        Assert.Contains("users upload", lifecycle);
 
-        Assert.Contains("front end", lifecycle["whereThingsGo"]!["theProgram"]!.GetValue<string>());
-        Assert.Contains("accounts", lifecycle["whereThingsGo"]!["theRecords"]!.GetValue<string>());
-        Assert.Contains("upload", lifecycle["whereThingsGo"]!["theFiles"]!.GetValue<string>());
-
-        Assert.Contains("No feature needed", lifecycle["flows"]!["newLambda"]!.GetValue<string>(), "the flow without features stays");
-        Assert.Contains("create_feature", lifecycle["flows"]!["changeALambda"]!.GetValue<string>());
+        Assert.Contains("No feature needed", lifecycle, "the flow without features stays");
+        Assert.Contains("create_feature", lifecycle);
 
         var initialized = await CallAsync(fixture, "initialize", new JsonObject());
 
@@ -742,19 +788,19 @@ public sealed class McpTests
         Assert.Contains("meant to be found", instructions, "said on connecting, before anything is built");
         Assert.Contains("beingFound", instructions, "and where the guide says how");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var guide = await Guide.ReadAsync(fixture);
 
-        var found = guide["beingFound"]!;
+        var found = Guide.Section(guide, "beingFound");
 
-        Assert.Contains("<title>", found["title"]!.GetValue<string>());
-        Assert.Contains("description", found["description"]!.GetValue<string>());
-        Assert.Contains("icon", found["icon"]!.GetValue<string>());
-        Assert.Contains("og:image", found["socialPreview"]!.GetValue<string>());
-        Assert.Contains("domainUrl", found["fullAddress"]!.GetValue<string>(), "a social network does not resolve a relative picture");
-        Assert.Contains("canonical", found["canonical"]!.GetValue<string>(), "a lambda on a domain is listed under the domain");
-        Assert.Contains("In proportion", found["howMuch"]!.GetValue<string>());
+        Assert.Contains("<title>", found);
+        Assert.Contains("<meta name=\"description\"", found);
+        Assert.Contains("rel=\"icon\"", found);
+        Assert.Contains("og:image", found);
+        Assert.Contains("domainUrl", found, "a social network does not resolve a relative picture");
+        Assert.Contains("rel=\"canonical\"", found, "a lambda on a domain is listed under the domain");
+        Assert.Contains("In proportion", found);
 
-        Assert.Contains("beingFound", guide["paths"]!["exception"]!.GetValue<string>(), "the rule about relative paths names its exception");
+        Assert.Contains("(see beingFound)", Guide.Section(guide, "paths"), "the rule about relative paths names its exception");
     }
 
     [TestMethod]
@@ -769,13 +815,12 @@ public sealed class McpTests
         Assert.Contains("Never poll", instructions, "said on connecting, before anything is built");
         Assert.Contains("liveUpdates", instructions, "and where the guide says how");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var live = Guide.Section(await Guide.ReadAsync(fixture), "liveUpdates");
 
-        var live = guide["liveUpdates"]!;
-
-        Assert.Contains("Never poll", live["rule"]!.GetValue<string>());
-        Assert.Contains("demo-live", live["serverSentEvents"]!.GetValue<string>(), "a page that only listens is shown server-sent events");
-        Assert.Contains("demo-game", live["websockets"]!.GetValue<string>(), "and one that talks back a websocket");
+        Assert.Contains("Never poll", live);
+        Assert.Contains("server-sent events", live);
+        Assert.Contains("demo-live", live, "a page that only listens is shown server-sent events");
+        Assert.Contains("demo-game", live, "and one that talks back a websocket");
     }
 
     [TestMethod]
@@ -790,16 +835,14 @@ public sealed class McpTests
         Assert.Contains("\"Made with\" line naming this platform", instructions, "asked on connecting, before anything is built - in words that hold whatever the installation is called");
         Assert.Contains("does not want it", instructions, "as a request the user may turn down");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var backlink = Guide.Section(await Guide.ReadAsync(fixture), "backlink");
 
-        var backlink = guide["backlink"]!;
-
-        Assert.Contains("<a href=\"https://genhttp.dev/\" rel=\"nofollow\">Made with GenHTTP Lambda</a>", backlink["how"]!.GetValue<string>(),
+        Assert.Contains("<a href=\"https://genhttp.dev/\" rel=\"nofollow\">Made with GenHTTP Lambda</a>", backlink,
                         "to the address the site is meant to be found at, not the one the agent called");
-        Assert.Contains("plain text", backlink["onADomain"]!.GetValue<string>(), "a lambda on a domain of its own names the platform without linking to it");
-        Assert.Contains("nofollow", backlink["fromBefore"]!.GetValue<string>(), "and a link written before the lambdas had hosts of their own is given it");
-        Assert.Contains("not a rule", backlink["ask"]!.GetValue<string>());
-        Assert.Contains("decisions.md", backlink["theUserDecides"]!.GetValue<string>(), "a link the user took out stays out");
+        Assert.Contains("With a domain of its own the line is plain text", backlink, "a lambda on a domain of its own names the platform without linking to it");
+        Assert.Contains("A line that links without rel=\"nofollow\" is given it", backlink, "and a link written before the lambdas had hosts of their own is given it");
+        Assert.Contains("not a rule", backlink);
+        Assert.Contains("decisions.md", backlink, "a link the user took out stays out");
     }
 
     [TestMethod]
@@ -1420,10 +1463,10 @@ public sealed class McpTests
             Production = o.Production with { Label = "Premium" }
         });
 
-        var limits = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()))["limits"]!;
+        var limits = Guide.Section(await Guide.ReadAsync(fixture), "limits");
 
-        Assert.Contains("the sandbox ('Free' here)", limits["tiers"]!.GetValue<string>());
-        Assert.Contains("Production ('Premium' here)", limits["tiers"]!.GetValue<string>());
+        Assert.Contains("the sandbox ('Free' here)", limits);
+        Assert.Contains("Production ('Premium' here)", limits);
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -1439,28 +1482,25 @@ public sealed class McpTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var limits = Guide.Section(await Guide.ReadAsync(fixture), "limits");
 
-        var limits = guide["limits"]!;
+        Assert.Contains("the operator assigns it", limits, "which tier a lambda is in, and who decides it");
+        Assert.Contains("a new lambda starts in the sandbox", limits);
 
-        var tiers = limits["tiers"]!.GetValue<string>();
+        string Tier(string name) => limits.Split('\n').Single(l => l.StartsWith($"- {name}", StringComparison.Ordinal));
 
-        Assert.Contains("Production", tiers, "which tier a lambda is in, and who decides it");
-        Assert.Contains("A new lambda starts in the sandbox", tiers);
-
-        var sandbox = limits["sandbox"]!.GetValue<string>();
-        var production = limits["production"]!.GetValue<string>();
+        var sandbox = Tier("The sandbox");
+        var production = Tier("Production");
 
         Assert.Contains("A version: 32 MB - its code and its resources together", sandbox);
         Assert.Contains("Its data: 512 MB - its database and its workspace together", sandbox);
-        Assert.Contains("Taken offline when unused", sandbox);
+        Assert.Contains("Taken offline after 30 days without visits or edits", sandbox);
 
         Assert.Contains("A version: 128 MB", production);
         Assert.Contains("Its data: 4 GB", production);
         Assert.Contains("A domain of its own", production);
 
-        Assert.IsNull(guide["code"]!["limit"], "nothing counts the files of the code");
-        Assert.IsNull(guide["limits"]!["code"], "nor the characters of the C#");
+        Assert.DoesNotContain("characters", limits, "nothing counts the files of the code, nor the characters of the C#");
     }
 
     [TestMethod]
@@ -1479,15 +1519,17 @@ public sealed class McpTests
         Assert.Contains("Entity Framework Core", instructions, "records are read and written through it");
         Assert.Contains("never their Async forms", instructions, "and synchronously");
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var guide = await Guide.ReadAsync(fixture);
 
-        Assert.Contains("database", guide["lifecycle"]!["whereThingsGo"]!["theRecords"]!.GetValue<string>());
-        Assert.Contains("Evolve", guide["database"]!["migrations"]!["example"]!.GetValue<string>());
-        Assert.Contains("synchronously", guide["database"]!["usage"]!["synchronous"]!.GetValue<string>());
-        Assert.Contains("UseSqlite(connection, contextOwnsConnection: true)", guide["database"]!["entityFramework"]!["connection"]!.GetValue<string>()
-                                                                             + string.Join(" ", guide["database"]!["surface"]!.AsArray().Select(s => s!.GetValue<string>())));
-        Assert.Contains("SaveChangesAsync", guide["database"]!["entityFramework"]!["synchronous"]!.GetValue<string>(), "named, as what not to call");
-        Assert.Contains("EnsureCreated", guide["database"]!["notAllowed"]!.GetValue<string>(), "the schema is Evolve's");
+        Assert.Contains("Records - entries, accounts, sessions, orders, votes, scores - in the database", Guide.Section(guide, "lifecycle"));
+
+        var database = Guide.Section(guide, "database");
+
+        Assert.Contains("new Evolve(connection", database);
+        Assert.Contains("Synchronous only", database);
+        Assert.Contains("UseSqlite(connection, contextOwnsConnection: true)", database);
+        Assert.Contains("never ToListAsync, SaveChangesAsync", database, "named, as what not to call");
+        Assert.Contains("EnsureCreated", database, "the schema is Evolve's");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 
@@ -1505,14 +1547,11 @@ public sealed class McpTests
 
         // an agent decides where a model goes while it reads the guide and
         // while it picks a tool, so both have to say it
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var guide = await Guide.ReadAsync(fixture);
 
-        var rule = guide["lifecycle"]!["whereThingsGo"]!["theFiles"]!.GetValue<string>();
-
-        Assert.Contains("model", rule);
-        Assert.Contains("workspace", rule);
-        Assert.Contains("upload_file", guide["workspace"]!["fromOutside"]!.GetValue<string>());
-        Assert.Contains("workspace", guide["resources"]!["size"]!.GetValue<string>(), "and the resources say where their large files belong");
+        Assert.Contains("large inputs that are not program - a model, a dataset, media - in the workspace", Guide.Section(guide, "lifecycle"));
+        Assert.Contains("upload_file", Guide.Section(guide, "workspace"));
+        Assert.Contains("belongs in the workspace", Guide.Section(guide, "resources"), "and the resources say where their large files belong");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 
@@ -1584,13 +1623,12 @@ public sealed class McpTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+        var open = Guide.Section(await Guide.ReadAsync(fixture), "openSource");
 
-        var open = guide["openSource"]!;
-
-        Assert.Contains("Only when the user asks", open["when"]!.GetValue<string>());
-        Assert.Contains("database", open["neverPublished"]!.GetValue<string>());
-        Assert.Contains("lambda.cs", open["startingFromOne"]!.GetValue<string>(), "how an agent makes a lambda of a download");
+        Assert.Contains("Only when the user asks", open);
+        Assert.Contains("Never published: the data (the database", open);
+        Assert.Contains("Starting from one", open, "how an agent makes a lambda of a download");
+        Assert.Contains("becomes lambda.cs", open);
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 

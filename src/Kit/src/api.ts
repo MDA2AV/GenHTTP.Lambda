@@ -1399,6 +1399,27 @@ export interface AdminBranding {
   limits: { name: number; logoBytes: number; types: string[] };
 }
 
+/** The section the operator wrote into the guide, for the agents that build on the installation. */
+export interface AdminGuideSection {
+  /** Its title: the heading agents find it under. */
+  title: string;
+  /** Its text, Markdown, as kept. */
+  text: string;
+  /** How large the text is in UTF-8. */
+  bytes: number;
+}
+
+/** The guide agents read first over MCP, and the operator's section of it. */
+export interface AdminGuide {
+  /** The guide as an agent reads it from platform_guide right now: Markdown, the operator's section first. */
+  guide: string;
+  /** How large the guide is in UTF-8 - what an agent's client is handed with every call. */
+  bytes: number;
+  /** The operator's section; none while there is none. */
+  section: AdminGuideSection | null;
+  limits: { title: number; textBytes: number };
+}
+
 /** The installation's daily usage report, and how the last one fared. */
 export interface UsageReportStatus {
   /** Whether a report is sent once a day. */
@@ -1631,6 +1652,15 @@ export const api = {
     removeLogo: (token: string) => request<void>('/admin/branding/logo', withToken(token, { method: 'DELETE' })),
 
     resetBranding: (token: string) => request<void>('/admin/branding', withToken(token, { method: 'DELETE' })),
+
+    guide: (token: string) =>
+      request<AdminGuide>('/admin/guide', withToken(token)).then((read) => ({ ...read, section: read.section ?? null })),
+
+    /** Answers with the section alone: the guide around it is read again. */
+    saveGuide: (token: string, title: string, text: string) =>
+      request<AdminGuideSection>('/admin/guide', withToken(token, { method: 'PUT', body: JSON.stringify({ title, text }) })),
+
+    removeGuide: (token: string) => request<void>('/admin/guide', withToken(token, { method: 'DELETE' })),
   },
 
   /**

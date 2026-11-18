@@ -1523,6 +1523,11 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   whose policy says so `TiersWhere`, and a refusal names the tier above with
   `Above`. The demo seeder is the exception, since it is what puts a lambda
   among the demos.
+- **Guide** (`Services/Guide`) - what `platform_guide` answers: one Markdown
+  document for agents (`GuideDocument`), the same for MCP and the operator's
+  routes, with the section the operator wrote last. The section is two
+  settings held in memory once read, and `GuideChecks` says what it may be
+  (see [Rules for agents](#rules-for-agents)).
 - **Branding** (`Services/Branding`) - how the installation presents itself:
   the name and the logo its operator gave it, where its host lets them
   (`LambdaOptions.Branding`), held in memory as a `Brand` once read.
@@ -2154,10 +2159,19 @@ lambda, and switching that on when the user asks, and
 `list_demos` for reading something that already works. Where the installation
 may be branded and has an admin token, `customize_installation` names it and
 gives it a logo, for an agent its operator handed the token (see
-[Branding](#branding)). `platform_guide` is the one to call first
-- it opens with how versions, features and data live, then says what a snippet
-has to return, what is imported, what is refused, and the handful of things
-that catch people out.
+[Branding](#branding)). `platform_guide` is the one to call first. It answers
+with one Markdown document, sent once as text rather than as an object (which
+the MCP module sends twice), written for a model and held under 24 KB by a
+test - at 65 KB, clients wrote it to a file instead of the conversation. It
+opens with what a lambda is and how versions, features and data live, then
+git and the REST API, code and resources, paths, compiling, requests and the
+data, and ends with documentation, pages meant to be found, the link back,
+the limits and the terms. Its sections are headings named the way the tools,
+the instructions and the briefs point at them ("platform_guide,
+connectivity"), and what a tool's description or a demo already says is not
+repeated in it. Where the operator wrote rules for agents, they come last,
+after the platform's own sections (see [Rules for agents](#rules-for-agents));
+the budget is the platform's, without them.
 
 Agents used to leave a version behind for every attempt, and put every attempt
 online. A lambda that exists is now changed in a feature: `write_code`,
@@ -2260,10 +2274,10 @@ passwords and personal data out of the files, where they never belong anyway.
 
 What a build tool makes the resources or code from is kept in a folder of the
 code (see [What it is built from](#what-it-is-built-from)), and the agents are
-told so under `code` in the guide (`builtWithATool`) - the flow, building
-where the files are laid out as in a clone, a `.gitignore`, a README that says
-how it is built, nothing secret in it, and the pitfalls (what a build writes
-refers to its files relatively; what it wrote anew is saved with it) - in
+told so under `code` in the guide (`builtWithATool`) - the flow, a
+`.gitignore`, a README that says how it is built, and the pitfalls (what a
+build writes refers to its files relatively; what it wrote anew is saved with
+it) - in
 `AGENTS.md` of a clone, and in the tool descriptions. `write_code`, which
 replaces every file, says so when what it replaced had a folder of code the
 save has none of - `change_code` keeps every file it is not told about - and
@@ -2349,7 +2363,9 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Configuration | **Settings**, **Limits**, **Branding**, **Usage report** | the site's switches, what a lambda may have, the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)) - and what the installation reports about itself (see [Usage reports](#usage-reports)) |
+| Configuration | **Settings**, **Branding** | the site's switches, and the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)) |
+| Platform      | **Limits**, **Guide** | what a lambda may have in its tier and for every lambda, and the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)) |
+| Misc          | **Usage report**      | what the installation reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
@@ -2575,6 +2591,43 @@ save.
 The environment variables that set them before the panel did
 (`LAMBDA_MAX_CODE_LENGTH`, `LAMBDA_RATE_LIMIT`, `LAMBDA_AGENT_BUILDS_PER_DAY`
 and the others) are no longer read.
+
+### Rules for agents
+
+Whoever runs an installation - either edition - may write rules for the agents
+that build there into the guide they read first: `platform_guide`, which the
+MCP instructions send every agent to before anything else, and the build agent
+calls as its first step. It is a section of the operator's own, a title and a
+text in Markdown, written in the panel's **Guide** section - which shows the
+guide exactly as an agent reads it - or through the API with the admin token.
+It is read from the next call to the guide on; nothing restarts.
+
+| Route                 | What it does                                                          |
+|-----------------------|-----------------------------------------------------------------------|
+| `GET /admin/guide`    | the guide as an agent calling `platform_guide` at this address reads it now, its size in bytes, the operator's section and what it may be |
+| `PUT /admin/guide`    | writes the section (`{ "title": …, "text": … }`), or replaces it; answers with the section alone |
+| `DELETE /admin/guide` | takes it out: agents read the platform's guide alone again             |
+
+The section comes last in the guide, after the platform's own sections and
+its terms - what the platform requires matters most to an agent - under the
+operator's title and a line saying it is theirs: agents follow it wherever the
+guide leaves them the choice, and it changes nothing the platform requires or
+refuses, since the code guard, connectivity, the limits and blocks hold
+whatever it says. What operators write there is mostly how lambdas are built
+on the installation: an architecture, a language, a look, data not to keep. The title is one line of at most 60 characters and none of
+the platform's own sections, which the tools point agents to by name; the
+text is at most 6 KB in UTF-8 - counted in bytes, since a client is handed
+bytes - with headings of the third level and below, as `#` and `##` would end
+the section early, and no code block left open (a line in a fenced code
+block is no heading). So a guide
+with a full section stays a tool result an agent reads in full: the
+platform's under 24 KB, the operator's 6 KB, under 30 KB together.
+
+Kept as two settings (`guide.title`, `guide.text`) and read only where the
+installation has an admin token: a copy of another installation's data hands
+no agent rules nobody here could see or take away. The rules reach agents
+through `platform_guide` only - not the MCP instructions, which are fixed when
+the endpoint starts, nor the `AGENTS.md` of a lambda's repository.
 
 ### Branding
 

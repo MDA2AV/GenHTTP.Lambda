@@ -54,18 +54,22 @@ public static class ApiLayout
         // all on an installation that has none, see AdminAuthentication
         if (options.Administrable)
         {
-            // on the resource itself rather than a layout around it, which
-            // would redirect /telemetry to /telemetry/ before asking it
-            IHandlerBuilder admin = Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options));
+            // the guide agents read, and the operator's section of it - on
+            // every installation that has an operator
+            var admin = Layout.Create()
+                              .Add("guide", Resource<GuideResource>(mode).Add(AdminAuthentication.Create(options)));
 
             // the installation's name and logo, where its host lets the
             // operator give it some - and not there at all where it does not
             if (options.Branding)
             {
-                admin = Layout.Create()
-                              .Add("branding", Resource<BrandingResource>(mode).Add(AdminAuthentication.Create(options)))
-                              .Add(admin);
+                admin.Add("branding", Resource<BrandingResource>(mode).Add(AdminAuthentication.Create(options)));
             }
+
+            // on the resource itself rather than a layout of its own, which
+            // would redirect /telemetry to /telemetry/ before asking it; the
+            // layout around it has no path of its own to answer
+            admin.Add(Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options)));
 
             version.Add("admin", admin)
                    .Add("telemetry", Resource<TelemetryResource>(mode).Add(AdminAuthentication.Create(options)))

@@ -520,9 +520,7 @@ public sealed class CodeTests
 
         Assert.AreEqual(Package, one["files"]![0]!["code"]!.GetValue<string>(), "one file is read by its name");
 
-        var guide = await ToolAsync(fixture, "platform_guide", new JsonObject());
-
-        StringAssert.Contains(guide["code"]!["builtWithATool"]!["nothingIsBuiltHere"]!.GetValue<string>(), "never builds anything");
+        StringAssert.Contains(Guide.Section(await Guide.ReadAsync(fixture), "builtWithATool"), "never builds anything");
     }
 
     [TestMethod]

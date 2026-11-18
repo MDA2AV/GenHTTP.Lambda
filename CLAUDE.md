@@ -924,7 +924,7 @@ to read, star and download.
   version is described by its change line.
 - **Just the source.** No issues, pull requests, wikis or projects, and nothing
   on `/source` acts on the lambda. Whoever wants to build on it downloads it;
-  `platform_guide` (`openSource.startingFromOne`) tells an agent how a download
+  `platform_guide` (`openSource`, starting from one) tells an agent how a download
   becomes a lambda again.
 - `/source` is a component of its own (`SourcePages`, with its bundle in
   `src/GenHTTP.Lambda.Sources/Frontend`),
@@ -1040,9 +1040,10 @@ how it shows them did.
 - **Sections in groups, as the editor has them** (the kit's `Navigation`):
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Configuration** (Settings, Limits, Branding -
-  where the host lets the operator brand the installation - Usage report). A
-  new section joins the group it belongs to. A mark beside a
+  (Server, Storage, Log); **Configuration** (Settings, Branding - where the
+  host lets the operator brand the installation); **Platform** (Limits,
+  Guide); **Misc** (Usage report) - the last three the owner's ask. A new
+  section joins the group it belongs to. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
 - **What is shown and what is done are kept apart - asked for by the owner.**
@@ -1139,7 +1140,7 @@ panel.
 - The panel's **Blocked addresses** section lists the blocks with why, the
   lambda, until when and what each refused, marks the operator's own and lifts
   them. This is said in the reference (Blocking), `platform_guide`
-  (`theLambda.blocked`), the API's introduction, the terms and the privacy
+  (`lifecycle`), the API's introduction, the terms and the privacy
   page - keep them the same.
 
 ### Connectivity
@@ -1678,6 +1679,37 @@ would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
 meant to be found). The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
+
+**`platform_guide` is written for agents, not people - asked for by the
+owner**, after agents complained it was too large (65 KB, which clients wrote
+to a file; issue 140). It is written as a whole and reads from beginning to
+end (`GuideDocument` in `Services/Guide`): terse, no words only a person
+needs, each rule said once where the agent decides it, and no internal
+detail that has no consequence for the agent. What a tool's description or a
+demo already says is not repeated. Chosen with it, open to change: it is one
+Markdown string rather than an object, so the MCP module sends it once as
+text instead of twice with every quote escaped; its sections are headings
+named as the pointers say ("platform_guide, connectivity"), and a renamed one
+renames every pointer; a test holds it under 24 KB
+(`TheGuideFitsIntoOneToolResult`), so a new rule makes room for itself.
+
+**The operator writes rules for agents into the guide - decided by the
+owner, on both editions.** The panel's **Guide** section (group Platform)
+shows the guide exactly as an agent reads it and takes a section of the
+operator's own, through `/admin/guide` behind the admin token
+(`Services/Guide`, which MCP and the API both read, so neither door reaches
+into the other). Chosen with it, open to change: one section, a title and a
+Markdown text; **it comes last, after the platform's own sections - decided by
+the owner**: what the platform requires matters most to an agent, and an
+operator mostly writes how lambdas are built here. It says agents follow it
+wherever the guide leaves them the choice, and that it changes nothing the
+platform requires or refuses (the code guard, connectivity, limits, blocks);
+its title may not be
+one of the platform's sections, which pointers name, and its text takes no
+`#` or `##` headings, no open code block and at most 6 KB in UTF-8, so a full
+guide stays under 30 KB; it is read only where there is an admin token, as the branding is
+only where it may be changed. The rules reach agents through `platform_guide`
+only - not the MCP instructions, nor a repository's `AGENTS.md`.
 
 ### The API description
 
