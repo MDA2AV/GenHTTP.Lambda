@@ -1040,10 +1040,10 @@ how it shows them did.
 - **Sections in groups, as the editor has them** (the kit's `Navigation`):
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Configuration** (Settings, Limits, Branding -
-  where the host lets the operator brand the installation - Usage report);
-  **Platform** (Guide - the owner's ask). A new section joins the group it
-  belongs to. A mark beside a
+  (Server, Storage, Log); **Configuration** (Settings, Branding - where the
+  host lets the operator brand the installation); **Platform** (Limits,
+  Guide); **Misc** (Usage report) - the last three the owner's ask. A new
+  section joins the group it belongs to. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
 - **What is shown and what is done are kept apart - asked for by the owner.**

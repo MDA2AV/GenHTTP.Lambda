@@ -35,10 +35,11 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * installation safe from what runs on it: the lambdas that ask to connect
  * out, and the addresses refused. Then how the machine is doing: the
  * process, the room on its volume, and what it logs. Then how the operator
- * set it up: the site's switches, the limits, the name and logo it shows -
- * where its host lets them give it some - and the report it sends. Last,
- * what the platform tells the agents that build on it: the guide, with the
- * operator's own rules in it.
+ * set the installation up: the site's switches, and the name and logo it
+ * shows - where its host lets them give it some. Then what the platform
+ * holds the lambdas to and tells the agents that build them: the limits,
+ * and the guide with the operator's own rules in it. Last, what fits no
+ * group: the report the installation sends about itself.
  */
 const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
   { id: 'start', label: null, sections: [
@@ -59,12 +60,14 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
   ] },
   { id: 'configuration', label: 'Configuration', sections: [
     { id: 'settings', label: 'Settings', note: 'What the site offers, switched without a restart' },
-    { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
     { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
-    { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
   ] },
   { id: 'platform', label: 'Platform', sections: [
+    { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
     { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
+  ] },
+  { id: 'misc', label: 'Misc', sections: [
+    { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
   ] },
 ];
 

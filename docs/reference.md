@@ -2363,8 +2363,9 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Configuration | **Settings**, **Limits**, **Branding**, **Usage report** | the site's switches, what a lambda may have, the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)) - and what the installation reports about itself (see [Usage reports](#usage-reports)) |
-| Platform      | **Guide**             | the guide agents read first over MCP, rendered or as the Markdown they are handed, and a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)) |
+| Configuration | **Settings**, **Branding** | the site's switches, and the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)) |
+| Platform      | **Limits**, **Guide** | what a lambda may have in its tier and for every lambda, and the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)) |
+| Misc          | **Usage report**      | what the installation reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
