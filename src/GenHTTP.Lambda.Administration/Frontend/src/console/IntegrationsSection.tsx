@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api, refusedToken, type Integration } from '@genhttp-lambda/kit/api';
 import { Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
-import { Card, Fact, Facts, Reading } from './parts';
+import { Card, Fact, Reading } from './parts';
 
 /** What each kind of integration keeps, as the operator reads it. */
 const KEEPS: Record<Integration['kind'], { title: string; keeps: string }> = {
@@ -62,15 +62,15 @@ export function IntegrationsSection({ access }: { access: Access }) {
               <p className="text-[13px] text-slate-600 dark:text-slate-400">{integration.summary}</p>
 
               {integration.details.length > 0 && (
-                <div className="mt-3">
-                  <Facts columns={2}>
-                    {integration.details.map((detail) => (
-                      <Fact key={detail.label} label={detail.label}>
-                        <span className="font-mono text-[12px]">{detail.value}</span>
-                      </Fact>
-                    ))}
-                  </Facts>
-                </div>
+                // one column on a phone: the values are paths and addresses,
+                // which read badly broken into two narrow ones
+                <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-3 text-[13px] sm:grid-cols-2">
+                  {integration.details.map((detail) => (
+                    <Fact key={detail.label} label={detail.label}>
+                      <span className="break-all font-mono text-[12px]">{detail.value}</span>
+                    </Fact>
+                  ))}
+                </dl>
               )}
             </Card>
           ))}

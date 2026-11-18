@@ -1446,7 +1446,7 @@ export interface Integration {
   summary: string;
   /** Where it keeps what it keeps - never a password, a key or a connection string. */
   details: { label: string; value: string }[];
-  /** Whether it is the platform's own, used because the host chose none. */
+  /** Whether it is the platform's own, which every installation has unless its host chooses another. */
   default: boolean;
 }
 

@@ -243,7 +243,7 @@ public sealed record IntegrationResponse(
     string Summary,
     [Summary("Where it keeps what it keeps, as label and value - never a password, a key or a connection string")]
     IReadOnlyList<IntegrationDetailResponse> Details,
-    [Summary("Whether it is the platform's own, used because the host chose none")]
+    [Summary("Whether it is the platform's own, which every installation has unless its host chooses another")]
     bool Default
 )
 {

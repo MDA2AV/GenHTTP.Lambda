@@ -583,7 +583,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Remarks("""
              The database the platform keeps its records, its analytics and the lambdas' databases in, where the lambdas' files
              are kept, and where their secrets are - each with what it says about where, and whether it is the platform's own,
-             used because the host chose none. Chosen by the host as it starts (`LAMBDA_DATABASE` on the community edition), not
+             which every installation has unless its host chooses another. Chosen by the host as it starts (`LAMBDA_DATABASE` on the community edition), not
              here. Never a password, a key or a connection string.
              """)]
     [return: Summary("The database, the files and the secrets, in that order")]

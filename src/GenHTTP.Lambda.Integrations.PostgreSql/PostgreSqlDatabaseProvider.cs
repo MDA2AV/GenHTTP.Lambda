@@ -364,7 +364,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKinds.Database, "PostgreSQL",
-                                             "One PostgreSQL database: the platform's records and analytics in schemas of their own, every lambda's database a schema reached under a role of its own.",
+                                             "One PostgreSQL database, a schema per store and per lambda, each lambda reaching its own under a role of its own.",
                                              [
                                                  new IntegrationDetail("Server", _connection.Port is 5432 or 0 ? _connection.Host ?? "localhost" : $"{_connection.Host}:{_connection.Port}"),
                                                  new IntegrationDetail("Database", _connection.Database ?? ""),

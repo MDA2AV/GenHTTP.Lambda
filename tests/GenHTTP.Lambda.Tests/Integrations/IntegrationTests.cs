@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Integrations.Sqlite;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.UsageReports;
@@ -42,6 +43,22 @@ public sealed class IntegrationTests
         var database = integrations[0];
 
         Assert.IsTrue(database.Details.Any(d => d.Value.EndsWith("lambda.db", StringComparison.Ordinal)), "where the platform's records are");
+    }
+
+    /// <summary>
+    /// The community host names SQLite where its environment chooses no other
+    /// database, which is still the platform's own.
+    /// </summary>
+    [TestMethod]
+    public async Task NamingThePlatformsOwnDatabaseIsNoChoiceOfAnother()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel, SqliteDatabase.Create());
+
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/admin/integrations");
+
+        var integrations = await response.GetContentAsync<List<IntegrationResponse>>();
+
+        Assert.IsTrue(integrations[0].Default);
     }
 
     [TestMethod]

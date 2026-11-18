@@ -329,7 +329,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKinds.Database, "SQLite",
-                                             "A file per database in the data directory: the platform's records, its analytics, and the database of every lambda and draft.",
+                                             "A SQLite file per database, in the data directory.",
                                              [
                                                  new IntegrationDetail("Platform", StoreFile(DatabaseStores.Platform)),
                                                  new IntegrationDetail("Analytics", StoreFile(DatabaseStores.Analytics)),

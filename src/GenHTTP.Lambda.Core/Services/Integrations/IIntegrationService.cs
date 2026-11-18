@@ -18,5 +18,5 @@ public interface IIntegrationService
 }
 
 /// <param name="Info">What the integration says about itself</param>
-/// <param name="Default">Whether it is the platform's own, used because the host chose none</param>
+/// <param name="Default">Whether it is the platform's own, which every installation has unless its host chooses another</param>
 public sealed record IntegrationState(IntegrationInfo Info, bool Default);
