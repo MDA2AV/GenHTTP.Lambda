@@ -26,9 +26,10 @@ namespace GenHTTP.Lambda.Server;
 /// matches names exactly: a wildcard covers its subdomains there only by being
 /// what it presents to a name it was not told about.
 ///
-/// Which of the two ways that happens depends on the engine. Kestrel terminates
-/// TLS in .NET and asks for a certificate per connection, so the name comes in
-/// through <see cref="Provide" />. The io_uring engine terminates it itself and
+/// Which of the two ways that happens depends on the engine. Kestrel and the
+/// internal engine terminate TLS in .NET and ask for a certificate per
+/// connection, so the name comes in through <see cref="Provide" />. The
+/// io_uring engine terminates it itself and
 /// reads the PEM files directly, so it wants the names up front and a path per
 /// name instead - hence <see cref="Hosts" /> and <see cref="ProvideFiles" />.
 /// </remarks>
@@ -374,7 +375,8 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
     /// has nothing to build a path to a root with. .NET assembles that chain from
     /// the certificates it can find locally, so the issuers have to be in a store
     /// before the first handshake rather than in a file nobody reads. Kestrel
-    /// hides the omission by fetching the issuer over the network on demand; the
+    /// and the internal engine hide the omission by fetching the issuer over
+    /// the network on demand; the
     /// io_uring engine sends what it was given and the connection fails.
     /// </remarks>
     private void Publish(X509Certificate2Collection chain)

@@ -193,6 +193,7 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
     private static IServerHost CreateHost(ServerSettings settings) => settings.Engine switch
     {
         LambdaEngine.Kestrel => GenHTTP.Engine.Kestrel.Host.Create(),
+        LambdaEngine.Internal => GenHTTP.Engine.Internal.Host.Create(),
         _ => GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
         {
             Tcp = new GenHTTP.Engine.Ioxide.TcpTransportOptions { RecvQueueEntries = settings.ReceiveQueueEntries }

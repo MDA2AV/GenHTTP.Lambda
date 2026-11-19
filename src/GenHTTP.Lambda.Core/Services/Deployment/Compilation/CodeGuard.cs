@@ -869,7 +869,8 @@ public static class CodeGuard
     /// are posted back to that thread. A request that blocks it waiting for a
     /// task waits for work queued behind itself: that core never serves
     /// anything again, the lambda's requests and everybody else's alike. On
-    /// Kestrel it merely costs a thread, which is why such code works on a
+    /// Kestrel or the internal engine it merely costs a thread, which is why
+    /// such code works on a
     /// developer's machine and must not get further than this.
     ///
     /// Asked of the compilation, like <see cref="InspectConstruction"/>, so a

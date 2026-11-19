@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// What it is for: compiling and binding code with Roslyn, packing and
 /// unpacking, reading or writing a file that may be large. What it is not
 /// for: a query against SQLite or a small file, which take less than the hop.
-/// On Kestrel it is a hop to the pool and nothing more.
+/// On Kestrel and the internal engine it is a hop to the pool and nothing more.
 ///
 /// The only way to the pool: <c>Task.Run</c> is refused when the server is
 /// compiled (BannedSymbols.txt), so every hop is marked as one here, and

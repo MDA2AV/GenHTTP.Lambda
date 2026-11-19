@@ -18,6 +18,16 @@ public enum LambdaEngine
     /// <summary>
     /// The Kestrel based engine, which runs wherever ASP.NET Core runs.
     /// </summary>
-    Kestrel
+    Kestrel,
+
+    /// <summary>
+    /// GenHTTP's own engine on .NET sockets, which runs wherever .NET runs.
+    /// </summary>
+    /// <remarks>
+    /// What the community image runs on: it needs nothing a container runtime
+    /// withholds. It speaks HTTP/1.1 only, whatever <c>LAMBDA_HTTP_PROTOCOLS</c>
+    /// says beyond it.
+    /// </remarks>
+    Internal
 
 }

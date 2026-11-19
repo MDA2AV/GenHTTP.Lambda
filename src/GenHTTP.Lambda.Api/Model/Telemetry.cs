@@ -7,7 +7,7 @@ namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What is running, and on what.")]
 public sealed record ServerDescription(
-    [Summary("The engine serving the requests: `ioxide` or `kestrel`")]
+    [Summary("The engine serving the requests: `ioxide`, `kestrel` or `internal`")]
     string Engine,
     [Summary("The version of GenHTTP")]
     string Version,

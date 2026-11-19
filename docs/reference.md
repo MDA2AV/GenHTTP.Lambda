@@ -1886,7 +1886,7 @@ variable (see [Branding](#branding)).
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
-| `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide` or `kestrel` (see below)           |
+| `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide`, `kestrel` or `internal` (see below) |
 | `LAMBDA_HTTP_PROTOCOLS`             | `Http1`          | the HTTP versions both ports answer on; `Http1AndHttp2` tries HTTP/2 again |
 | `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `4096`           | reads of 32 KB a connection may have waiting on io_uring |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
@@ -1936,9 +1936,12 @@ variable (see [Branding](#branding)).
 | `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
 The io_uring engine is the default and the faster one, but container runtimes
-block the syscall in their default seccomp profile - so both images default to
-`LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
-and allowed; genhttp.dev does, in `deploy/cloud/docker-compose.yml`.
+block the syscall in their default seccomp profile - so the community image
+defaults to `LAMBDA_ENGINE=internal`, GenHTTP's own engine on .NET sockets,
+and the cloud's image to `kestrel`. Set it back to `ioxide` where io_uring is
+available and allowed; genhttp.dev does, in `deploy/cloud/docker-compose.yml`.
+The internal engine speaks HTTP/1.1 only, whatever `LAMBDA_HTTP_PROTOCOLS`
+says beyond it.
 
 It runs the server on io_uring under `deploy/cloud/seccomp-ioxide.json`, which is
 the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
@@ -1957,8 +1960,8 @@ out it waits for them rather than dropping anybody - so the default here is
 4096, at which a connection is only ever slowed down: 200 MB went through at
 the full speed of the loopback, where 1024 dropped 100 MB sent at 50 MB/s. The
 price is that one large upload can hold the reads of its reactor while it is
-consumed, and the other connections on that reactor wait for them. Kestrel
-slows the sender down and needs none of this.
+consumed, and the other connections on that reactor wait for them. Kestrel and
+the internal engine slow the sender down and need none of this.
 
 A workspace file sent as it is, to `…/files/:path/content`, is written to the
 disk as it arrives: 200 MB went through with the server growing by 160 MB,
@@ -2079,8 +2082,9 @@ LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
 ```
 
 A PKCS#12 archive works just as well - leave the key empty and set
-`LAMBDA_CERTIFICATE_PASSWORD` instead. On Kestrel the certificate is read
-again when the files change, so a renewal is picked up without a restart; the
+`LAMBDA_CERTIFICATE_PASSWORD` instead. On Kestrel and the internal engine the
+certificate is read again when the files change, so a renewal is picked up
+without a restart; the
 io_uring engine takes the files when it opens its port, and is restarted to
 serve a renewal.
 
@@ -2161,13 +2165,15 @@ answered with the default one - or with the wildcard of the hosting domain,
 where one of them is that (see below).
 
 Note that this needs a PEM pair per name when running on the io_uring engine.
-Kestrel terminates TLS in .NET and is handed a loaded certificate, but the
-io_uring engine reads the files itself and has no way to be given an archive.
+Kestrel and the internal engine terminate TLS in .NET and are handed a loaded
+certificate, but the io_uring engine reads the files itself and has no way to
+be given an archive.
 
 The issuers in the file are published into the certificate store of the user
 the server runs as, because a client needs the chain and not just the leaf to
-reach a root. Kestrel papers over a missing chain by fetching the issuer over
-the network mid-handshake; the io_uring engine sends what it was given, so a
+reach a root. Kestrel and the internal engine paper over a missing chain by
+fetching the issuer over the network mid-handshake; the io_uring engine sends
+what it was given, so a
 server that never published its issuers answers it with a certificate nobody
 can verify.
 
@@ -2228,8 +2234,9 @@ names it was told when it opened the port, and a wildcard is no such name:
 `quiz.genhttp.run` is never in that list. So the certificate whose names
 include `*.` and the hosting domain is presented to every name no
 certificate is listed for, in place of the default one - which keeps being
-presented, by name, to the names it carries. Kestrel asks per connection and
-finds the wildcard by the name anyway; it is given the same.
+presented, by name, to the names it carries. Kestrel and the internal engine
+ask per connection and find the wildcard by the name anyway; they are given
+the same.
 
 A wildcard is issued only against a challenge in the DNS - the HTTP challenge
 the server answers proves one host, not all of them - so it takes the DNS
@@ -2243,8 +2250,9 @@ install -m 0644 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/fullchain.pem 
 install -m 0640 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/privkey.pem   /opt/genhttp-lambda/certs/genhttp.run/
 ```
 
-Like every certificate in the folder, it is found on startup. Kestrel reads a
-renewal as it is written; the io_uring engine takes the files when it opens
+Like every certificate in the folder, it is found on startup. Kestrel and the
+internal engine read a renewal as it is written; the io_uring engine takes the
+files when it opens
 its port, so the hook that installs a renewal restarts the container. A
 server whose certificates include no wildcard of the hosting domain presents
 the default one to every name, as it always did - and says so on startup, as
