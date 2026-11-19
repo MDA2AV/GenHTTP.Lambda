@@ -13,6 +13,7 @@
     <Folder Name="/integrations/">
         <Project Path="src/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
         <Project Path="src/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
+        <Project Path="src/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
         <Project Path="src/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj" />
     </Folder>
     <Folder Name="/hosts/">

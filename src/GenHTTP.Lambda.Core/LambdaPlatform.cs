@@ -4,7 +4,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Integrations.Files;
-using GenHTTP.Lambda.Integrations.Internal;
+using GenHTTP.Lambda.Integrations.Sealed;
 using GenHTTP.Lambda.Integrations.Local;
 using GenHTTP.Lambda.Integrations.Secrets;
 using GenHTTP.Lambda.Integrations.Sqlite;
@@ -111,6 +111,17 @@ public sealed class LambdaPlatform : IAsyncDisposable
         // before the first request, which is asked about against them
         Services.GetRequiredService<DomainRegistry>().Reload();
         Services.GetRequiredService<AddressBlocks>().Reload();
+
+        // and the pictures out of the records they were kept in before - read
+        // from there meanwhile where that fails, and tried again next time
+        try
+        {
+            PictureMove.Run(Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>(), integrations.Files, loggers.CreateLogger<LambdaPlatform>());
+        }
+        catch (Exception e)
+        {
+            loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "Failed to move the pictures from the platform's records into its files");
+        }
     }
 
     /// <summary>
@@ -141,7 +152,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         else
         {
             services.AddSingleton<SecretCipher>();
-            services.AddSingleton<ISecretProvider, InternalSecrets>();
+            services.AddSingleton<ISecretProvider, DatabaseSecrets>();
         }
 
         services.AddSingleton<IIntegrationService, IntegrationService>();

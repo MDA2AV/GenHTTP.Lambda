@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Settings;
@@ -78,6 +79,9 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             [Name(options.SourceDirectory)] = ("sources", true),
             [Name(options.AssemblyDirectory)] = ("compiled", true),
             [Name(options.ResourceDirectory)] = ("resources", true),
+            // the platform's pictures, kept by the files integration where it is local
+            [FileStores.Branding] = ("pictures", false),
+            [FileStores.Showcase] = ("pictures", false),
             // the lists the log and the analytics read, downloaded by their jobs
             ["geo"] = ("locations", false),
             ["crawlers"] = ("crawlers", false),

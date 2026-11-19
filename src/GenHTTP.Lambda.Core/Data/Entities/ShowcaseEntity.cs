@@ -17,9 +17,16 @@ public sealed class ShowcaseEntity
     public required string Description { get; set; }
 
     /// <summary>
-    /// The picture shown with it, as uploaded.
+    /// What the picture shown with it held while pictures were rows - empty
+    /// since they are files of the files integration (<c>showcase/{lambda}</c>),
+    /// and left for the platform to move out as it starts.
     /// </summary>
-    public required byte[] Image { get; set; }
+    public byte[] Image { get; set; } = [];
+
+    /// <summary>
+    /// How large the picture is, in bytes.
+    /// </summary>
+    public int ImageBytes { get; set; }
 
     /// <summary>
     /// What the picture is, as sniffed from its first bytes rather than

@@ -3,8 +3,9 @@ using GenHTTP.Api.Content.IO;
 namespace GenHTTP.Lambda.Integrations.Files;
 
 /// <summary>
-/// Where the files a lambda keeps as data are: its workspace, and the copy a
-/// feature works on.
+/// Where files are kept: the workspace of every lambda and the copy a feature
+/// works on, and the pictures the platform keeps for itself - its logo, the
+/// pictures of the showcase.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,9 +23,34 @@ namespace GenHTTP.Lambda.Integrations.Files;
 /// upload, which arrives as it is sent: a lambda writes a file with a plain
 /// call, wherever it happens to be.
 /// </para>
+/// <para>
+/// The platform's own files are in named stores (<see cref="FileStores"/>),
+/// as its records are in the stores of the database: a picture is a file,
+/// never a row. Their names are the platform's, never anybody's input.
+/// </para>
 /// </remarks>
 public interface IFileProvider : IIntegration
 {
+
+    #region The platform's own
+
+    /// <summary>
+    /// A file of one of the platform's stores, or nothing where there is none.
+    /// </summary>
+    byte[]? Read(string store, string name);
+
+    /// <summary>
+    /// Writes a file into one of the platform's stores, replacing it where
+    /// it is there - whole, or not at all.
+    /// </summary>
+    void Write(string store, string name, ReadOnlySpan<byte> content);
+
+    /// <summary>
+    /// Removes a file from one of the platform's stores, where it is there.
+    /// </summary>
+    void Delete(string store, string name);
+
+    #endregion
 
     #region Reading
 
@@ -114,6 +140,24 @@ public interface IFileProvider : IIntegration
     void DeleteAll(long lambdaId);
 
     #endregion
+
+}
+
+/// <summary>
+/// The stores the platform keeps its own files in.
+/// </summary>
+public static class FileStores
+{
+
+    /// <summary>
+    /// What the installation presents itself with: its logo.
+    /// </summary>
+    public const string Branding = "branding";
+
+    /// <summary>
+    /// The pictures of the showcase, one per lambda that is listed there.
+    /// </summary>
+    public const string Showcase = "showcase";
 
 }
 

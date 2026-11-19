@@ -15,6 +15,7 @@ const PARTS: Record<string, { label: string; note: string }> = {
   drafts: { label: 'Drafts', note: 'Features being worked on, each with a copy of the data' },
   databases: { label: 'Databases', note: 'The records of the lambdas' },
   workspaces: { label: 'Workspaces', note: 'The files the lambdas saved' },
+  pictures: { label: 'Pictures', note: 'The logo and the pictures of the showcase' },
   git: { label: 'Git histories', note: 'The commits of the lambdas that were cloned' },
   sources: { label: 'Published sources', note: 'Versions packed for /source - made again when missing' },
   compiled: { label: 'Compiled lambdas', note: 'What they were compiled to - made again when missing' },

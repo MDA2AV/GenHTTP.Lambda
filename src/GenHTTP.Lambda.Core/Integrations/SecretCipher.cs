@@ -5,7 +5,7 @@ using GenHTTP.Lambda.Configuration;
 
 using Microsoft.Extensions.Logging;
 
-namespace GenHTTP.Lambda.Integrations.Internal;
+namespace GenHTTP.Lambda.Integrations.Sealed;
 
 /// <summary>
 /// Seals the values of secrets before they are stored, and opens them again

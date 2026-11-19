@@ -159,6 +159,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         showcases.Property(s => s.Title).HasColumnName("title");
         showcases.Property(s => s.Description).HasColumnName("description");
         showcases.Property(s => s.Image).HasColumnName("image");
+        showcases.Property(s => s.ImageBytes).HasColumnName("image_bytes");
         showcases.Property(s => s.ImageType).HasColumnName("image_type");
         showcases.Property(s => s.Created).HasColumnName("created");
         showcases.Property(s => s.Updated).HasColumnName("updated");

@@ -6,20 +6,26 @@ using GenHTTP.Lambda.Services.Meta;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace GenHTTP.Lambda.Integrations.Internal;
+namespace GenHTTP.Lambda.Integrations.Sealed;
 
 /// <summary>
-/// Keeps the secrets in the platform's own database, sealed - what every
+/// Keeps the secrets sealed in the platform's own database - what every
 /// installation does unless it chooses another place for them.
 /// </summary>
 /// <remarks>
+/// A secrets integration built on the database integration: the values are
+/// rows of the platform's records (<c>secrets</c>), which are wherever the
+/// database integration keeps them - in PostgreSQL on an installation that
+/// keeps its databases there. So it is in Core, beside the platform's
+/// records, rather than a project of its own.
+///
 /// A value is sealed by <see cref="SecretCipher"/> under a key made of the
 /// installation's key, which is never in the database, and a salt of the
 /// lambda's, which is in its row. A feature's copy is copied sealed: it is the
 /// lambda's, under the lambda's key, so nothing is opened to make it. What a
 /// lambda reads is held sealed until it reads it.
 /// </remarks>
-public sealed class InternalSecrets(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<InternalSecrets> logger) : ISecretProvider
+public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<DatabaseSecrets> logger) : ISecretProvider
 {
     private const string FingerprintSetting = "secrets-key";
 
@@ -148,7 +154,7 @@ public sealed class InternalSecrets(IDbContextFactory<LambdaDbContext> databases
                         .ExecuteUpdate(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null));
     }
 
-    public IntegrationInfo Describe() => new(IntegrationKinds.Secrets, "Internal",
+    public IntegrationInfo Describe() => new(IntegrationKinds.Secrets, "Database",
                                              "Sealed with AES-GCM in the platform's database, under a key made of the installation's key and a salt per lambda.",
                                              [
                                                  new IntegrationDetail("Values", "the platform's database"),

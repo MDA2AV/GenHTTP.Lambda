@@ -43,6 +43,7 @@ COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/Directory.Build.props src/BannedSymbols.txt src/
 COPY src/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj src/GenHTTP.Lambda.Integrations/
 COPY src/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj src/GenHTTP.Lambda.Integrations.Sqlite/
+COPY src/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj src/GenHTTP.Lambda.Integrations.Local/
 COPY src/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj src/GenHTTP.Lambda.Integrations.PostgreSql/
 COPY src/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj src/GenHTTP.Lambda.Core/
 COPY src/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj src/GenHTTP.Lambda.Web/

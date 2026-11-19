@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        Where every installation keeps its files unless it chooses another
+        place: directories in its data directory - the workspaces of the
+        lambdas and the pictures of the platform.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Integrations.Local</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Integrations.Local</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- what a file and a directory are served as -->
+        <PackageReference Include="GenHTTP.Modules.IO" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+    </ItemGroup>
+
+</Project>

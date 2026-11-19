@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -22,7 +23,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// it, or the sweep finds it abandoned - and both have to leave nothing behind.
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
-                                  IDatabaseVault databaseVault, IWorkspaceVault workspaces, IDomainRegistry domains, IStorageService storage,
+                                  IDatabaseVault databaseVault, IWorkspaceVault workspaces, IShowcaseService showcases, IDomainRegistry domains, IStorageService storage,
                                   IAnalyticsStore analytics)
 {
 
@@ -41,7 +42,8 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         // foreign keys switched on - said here so it does not depend on that
         database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDelete();
 
-        database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
+        // its entry and its picture, wherever the files are kept
+        showcases.Forget(lambda.Id);
 
         database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 

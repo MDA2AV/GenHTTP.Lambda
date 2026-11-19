@@ -36,7 +36,7 @@ public sealed class IntegrationTests
         var integrations = await response.GetContentAsync<List<IntegrationResponse>>();
 
         CollectionAssert.AreEqual(new[] { "database", "files", "secrets" }, integrations.Select(i => i.Kind).ToArray(), "in that order");
-        CollectionAssert.AreEqual(new[] { "SQLite", "Local", "Internal" }, integrations.Select(i => i.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "SQLite", "Local", "Database" }, integrations.Select(i => i.Name).ToArray());
 
         Assert.IsTrue(integrations.All(i => i.Default), "the platform's own, since the host chose none");
 
@@ -167,7 +167,7 @@ public sealed class IntegrationTests
 
         Assert.AreEqual("sqlite", configuration.GetProperty("database").GetString());
         Assert.AreEqual("local", configuration.GetProperty("files").GetString());
-        Assert.AreEqual("internal", configuration.GetProperty("secrets").GetString());
+        Assert.AreEqual("database", configuration.GetProperty("secrets").GetString());
 
         Assert.DoesNotContain(fixture.Options.DataDirectory, collector.Reports.Single().Body, "which, never where");
     }

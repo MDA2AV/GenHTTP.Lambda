@@ -7,8 +7,9 @@ using GenHTTP.Modules.IO;
 namespace GenHTTP.Lambda.Integrations.Local;
 
 /// <summary>
-/// Keeps the workspaces as directories in the data directory - what every
-/// installation does unless it chooses another place for them.
+/// Keeps the files as directories in the data directory - the workspaces and
+/// the platform's pictures - what every installation does unless it chooses
+/// another place for them.
 /// </summary>
 /// <example>
 /// <code>
@@ -38,7 +39,8 @@ public sealed class LocalFilesBuilder : IIntegrationBuilder<IFileProvider>
 /// <summary>
 /// A workspace as a directory: <c>workspaces/{id}</c> for a lambda,
 /// <c>features/{id}/{feature}/workspace</c> for the copy a feature works on,
-/// beside the rest of what the feature keeps.
+/// beside the rest of what the feature keeps. A store of the platform is the
+/// directory of its name: <c>branding/logo</c>, <c>showcase/{id}</c>.
 /// </summary>
 /// <remarks>
 /// What is written goes through a file beside the one it replaces, which a
@@ -57,6 +59,67 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
     /// made by an earlier version of the platform leaves out the same files.
     /// </remarks>
     private const string Staging = ".uploading";
+
+    #region The platform's own
+
+    public byte[]? Read(string store, string name)
+    {
+        var file = Stored(store, name);
+
+        try
+        {
+            return File.Exists(file) ? File.ReadAllBytes(file) : null;
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    public void Write(string store, string name, ReadOnlySpan<byte> content)
+    {
+        var file = Stored(store, name);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+
+        var staging = file + Staging;
+
+        try
+        {
+            using (var target = File.Create(staging))
+            {
+                target.Write(content);
+            }
+
+            File.Move(staging, file, true);
+        }
+        catch
+        {
+            Remove(staging);
+            throw;
+        }
+    }
+
+    public void Delete(string store, string name) => Remove(Stored(store, name));
+
+    /// <summary>
+    /// Where a file of a store is - one level below the store, the names
+    /// being the platform's own.
+    /// </summary>
+    private string Stored(string store, string name)
+    {
+        if (!Plain(store) || !Plain(name))
+        {
+            throw new ArgumentException($"'{store}/{name}' is no file of a store: a name of letters, digits, dashes and dots each.");
+        }
+
+        return Path.Combine(dataDirectory, store, name);
+    }
+
+    private static bool Plain(string name)
+        => name.Length > 0 && name[0] != '.' && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
+
+    #endregion
 
     #region Reading
 
@@ -274,10 +337,12 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKinds.Files, "Local",
-                                             "A directory per workspace, in the data directory.",
+                                             "A directory per workspace, and per store of the platform, in the data directory.",
                                              [
                                                  new IntegrationDetail("Lambdas", Path.Combine(dataDirectory, "workspaces", "{lambda}")),
-                                                 new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace"))
+                                                 new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace")),
+                                                 new IntegrationDetail("Logo", Path.Combine(dataDirectory, FileStores.Branding)),
+                                                 new IntegrationDetail("Showcase", Path.Combine(dataDirectory, FileStores.Showcase))
                                              ]);
 
     public string? Guide(GuideContext context) => null;

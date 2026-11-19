@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Settings;
@@ -13,7 +14,12 @@ namespace GenHTTP.Lambda.Services.Showcase;
 /// <summary>
 /// Keeps the showcase entries and decides the order they are shown in.
 /// </summary>
-public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, ITelemetryService telemetry,
+/// <remarks>
+/// An entry is a row of the platform's records, and its picture a file of
+/// the files integration (<c>showcase/{lambda}</c>) - no picture is kept in a
+/// database. The row says what the picture is and how large.
+/// </remarks>
+public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, IFileProvider files, ITelemetryService telemetry,
                                     ILimitsService limits, ILogger<ShowcaseService> logger) : IShowcaseService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
@@ -89,19 +95,25 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         var now = DateTime.UtcNow;
 
+        if (entry == null && draft.Image == null)
+        {
+            throw LambdaException.Invalid("A showcase needs a picture.");
+        }
+
+        // the picture first: a row is never there without the file it names
+        if (draft.Image != null)
+        {
+            files.Write(FileStores.Showcase, PictureOf(lambda.Id), draft.Image);
+        }
+
         if (entry == null)
         {
-            if (draft.Image == null)
-            {
-                throw LambdaException.Invalid("A showcase needs a picture.");
-            }
-
             database.Showcases.Add(new ShowcaseEntity
             {
                 LambdaId = lambda.Id,
                 Title = title,
                 Description = description,
-                Image = draft.Image,
+                ImageBytes = draft.Image!.Length,
                 ImageType = type!,
                 Created = now,
                 Updated = now
@@ -117,7 +129,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
             if (draft.Image != null)
             {
-                entry.Image = draft.Image;
+                entry.Image = [];
+                entry.ImageBytes = draft.Image.Length;
                 entry.ImageType = type!;
             }
         }
@@ -139,6 +152,17 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         {
             logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
         }
+
+        files.Delete(FileStores.Showcase, PictureOf(lambda.Id));
+    }
+
+    public void Forget(long lambdaId)
+    {
+        using var database = databases.CreateDbContext();
+
+        database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
+
+        files.Delete(FileStores.Showcase, PictureOf(lambdaId));
     }
 
     #endregion
@@ -173,11 +197,27 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     {
         using var database = databases.CreateDbContext();
 
-        return database.Showcases.AsNoTracking()
-                       .Where(s => s.Lambda!.PublicKey == publicKey)
-                       .Select(s => new ShowcaseImage(s.Image, s.ImageType, s.Updated))
-                       .FirstOrDefault();
+        var entry = database.Showcases.AsNoTracking()
+                            .Where(s => s.Lambda!.PublicKey == publicKey)
+                            .Select(s => new { s.LambdaId, s.ImageType, s.Updated })
+                            .FirstOrDefault();
+
+        if (entry == null)
+        {
+            return null;
+        }
+
+        // the row's own bytes where the picture was not moved out of it yet
+        var content = files.Read(FileStores.Showcase, PictureOf(entry.LambdaId))
+                   ?? database.Showcases.AsNoTracking().Where(s => s.LambdaId == entry.LambdaId).Select(s => s.Image).FirstOrDefault();
+
+        return content is { Length: > 0 } ? new ShowcaseImage(content, entry.ImageType, entry.Updated) : null;
     }
+
+    /// <summary>
+    /// What the picture of a lambda's entry is called in the store of the showcase.
+    /// </summary>
+    internal static string PictureOf(long lambdaId) => lambdaId.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     #endregion
 
@@ -236,7 +276,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         => showcases.AsNoTracking()
                     .Select(s => new Entry(
                        s.LambdaId,
-                       new ShowcaseInfo(s.Lambda!.PublicKey, s.Title, s.Description, s.ImageType, s.Image.Length,
+                       new ShowcaseInfo(s.Lambda!.PublicKey, s.Title, s.Description, s.ImageType, s.ImageBytes,
                                         s.Lambda.ActiveVersion != null, s.Created, s.Updated,
                                         s.Lambda.Tier, s.Lambda.Domain),
                        s.Lambda.LastSeen,
