@@ -185,8 +185,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - Imported in every file: {{Imports()}}. Those are the GenHTTP modules available; ReverseProxy and DependencyInjection are refused. Anything else needs a using - System.Text.RegularExpressions and System.Net.Http among them.
             - No source generators run: [GeneratedRegex] fails with CS8795, and so does whatever else a generator would write - keep a new Regex(...) in a static field. A local build of a clone runs them.
             - Refused: reflection, dynamic, processes, the environment, the file system beyond Workspace and Resources - lambdas share one process. A type of yours named like a refused one is fine.
-            - Never wait for a task - .Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny, SemaphoreSlim.Wait() are refused: a request's thread is the one its task finishes on. Await (routes may be async), use await semaphore.WaitAsync() or a lock without an await inside.
-            - Database, Workspace and Secret are awaited: GetConnectionAsync(), ReadTextAsync(...), ReadAsync(...). Their plain forms are kept for older code, and hold the thread where the data is on another machine.
+            - Never wait for a task - .Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny, SemaphoreSlim.Wait() are refused: a request's thread is the one its task finishes on. Await (routes may be async; so are Database, Workspace and Secret - plain forms are for older code), use await semaphore.WaitAsync() or a lock without an await inside.
 
             ## requests
 
@@ -207,36 +206,35 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             ```csharp
             await using (var connection = await Database.GetConnectionAsync())
             {
-                new Evolve(connection, message => Console.WriteLine(message)) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+                new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
             }
             ```
 
-            - At the top level, a using declaration (using var) does not compile.
             - Never change an applied migration - Evolve refuses to start; a schema change is the next file. A preview migrates its feature's copy first.
             - A rollback runs older code on a newer schema: prefer additive changes - new tables, columns with a default - over dropping or renaming what an older version reads.
             - Plain SQL: TEXT, INTEGER, BIGINT, BOOLEAN, DOUBLE PRECISION; keys you make (Guid text), no AUTOINCREMENT or SERIAL; unquoted names.
 
             Records go through Entity Framework Core: a DbContext of yours mapping those tables on the connection handed in - class Records(DbConnection connection) : DbContext, options.UseDatabase(connection) in OnConfiguring, await using var db = new Records(await Database.GetConnectionAsync()) per request, never in a shared field.
 
-            - Awaited: ToListAsync, FindAsync, SaveChangesAsync, ExecuteUpdateAsync - routes are async.
+            - Awaited: ToListAsync, FindAsync, SaveChangesAsync, ExecuteUpdateAsync.
             - Inside a DbContext, Database is the context's own: hand the connection in.
             - EnsureCreated, Migrate and EF's migrations are refused: a new property needs a migration first.
-            - ExecuteUpdateAsync(s => s.SetProperty(v => v.Votes, v => v.Votes + 1)) counts every request without a lock; add a row that may not exist inside await db.Database.BeginTransactionAsync().
+            - ExecuteUpdateAsync(s => s.SetProperty(v => v.Votes, v => v.Votes + 1)) counts every request without a lock; add a row that may not exist inside db.Database.BeginTransactionAsync().
             - A taken unique value fails SaveChangesAsync with a DbUpdateException: if the row is there now, answer 409 (demo-registration). Times as ISO 8601 UTC text through a converter (demo-crud).
             - Of EF's namespaces only the root, Metadata.Builders, ChangeTracking and Storage.ValueConversion; a connection of your own is refused.{{stored}}
 
             ## workspace
 
-            The lambda's private files, as data: shared by every version, copied for a feature; switched off by the owner, every member throws. await Workspace.ReadTextAsync / WriteTextAsync, ReadBytesAsync / WriteBytesAsync, ExistsAsync, DeleteAsync, ListAsync(), FoldersAsync(), CreateFolderAsync(); Files(folder) serves it - Workspace.Files("uploads") for what users uploaded. No Append, no path: nothing else on disk is reachable. From outside: upload_file, list_files, delete_file, or for a large file PUT {{home}}api/v1/lambdas/{privateKey}/files/{path}/content with the file as the body (curl -T), the path's slashes as %2F.{{kept}}
+            The lambda's private files, as data: shared by every version, copied for a feature; switched off by the owner, every member throws. Workspace.ReadTextAsync / WriteTextAsync, ReadBytesAsync / WriteBytesAsync, ExistsAsync, DeleteAsync, ListAsync, FoldersAsync, CreateFolderAsync; Files(folder) serves it - Workspace.Files("uploads") for what users uploaded. No Append, no path: nothing else on disk is reachable. From outside: upload_file, list_files, delete_file, or for a large file PUT {{home}}api/v1/lambdas/{privateKey}/files/{path}/content with the file as the body (curl -T), the path's slashes as %2F.{{kept}}
 
             ## secrets
 
             API keys, passwords, tokens. Data like the workspace; a feature has a copy, which set_secret with feature changes.
 
-            - Off until enable_data 'secrets'. await Secret.ReadAsync("STRIPE_KEY") returns the value or throws saying how to set it; Secret.ExistsAsync("STRIPE_KEY") checks. Read it where it is used, not into a static, so a change applies without a deploy.
+            - Off until enable_data 'secrets'. Secret.ReadAsync("STRIPE_KEY") returns the value or throws saying how to set it; Secret.ExistsAsync("STRIPE_KEY") checks. Read it where it is used, not into a static, so a change applies without a deploy.
             - Write Secret.ReadAsync("NAME"), switch secrets on, and tell the user which names to enter in the editor (Secrets; Keys and passwords in the simple view) and where to get the values: no value passes through you. list_secrets names the missing ones. A value the user hands you goes to set_secret.
             - Never put a value in code, resources, the workspace, a log line, a specification or a change, nor return, print or repeat it. Nothing shows one again.
-            - Names: letters, digits and underscores, no leading digit, case sensitive. Up to {{SecretVault.MaxSecrets}}, {{SecretVault.MaxValue / 1024}} KB each. An export reads Secret.ReadAsync("X") from the environment variable X.{{sealedAway}}
+            - Names: letters, digits and underscores, no leading digit, case sensitive. Up to {{SecretVault.MaxSecrets}}, {{SecretVault.MaxValue / 1024}} KB each. An export reads each from the environment variable of its name.{{sealedAway}}
 
             ## connectivity
 

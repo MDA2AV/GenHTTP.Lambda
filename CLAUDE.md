@@ -1735,7 +1735,11 @@ change; the helpers are in `OperationLog`.
   after the behaviour (`AFeatureStartsAsACopyOfTheNewestVersion`).
 - **Prefer these over unit tests with mocks.** There are none with mocks in this
   repository today; keep it that way. A fake is acceptable only for something
-  outside our process (`FakeAgent` stands in for the build agent's runner).
+  outside our process (`FakeAgent` stands in for the build agent's runner;
+  `YieldingIntegrations` for infrastructure on another machine - the platform's
+  own integrations yielding before every call, the secrets in memory - so what
+  awaits an integration, and the plain calls' bridge, are tested on tasks that
+  have not completed; the platform's own never hand one out).
 - Each test has its own temporary data directory and runs in parallel.
 - MSTest, `TreatWarningsAsErrors` is on.
 

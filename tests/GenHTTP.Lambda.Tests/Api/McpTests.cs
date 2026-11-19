@@ -1537,7 +1537,7 @@ public sealed class McpTests
         Assert.DoesNotContain("UseSqlite", database);
         Assert.DoesNotContain("SqliteConnection", database);
         Assert.Contains("Awaited: ToListAsync, FindAsync, SaveChangesAsync", database, "named, as what to call");
-        Assert.Contains("Their plain forms are kept for older code", Guide.Section(guide, "compiling"), "and what they cost");
+        Assert.Contains("plain forms are for older code", Guide.Section(guide, "compiling"));
         Assert.Contains("EnsureCreated", database, "the schema is Evolve's");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
