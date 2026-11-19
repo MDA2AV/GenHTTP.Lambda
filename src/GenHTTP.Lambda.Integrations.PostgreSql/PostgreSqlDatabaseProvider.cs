@@ -48,8 +48,8 @@ namespace GenHTTP.Lambda.Integrations.PostgreSql;
 /// internal engine make use of: no thread waits for the network. On the Ioxide
 /// engine what it awaits resumes on the reactor of the request, through
 /// Npgsql's own sockets - it works there, but does not complete on the reactor
-/// as SQLite does. What the platform keeps in its own records it still asks
-/// Entity Framework for synchronously.
+/// as SQLite does. The platform's own records are awaited the same way,
+/// through Entity Framework, and so are the secrets it seals into them.
 /// </para>
 /// </remarks>
 internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisposable

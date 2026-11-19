@@ -39,13 +39,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// </summary>
     private readonly ResolutionCache<string> _previews = new(changes);
 
-    /// <summary>
-    /// What the previews are loaded with, made once rather than on every
-    /// request to one.
-    /// </summary>
-    private Func<string, ValueTask<ResolvedLambda?>>? _loadPreviewDelegate;
-
-    private Func<string, ValueTask<ResolvedLambda?>> _loadPreview => _loadPreviewDelegate ??= LoadPreviewAsync;
+    private Func<string, ValueTask<ResolvedLambda?>>? _previewLoader;
 
     /// <summary>
     /// How long the name of a feature may be.
@@ -151,8 +145,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             return ValueTask.FromResult<ResolvedLambda?>(null);
         }
 
-        return _previews.ResolveAsync(key, _loadPreview);
+        return _previews.ResolveAsync(key, PreviewLoader);
     }
+
+    /// <summary>
+    /// What the previews are loaded with, made once rather than on every
+    /// request to one.
+    /// </summary>
+    private Func<string, ValueTask<ResolvedLambda?>> PreviewLoader => _previewLoader ??= LoadPreviewAsync;
 
     /// <summary>
     /// Reads the preview of a feature, like the lambdas it stands beside

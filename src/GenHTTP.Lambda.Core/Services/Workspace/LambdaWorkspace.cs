@@ -118,11 +118,11 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
 
         var entries = await files.ListAsync(scope, cancellation);
 
-        var room = await RoomAsync(cancellation);
+        var allowed = await room(cancellation);
 
-        if (WorkspacePaths.Measure(entries) + await beside(cancellation) + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > room)
+        if (WorkspacePaths.Measure(entries) + await beside(cancellation) + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > allowed)
         {
-            throw Full(room);
+            throw Full(allowed);
         }
 
         await files.CreateFolderAsync(scope, path, cancellation);
@@ -186,19 +186,17 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
 
         if (added > replaced)
         {
-            var room = await RoomAsync(cancellation);
+            var allowed = await room(cancellation);
 
-            if (WorkspacePaths.Measure(entries) + await beside(cancellation) - replaced + added > room)
+            if (WorkspacePaths.Measure(entries) + await beside(cancellation) - replaced + added > allowed)
             {
-                throw Full(room);
+                throw Full(allowed);
             }
         }
     }
 
-    private ValueTask<long> RoomAsync(CancellationToken cancellation) => room(cancellation);
-
-    private static InvalidOperationException Full(long room)
-        => new($"The data of this lambda - its workspace and its database together - must not take more than {room} bytes.");
+    private static InvalidOperationException Full(long allowed)
+        => new($"The data of this lambda - its workspace and its database together - must not take more than {allowed} bytes.");
 
     #endregion
 

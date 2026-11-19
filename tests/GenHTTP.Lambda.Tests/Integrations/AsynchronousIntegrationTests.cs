@@ -4,9 +4,14 @@ using System.Net;
 using System.Text;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Workspace;
@@ -16,6 +21,7 @@ using GenHTTP.Testing;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Tests.Integrations;
 
@@ -269,21 +275,125 @@ public sealed class AsynchronousIntegrationTests
     /// <summary>
     /// What the platform keeps in its own records is awaited as well, and
     /// over SQLite every step of it - a context taken from the pool, a query,
-    /// a save, an update in place, the context given back - completes before
-    /// the task is handed out, so a request asking for it never leaves its
-    /// reactor either.
+    /// a save, a turn taken, the context given back - completes before the
+    /// task is handed out, so a request asking for it never leaves its
+    /// reactor either: reading a lambda, loading what answers to its key,
+    /// saving a version in its turn, what the operator writes.
     /// </summary>
     [TestMethod]
     public async Task ThePlatformsOwnRecordsAnswerOnTheThreadThatAsks()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var settings = fixture.Platform.Services.GetRequiredService<ISettingsService>();
+        var lambda = await fixture.CreateLambdaAsync("records");
 
-        var saved = AtOnce(settings.SaveAsync(new SiteSettings(BuildBox: false, ChangeBox: true)), "a setting is written");
+        await fixture.DeployAsync(lambda.PrivateKey);
 
-        Assert.IsFalse(saved.BuildBox);
-        Assert.IsFalse(settings.Get().BuildBox);
+        var services = fixture.Platform.Services;
+
+        var meta = fixture.Meta;
+
+        var features = services.GetRequiredService<IFeatureService>();
+        var settings = services.GetRequiredService<ISettingsService>();
+        var limits = services.GetRequiredService<ILimitsService>();
+
+        Assert.AreEqual("records", AtOnce(meta.GetAsync(lambda.PrivateKey), "a lambda is read")!.PublicKey);
+
+        Assert.IsNotNull(AtOnce(meta.ResolveAsync("records"), "what answers to its key is loaded"));
+        Assert.IsNotNull(AtOnce(meta.ResolveAsync("records"), "and answered from memory"));
+
+        var version = AtOnce(meta.SaveAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"two\"));"), "a version is saved, in the lambda's turn");
+
+        Assert.AreEqual(2, version.Version);
+        Assert.AreEqual(2, AtOnce(meta.GetVersionsAsync(lambda.PrivateKey), "the versions are listed").Count);
+
+        AtOnce(meta.ChangeViewAsync(lambda.PrivateKey, EditorView.Simple), "a setting of the lambda is changed");
+
+        Assert.AreEqual(0, AtOnce(features.ListAsync(lambda.PrivateKey), "its drafts are listed").Count);
+
+        Assert.IsTrue(AtOnce(meta.ListAsync(new LambdaQuery()), "the panel lists the lambdas").Matched > 0);
+
+        Assert.IsFalse(AtOnce(settings.SaveAsync(new SiteSettings(BuildBox: false, ChangeBox: true)), "a switch of the operator's is written").BuildBox);
+        Assert.IsFalse(settings.Get().BuildBox, "and read from memory");
+
+        AtOnce(limits.SaveAsync(limits.Get()), "the limits are written");
+
+        AtOnce(meta.UndeployAsync(lambda.PrivateKey), "the lambda is taken offline, in its turn");
+
+        Assert.IsNull(AtOnce(meta.ResolveAsync("records"), "after which nothing answers to its key"));
+    }
+
+    /// <summary>
+    /// What answers to a key is kept in memory until something is written to
+    /// the platform's records, and an awaited write says so as the synchronous
+    /// ones did - an update in place and a save of what was read alike - so a
+    /// lambda never goes on serving what it no longer is.
+    /// </summary>
+    [TestMethod]
+    public async Task AnAwaitedWriteMakesWhatServingHoldsStale()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("cached");
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        Assert.IsNotNull(await fixture.Meta.ResolveAsync("cached"), "it answers, and is remembered");
+
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+
+        // past the services, so nothing but the write itself tells the caches
+        await using (var database = await databases.CreateDbContextAsync())
+        {
+            await database.Lambdas.Where(l => l.PublicKey == "cached")
+                          .ExecuteUpdateAsync(u => u.SetProperty(l => l.ActiveVersion, (int?)null));
+        }
+
+        Assert.IsNull(await fixture.Meta.ResolveAsync("cached"), "an update in place makes it stale");
+
+        await using (var database = await databases.CreateDbContextAsync())
+        {
+            var row = await database.Lambdas.SingleAsync(l => l.PublicKey == "cached");
+
+            row.ActiveVersion = 1;
+
+            await database.SaveChangesAsync();
+        }
+
+        Assert.IsNotNull(await fixture.Meta.ResolveAsync("cached"), "and so does a save");
+    }
+
+    /// <summary>
+    /// A query of the platform's records that is enumerated rather than
+    /// awaited compiles - it binds to LINQ's own methods - and runs
+    /// synchronously, on PostgreSQL holding a thread while the server
+    /// answers. It still answers, is said in the log once per statement, and
+    /// fails the test it ran in.
+    /// </summary>
+    [TestMethod]
+    public async Task ARecordReadWithoutAwaitingIsSaidInTheLog()
+    {
+        var fixture = await LambdaFixture.CreateAsync();
+
+        var services = fixture.Platform.Services;
+
+        await using (var database = await services.GetRequiredService<IDbContextFactory<LambdaDbContext>>().CreateDbContextAsync())
+        {
+            foreach (var _ in Enumerable.Range(0, 2))
+            {
+                Assert.IsNotNull(database.Settings.AsNoTracking().ToList(), "it answers");
+            }
+        }
+
+        var synchronous = services.GetRequiredService<SynchronousRecords>();
+
+        Assert.AreEqual(2, synchronous.Count, "each time it runs");
+
+        var (lines, _, _) = services.GetRequiredService<ILogBook>().Read(0, null, LogLevel.Warning, 1000);
+
+        Assert.AreEqual(1, lines.Count(l => l.Text.StartsWith("Queried the platform's records synchronously", StringComparison.Ordinal)), "said once for the statement");
+
+        await Assert.ThrowsExactlyAsync<AssertFailedException>(async () => await fixture.DisposeAsync());
     }
 
     /// <summary>

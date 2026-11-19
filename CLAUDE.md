@@ -814,7 +814,7 @@ section.
   is accepted. Do not write to a database while a request is served.
 - **A database of its own, a star - decided by the owner.** `analytics.db`,
   `lambdas` and a fact table per statistic keyed by lambda, year, month, day
-  (and value). Plain commands, synchronous; migrated by Evolve from
+  (and value). Plain commands, awaited; migrated by Evolve from
   `Services/Analytics/Migrations`, numbered on their own. Only the switch is
   in the platform's database, so serving reads it from memory.
 - **Crawlers by a maintained list and by their addresses, not by guessing -
@@ -1484,9 +1484,10 @@ integrations (yet - the owner's words: "not for now").
   `CancellationToken`, building one included (`IIntegrationBuilder.BuildAsync`);
   what an integration says of itself (`Describe`, `Guide`) and what only
   configures (`ConfigureStore`, `ConfigureContext`, `Binding`, `Quote`, `Tree`)
-  stays synchronous. How an integration answers is its own: SQLite, the local
-  files and `DatabaseSecrets` are synchronous inside, PostgreSQL awaits Npgsql
-  (see Serving, and the threads it runs on). A whole database or workspace is
+  stays synchronous. How an integration answers is its own: SQLite and the
+  local files are synchronous inside, PostgreSQL awaits Npgsql, and
+  `DatabaseSecrets` awaits the platform's records wherever they are kept (see
+  Serving, and the threads it runs on). A whole database or workspace is
   copied or exported through `Offload` by the platform, so no integration
   needs a hop of its own.
 - **Kinds, dialects and stores are enums, never strings - decided by the
@@ -1570,9 +1571,9 @@ thread taken from every other request. So:
   (see Integrations), so one that waits on the network - PostgreSQL, object
   storage, a vault - awaits it, which Kestrel and the internal engine make use
   of. On Ioxide, take care: an integration meant for it answers on the thread
-  it is asked on, as SQLite, the local files and the platform's own secrets
-  do - synchronous inside, every task they return completed - so nothing
-  leaves the reactor. PostgreSQL through Npgsql works on Ioxide, its
+  it is asked on, as SQLite and the local files do - synchronous inside,
+  every task they return completed - and the platform's own secrets with the
+  records they are kept in, so nothing leaves the reactor. PostgreSQL through Npgsql works on Ioxide, its
   continuations posted back to the reactor, but does not complete there; an
   integration on Ioxide's own PostgreSQL client would, and is not needed for
   now (the owner's words).
@@ -1583,15 +1584,31 @@ thread taken from every other request. So:
   A method is `async` where it awaits an integration, compiling, packing, a
   request body or the network; anything else stays a plain method returning
   a plain value.
-- **The platform's own records are still asked for synchronously.** Entity
-  Framework over `LambdaDbContext` - `ToList`, `FirstOrDefault`, `SaveChanges`,
-  `CreateDbContext` - on PostgreSQL too, its wait on the network accepted by
-  whoever chooses it. Making those asynchronous is a change of its own, not
-  taken with the integrations; until then `DatabaseSecrets`, which keeps the
-  secrets in those records, is synchronous inside like SQLite. What the
-  platform sends over a connection an integration opened - the analytics, the
-  editor's look into a lambda's database - is awaited (`ExecuteReaderAsync`).
-  Do not add an async path beside a synchronous one.
+- **The platform's own records are awaited - asked for by the owner**, as
+  the integrations are. Entity Framework over `LambdaDbContext` -
+  `CreateDbContextAsync` and `await using`, `ToListAsync`,
+  `FirstOrDefaultAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`,
+  `FindAsync` - and every method up the chain: the services and their
+  interfaces (`…Async`), the resources and MCP tools (their names kept, since
+  operation ids and tool names are made of them), the jobs and the request
+  path. Over SQLite each of those steps completes before the task is handed
+  out - Microsoft.Data.Sqlite does the work on the thread that asks - so a
+  request awaiting the records never leaves its reactor on Ioxide; over
+  PostgreSQL it waits for the server without holding a thread. So does
+  `DatabaseSecrets`, which keeps the secrets in those records, and so does
+  what the platform sends over a connection an integration opened - the
+  analytics, the editor's look into a lambda's database. Evolve, which
+  migrates both stores as the platform starts, stays synchronous: nothing is
+  served yet. Do not add a synchronous path beside the asynchronous one.
+- **What is read on every request is read from memory, loaded awaited.**
+  The limits, the operator's switches, the brand, the guide's section, the
+  domains served and the blocked addresses are read once as the platform
+  starts (`LambdaPlatform.PrepareAsync`, before anything is served) and kept
+  in memory, written through on a change; their reads stay plain properties
+  and methods, and asking one before it was loaded is an error, not a query.
+  What answers to a key (`ResolutionCache`) and the vaults' snapshots answer
+  with a task that has completed, and only the first request after a write
+  awaits the records to load again.
 - **Lambdas are taught the asynchronous form - decided by the owner.**
   `await Database.GetConnectionAsync()`, `Workspace.ReadTextAsync` and the
   rest, `await Secret.ReadAsync(...)`, and EF's `ToListAsync` and
@@ -1607,17 +1624,23 @@ thread taken from every other request. So:
   compiled lambda go through it; the platform's code awaits. A workspace's
   tree (`Tree`, `Files`, `App`) is made rather than read, and has a plain
   form only.
-- **Enforced when it compiles.** `src/BannedSymbols.txt`
-  (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's async
-  methods, waiting for a task, the `File.*Async` helpers and `Task.Run`, each
-  with the reason; `Synchronous` and `Offload` are the places that suppress it.
-  It lists every overload by its id, generated from the assemblies; a new
-  overload in a new version of EF is added the same way.
+- **Enforced when it compiles, and noticed as it runs.** `src/BannedSymbols.txt`
+  (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's
+  synchronous methods (`CreateDbContext`, `SaveChanges`, `Find`,
+  `ExecuteUpdate`, `ExecuteDelete`, the transactions and raw SQL), waiting for
+  a task, the `File.*Async` helpers and `Task.Run`, each with the reason;
+  `Synchronous` and `Offload` are the places that suppress it. It lists every
+  overload by its id, generated from the assemblies; a new overload in a new
+  version of EF is added the same way. A query enumerated synchronously -
+  `ToList()`, `foreach`, a spread over it - binds to LINQ and compiles, so
+  `SynchronousRecords`, an interceptor beside `DatabaseChanges`, logs a
+  warning for it once per statement and counts it, and every test fixture
+  fails on the count. It refuses nothing: the query still answers.
 - **Serving a lambda does not touch the database.** What answers to a key, an
   id or a preview key is held by `ResolutionCache`, and every write to the
-  platform's database makes it stale (`DatabaseChanges`, an EF interceptor).
-  So every write goes through EF; one that does not is never seen by the
-  caches.
+  platform's database makes it stale (`DatabaseChanges`, an EF interceptor,
+  counting the awaited writes as the synchronous ones). So every write goes
+  through EF; one that does not is never seen by the caches.
 - **Long work leaves the reactor in one hop**, through `Offload`: compiling and
   binding with Roslyn, packing, copying or exporting a whole workspace or
   database - which an integration that answers at once does on the thread it
@@ -1630,18 +1653,25 @@ thread taken from every other request. So:
   its own there; work started in the background rather than awaited (the
   scheduler's jobs, seeding the demos, warming up the lambdas) is not a hop and suppresses RS0030
   where it starts, saying why.
-- **Locks are plain locks (`Lock`), never held across an await.** What compiles
-  under a lambda's or a feature's turn compiles first and takes the turn to
-  write down what it came to (`MetaService.DeployAsync`,
-  `FeatureService.DeployAsync`, `MergeAsync`); serving compares the build it
-  finds with what is online and builds again where they differ, so the order
-  two deployments finish in does not matter. What an integration is asked for
-  waits for the turn to be over - a merged or deleted feature's copy of the
-  data is removed once its row is gone, and what is left behind the sweep
-  removes. A lock that has to be held across an await is a `SemaphoreSlim`
-  taken with `WaitAsync` (copying a feature's data, writing the analytics,
-  changing the brand, making a lambda's role on PostgreSQL), never with
-  `Wait()`.
+- **A lock held across an await is a `SemaphoreSlim` taken with
+  `WaitAsync`, never with `Wait()`; a plain lock (`Lock`) is never held
+  across one.** A lambda's and a feature's turns are semaphores
+  (`Infrastructure/Turns.cs`, striped), since what they enclose awaits the
+  records; so are the writes of the limits, the settings, the guide, the
+  domains and the address blocks, copying a feature's data, writing the
+  analytics, changing the brand and making a lambda's role on PostgreSQL. One
+  nobody holds is taken at once, without leaving the thread. A semaphore is
+  not re-entrant: what holds a turn never asks for another of the same kind,
+  and turns nest one way only - a feature's before its lambda's (a merge
+  saves the version in the feature's turn). What compiles under a lambda's or
+  a feature's turn still compiles first and takes the turn to write down what
+  it came to (`MetaService.DeployAsync`, `FeatureService.DeployAsync`,
+  `MergeAsync`), so a save of the same lambda does not wait seconds for it;
+  serving compares the build it finds with what is online and builds again
+  where they differ, so the order two deployments finish in does not matter.
+  What an integration copies or removes waits for the turn to be over - a
+  merged or deleted feature's copy of the data is removed once its row is
+  gone, and what is left behind the sweep removes.
 - **Never wait on a task** (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`):
   on a reactor its continuation is posted to the very thread that is waiting,
   and that core deadlocks for good. Lambdas are held to the same by the code
@@ -1737,9 +1767,15 @@ change; the helpers are in `OperationLog`.
   repository today; keep it that way. A fake is acceptable only for something
   outside our process (`FakeAgent` stands in for the build agent's runner;
   `YieldingIntegrations` for infrastructure on another machine - the platform's
-  own integrations yielding before every call, the secrets in memory - so what
-  awaits an integration, and the plain calls' bridge, are tested on tasks that
-  have not completed; the platform's own never hand one out).
+  own integrations yielding before every call, the platform's records before
+  every statement, the secrets in memory - so what awaits an integration or
+  the records, and the plain calls' bridge, are tested on tasks that have not
+  completed; the platform's own never hand one out).
+- **A fixture fails its test where the platform asked for its records
+  synchronously** (`SynchronousRecords`, see Serving, and the threads it runs
+  on), so whatever a test exercises is proven awaited - on SQLite here and on
+  PostgreSQL in CI. A test that reads or writes the records itself awaits
+  them as well.
 - Each test has its own temporary data directory and runs in parallel.
 - MSTest, `TreatWarningsAsErrors` is on.
 

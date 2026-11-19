@@ -11,7 +11,8 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// <para>
 /// What a lambda reads and writes goes through the integrations, whose
 /// contracts are asynchronous. Where the integration answers at once - SQLite,
-/// local directories, the platform's own secrets - the task it returns has
+/// local directories, the platform's own secrets while its records are in
+/// SQLite - the task it returns has
 /// completed, and this hands over its result on the thread that asked,
 /// waiting for nothing. Where it does not - a database server, object
 /// storage - this blocks the calling thread until it has, which costs a thread

@@ -16,8 +16,8 @@ namespace GenHTTP.Lambda.Services.Census;
 /// One read of the lambdas' rows and a few counts beside it, done in memory -
 /// a row is a few dozen bytes, and the conditions the counts need (when a
 /// sandbox lambda expires, whether one may connect) are read off the tier's
-/// policy, which the database does not hold. Synchronous, like every query of
-/// the platform's database.
+/// policy, which the database does not hold. Awaited, like every query of the
+/// platform's records, one after another on the one context.
 /// </remarks>
 public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, ILimitsService limits)
 {

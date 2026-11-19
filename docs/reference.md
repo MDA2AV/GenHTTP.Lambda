@@ -1524,8 +1524,10 @@ genhttp.dev being GenHTTP Lambda - and has `Website` where this has
 `LambdaPlatform.Create().Options(...).BuildAsync()` builds the integrations,
 migrates the platform's records and its analytics through the database
 integration, builds the services into one container and reads what every
-page needs before the first request - the brand, the pictures moved out of
-the records they were kept in before - once per process. It is awaited: on
+request and page needs before the first request - the limits, the operator's
+switches, the guide's section, the domains served, the blocked addresses, the
+brand, the pictures moved out of the records they were kept in before - once
+per process. It is awaited: on
 PostgreSQL that is where the server is first reached; every component's
 builder is handed the platform and takes what it needs from it, and makes its
 own singletons - the MCP tools, the pages of a bundle - from those services,
@@ -1787,8 +1789,13 @@ is awaited - the contracts return `ValueTask`s - so an integration that waits
 on the network does so without holding a thread, and one that answers at
 once (SQLite, local directories, the platform's own secrets) completes on the
 thread that asked, which on ioxide never leaves its reactor. The platform's
-own records are still asked of Entity Framework synchronously, on PostgreSQL
-too, its wait on the network accepted by whoever chooses it. What takes long -
+own records are awaited the same way, through Entity Framework: over SQLite
+every query and save completes on the thread that asks, over PostgreSQL it
+waits for the server without holding a thread - so on a distant server the
+editor, the panel and the API wait for it without taking a thread from
+anybody else. What every request reads - which lambda answers to a key, the
+limits, the brand, the domains served - is kept in memory: read as the
+platform starts, or by the first request after a write. What takes long -
 compiling and binding with Roslyn, packing, copying or exporting a workspace
 or a database - is handed to the thread pool in one hop
 (`Infrastructure/Offload.cs`) and the request resumes on its reactor
@@ -1797,13 +1804,15 @@ awaited - `Database.GetConnection()`, `Workspace.ReadText`, `Secret.Read` - go
 through `Infrastructure/Synchronous.cs`, which takes the synchronization
 context off the thread before the work starts, so what it awaits is never
 posted to the reactor it blocks, and waits for nothing where the integration
-answered at once. `src/BannedSymbols.txt` refuses the asynchronous EF
+answered at once. `src/BannedSymbols.txt` refuses the synchronous EF
 calls, waiting for a task and `Task.Run` when any project below `src/` is
 compiled - every component runs on the same reactors - so every
 hop to the pool goes through `Offload` and the one wait through
 `Synchronous`; the pieces of work started in the background rather than
 awaited - the scheduler's jobs, seeding the demos, warming up the lambdas -
-say so where they start. CLAUDE.md has the rules.
+say so where they start. A query of the platform's records enumerated
+synchronously compiles all the same; it is logged as it runs, a warning per
+statement (`Data/SynchronousRecords.cs`). CLAUDE.md has the rules.
 
 Compiled lambdas run in the server process. The guard raises the cost of
 misbehaving; it is not a sandbox, which is why the container runs unprivileged
@@ -1845,8 +1854,9 @@ configures (`ConfigureStore`, `ConfigureContext`, `Binding`, `Quote`, `Tree`)
 is synchronous. How it answers is the integration's own. One that waits on the
 network - a database server, object storage, a vault - awaits it, and Kestrel
 and the internal engine lose no thread to it. One that answers at once returns
-tasks that have completed: SQLite, the local directories and the platform's
-own secrets are synchronous inside, which is what the Ioxide engine wants,
+tasks that have completed: SQLite and the local directories are synchronous
+inside, and so the platform's own secrets are on SQLite, which await its
+records - which is what the Ioxide engine wants,
 since a request runs on the reactor of its core and what it awaits is
 resumed there. PostgreSQL awaits Npgsql, which works on Ioxide but does not
 complete on the reactor. A whole database or workspace - a draft's copy, an
