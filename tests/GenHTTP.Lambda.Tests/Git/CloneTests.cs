@@ -172,7 +172,7 @@ public sealed class CloneTests
 
         var limits = fixture.Limits.Get();
 
-        fixture.Limits.Save(limits with { Versions = 2 });
+        await fixture.Limits.SaveAsync(limits with { Versions = 2 });
 
         var lambda = await fixture.CreateLambdaAsync("pruned");
 

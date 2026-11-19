@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Tests.Hosting;
@@ -229,10 +230,10 @@ public sealed class HostingTests
         var lambda = await ServeAsync(fixture, "mailroom");
 
         // the key it had before the name was kept for something else
-        await using (var database = fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
-                                           .CreateDbContext())
+        await using (var database = await fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
+                                                 .CreateDbContextAsync())
         {
-            database.Lambdas.Single(l => l.PublicKey == "mailroom").PublicKey = "mail";
+            (await database.Lambdas.SingleAsync(l => l.PublicKey == "mailroom")).PublicKey = "mail";
             await database.SaveChangesAsync();
         }
 
@@ -337,7 +338,7 @@ public sealed class HostingTests
 
         var lambda = await fixture.CreateLambdaAsync("greedy");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         foreach (var claimed in new[] { "genhttp.run", "quiz.genhttp.run" })
         {

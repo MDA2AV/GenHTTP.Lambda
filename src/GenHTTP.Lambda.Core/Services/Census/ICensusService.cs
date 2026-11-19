@@ -15,7 +15,7 @@ public interface ICensusService
     /// <summary>
     /// The lambdas counted as of now: a few counts on the platform's database.
     /// </summary>
-    LambdaCensus Count();
+    ValueTask<LambdaCensus> CountAsync(CancellationToken cancellation = default);
 
     /// <summary>
     /// How large the volume of the data directory is and how much of it is

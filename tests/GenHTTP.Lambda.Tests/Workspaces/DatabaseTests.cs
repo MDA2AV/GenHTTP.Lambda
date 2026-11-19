@@ -128,7 +128,7 @@ public sealed class DatabaseTests
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode);
 
-        Assert.IsFalse(File.Exists(FileOf(fixture, lambda.PrivateKey)), "nothing is made while it is off");
+        Assert.IsFalse(File.Exists(await FileOfAsync(fixture, lambda.PrivateKey)), "nothing is made while it is off");
     }
 
     [TestMethod]
@@ -140,7 +140,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        var file = FileOf(fixture, lambda.PrivateKey);
+        var file = await FileOfAsync(fixture, lambda.PrivateKey);
 
         Assert.IsTrue(File.Exists(file), "made when it is switched on, before anything uses it");
 
@@ -211,7 +211,7 @@ public sealed class DatabaseTests
             Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
         }
 
-        Assert.IsFalse(File.Exists(FileOf(fixture, lambda.PrivateKey)));
+        Assert.IsFalse(File.Exists(await FileOfAsync(fixture, lambda.PrivateKey)));
 
         using (var refused = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/notes"))
         {
@@ -518,7 +518,7 @@ public sealed class DatabaseTests
 
         Assert.AreEqual("live", await ServedAsync(fixture, $"{feature.PreviewPath}notes"), "a fresh copy, and the preview started again with it");
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
 
         var copyFile = Path.Combine(fixture.Options.FeatureDirectory, id.ToString()!, "database.db");
 
@@ -742,7 +742,7 @@ public sealed class DatabaseTests
 
         await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=gone");
 
-        var file = FileOf(fixture, lambda.PrivateKey);
+        var file = await FileOfAsync(fixture, lambda.PrivateKey);
 
         using (var deleted = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}"))
         {
@@ -802,9 +802,9 @@ public sealed class DatabaseTests
         return await response.GetContentAsync<DataStoreResponse>();
     }
 
-    private static string FileOf(LambdaFixture fixture, string privateKey)
+    private static async Task<string> FileOfAsync(LambdaFixture fixture, string privateKey)
     {
-        var id = fixture.Meta.GetId(privateKey);
+        var id = await fixture.Meta.GetIdAsync(privateKey);
 
         return Path.Combine(fixture.Options.DatabaseDirectory, id.ToString()!, "database.db");
     }

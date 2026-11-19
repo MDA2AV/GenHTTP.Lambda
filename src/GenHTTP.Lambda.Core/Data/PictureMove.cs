@@ -25,38 +25,39 @@ internal static class PictureMove
     {
         var moved = 0;
 
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            var purposes = database.BrandingPictures.AsNoTracking().Where(p => p.Content.Length > 0).Select(p => p.Purpose).ToList();
+            var purposes = await database.BrandingPictures.AsNoTracking().Where(p => p.Content.Length > 0).Select(p => p.Purpose).ToListAsync(cancellation);
 
             foreach (var purpose in purposes)
             {
-                var picture = database.BrandingPictures.First(p => p.Purpose == purpose);
+                var picture = await database.BrandingPictures.FirstAsync(p => p.Purpose == purpose, cancellation);
 
                 await files.WriteAsync(FileStore.Branding, PictureNames.Branding(purpose), picture.Content, cancellation);
 
                 picture.Content = [];
 
-                database.SaveChanges();
+                // written to the files, so emptied in the row whoever cancels
+                await database.SaveChangesAsync(CancellationToken.None);
 
                 moved++;
             }
         }
 
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            var lambdas = database.Showcases.AsNoTracking().Where(s => s.Image.Length > 0).Select(s => s.LambdaId).ToList();
+            var lambdas = await database.Showcases.AsNoTracking().Where(s => s.Image.Length > 0).Select(s => s.LambdaId).ToListAsync(cancellation);
 
             foreach (var lambda in lambdas)
             {
-                var entry = database.Showcases.First(s => s.LambdaId == lambda);
+                var entry = await database.Showcases.FirstAsync(s => s.LambdaId == lambda, cancellation);
 
                 await files.WriteAsync(FileStore.Showcase, PictureNames.Showcase(lambda), entry.Image, cancellation);
 
                 entry.ImageBytes = entry.Image.Length;
                 entry.Image = [];
 
-                database.SaveChanges();
+                await database.SaveChangesAsync(CancellationToken.None);
 
                 // the next picture in a context that holds none of the ones before
                 database.ChangeTracker.Clear();

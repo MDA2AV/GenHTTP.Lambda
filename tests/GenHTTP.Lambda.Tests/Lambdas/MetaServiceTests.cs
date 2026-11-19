@@ -21,7 +21,7 @@ public sealed class MetaServiceTests
         Assert.AreEqual(1, lambda.LatestVersion);
         Assert.IsNull(lambda.ActiveVersion, "a new lambda is not online yet");
 
-        var seeded = fixture.Meta.GetVersion(lambda.PrivateKey, 1);
+        var seeded = await fixture.Meta.GetVersionAsync(lambda.PrivateKey, 1);
 
         Assert.Contains(lambda.PublicKey, seeded.Code, "the example mentions the URL of the lambda");
     }
@@ -33,7 +33,7 @@ public sealed class MetaServiceTests
 
         await fixture.Meta.CreateAsync("taken");
 
-        var availability = fixture.Meta.DescribeKey("taken");
+        var availability = await fixture.Meta.DescribeKeyAsync("taken");
 
         Assert.IsFalse(availability.Available);
         Assert.IsNotNull(availability.Reason);
@@ -50,16 +50,16 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        var saved = fixture.Meta.Save(lambda.PrivateKey, "return Content.From(Resource.FromString(\"second\"));");
+        var saved = await fixture.Meta.SaveAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"second\"));");
 
         Assert.AreEqual(2, saved.Version);
 
-        var versions = fixture.Meta.GetVersions(lambda.PrivateKey);
+        var versions = await fixture.Meta.GetVersionsAsync(lambda.PrivateKey);
 
         Assert.HasCount(2, versions);
         Assert.AreEqual(2, versions[0].Version, "the newest version comes first");
 
-        var content = fixture.Meta.GetVersion(lambda.PrivateKey, 2);
+        var content = await fixture.Meta.GetVersionAsync(lambda.PrivateKey, 2);
 
         Assert.Contains("second", content.Code);
     }
@@ -71,7 +71,7 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        var error = await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.Meta.Save(lambda.PrivateKey, "   "));
+        var error = await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.Meta.SaveAsync(lambda.PrivateKey, "   "));
 
         Assert.AreEqual(LambdaError.Invalid, error.Error);
     }
@@ -88,14 +88,14 @@ public sealed class MetaServiceTests
         Assert.IsTrue(deployment.Success);
         Assert.AreEqual(1, deployment.Lambda?.ActiveVersion);
 
-        Assert.IsNotNull(fixture.Meta.Resolve(lambda.PublicKey));
+        Assert.IsNotNull(await fixture.Meta.ResolveAsync(lambda.PublicKey));
 
-        var retired = fixture.Meta.Undeploy(lambda.PrivateKey);
+        var retired = await fixture.Meta.UndeployAsync(lambda.PrivateKey);
 
         Assert.IsNull(retired.ActiveVersion);
-        Assert.IsNull(fixture.Meta.Resolve(lambda.PublicKey), "an undeployed lambda no longer resolves");
+        Assert.IsNull(await fixture.Meta.ResolveAsync(lambda.PublicKey), "an undeployed lambda no longer resolves");
 
-        var status = fixture.Meta.DescribeKey(lambda.PublicKey);
+        var status = await fixture.Meta.DescribeKeyAsync(lambda.PublicKey);
 
         Assert.IsTrue(status.Exists);
         Assert.IsFalse(status.Deployed);
@@ -108,7 +108,7 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        fixture.Meta.Save(lambda.PrivateKey, "return this is not csharp;");
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, "return this is not csharp;");
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -124,14 +124,14 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync("before");
 
-        var moved = fixture.Meta.ChangeKey(lambda.PrivateKey, "after");
+        var moved = await fixture.Meta.ChangeKeyAsync(lambda.PrivateKey, "after");
 
         Assert.AreEqual("after", moved.PublicKey);
-        Assert.IsFalse((fixture.Meta.DescribeKey("before")).Exists);
+        Assert.IsFalse((await fixture.Meta.DescribeKeyAsync("before")).Exists);
 
         await fixture.Meta.CreateAsync("occupied");
 
-        var conflict = await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.Meta.ChangeKey(lambda.PrivateKey, "occupied"));
+        var conflict = await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.Meta.ChangeKeyAsync(lambda.PrivateKey, "occupied"));
 
         Assert.AreEqual(LambdaError.Conflict, conflict.Error);
     }
@@ -145,8 +145,8 @@ public sealed class MetaServiceTests
 
         await fixture.Meta.DeleteAsync(lambda.PrivateKey);
 
-        Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));
-        Assert.IsFalse((fixture.Meta.DescribeKey(lambda.PublicKey)).Exists);
+        Assert.IsNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
+        Assert.IsFalse((await fixture.Meta.DescribeKeyAsync(lambda.PublicKey)).Exists);
     }
 
     [TestMethod]
@@ -168,14 +168,14 @@ public sealed class MetaServiceTests
         var retired = await fixture.Meta.RunMaintenanceAsync(aged);
 
         Assert.AreEqual(1, retired.Undeployed);
-        Assert.IsNull((fixture.Meta.Get(lambda.PrivateKey))?.ActiveVersion);
+        Assert.IsNull((await fixture.Meta.GetAsync(lambda.PrivateKey))?.ActiveVersion);
 
         var abandoned = DateTime.UtcNow + fixture.Options.Retention + TimeSpan.FromDays(1);
 
         var removed = await fixture.Meta.RunMaintenanceAsync(abandoned);
 
         Assert.AreEqual(1, removed.Deleted);
-        Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));
+        Assert.IsNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
     }
 
 }

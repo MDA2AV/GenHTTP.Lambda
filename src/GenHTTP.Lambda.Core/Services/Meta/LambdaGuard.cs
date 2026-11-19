@@ -2,6 +2,8 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Settings;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
@@ -15,8 +17,8 @@ internal static class LambdaGuard
     /// <summary>
     /// The lambda the editor key opens, to be changed in this context.
     /// </summary>
-    public static LambdaEntity Require(LambdaDbContext database, string privateKey)
-        => database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey)
+    public static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation = default)
+        => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
     /// <summary>

@@ -28,7 +28,7 @@ public sealed class WorkspaceVault(IFileProvider files) : IWorkspaceVault
 
     #region Functionality
 
-    public WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<CancellationToken, ValueTask<long>> beside)
+    public WorkspaceBinding Bind(long lambdaId, long? featureId, Func<CancellationToken, ValueTask<long>> room, Func<CancellationToken, ValueTask<long>> beside)
         => new LambdaWorkspace(files, this, new DataScope(lambdaId, featureId), room, beside).Bind();
 
     public ValueTask<long> SizeOfAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)

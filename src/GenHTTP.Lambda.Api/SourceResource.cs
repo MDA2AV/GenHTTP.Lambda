@@ -65,7 +65,7 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
     [Summary("Lists the published sources, a page at a time")]
     [Remarks("Public. Every lambda whose owner published its code, whether or not it is online.")]
     [return: Summary("A page of sources, and where the next one starts")]
-    public Page<SourceEntryResponse> List([Summary("Words that the key, the title or what it is about all have to contain")] string? search,
+    public async ValueTask<Page<SourceEntryResponse>> List([Summary("Words that the key, the title or what it is about all have to contain")] string? search,
                                           [Summary("`stars` (the default), the most starred first; `updated`, the most recently saved first; or `published`, the most recently published first")] string? order,
                                           [Summary("How many sources to leave out, from the start")] int skip = 0,
                                           [Summary("How many sources to answer with, 1 to 48")] int take = PageSize)
@@ -79,7 +79,7 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
             _ => SourceOrder.Stars
         };
 
-        var page = sources.List(search, ordered, from, take);
+        var page = await sources.ListAsync(search, ordered, from, take);
 
         return Page<SourceEntryResponse>.Of([.. page.Entries.Select(e => SourceEntryResponse.Of(e, addresses))], from, page.Total);
     }
@@ -90,9 +90,9 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
     [Response(ResponseStatus.NotFound, "There is no published source at this public key - it does not exist, or its owner has not published it, which are answered alike.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The source, its versions and a ticket to star it with")]
-    public SourceProjectResponse Get([Summary("The public key of the lambda")] string publicKey)
+    public async ValueTask<SourceProjectResponse> Get([Summary("The public key of the lambda")] string publicKey)
     {
-        var project = sources.GetProject(publicKey) ?? throw NotPublished(publicKey);
+        var project = await sources.GetProjectAsync(publicKey) ?? throw NotPublished(publicKey);
 
         var entry = SourceEntryResponse.Of(project.Entry, addresses);
 
@@ -253,9 +253,9 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
     [Response(ResponseStatus.NotFound, "There is no published source at this public key - it does not exist, or its owner has not published it, which are answered alike.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("How it is starred now")]
-    public StarResponse Star([Summary("The public key of the lambda")] string publicKey, IRequest request, StarRequest body)
+    public async ValueTask<StarResponse> Star([Summary("The public key of the lambda")] string publicKey, IRequest request, StarRequest body)
     {
-        var outcome = sources.Star(publicKey, body?.Ticket, request.Client.Address, body?.Starred ?? true)
+        var outcome = await sources.StarAsync(publicKey, body?.Ticket, request.Client.Address, body?.Starred ?? true)
                    ?? throw NotPublished(publicKey);
 
         if (outcome.Changed)

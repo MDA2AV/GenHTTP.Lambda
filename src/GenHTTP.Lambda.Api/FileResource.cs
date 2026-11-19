@@ -44,7 +44,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Summary("Lists the files of the workspace")]
     [return: Summary("The files and folders of the workspace")]
     public async ValueTask<WorkspaceListing> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => await workspace.ListAsync(meta.RequireId(privateKey));
+        => await workspace.ListAsync(await meta.RequireIdAsync(privateKey));
 
     [ResourceMethod("lambdas/:privateKey/files/:path")]
     [Summary("Reads a file, base64 encoded")]
@@ -57,7 +57,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such file.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The file, base64 encoded")]
     public async ValueTask<FileResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
-        => await WorkspaceFiles.ReadAsync(workspace, meta.RequireId(privateKey), null, path, "/api/v1/lambdas/{privateKey}/files");
+        => await WorkspaceFiles.ReadAsync(workspace, await meta.RequireIdAsync(privateKey), null, path, "/api/v1/lambdas/{privateKey}/files");
 
     [ResourceMethod("lambdas/:privateKey/files/:path/content")]
     [Summary("Downloads a file as it is, however large")]
@@ -66,7 +66,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, with the name of the file")]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such file.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<IResponse> GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
-        => await WorkspaceFiles.SendAsync(workspace, meta.RequireId(privateKey), null, path, request);
+        => await WorkspaceFiles.SendAsync(workspace, await meta.RequireIdAsync(privateKey), null, path, request);
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path/content")]
     [Summary("Uploads a file as it is")]
@@ -84,7 +84,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [return: Summary("The file as it was written")]
     public async ValueTask<WorkspaceEntry> PutContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path,
                                                       IRequest request)
-        => Written(privateKey, await WorkspaceFiles.ReceiveAsync(workspace, meta.RequireEditable(privateKey), null, path, request));
+        => await WrittenAsync(privateKey, await WorkspaceFiles.ReceiveAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path, request));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path")]
     [Summary("Writes a file sent base64 encoded")]
@@ -96,7 +96,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [return: Summary("The file as it was written")]
     public async ValueTask<WorkspaceEntry> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path,
                                                FileRequest request)
-        => Written(privateKey, await workspace.WriteEncodedAsync(meta.RequireEditable(privateKey), path, request.Content));
+        => await WrittenAsync(privateKey, await workspace.WriteEncodedAsync(await meta.RequireEditableAsync(privateKey), path, request.Content));
 
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/files/:path")]
     [Summary("Deletes a file, or a folder and everything in it")]
@@ -106,9 +106,9 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
-        await workspace.DeleteAsync(meta.RequireEditable(privateKey), path);
+        await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path);
 
-        logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
     }
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/folders/:path")]
@@ -122,16 +122,16 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     public async ValueTask<WorkspaceListing> PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey,
                                                        [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
     {
-        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, meta.RequireEditable(privateKey), null, path);
+        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path);
 
-        logger.LogInformation("Created workspace folder {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Created workspace folder {Path} of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
 
         return listing;
     }
 
-    private WorkspaceEntry Written(string privateKey, WorkspaceEntry written)
+    private async ValueTask<WorkspaceEntry> WrittenAsync(string privateKey, WorkspaceEntry written)
     {
-        logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, meta.PublicKeyOf(privateKey), written.Size);
+        logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, await meta.PublicKeyOfAsync(privateKey), written.Size);
 
         return written;
     }

@@ -51,7 +51,7 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
     [return: Summary("Whether there is an agent, how many changes this caller has left today, and the change under way or the last one")]
     public async ValueTask<AgentState> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
-        var lambda = meta.RequireEditable(privateKey);
+        var lambda = await meta.RequireEditableAsync(privateKey);
 
         return await builds.StateAsync(lambda, request.Client.Address);
     }
@@ -82,11 +82,11 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
     [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering. Nothing was counted.")]
     public async ValueTask<Result<AgentState>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, ChangeRequest body, IRequest request)
     {
-        var lambda = meta.RequireEditable(privateKey);
+        var lambda = await meta.RequireEditableAsync(privateKey);
 
-        var current = meta.Require(privateKey);
+        var current = await meta.RequireAsync(privateKey);
 
-        var feature = body?.Feature is { Length: > 0 } key ? (features.Get(privateKey, key)).Feature.Key : null;
+        var feature = body?.Feature is { Length: > 0 } key ? (await features.GetAsync(privateKey, key)).Feature.Key : null;
 
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
                                              body?.Model, body?.Password, body?.Language, feature, body?.History, request.Client.Address);
@@ -104,11 +104,11 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
     [return: Summary("The state afterwards")]
     public async ValueTask<AgentState> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
-        var lambda = meta.RequireEditable(privateKey);
+        var lambda = await meta.RequireEditableAsync(privateKey);
 
         var state = await builds.StopAsync(lambda, request.Client.Address);
 
-        logger.LogInformation("Stopped change of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Stopped change of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
 
         return state;
     }

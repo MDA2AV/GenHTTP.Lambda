@@ -36,7 +36,7 @@ public sealed class TelemetryResource(ITelemetryService telemetry, IMetaService 
     [ResourceMethod]
     [Summary("Reads the telemetry of the server")]
     [return: Summary("What is running, what it did, and the readings taken while it did")]
-    public TelemetryResponse Get(IRequest request, [Summary("How far back the readings reach, in minutes: 1 to 1440, as far as they are kept")] int minutes = 60,
+    public async ValueTask<TelemetryResponse> Get(IRequest request, [Summary("How far back the readings reach, in minutes: 1 to 1440, as far as they are kept")] int minutes = 60,
                                  [Summary("How far back the events reach, in days: 1 to 365")] int days = 30)
     {
         var window = TimeSpan.FromMinutes(Math.Clamp(minutes, 1, 60 * 24));
@@ -44,13 +44,13 @@ public sealed class TelemetryResource(ITelemetryService telemetry, IMetaService 
         // a different window from the readings on purpose: memory is watched
         // over an hour, and whether anybody is using the platform is a
         // question about weeks
-        var history = meta.GetEvents(days);
+        var history = await meta.GetEventsAsync(days);
 
         var series = telemetry.Series(window);
 
         var latest = series.Count > 0 ? series[^1] : telemetry.Sample();
 
-        var counts = meta.Count();
+        var counts = await meta.CountAsync();
 
         var server = request.Server;
 

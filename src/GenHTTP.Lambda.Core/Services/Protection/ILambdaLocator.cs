@@ -19,7 +19,12 @@ public interface ILambdaLocator
     /// <summary>
     /// The deployed lambda the request is for, or nothing if there is none.
     /// </summary>
-    ResolvedLambda? Locate(IRequest request);
+    /// <remarks>
+    /// Asked on every request, and answered from memory (see the meta
+    /// service's resolution cache) with a task that has completed - only the
+    /// first request after a write waits for the records.
+    /// </remarks>
+    ValueTask<ResolvedLambda?> LocateAsync(IRequest request);
 
     /// <summary>
     /// What a request is told when there is no lambda to answer it.

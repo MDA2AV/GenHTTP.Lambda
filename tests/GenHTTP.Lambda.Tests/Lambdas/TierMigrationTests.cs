@@ -70,15 +70,15 @@ public sealed class TierMigrationTests
 
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataDirectory = directory });
 
-        Assert.AreEqual(nameof(LambdaTier.Sandbox), fixture.Meta.Get("key-trying")!.Tier);
-        Assert.AreEqual(nameof(LambdaTier.Production), fixture.Meta.Get("key-shop")!.Tier);
-        Assert.AreEqual(nameof(LambdaTier.Production), fixture.Meta.Get("key-telemetry")!.Tier, "nothing becomes a system lambda without the operator");
+        Assert.AreEqual(nameof(LambdaTier.Sandbox), (await fixture.Meta.GetAsync("key-trying"))!.Tier);
+        Assert.AreEqual(nameof(LambdaTier.Production), (await fixture.Meta.GetAsync("key-shop"))!.Tier);
+        Assert.AreEqual(nameof(LambdaTier.Production), (await fixture.Meta.GetAsync("key-telemetry"))!.Tier, "nothing becomes a system lambda without the operator");
 
-        Assert.AreEqual(0, fixture.Meta.List(new LambdaQuery(Tier: LambdaTier.System)).Matched);
+        Assert.AreEqual(0, (await fixture.Meta.ListAsync(new LambdaQuery(Tier: LambdaTier.System))).Matched);
 
-        Assert.IsTrue(fixture.Meta.Get("key-declined")!.Connectivity!.Allowed, "what a premium lambda could do, it still can");
-        Assert.AreEqual(ConnectivityStatus.Requested, fixture.Meta.Get("key-asked")!.Connectivity!.Status, "and a sandbox's request waits as before");
-        Assert.IsFalse(fixture.Meta.Get("key-trying")!.Connectivity!.Allowed);
+        Assert.IsTrue((await fixture.Meta.GetAsync("key-declined"))!.Connectivity!.Allowed, "what a premium lambda could do, it still can");
+        Assert.AreEqual(ConnectivityStatus.Requested, (await fixture.Meta.GetAsync("key-asked"))!.Connectivity!.Status, "and a sandbox's request waits as before");
+        Assert.IsFalse((await fixture.Meta.GetAsync("key-trying"))!.Connectivity!.Allowed);
 
         var limits = fixture.Limits.Get();
 

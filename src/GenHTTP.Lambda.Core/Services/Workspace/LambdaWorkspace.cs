@@ -38,7 +38,8 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// </remarks>
 /// <param name="room">The room of the lambda's data, as its tier allows it now</param>
 /// <param name="beside">The room the rest of its data - its database - takes</param>
-internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault, DataScope scope, Func<long> room, Func<CancellationToken, ValueTask<long>> beside)
+internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault, DataScope scope, Func<CancellationToken, ValueTask<long>> room,
+                                      Func<CancellationToken, ValueTask<long>> beside)
 {
 
     #region Functionality
@@ -117,9 +118,11 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
 
         var entries = await files.ListAsync(scope, cancellation);
 
-        if (WorkspacePaths.Measure(entries) + await beside(cancellation) + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > room())
+        var room = await RoomAsync(cancellation);
+
+        if (WorkspacePaths.Measure(entries) + await beside(cancellation) + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > room)
         {
-            throw Full();
+            throw Full(room);
         }
 
         await files.CreateFolderAsync(scope, path, cancellation);
@@ -181,14 +184,21 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
         // a file being replaced is not counted a second time
         var replaced = entries.FirstOrDefault(e => !e.Folder && e.Path == path) is { } existing ? WorkspaceLimits.Footprint(existing.Length) : 0;
 
-        if (added > replaced && WorkspacePaths.Measure(entries) + await beside(cancellation) - replaced + added > room())
+        if (added > replaced)
         {
-            throw Full();
+            var room = await RoomAsync(cancellation);
+
+            if (WorkspacePaths.Measure(entries) + await beside(cancellation) - replaced + added > room)
+            {
+                throw Full(room);
+            }
         }
     }
 
-    private InvalidOperationException Full()
-        => new($"The data of this lambda - its workspace and its database together - must not take more than {room()} bytes.");
+    private ValueTask<long> RoomAsync(CancellationToken cancellation) => room(cancellation);
+
+    private static InvalidOperationException Full(long room)
+        => new($"The data of this lambda - its workspace and its database together - must not take more than {room} bytes.");
 
     #endregion
 

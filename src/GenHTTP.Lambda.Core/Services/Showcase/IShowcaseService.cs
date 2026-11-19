@@ -14,7 +14,7 @@ public interface IShowcaseService
     /// <summary>
     /// The entry of the lambda behind an editor key, if it has one.
     /// </summary>
-    ShowcaseInfo? Get(string privateKey);
+    ValueTask<ShowcaseInfo?> GetAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Creates or replaces the entry of a lambda.
@@ -34,7 +34,7 @@ public interface IShowcaseService
     /// <summary>
     /// One page of the entries of lambdas that are online, the most active first.
     /// </summary>
-    ShowcasePage List(int skip, int take);
+    ValueTask<ShowcasePage> ListAsync(int skip, int take, CancellationToken cancellation = default);
 
     /// <summary>
     /// The picture of the entry of the lambda at a public key.

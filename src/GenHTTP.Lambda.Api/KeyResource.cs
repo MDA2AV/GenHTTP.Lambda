@@ -29,9 +29,9 @@ public sealed class KeyResource(IMetaService meta)
              key while it is typed needs. A key that is free now may be taken by the time a lambda is created with it.
              """)]
     [return: Summary("What anybody may know about the key")]
-    public KeyResponse Get([Summary("The key to look up, in any case - it is answered the way it would be stored")] string publicKey)
+    public async ValueTask<KeyResponse> Get([Summary("The key to look up, in any case - it is answered the way it would be stored")] string publicKey)
     {
-        var status = meta.DescribeKey(publicKey);
+        var status = await meta.DescribeKeyAsync(publicKey);
 
         return new KeyResponse(status.PublicKey, status.Valid, status.Available, status.Exists, status.Deployed, status.Reason);
     }

@@ -360,7 +360,7 @@ public sealed class AnalyticsTests
 
         var store = fixture.Platform.Services.GetRequiredService<AnalyticsStore>();
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -423,7 +423,7 @@ public sealed class AnalyticsTests
         Assert.AreEqual(DateOnly.FromDateTime(DateTime.UtcNow), free.Earliest, "but it is kept, and said to be");
         Assert.IsNull(free.Previous, "nor is the week before compared, which a free lambda does not show");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var premium = await analytics.GetAsync(lambda.PrivateKey, 60, later);
 
@@ -439,7 +439,7 @@ public sealed class AnalyticsTests
 
         var lambda = await OnlineAsync(fixture, "aging");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
@@ -469,7 +469,7 @@ public sealed class AnalyticsTests
 
         await FlushAsync(fixture);
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var store = fixture.Platform.Services.GetRequiredService<AnalyticsStore>();
 

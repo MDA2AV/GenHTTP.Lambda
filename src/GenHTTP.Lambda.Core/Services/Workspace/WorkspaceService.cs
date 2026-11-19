@@ -41,7 +41,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
 
     public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
     {
-        var limits = Limits(lambdaId);
+        var limits = await LimitsAsync(lambdaId, cancellation);
 
         // switched off, it holds nothing - and looking is no reason to make
         // anything it would have
@@ -105,7 +105,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
                                                       CancellationToken cancellation = default)
     {
-        var limits = RequireEnabled(lambdaId);
+        var limits = await RequireEnabledAsync(lambdaId, cancellation);
 
         var scope = new DataScope(lambdaId, featureId);
 
@@ -133,7 +133,10 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
         // refused the moment it grows past what a lambda would be allowed to
         // write itself; the integration keeps what was there, and none of
         // the folders it would have gone into, when the content fails
-        var guarded = new GuardedUpload(content, room, expected, () => Full(limits, lambdaId));
+        // what it is refused with, read before the content streams in
+        var full = await FullAsync(limits, lambdaId, cancellation);
+
+        var guarded = new GuardedUpload(content, room, expected, () => full);
 
         try
         {
@@ -179,7 +182,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
 
     public async ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
-        var limits = RequireEnabled(lambdaId);
+        var limits = await RequireEnabledAsync(lambdaId, cancellation);
 
         var scope = new DataScope(lambdaId, featureId);
 
@@ -202,7 +205,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
          && WorkspacePaths.Measure(entries) + (WorkspacePaths.Missing(resolved, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block
           > await RoomAsync(limits, lambdaId, featureId, cancellation))
         {
-            throw Full(limits, lambdaId);
+            throw await FullAsync(limits, lambdaId, cancellation);
         }
 
         await files.CreateFolderAsync(scope, resolved, cancellation);
@@ -259,9 +262,9 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// limit, its tier, and the tier that allows more, as the installation
     /// calls them.
     /// </summary>
-    private LambdaException Full(WorkspaceLimits limits, long lambdaId)
+    private async ValueTask<LambdaException> FullAsync(WorkspaceLimits limits, long lambdaId, CancellationToken cancellation)
     {
-        var tier = meta.GetTier(lambdaId);
+        var tier = await meta.GetTierAsync(lambdaId, cancellation);
 
         var named = tier is { } known ? $" in the tier '{tiers.PolicyOf(known).Name}'" : string.Empty;
 
@@ -282,8 +285,8 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// ones its own code reads as it writes. One that is gone gets the least
     /// room of any tier.
     /// </remarks>
-    private WorkspaceLimits Limits(long lambdaId)
-        => meta.GetWorkspaceLimits(lambdaId) ?? tiers.WorkspaceOf(LambdaTier.Sandbox);
+    private async ValueTask<WorkspaceLimits> LimitsAsync(long lambdaId, CancellationToken cancellation)
+        => await meta.GetWorkspaceLimitsAsync(lambdaId, cancellation) ?? tiers.WorkspaceOf(LambdaTier.Sandbox);
 
     /// <summary>
     /// The limits of a workspace that is switched on, or a refusal saying how
@@ -293,9 +296,9 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// Refused here as the lambda itself refuses it, so a file uploaded by
     /// hand cannot land where the lambda has been told there is nothing.
     /// </remarks>
-    private WorkspaceLimits RequireEnabled(long lambdaId)
+    private async ValueTask<WorkspaceLimits> RequireEnabledAsync(long lambdaId, CancellationToken cancellation)
     {
-        var limits = Limits(lambdaId);
+        var limits = await LimitsAsync(lambdaId, cancellation);
 
         return limits.Enabled ? limits : throw LambdaException.Conflict(DataKinds.WorkspaceOff);
     }

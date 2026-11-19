@@ -25,10 +25,11 @@ namespace GenHTTP.Lambda.Integrations.Sealed;
 /// lambda's, under the lambda's key, so nothing is opened to make it. What a
 /// lambda reads is held sealed until it reads it.
 ///
-/// Synchronous inside, whatever the contract says: the platform asks Entity
-/// Framework for its own records synchronously, so every task this returns
-/// has completed already - on SQLite, the thread that asks is the one that
-/// reads the row.
+/// Asks for the rows as the platform asks for all of its records: awaited.
+/// Where the database integration answers at once - SQLite - every task this
+/// returns has completed already and the thread that asks is the one that
+/// reads the row; on PostgreSQL it waits for the server without holding a
+/// thread.
 /// </remarks>
 public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<DatabaseSecrets> logger) : ISecretProvider
 {
@@ -38,57 +39,55 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
 
     #region Functionality
 
-    public ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default) => ValueTask.FromResult(Load(scope));
-
-    private ISecretSet Load(DataScope scope)
+    public async ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var values = database.Secrets.AsNoTracking()
-                             .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
-                             .ToDictionary(s => s.Name, s => s.Value, StringComparer.Ordinal);
+        var values = await database.Secrets.AsNoTracking()
+                                   .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
+                                   .ToDictionaryAsync(s => s.Name, s => s.Value, StringComparer.Ordinal, cancellation);
 
         if (values.Count == 0)
         {
             return new SealedSet(cipher, null, values);
         }
 
-        CheckFingerprint(database);
+        await CheckFingerprintAsync(database);
 
-        var salt = database.Lambdas.AsNoTracking()
-                           .Where(l => l.Id == scope.LambdaId)
-                           .Select(l => l.SecretSalt)
-                           .FirstOrDefault();
+        var salt = await database.Lambdas.AsNoTracking()
+                                 .Where(l => l.Id == scope.LambdaId)
+                                 .Select(l => l.SecretSalt)
+                                 .FirstOrDefaultAsync(cancellation);
 
         return new SealedSet(cipher, salt != null ? cipher.KeyOf(salt) : null, values);
     }
 
-    public ValueTask<IReadOnlyList<SecretEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default)
+    public async ValueTask<IReadOnlyList<SecretEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return ValueTask.FromResult<IReadOnlyList<SecretEntry>>(database.Secrets.AsNoTracking()
-                                                                        .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
-                                                                        .OrderBy(s => s.Name)
-                                                                        .Select(s => new SecretEntry(s.Name, s.Created, s.Changed))
-                                                                        .ToList());
+        return await database.Secrets.AsNoTracking()
+                             .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
+                             .OrderBy(s => s.Name)
+                             .Select(s => new SecretEntry(s.Name, s.Created, s.Changed))
+                             .ToListAsync(cancellation);
     }
 
-    public ValueTask<SecretEntry> StoreAsync(DataScope scope, string name, string value, CancellationToken cancellation = default)
+    public async ValueTask<SecretEntry> StoreAsync(DataScope scope, string name, string value, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = database.Lambdas.FirstOrDefault(l => l.Id == scope.LambdaId)
+        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.Id == scope.LambdaId, cancellation)
                   ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
         // the lambda's half of its key, made the first time it needs one
         lambda.SecretSalt ??= SecretCipher.NewSalt();
 
-        CheckFingerprint(database);
+        await CheckFingerprintAsync(database);
 
         var sealedValue = cipher.Seal(cipher.KeyOf(lambda.SecretSalt), name, value);
 
-        var existing = database.Secrets.FirstOrDefault(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name);
+        var existing = await database.Secrets.FirstOrDefaultAsync(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name, cancellation);
 
         var now = DateTime.UtcNow;
 
@@ -104,28 +103,34 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
             existing.Changed = now;
         }
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
-        return ValueTask.FromResult(new SecretEntry(existing.Name, existing.Created, existing.Changed));
+        return new SecretEntry(existing.Name, existing.Created, existing.Changed);
     }
 
-    public ValueTask<bool> DeleteAsync(DataScope scope, string name, CancellationToken cancellation = default)
+    public async ValueTask<bool> DeleteAsync(DataScope scope, string name, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return ValueTask.FromResult(database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name)
-                                            .ExecuteDelete() > 0);
+        return await database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name)
+                             .ExecuteDeleteAsync(cancellation) > 0;
     }
 
-    public ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
+    /// <remarks>
+    /// In one transaction, so a copy stopped half way leaves the one before
+    /// rather than none.
+    /// </remarks>
+    public async ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        database.Secrets.Where(s => s.LambdaId == target.LambdaId && s.FeatureId == target.FeatureId).ExecuteDelete();
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellation);
 
-        var own = database.Secrets.AsNoTracking()
-                          .Where(s => s.LambdaId == source.LambdaId && s.FeatureId == source.FeatureId)
-                          .ToList();
+        await database.Secrets.Where(s => s.LambdaId == target.LambdaId && s.FeatureId == target.FeatureId).ExecuteDeleteAsync(cancellation);
+
+        var own = await database.Secrets.AsNoTracking()
+                                .Where(s => s.LambdaId == source.LambdaId && s.FeatureId == source.FeatureId)
+                                .ToListAsync(cancellation);
 
         database.Secrets.AddRange(own.Select(s => new SecretEntity
         {
@@ -137,34 +142,31 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
             Changed = s.Changed
         }));
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
-        return ValueTask.CompletedTask;
+        await transaction.CommitAsync(cancellation);
     }
 
-    public ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
+    public async ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId).ExecuteDelete();
-
-        return ValueTask.CompletedTask;
+        await database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId).ExecuteDeleteAsync(cancellation);
     }
 
     /// <remarks>
     /// The lambda's half of its key goes with them, so secrets stored later
     /// are sealed with a new one.
     /// </remarks>
-    public ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        database.Secrets.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
+        await database.Secrets.Where(s => s.LambdaId == lambdaId).ExecuteDeleteAsync(cancellation);
 
-        database.Lambdas.Where(l => l.Id == lambdaId)
-                        .ExecuteUpdate(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null));
-
-        return ValueTask.CompletedTask;
+        // the secrets are gone, so the half of the key that opened them goes as well
+        await database.Lambdas.Where(l => l.Id == lambdaId)
+                              .ExecuteUpdateAsync(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null), CancellationToken.None);
     }
 
     public IntegrationInfo Describe() => new(IntegrationKind.Secrets, "Database",
@@ -187,7 +189,7 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
     /// Without this, a server moved without its key would find out one secret
     /// at a time, in the logs of the lambdas that read them.
     /// </remarks>
-    private void CheckFingerprint(LambdaDbContext database)
+    private async ValueTask CheckFingerprintAsync(LambdaDbContext database)
     {
         if (Interlocked.Exchange(ref _fingerprinted, 1) == 1)
         {
@@ -198,14 +200,14 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
         {
             var mine = cipher.Fingerprint();
 
-            var stored = database.Settings.AsNoTracking().FirstOrDefault(s => s.Key == FingerprintSetting);
+            var stored = await database.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == FingerprintSetting);
 
             if (stored == null)
             {
-                using var writer = databases.CreateDbContext();
+                await using var writer = await databases.CreateDbContextAsync();
 
                 writer.Settings.Add(new SettingEntity { Key = FingerprintSetting, Value = mine });
-                writer.SaveChanges();
+                await writer.SaveChangesAsync();
             }
             else if (stored.Value != mine)
             {

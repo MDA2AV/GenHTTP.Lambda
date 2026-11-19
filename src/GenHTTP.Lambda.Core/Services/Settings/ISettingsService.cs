@@ -14,6 +14,6 @@ public interface ISettingsService
     /// <summary>
     /// Replaces the settings.
     /// </summary>
-    SiteSettings Save(SiteSettings settings);
+    ValueTask<SiteSettings> SaveAsync(SiteSettings settings, CancellationToken cancellation = default);
 
 }

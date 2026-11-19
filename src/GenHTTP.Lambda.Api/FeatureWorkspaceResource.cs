@@ -36,7 +36,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     [return: Summary("The files and folders of the feature's copy")]
     public async ValueTask<WorkspaceListing> List([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, false);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false);
 
         return await workspace.ListAsync(lambdaId, featureId);
     }
@@ -50,7 +50,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask<FileResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                              [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, false);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false);
 
         return await WorkspaceFiles.ReadAsync(workspace, lambdaId, featureId, path, $"/api/v1/lambdas/{{privateKey}}/features/{feature}/workspace");
     }
@@ -62,7 +62,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask<IResponse> GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                  [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, false);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false);
 
         return await WorkspaceFiles.SendAsync(workspace, lambdaId, featureId, path, request);
     }
@@ -78,9 +78,9 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask<WorkspaceEntry> PutContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                       [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, true);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
-        return Written(privateKey, feature, await WorkspaceFiles.ReceiveAsync(workspace, lambdaId, featureId, path, request));
+        return await WrittenAsync(privateKey, feature, await WorkspaceFiles.ReceiveAsync(workspace, lambdaId, featureId, path, request));
     }
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/workspace/:path")]
@@ -92,9 +92,9 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask<WorkspaceEntry> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                [Summary(ApiDocumentation.WorkspacePath)] string path, FileRequest request)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, true);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
-        return Written(privateKey, feature, await workspace.WriteEncodedAsync(lambdaId, path, request.Content, featureId));
+        return await WrittenAsync(privateKey, feature, await workspace.WriteEncodedAsync(lambdaId, path, request.Content, featureId));
     }
 
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/features/:feature/workspace/:path")]
@@ -104,12 +104,12 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                   [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, true);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
         await workspace.DeleteAsync(lambdaId, path, featureId);
 
         logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path,
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
     }
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/folders/:path")]
@@ -121,20 +121,20 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     public async ValueTask<WorkspaceListing> PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                        [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, true);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
         var listing = await WorkspaceFiles.CreateFolderAsync(workspace, lambdaId, featureId, path);
 
         logger.LogInformation("Created workspace folder {Path} of feature '{Feature}' of lambda {Lambda}", path,
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
 
         return listing;
     }
 
-    private WorkspaceEntry Written(string privateKey, string feature, WorkspaceEntry written)
+    private async ValueTask<WorkspaceEntry> WrittenAsync(string privateKey, string feature, WorkspaceEntry written)
     {
         logger.LogInformation("Wrote workspace file {Path} of feature '{Feature}' of lambda {Lambda} size {Size}", written.Path,
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey), written.Size);
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey), written.Size);
 
         return written;
     }

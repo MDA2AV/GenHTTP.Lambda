@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -186,7 +187,7 @@ public sealed class AsynchronousIntegrationTests
         Assert.AreEqual("1", await ServedAsync(fixture, "/lambda/gone/records/add?text=milk"));
         Assert.AreEqual("notes/a.txt;notes", await ServedAsync(fixture, "/lambda/gone/files/write?name=a.txt&text=first"));
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         using (var deleted = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}"))
         {
@@ -227,7 +228,7 @@ public sealed class AsynchronousIntegrationTests
             Assert.AreEqual(HttpStatusCode.OK, secret.StatusCode, await secret.Content.ReadAsStringAsync());
         }
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var services = fixture.Platform.Services;
 
@@ -266,6 +267,26 @@ public sealed class AsynchronousIntegrationTests
     }
 
     /// <summary>
+    /// What the platform keeps in its own records is awaited as well, and
+    /// over SQLite every step of it - a context taken from the pool, a query,
+    /// a save, an update in place, the context given back - completes before
+    /// the task is handed out, so a request asking for it never leaves its
+    /// reactor either.
+    /// </summary>
+    [TestMethod]
+    public async Task ThePlatformsOwnRecordsAnswerOnTheThreadThatAsks()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var settings = fixture.Platform.Services.GetRequiredService<ISettingsService>();
+
+        var saved = AtOnce(settings.SaveAsync(new SiteSettings(BuildBox: false, ChangeBox: true)), "a setting is written");
+
+        Assert.IsFalse(saved.BuildBox);
+        Assert.IsFalse(settings.Get().BuildBox);
+    }
+
+    /// <summary>
     /// On the Ioxide engine a request runs on the reactor of its core, which
     /// runs what is posted to it only once the request lets go of it. A plain
     /// call that waited for an integration there with the reactor's context
@@ -281,7 +302,7 @@ public sealed class AsynchronousIntegrationTests
 
         var lambda = await PrepareAsync(fixture, "reactor", Awaited);
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var services = fixture.Platform.Services;
 

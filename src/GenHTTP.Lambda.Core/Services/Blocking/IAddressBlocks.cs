@@ -40,17 +40,17 @@ public interface IAddressBlocks
     /// <param name="reason">Why, in the operator's words</param>
     /// <param name="publicKey">The lambda they are blocked for, if any</param>
     /// <returns>The blocks made or renewed</returns>
-    IReadOnlyList<AddressBlock> Block(IReadOnlyList<string> addresses, string? reason, string? publicKey);
+    ValueTask<IReadOnlyList<AddressBlock>> BlockAsync(IReadOnlyList<string> addresses, string? reason, string? publicKey);
 
     /// <summary>
     /// Lets go of a block. False when there was none of that id.
     /// </summary>
-    bool Remove(long id);
+    ValueTask<bool> RemoveAsync(long id);
 
     /// <summary>
     /// Lets go of every block older than <see cref="Kept"/>.
     /// </summary>
     /// <returns>How many there were</returns>
-    int Expire(DateTime now);
+    ValueTask<int> ExpireAsync(DateTime now);
 
 }

@@ -28,7 +28,7 @@ namespace GenHTTP.Lambda.Execution;
 public sealed class PathLocator(IMetaService meta, HostingPages pages) : ILambdaLocator
 {
 
-    public ResolvedLambda? Locate(IRequest request)
+    public async ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
     {
         var target = request.Header.Target;
 
@@ -37,7 +37,7 @@ public sealed class PathLocator(IMetaService meta, HostingPages pages) : ILambda
             return null;
         }
 
-        var lambda = meta.Resolve(key);
+        var lambda = await meta.ResolveAsync(key);
 
         if (lambda != null)
         {

@@ -22,7 +22,7 @@ public sealed class MaintenanceJob(IMetaService meta, IFeatureService features, 
 
         await meta.RunMaintenanceAsync(now, cancellation);
 
-        features.RunMaintenance(now);
+        await features.RunMaintenanceAsync(now, cancellation);
 
         await features.SweepAsync(cancellation);
     }

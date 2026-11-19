@@ -50,7 +50,7 @@ public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions option
     [Remarks("The name servers are asked as the request is answered, for up to three seconds, and their answers may be cached for as long as the records say.")]
     [return: Summary("The domain, and what it resolves to")]
     public async ValueTask<DomainResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => await DescribeAsync(meta.Require(privateKey));
+        => await DescribeAsync(await meta.RequireAsync(privateKey));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/domain")]
     [Summary("Sets the domain a lambda answers at")]
@@ -69,7 +69,7 @@ public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions option
     [return: Summary("The domain afterwards, and what it resolves to")]
     public async ValueTask<DomainResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, DomainChangeRequest request)
     {
-        var lambda = meta.ChangeDomain(privateKey, request.Domain);
+        var lambda = await meta.ChangeDomainAsync(privateKey, request.Domain);
 
         logger.LogInformation("Set domain of lambda {Lambda} to {Domain}", lambda.PublicKey, lambda.Domain ?? "(none)");
 
@@ -83,7 +83,7 @@ public sealed class LambdaDomainResource(IMetaService meta, LambdaOptions option
     [return: Summary("The lambda, without a domain")]
     public async ValueTask<DomainResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var lambda = meta.ChangeDomain(privateKey, null);
+        var lambda = await meta.ChangeDomainAsync(privateKey, null);
 
         logger.LogInformation("Removed domain of lambda {Lambda}", lambda.PublicKey);
 

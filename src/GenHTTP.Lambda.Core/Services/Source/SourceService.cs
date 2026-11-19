@@ -34,18 +34,18 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Owner
 
-    public SourceSettings? Get(string privateKey)
+    public async ValueTask<SourceSettings?> GetAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = Require(database, privateKey);
+        var lambda = await RequireAsync(database, privateKey, cancellation);
 
-        var source = database.Sources.AsNoTracking().FirstOrDefault(s => s.LambdaId == lambda.Id);
+        var source = await database.Sources.AsNoTracking().FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
         return source == null ? null : Settings(lambda.PublicKey, source);
     }
 
-    public SourceSettings Publish(string privateKey, SourceDraft draft)
+    public async ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, CancellationToken cancellation = default)
     {
         // what is asked for is checked before anything is looked up, so a
         // request that is wrong changes nothing at all
@@ -55,11 +55,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         var author = draft.Author == null ? null : Author(draft.Author);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
-        var source = database.Sources.FirstOrDefault(s => s.LambdaId == lambda.Id);
+        var source = await database.Sources.FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
         var now = DateTime.UtcNow;
 
@@ -98,27 +98,27 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
             source.Updated = now;
         }
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
         logger.LogInformation("Published source of lambda #{LambdaId} license {License}", lambda.Id, source.License);
 
         return Settings(lambda.PublicKey, source);
     }
 
-    public SourceSettings? Withdraw(string privateKey)
+    public async ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
-        var source = database.Sources.FirstOrDefault(s => s.LambdaId == lambda.Id);
+        var source = await database.Sources.FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
         if (source is { Published: true })
         {
             source.Published = false;
             source.Updated = DateTime.UtcNow;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             logger.LogInformation("Unpublished source of lambda #{LambdaId}", lambda.Id);
         }
@@ -140,18 +140,18 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
      * back once the block is lifted.
      */
 
-    public SourceListing List(string? search, SourceOrder order, int skip, int take)
+    public async ValueTask<SourceListing> ListAsync(string? search, SourceOrder order, int skip, int take, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         // every published source at once: the words searched for may be in
         // what the showcase says, and the showcase is a table of its own - and
         // a row here is a few hundred bytes
-        var rows = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null)).ToList();
+        var rows = await Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null)).ToListAsync(cancellation);
 
-        var newest = Newest(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
+        var newest = await NewestAsync(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId), cancellation);
 
-        var showcases = Showcases(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
+        var showcases = await ShowcasesAsync(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId), cancellation);
 
         var entries = rows.Select(r => Entry(r, newest, showcases)).ToList();
 
@@ -176,58 +176,58 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         {
             var row = rows.First(r => r.PublicKey == page[i].PublicKey);
 
-            page[i] = page[i] with { About = About(database, row, page[i].LatestVersion) };
+            page[i] = page[i] with { About = await AboutAsync(database, row, page[i].LatestVersion) };
         }
 
         return new SourceListing(page, entries.Count);
     }
 
-    public SourceProject? GetProject(string publicKey)
+    public async ValueTask<SourceProject?> GetProjectAsync(string publicKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
+        var row = await Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefaultAsync(cancellation);
 
         if (row == null)
         {
             return null;
         }
 
-        var lambda = database.Lambdas.AsNoTracking()
-                             .Where(l => l.Id == row.Id)
-                             .Select(l => new { l.ActiveVersion, l.Created })
-                             .First();
+        var lambda = await database.Lambdas.AsNoTracking()
+                                   .Where(l => l.Id == row.Id)
+                                   .Select(l => new { l.ActiveVersion, l.Created })
+                                   .FirstAsync(cancellation);
 
-        var versions = database.Deployments.AsNoTracking()
-                               .Where(d => d.LambdaId == row.Id)
-                               .OrderByDescending(d => d.Version)
-                               .Select(d => new SourceVersion(d.Version, d.Created, d.Change, d.Origin))
-                               .ToList();
+        var versions = await database.Deployments.AsNoTracking()
+                                     .Where(d => d.LambdaId == row.Id)
+                                     .OrderByDescending(d => d.Version)
+                                     .Select(d => new SourceVersion(d.Version, d.Created, d.Change, d.Origin))
+                                     .ToListAsync(cancellation);
 
         var only = database.Sources.Where(s => s.LambdaId == row.Id).Select(s => s.LambdaId);
 
-        var entry = Entry(row, Newest(database, only), Showcases(database, only));
+        var entry = Entry(row, await NewestAsync(database, only, cancellation), await ShowcasesAsync(database, only, cancellation));
 
-        entry = entry with { About = About(database, row, entry.LatestVersion) };
+        entry = entry with { About = await AboutAsync(database, row, entry.LatestVersion) };
 
         return new SourceProject(entry, row.Author, lambda.ActiveVersion, lambda.Created, versions);
     }
 
     public async ValueTask<SourceArchive?> GetArchiveAsync(string publicKey, int version, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
+        var row = await Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefaultAsync(cancellation);
 
         if (row == null)
         {
             return null;
         }
 
-        var saved = database.Deployments.AsNoTracking()
-                            .Where(d => d.LambdaId == row.Id && d.Version == version)
-                            .Select(d => new { d.Created, d.Change })
-                            .FirstOrDefault();
+        var saved = await database.Deployments.AsNoTracking()
+                                  .Where(d => d.LambdaId == row.Id && d.Version == version)
+                                  .Select(d => new { d.Created, d.Change })
+                                  .FirstOrDefaultAsync(cancellation);
 
         if (saved == null)
         {
@@ -274,11 +274,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
     public string IssueTicket(string publicKey) => stars.Issue(publicKey, DateTime.UtcNow);
 
-    public StarOutcome? Star(string publicKey, string? ticket, IPAddress? client, bool starred)
+    public async ValueTask<StarOutcome?> StarAsync(string publicKey, string? ticket, IPAddress? client, bool starred, CancellationToken cancellation = default)
     {
         var now = DateTime.UtcNow;
 
-        var current = GetStars(publicKey);
+        var current = await GetStarsAsync(publicKey, cancellation);
 
         if (current == null)
         {
@@ -299,20 +299,21 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
                 return new StarOutcome(current.Stars, starred, false);
         }
 
-        return Count(publicKey, starred) is { } count ? new StarOutcome(count, starred, true) : null;
+        // the address was let star, so the star is counted whoever leaves
+        return await CountAsync(publicKey, starred) is { } count ? new StarOutcome(count, starred, true) : null;
     }
 
     /// <summary>
     /// Gives a published source a star or takes one back, and says how many
     /// it has now - or nothing where there is no such source.
     /// </summary>
-    private int? Count(string publicKey, bool starred)
+    private async ValueTask<int?> CountAsync(string publicKey, bool starred)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync();
 
-        var id = database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
-                         .Select(s => (long?)s.LambdaId)
-                         .FirstOrDefault();
+        var id = await database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
+                               .Select(s => (long?)s.LambdaId)
+                               .FirstOrDefaultAsync();
 
         if (id == null)
         {
@@ -324,41 +325,41 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         // counted by the database rather than read, changed and written, so
         // two visitors at the same moment are two stars
         var changed = starred
-            ? sources.ExecuteUpdate(s => s.SetProperty(x => x.Stars, x => x.Stars + 1))
-            : sources.ExecuteUpdate(s => s.SetProperty(x => x.Stars, x => x.Stars > 0 ? x.Stars - 1 : 0));
+            ? await sources.ExecuteUpdateAsync(s => s.SetProperty(x => x.Stars, x => x.Stars + 1))
+            : await sources.ExecuteUpdateAsync(s => s.SetProperty(x => x.Stars, x => x.Stars > 0 ? x.Stars - 1 : 0));
 
         if (changed == 0)
         {
             return null;
         }
 
-        return sources.Select(s => s.Stars).First();
+        return await sources.Select(s => s.Stars).FirstAsync();
     }
 
     /// <summary>
     /// How many stars a published source has, and the identity the guard
     /// counts each visitor's star under.
     /// </summary>
-    private SourceStars? GetStars(string publicKey)
+    private async ValueTask<SourceStars?> GetStarsAsync(string publicKey, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.Sources.AsNoTracking()
-                       .Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
-                       .Select(s => new SourceStars(s.LambdaId, s.Stars))
-                       .FirstOrDefault();
+        return await database.Sources.AsNoTracking()
+                             .Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
+                             .Select(s => new SourceStars(s.LambdaId, s.Stars))
+                             .FirstOrDefaultAsync(cancellation);
     }
 
-    public IReadOnlyList<SourceAddress> ListAddresses()
+    public async ValueTask<IReadOnlyList<SourceAddress>> ListAddressesAsync(CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var keys = database.Sources.AsNoTracking()
-                           .Where(s => s.Published && s.Lambda!.Blocked == null)
-                           .Select(s => new { s.LambdaId, s.Lambda!.PublicKey })
-                           .ToList();
+        var keys = await database.Sources.AsNoTracking()
+                                 .Where(s => s.Published && s.Lambda!.Blocked == null)
+                                 .Select(s => new { s.LambdaId, s.Lambda!.PublicKey })
+                                 .ToListAsync(cancellation);
 
-        var newest = Newest(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
+        var newest = await NewestAsync(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId), cancellation);
 
         return [.. keys.OrderBy(k => k.PublicKey, StringComparer.Ordinal)
                        .Select(k => new SourceAddress(k.PublicKey, newest.TryGetValue(k.LambdaId, out var n) ? n.Created : null))];
@@ -386,21 +387,21 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// The newest version of each of the lambdas, and when it was saved.
     /// </summary>
-    private static Dictionary<long, Newer> Newest(LambdaDbContext database, IQueryable<long> lambdas)
-        => database.Deployments.AsNoTracking()
-                   .Where(d => lambdas.Contains(d.LambdaId))
-                   .GroupBy(d => d.LambdaId)
-                   .Select(g => new { g.Key, Version = g.Max(d => d.Version), Created = g.Max(d => d.Created) })
-                   .ToDictionary(g => g.Key, g => new Newer(g.Version, g.Created));
+    private static async ValueTask<Dictionary<long, Newer>> NewestAsync(LambdaDbContext database, IQueryable<long> lambdas, CancellationToken cancellation)
+        => await database.Deployments.AsNoTracking()
+                         .Where(d => lambdas.Contains(d.LambdaId))
+                         .GroupBy(d => d.LambdaId)
+                         .Select(g => new { g.Key, Version = g.Max(d => d.Version), Created = g.Max(d => d.Created) })
+                         .ToDictionaryAsync(g => g.Key, g => new Newer(g.Version, g.Created), cancellation);
 
     /// <summary>
     /// What the showcase says about each of the lambdas that are on it.
     /// </summary>
-    private static Dictionary<long, Shown> Showcases(LambdaDbContext database, IQueryable<long> lambdas)
-        => database.Showcases.AsNoTracking()
-                   .Where(s => lambdas.Contains(s.LambdaId))
-                   .Select(s => new { s.LambdaId, s.Title, s.Description, s.Updated, s.ImageType })
-                   .ToDictionary(s => s.LambdaId, s => new Shown(s.Title, s.Description, s.Updated, s.ImageType));
+    private static async ValueTask<Dictionary<long, Shown>> ShowcasesAsync(LambdaDbContext database, IQueryable<long> lambdas, CancellationToken cancellation)
+        => await database.Showcases.AsNoTracking()
+                         .Where(s => lambdas.Contains(s.LambdaId))
+                         .Select(s => new { s.LambdaId, s.Title, s.Description, s.Updated, s.ImageType })
+                         .ToDictionaryAsync(s => s.LambdaId, s => new Shown(s.Title, s.Description, s.Updated, s.ImageType), cancellation);
 
     private static SourceEntry Entry(Row row, Dictionary<long, Newer> newest, Dictionary<long, Shown> showcases)
     {
@@ -427,7 +428,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     /// every time it is shown. Searching reads what was kept, which is at most
     /// a version behind for a source nobody looked at since.
     /// </remarks>
-    private string? About(LambdaDbContext database, Row row, int? latest)
+    /// <remarks>
+    /// What was read is written down whoever leaves, so no cancellation token:
+    /// the next reader would only read it again.
+    /// </remarks>
+    private async ValueTask<string?> AboutAsync(LambdaDbContext database, Row row, int? latest)
     {
         if (latest is not { } version || row.AboutVersion == version)
         {
@@ -448,8 +453,8 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
             return row.About;
         }
 
-        database.Sources.Where(s => s.LambdaId == row.Id)
-                      .ExecuteUpdate(s => s.SetProperty(x => x.About, about).SetProperty(x => x.AboutVersion, version));
+        await database.Sources.Where(s => s.LambdaId == row.Id)
+                            .ExecuteUpdateAsync(s => s.SetProperty(x => x.About, about).SetProperty(x => x.AboutVersion, version));
 
         return about;
     }
@@ -485,8 +490,8 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         return Convert.ToHexStringLower(hash)[..16];
     }
 
-    private static LambdaEntity Require(LambdaDbContext database, string privateKey)
-        => database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+    private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+        => await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
@@ -497,9 +502,9 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     /// one who decides under which license its code is given away - the
     /// installation publishes its demos itself.
     /// </remarks>
-    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private async ValueTask<LambdaEntity> RequireEditableAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
     {
-        var lambda = Require(database, privateKey);
+        var lambda = await RequireAsync(database, privateKey, cancellation);
 
         LambdaGuard.EnsureUnblocked(lambda);
 

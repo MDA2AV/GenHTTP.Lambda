@@ -20,21 +20,21 @@ public static class LambdaAccess
     /// <summary>
     /// The lambda the editor key belongs to.
     /// </summary>
-    public static LambdaInfo Require(this IMetaService meta, string privateKey)
-        => meta.Get(privateKey) ?? throw LambdaException.NotFound(Missing);
+    public static async ValueTask<LambdaInfo> RequireAsync(this IMetaService meta, string privateKey, CancellationToken cancellation = default)
+        => await meta.GetAsync(privateKey, cancellation) ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
     /// The identity the lambda of the editor key is filed under, for the
     /// services that keep things per lambda.
     /// </summary>
-    public static long RequireId(this IMetaService meta, string privateKey)
-        => meta.GetId(privateKey) ?? throw LambdaException.NotFound(Missing);
+    public static async ValueTask<long> RequireIdAsync(this IMetaService meta, string privateKey, CancellationToken cancellation = default)
+        => await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
     /// The editor key of the lambda at a public key, for the operator.
     /// </summary>
-    public static string RequirePrivateKey(this IMetaService meta, string publicKey)
-        => meta.GetPrivateKey(publicKey) ?? throw LambdaException.NotFound($"There is no lambda at '{publicKey}'.");
+    public static async ValueTask<string> RequirePrivateKeyAsync(this IMetaService meta, string publicKey, CancellationToken cancellation = default)
+        => await meta.GetPrivateKeyAsync(publicKey, cancellation) ?? throw LambdaException.NotFound($"There is no lambda at '{publicKey}'.");
 
     /// <summary>
     /// The files of the newest version of a lambda, or none before its first.
@@ -43,16 +43,16 @@ public static class LambdaAccess
     /// What a change is applied to, through either door: the API's and the
     /// MCP tools' edits both start from here.
     /// </remarks>
-    public static IReadOnlyList<LambdaFile> LatestFiles(this IMetaService meta, string privateKey)
+    public static async ValueTask<IReadOnlyList<LambdaFile>> LatestFilesAsync(this IMetaService meta, string privateKey, CancellationToken cancellation = default)
     {
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey, cancellation);
 
         if (lambda.LatestVersion is not { } latest)
         {
             return [];
         }
 
-        return LambdaSource.Parse(meta.GetVersion(privateKey, latest).Code);
+        return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, latest, cancellation)).Code);
     }
 
 }

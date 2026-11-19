@@ -51,11 +51,11 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
     public async ValueTask<DatabaseOverview> GetAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = Resolve(privateKey, feature);
+        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, cancellation);
 
-        var (enabled, tier) = State(lambdaId);
+        var (enabled, tier) = await StateAsync(lambdaId, cancellation);
 
-        var used = Used(lambdaId, featureId);
+        var used = await UsedAsync(lambdaId, featureId, cancellation);
 
         var room = await vault.RoomOfAsync(lambdaId, featureId, tier, cancellation);
 
@@ -74,9 +74,9 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     public async ValueTask<DatabaseRows> ReadAsync(string privateKey, string table, int offset = 0, int limit = 50, string? order = null, bool descending = true,
                                                    string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = Resolve(privateKey, feature);
+        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, cancellation);
 
-        var (enabled, _) = State(lambdaId);
+        var (enabled, _) = await StateAsync(lambdaId, cancellation);
 
         if (!enabled)
         {
@@ -297,43 +297,43 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
     #region Helpers
 
-    private (long LambdaId, long? FeatureId) Resolve(string privateKey, string? feature)
+    private async ValueTask<(long LambdaId, long? FeatureId)> ResolveAsync(string privateKey, string? feature, CancellationToken cancellation)
     {
         if (!string.IsNullOrWhiteSpace(feature))
         {
-            var (lambdaId, featureId) = features.Require(privateKey, feature, false);
+            var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false, cancellation);
 
             return (lambdaId, featureId);
         }
 
-        return (meta.GetId(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted)."), null);
+        return (await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted)."), null);
     }
 
-    private (bool Enabled, LambdaTier Tier) State(long lambdaId)
+    private async ValueTask<(bool Enabled, LambdaTier Tier)> StateAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var tier = database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefault();
+        var tier = await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefaultAsync(cancellation);
 
-        return (DataSwitches.IsEnabled(database, lambdaId, DataKinds.Database), tier);
+        return (await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Database, cancellation), tier);
     }
 
     /// <summary>
     /// Whether the code connects to the database: the feature's own, or the
     /// lambda's - what is online and what was saved last.
     /// </summary>
-    private bool Used(long lambdaId, long? featureId)
+    private async ValueTask<bool> UsedAsync(long lambdaId, long? featureId, CancellationToken cancellation)
     {
         if (featureId is { } feature)
         {
             return UsedIn(storage.ReadFeature(lambdaId, feature));
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var active = database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefault();
+        var active = await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefaultAsync(cancellation);
 
-        var newest = database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).Max(d => (int?)d.Version);
+        var newest = await database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).MaxAsync(d => (int?)d.Version, cancellation);
 
         foreach (var version in new[] { active, newest }.OfType<int>().Distinct())
         {

@@ -21,14 +21,14 @@ namespace GenHTTP.Lambda.Execution;
 public sealed class DomainLocator(IMetaService meta) : ILambdaLocator
 {
 
-    public ResolvedLambda? Locate(IRequest request)
+    public ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
     {
         if (request.GetHost() is not CustomDomain domain)
         {
-            return null;
+            return ValueTask.FromResult<ResolvedLambda?>(null);
         }
 
-        return meta.Resolve(domain.LambdaId);
+        return meta.ResolveAsync(domain.LambdaId);
     }
 
     public IResponse Unavailable(IRequest request)

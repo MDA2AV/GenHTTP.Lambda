@@ -25,24 +25,24 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
     #region Owner
 
-    public ConnectivityInfo Get(string privateKey)
+    public async ValueTask<ConnectivityInfo> GetAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return Describe(LambdaGuard.Require(database, privateKey));
+        return Describe(await LambdaGuard.RequireAsync(database, privateKey, cancellation));
     }
 
-    public ConnectivityInfo Request(string privateKey, string? purpose)
+    public async ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, CancellationToken cancellation = default)
     {
         var said = VersionInput.Tidy(purpose?.Replace("\r\n", "\n"), ConnectivityRule.MaxPurpose)
                 ?? throw LambdaException.Invalid("Say what the lambda connects to and why - the addresses or services, and what for. The operator decides on that.");
 
         // refuses a demo and a blocked lambda, and notes where the change came from
-        var id = meta.RequireEditable(privateKey);
+        var id = await meta.RequireEditableAsync(privateKey, cancellation);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = database.Lambdas.FirstOrDefault(l => l.Id == id) ?? throw LambdaException.NotFound(Missing);
+        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.Id == id, cancellation) ?? throw LambdaException.NotFound(Missing);
 
         if (ConnectivityRule.Allows(limits.PolicyOf(lambda.Tier), lambda.Connectivity))
         {
@@ -61,20 +61,20 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         lambda.ConnectivityPurpose = said;
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
         logger.LogInformation("Requested connectivity for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
         return Describe(lambda);
     }
 
-    public ConnectivityInfo Withdraw(string privateKey)
+    public async ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, CancellationToken cancellation = default)
     {
-        var id = meta.RequireEditable(privateKey);
+        var id = await meta.RequireEditableAsync(privateKey, cancellation);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = database.Lambdas.FirstOrDefault(l => l.Id == id) ?? throw LambdaException.NotFound(Missing);
+        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.Id == id, cancellation) ?? throw LambdaException.NotFound(Missing);
 
         if (lambda.Connectivity is ConnectivityStatus.Requested or ConnectivityStatus.Allowed)
         {
@@ -85,7 +85,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
             lambda.ConnectivityPurpose = null;
             lambda.ConnectivityNote = null;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             logger.LogInformation(previous == ConnectivityStatus.Allowed ? "Gave up connectivity of lambda {Lambda} #{LambdaId}" : "Withdrew connectivity request of lambda {Lambda} #{LambdaId}",
                                   lambda.PublicKey, lambda.Id);
@@ -98,11 +98,11 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
     #region Operator
 
-    public ConnectivityInfo Decide(string privateKey, bool allow, string? note)
+    public async ValueTask<ConnectivityInfo> DecideAsync(string privateKey, bool allow, string? note, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = LambdaGuard.Require(database, privateKey);
+        var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
 
         var policy = limits.PolicyOf(lambda.Tier);
 
@@ -135,7 +135,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
             lambda.ConnectivityNote = said;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             logger.LogInformation(allow ? "Allowed connectivity for lambda {Lambda} #{LambdaId}" : "Declined connectivity for lambda {Lambda} #{LambdaId}",
                                   lambda.PublicKey, lambda.Id);
@@ -144,21 +144,21 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
         return Describe(lambda);
     }
 
-    public IReadOnlyList<ConnectivityListing> List()
+    public async ValueTask<IReadOnlyList<ConnectivityListing>> ListAsync(CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambdas = database.Lambdas.AsNoTracking()
-                              .Where(l => l.Connectivity == ConnectivityStatus.Requested || l.Connectivity == ConnectivityStatus.Allowed)
-                              .ToList();
+        var lambdas = await database.Lambdas.AsNoTracking()
+                                    .Where(l => l.Connectivity == ConnectivityStatus.Requested || l.Connectivity == ConnectivityStatus.Allowed)
+                                    .ToListAsync(cancellation);
 
         var ids = lambdas.Select(l => l.Id).ToList();
 
-        var latest = database.Deployments.AsNoTracking()
-                             .Where(d => ids.Contains(d.LambdaId))
-                             .GroupBy(d => d.LambdaId)
-                             .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
-                             .ToDictionary(g => g.LambdaId, g => (int?)g.Version);
+        var latest = await database.Deployments.AsNoTracking()
+                                   .Where(d => ids.Contains(d.LambdaId))
+                                   .GroupBy(d => d.LambdaId)
+                                   .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
+                                   .ToDictionaryAsync(g => g.LambdaId, g => (int?)g.Version, cancellation);
 
         // the ones waiting first, the longest waiting at the top; then what
         // was allowed, the newest first, to be looked at again

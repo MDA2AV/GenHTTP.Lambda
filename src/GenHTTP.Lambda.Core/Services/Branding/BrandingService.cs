@@ -79,11 +79,11 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
         BrandingPictureEntity? logo;
 
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            name = database.Settings.AsNoTracking().Where(s => s.Key == NameKey).Select(s => s.Value).FirstOrDefault();
+            name = await database.Settings.AsNoTracking().Where(s => s.Key == NameKey).Select(s => s.Value).FirstOrDefaultAsync(cancellation);
 
-            logo = database.BrandingPictures.AsNoTracking().FirstOrDefault(p => p.Purpose == LogoPurpose);
+            logo = await database.BrandingPictures.AsNoTracking().FirstOrDefaultAsync(p => p.Purpose == LogoPurpose, cancellation);
         }
 
         // the row's own bytes where the logo was not moved out of it yet
@@ -112,9 +112,9 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
         {
             var current = Current;
 
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync(cancellation);
 
-            var existing = database.Settings.Find(NameKey);
+            var existing = await database.Settings.FindAsync([NameKey], cancellation);
 
             if (given == null)
             {
@@ -132,7 +132,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
                 existing.Value = given;
             }
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             return (_current = Brand.Of(given, current.Logo), current.Given);
         }
@@ -161,9 +161,10 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
             await files.WriteAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), logo.Content, cancellation);
 
-            using var database = databases.CreateDbContext();
+            // the logo is written, so what says what it is is written as well, whoever cancels
+            await using var database = await databases.CreateDbContextAsync(CancellationToken.None);
 
-            if (database.BrandingPictures.Find(LogoPurpose) is { } existing)
+            if (await database.BrandingPictures.FindAsync([LogoPurpose], CancellationToken.None) is { } existing)
             {
                 existing.Type = logo.Type;
                 existing.Content = [];
@@ -174,7 +175,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
                 database.BrandingPictures.Add(new BrandingPictureEntity { Purpose = LogoPurpose, Type = logo.Type, Updated = logo.Updated });
             }
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(CancellationToken.None);
 
             return _current = Brand.Of(current.Given, logo);
         }
@@ -197,12 +198,12 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
         {
             var current = Current;
 
-            using (var database = databases.CreateDbContext())
+            await using (var database = await databases.CreateDbContextAsync(cancellation))
             {
-                if (database.BrandingPictures.Find(LogoPurpose) is { } existing)
+                if (await database.BrandingPictures.FindAsync([LogoPurpose], cancellation) is { } existing)
                 {
                     database.BrandingPictures.Remove(existing);
-                    database.SaveChanges();
+                    await database.SaveChangesAsync(cancellation);
                 }
             }
 
@@ -227,19 +228,19 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
         try
         {
-            using (var database = databases.CreateDbContext())
+            await using (var database = await databases.CreateDbContextAsync(cancellation))
             {
-                if (database.Settings.Find(NameKey) is { } name)
+                if (await database.Settings.FindAsync([NameKey], cancellation) is { } name)
                 {
                     database.Settings.Remove(name);
                 }
 
-                if (database.BrandingPictures.Find(LogoPurpose) is { } logo)
+                if (await database.BrandingPictures.FindAsync([LogoPurpose], cancellation) is { } logo)
                 {
                     database.BrandingPictures.Remove(logo);
                 }
 
-                database.SaveChanges();
+                await database.SaveChangesAsync(cancellation);
             }
 
             await files.DeleteAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), cancellation);

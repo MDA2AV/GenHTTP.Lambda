@@ -102,7 +102,7 @@ public sealed class CompilationTests
 
         // what the snippet returns is only known once it ran, so this is caught
         // when the lambda is deployed rather than when its code is checked
-        fixture.Meta.Save(lambda.PrivateKey, "return 42;");
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, "return 42;");
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -162,7 +162,7 @@ public sealed class CompilationTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        fixture.Meta.Save(lambda.PrivateKey, """
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, """
             Workspace.WriteText("note.txt", "kept");
 
             return Content.From(Resource.FromString(Workspace.ReadText("note.txt")));
@@ -304,7 +304,7 @@ public sealed class CompilationTests
 
         foreach (var lambda in new[] { first, second })
         {
-            fixture.Meta.Save(lambda.PrivateKey, Code);
+            await fixture.Meta.SaveAsync(lambda.PrivateKey, Code);
 
             var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 

@@ -22,9 +22,9 @@ public sealed record ShowcaseListing(IReadOnlyList<ShowcaseListingEntry> Entries
     /// <summary>
     /// The first page of the showcase.
     /// </summary>
-    public static ShowcaseListing First(IShowcaseService showcases, ILambdaAddresses addresses)
+    public static async ValueTask<ShowcaseListing> FirstAsync(IShowcaseService showcases, ILambdaAddresses addresses)
     {
-        var page = showcases.List(0, ShowcasePage.Size);
+        var page = await showcases.ListAsync(0, ShowcasePage.Size);
 
         var entries = page.Entries.Select(e => ShowcaseListingEntry.Of(e, addresses)).ToList();
 

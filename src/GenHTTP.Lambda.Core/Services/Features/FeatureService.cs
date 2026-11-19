@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -39,6 +40,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     private readonly ResolutionCache<string> _previews = new(changes);
 
     /// <summary>
+    /// What the previews are loaded with, made once rather than on every
+    /// request to one.
+    /// </summary>
+    private Func<string, ValueTask<ResolvedLambda?>>? _loadPreviewDelegate;
+
+    private Func<string, ValueTask<ResolvedLambda?>> _loadPreview => _loadPreviewDelegate ??= LoadPreviewAsync;
+
+    /// <summary>
     /// How long the name of a feature may be.
     /// </summary>
     public const int MaxName = 80;
@@ -51,20 +60,21 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// feature, and one landing while the preview is deployed would leave the
     /// preview serving something nobody saved. Striped, like the lambdas'.
     ///
-    /// Plain locks, held only while the change is read and written: never
-    /// across an await, so what compiles or copies does that first and takes
-    /// the turn to write down what it came to (see <see cref="DeployAsync"/>
-    /// and <see cref="MergeAsync"/>).
+    /// Held while the change is read and written, across the awaits of the
+    /// records, but not across what compiles or copies: that is done first,
+    /// and the turn is taken to write down what it came to (see
+    /// <see cref="DeployAsync"/> and <see cref="MergeAsync"/>). A merge takes
+    /// the lambda's turn inside the feature's, never the other way round.
     /// </remarks>
-    private readonly Lock[] _stripes = [.. Enumerable.Range(0, 64).Select(_ => new Lock())];
+    private readonly Turns _turns = new();
 
     /// <summary>
     /// Takes turns over copying the data of a feature, one copy at a time.
     /// </summary>
     /// <remarks>
-    /// Waited for asynchronously because it is held across the copy, which
-    /// leaves the reactor (see Offload); two copies into the same feature
-    /// would write over each other's staging.
+    /// Apart from the turn to change, which a save would otherwise wait for
+    /// across the copy - and that can be gigabytes; two copies into the same
+    /// feature would write over each other's staging.
     /// </remarks>
     private readonly SemaphoreSlim[] _copying = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
@@ -76,86 +86,86 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
     #region Reading
 
-    public IReadOnlyList<FeatureInfo> List(string privateKey)
+    public async ValueTask<IReadOnlyList<FeatureInfo>> ListAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireLambda(database, privateKey);
+        var lambda = await RequireLambdaAsync(database, privateKey, cancellation);
 
-        var newest = Newest(database, lambda.Id);
+        var newest = await NewestAsync(database, lambda.Id, cancellation);
 
-        var features = database.Features.AsNoTracking()
-                               .Where(f => f.LambdaId == lambda.Id)
-                               .OrderByDescending(f => f.Modified)
-                               .ToList();
+        var features = await database.Features.AsNoTracking()
+                                     .Where(f => f.LambdaId == lambda.Id)
+                                     .OrderByDescending(f => f.Modified)
+                                     .ToListAsync(cancellation);
 
         return [.. features.Select(f => Describe(f, newest))];
     }
 
-    public FeatureContent Get(string privateKey, string feature)
+    public async ValueTask<FeatureContent> GetAsync(string privateKey, string feature, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireLambda(database, privateKey);
+        var lambda = await RequireLambdaAsync(database, privateKey, cancellation);
 
-        var entity = RequireFeature(database, lambda.Id, feature);
+        var entity = await RequireFeatureAsync(database, lambda.Id, feature, cancellation);
 
         var code = storage.ReadFeature(lambda.Id, entity.Id)
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-        return new FeatureContent(Describe(entity, Newest(database, lambda.Id)), code);
+        return new FeatureContent(Describe(entity, await NewestAsync(database, lambda.Id, cancellation)), code);
     }
 
-    public (long LambdaId, long FeatureId) Require(string privateKey, string feature, bool editable)
+    public async ValueTask<(long LambdaId, long FeatureId)> RequireAsync(string privateKey, string feature, bool editable, CancellationToken cancellation = default)
     {
         var lambdaId = editable
-            ? meta.RequireEditable(privateKey)
-            : meta.GetId(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+            ? await meta.RequireEditableAsync(privateKey, cancellation)
+            : await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var entity = RequireFeature(database, lambdaId, feature);
+        var entity = await RequireFeatureAsync(database, lambdaId, feature, cancellation);
 
         return (lambdaId, entity.Id);
     }
 
-    public string? GetName(string privateKey, string feature)
+    public async ValueTask<string?> GetNameAsync(string privateKey, string feature, CancellationToken cancellation = default)
     {
         var key = feature.Trim().ToLowerInvariant();
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.Features.AsNoTracking()
-                       .Where(f => f.Key == key && f.Lambda!.PrivateKey == privateKey)
-                       .Select(f => f.Name)
-                       .FirstOrDefault();
+        return await database.Features.AsNoTracking()
+                             .Where(f => f.Key == key && f.Lambda!.PrivateKey == privateKey)
+                             .Select(f => f.Name)
+                             .FirstOrDefaultAsync(cancellation);
     }
 
-    public ResolvedLambda? ResolvePreview(string key)
+    public ValueTask<ResolvedLambda?> ResolvePreviewAsync(string key)
     {
         // anything that is not one of our keys is answered without asking
         // the database or taking room in the cache, since every request to
         // /features/ is asked about
         if (!IsKey(key))
         {
-            return null;
+            return ValueTask.FromResult<ResolvedLambda?>(null);
         }
 
-        return _previews.Resolve(key, LoadPreview);
+        return _previews.ResolveAsync(key, _loadPreview);
     }
 
     /// <summary>
-    /// Reads the preview of a feature, synchronously like the lambdas it
-    /// stands beside (see <see cref="MetaService.Resolve(string)"/>).
+    /// Reads the preview of a feature, like the lambdas it stands beside
+    /// (see <see cref="MetaService.ResolveAsync(string)"/>).
     /// </summary>
-    private ResolvedLambda? LoadPreview(string key)
+    private async ValueTask<ResolvedLambda?> LoadPreviewAsync(string key)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync();
 
-        var found = database.Features.AsNoTracking()
-                            .Where(f => f.Key == key && f.Previewed != null)
-                            .Join(database.Lambdas, f => f.LambdaId, l => l.Id, (f, l) => new { Feature = f, Lambda = l })
-                            .FirstOrDefault();
+        var found = await database.Features.AsNoTracking()
+                                  .Where(f => f.Key == key && f.Previewed != null)
+                                  .Join(database.Lambdas, f => f.LambdaId, l => l.Id, (f, l) => new { Feature = f, Lambda = l })
+                                  .FirstOrDefaultAsync();
 
         // blocking takes the previews offline; this is for one that was put
         // online at the very moment the lambda was blocked
@@ -164,7 +174,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             return null;
         }
 
-        var workspace = DataSwitches.IsEnabled(database, found.Lambda.Id, DataKinds.Workspace);
+        var workspace = await DataSwitches.IsEnabledAsync(database, found.Lambda.Id, DataKinds.Workspace);
 
         // built as the lambda is, so a preview may connect where the lambda
         // may - and is not built again on its first request for being told
@@ -181,36 +191,36 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
     public async ValueTask<FeatureInfo> CreateAsync(string privateKey, FeatureDraft draft, CancellationToken cancellation = default)
     {
-        var lambdaId = meta.RequireEditable(privateKey);
+        var lambdaId = await meta.RequireEditableAsync(privateKey, cancellation);
 
         var name = Name(draft.Name);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = database.Lambdas.First(l => l.Id == lambdaId);
+        var lambda = await database.Lambdas.FirstAsync(l => l.Id == lambdaId, cancellation);
 
         var allowed = limits.Get().Features;
 
-        if (database.Features.Count(f => f.LambdaId == lambdaId) >= allowed)
+        if (await database.Features.CountAsync(f => f.LambdaId == lambdaId, cancellation) >= allowed)
         {
             throw LambdaException.Conflict($"A lambda may have {allowed} features open at once. Merge or delete one first.");
         }
 
-        var newest = Newest(database, lambdaId)
+        var newest = await NewestAsync(database, lambdaId, cancellation)
                   ?? throw LambdaException.Invalid("There is no version yet to start a feature from. Save one first.");
 
         var from = draft.Base ?? newest;
 
         var code = storage.Read(lambdaId, from);
 
-        if (code == null || !database.Deployments.Any(d => d.LambdaId == lambdaId && d.Version == from))
+        if (code == null || !await database.Deployments.AnyAsync(d => d.LambdaId == lambdaId && d.Version == from, cancellation))
         {
             throw LambdaException.NotFound($"Version {from} does not exist. The newest is version {newest}.");
         }
 
         var now = DateTime.UtcNow;
 
-        var taken = database.Features.Where(f => f.LambdaId == lambdaId).Select(f => f.Branch).ToList();
+        var taken = await database.Features.Where(f => f.LambdaId == lambdaId).Select(f => f.Branch).ToListAsync(cancellation);
 
         var entity = new FeatureEntity
         {
@@ -233,14 +243,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         try
         {
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
         }
         catch (DbUpdateException) when (draft.Branch == null)
         {
             // another feature took the same branch in the meantime: the next free one
-            entity.Branch = FeatureBranches.For(name, [.. database.Features.AsNoTracking().Where(f => f.LambdaId == lambdaId).Select(f => f.Branch)]);
+            entity.Branch = FeatureBranches.For(name, await database.Features.AsNoTracking().Where(f => f.LambdaId == lambdaId).Select(f => f.Branch).ToListAsync(cancellation));
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
         }
         catch (DbUpdateException)
         {
@@ -251,17 +261,18 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         {
             storage.WriteFeature(lambdaId, entity.Id, code);
 
-            await CopyDataAsync(lambdaId, entity.Id, WorkspaceEnabled(database, lambdaId), cancellation);
+            await CopyDataAsync(lambdaId, entity.Id, await WorkspaceEnabledAsync(database, lambdaId, cancellation), cancellation);
         }
         catch
         {
+            // what was begun is taken back whoever cancelled it
             await RemoveDataAsync(lambdaId, entity.Id);
 
             storage.DeleteFeature(lambdaId, entity.Id);
 
             database.Features.Remove(entity);
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(CancellationToken.None);
 
             throw;
         }
@@ -271,11 +282,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return Describe(entity, newest);
     }
 
-    public FeatureInfo Update(string privateKey, string feature, FeatureUpdate update)
+    public async ValueTask<FeatureInfo> UpdateAsync(string privateKey, string feature, FeatureUpdate update, CancellationToken cancellation = default)
     {
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
@@ -295,11 +306,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             entity.Change = VersionInput.Tidy(update.Change, VersionNote.MaxChange);
         }
 
-        var newest = Newest(database, lambda.Id);
+        var newest = await NewestAsync(database, lambda.Id, cancellation);
 
         if (update.Base is { } moved && moved != entity.BaseVersion)
         {
-            if (!database.Deployments.Any(d => d.LambdaId == lambda.Id && d.Version == moved))
+            if (!await database.Deployments.AnyAsync(d => d.LambdaId == lambda.Id && d.Version == moved, cancellation))
             {
                 throw LambdaException.NotFound($"Version {moved} does not exist. The newest is version {newest}.");
             }
@@ -312,18 +323,19 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         entity.Modified = DateTime.UtcNow;
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
         return Describe(entity, newest);
     }
 
-    public FeatureInfo Save(string privateKey, string feature, string code, VersionNote? note = null, int? after = null)
+    public async ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, string code, VersionNote? note = null, int? after = null,
+                                                  CancellationToken cancellation = default)
     {
         var files = VersionInput.Validate(code);
 
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
@@ -350,14 +362,15 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         entity.Modified = now;
         lambda.Modified = now;
 
-        database.SaveChanges();
+        // the files are written, so what says which revision they are is too
+        await database.SaveChangesAsync(CancellationToken.None);
 
-        return Describe(entity, Newest(database, lambda.Id));
+        return Describe(entity, await NewestAsync(database, lambda.Id, CancellationToken.None));
     }
 
     /// <remarks>
-    /// Compiled outside the feature's turn, which is a lock and is not held
-    /// across the seconds that takes (see <see cref="_stripes"/>): the build
+    /// Compiled outside the feature's turn, which a save would otherwise wait
+    /// for across the seconds that takes (see <see cref="_turns"/>): the build
     /// is numbered in the turn, compiled, and written down in the turn again -
     /// unless a deployment started later finished first, which is then what
     /// stays online.
@@ -373,9 +386,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         BuildSettings settings;
 
         {
-            var (database, lambda, entity, turn) = Locked(privateKey, feature);
+            var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-            using var context = database;
+            await using var context = database;
 
             using var held = turn;
 
@@ -383,7 +396,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
             // built as the lambda is, so a preview may connect where the lambda may
-            settings = new BuildSettings(WorkspaceEnabled(database, lambda.Id),
+            settings = new BuildSettings(await WorkspaceEnabledAsync(database, lambda.Id, cancellation),
                                          ConnectivityRule.Allows(limits.PolicyOf(lambda.Tier), lambda.Connectivity));
 
             // handed out here, so one started meanwhile is given the next
@@ -406,7 +419,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         try
         {
-            return Previewed(privateKey, feature, stamp, revision, code, outcome);
+            return await PreviewedAsync(privateKey, feature, stamp, revision, code, outcome);
         }
         catch (LambdaException)
         {
@@ -419,11 +432,16 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// <summary>
     /// Writes down what a deployment of the preview came to, in the feature's turn.
     /// </summary>
-    private FeatureDeployment Previewed(string privateKey, string feature, int stamp, int revision, string code, CompilationOutcome outcome)
+    /// <remarks>
+    /// Without a cancellation token: what was built is written down once it
+    /// was, or the next deployment would take its stamp for the build already
+    /// there.
+    /// </remarks>
+    private async ValueTask<FeatureDeployment> PreviewedAsync(string privateKey, string feature, int stamp, int revision, string code, CompilationOutcome outcome)
     {
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
@@ -443,7 +461,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 entity.Modified = now;
                 lambda.Modified = now;
 
-                database.SaveChanges();
+                await database.SaveChangesAsync();
             }
             catch
             {
@@ -454,14 +472,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             }
         }
 
-        return new FeatureDeployment(outcome.Success, Describe(entity, Newest(database, lambda.Id)), outcome.Diagnostics);
+        return new FeatureDeployment(outcome.Success, Describe(entity, await NewestAsync(database, lambda.Id)), outcome.Diagnostics);
     }
 
-    public FeatureInfo Undeploy(string privateKey, string feature)
+    public async ValueTask<FeatureInfo> UndeployAsync(string privateKey, string feature, CancellationToken cancellation = default)
     {
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
@@ -470,12 +488,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             entity.Previewed = null;
             entity.Modified = DateTime.UtcNow;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             deployments.EvictPreview(lambda.Id, entity.Id);
         }
 
-        return Describe(entity, Newest(database, lambda.Id));
+        return Describe(entity, await NewestAsync(database, lambda.Id, CancellationToken.None));
     }
 
     public async ValueTask<FeatureInfo> RefreshDataAsync(string privateKey, string feature, CancellationToken cancellation = default)
@@ -485,21 +503,22 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         bool workspace;
 
         {
-            var (database, lambda, entity, turn) = Locked(privateKey, feature);
+            var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-            using var context = database;
+            await using var context = database;
 
             using var held = turn;
 
-            (lambdaId, featureId, workspace) = (lambda.Id, entity.Id, WorkspaceEnabled(database, lambda.Id));
+            (lambdaId, featureId, workspace) = (lambda.Id, entity.Id, await WorkspaceEnabledAsync(database, lambda.Id, cancellation));
         }
 
         await CopyDataAsync(lambdaId, featureId, workspace, cancellation);
 
         {
-            var (database, lambda, entity, turn) = Locked(privateKey, feature);
+            // the copy is made: what follows is seen through whoever cancels
+            var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
 
-            using var context = database;
+            await using var context = database;
 
             using var held = turn;
 
@@ -510,9 +529,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
             entity.Modified = DateTime.UtcNow;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync();
 
-            return Describe(entity, Newest(database, lambda.Id));
+            return Describe(entity, await NewestAsync(database, lambda.Id));
         }
     }
 
@@ -537,7 +556,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// <remarks>
     /// The workspace and the database can be gigabytes, so they are copied
     /// away from the reactor and in the feature's turn to be copied (see
-    /// <see cref="_copying"/>) - not in its turn to change, which is a lock.
+    /// <see cref="_copying"/>) - not in its turn to change, which a save
+    /// would wait for meanwhile.
     /// </remarks>
     private async ValueTask CopyDataAsync(long lambdaId, long featureId, bool workspace, CancellationToken cancellation)
     {
@@ -570,10 +590,10 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     #region Finishing it
 
     /// <remarks>
-    /// Checked outside the feature's turn, which is a lock and is not held
-    /// across the compiler (see <see cref="_stripes"/>), and merged in it
-    /// once the check passed - refused if the feature was saved meanwhile,
-    /// since what was checked would then not be what is merged.
+    /// Checked outside the feature's turn, which is not held across the
+    /// compiler (see <see cref="_turns"/>), and merged in it once the check
+    /// passed - refused if the feature was saved meanwhile, since what was
+    /// checked would then not be what is merged.
     /// </remarks>
     public async ValueTask<FeatureMerge> MergeAsync(string privateKey, string feature, VersionNote? note = null, bool deploy = false,
                                                     CancellationToken cancellation = default)
@@ -585,13 +605,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         int revision;
 
         {
-            var (database, lambda, entity, turn) = Locked(privateKey, feature);
+            var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-            using var context = database;
+            await using var context = database;
 
             using var held = turn;
 
-            var newest = Newest(database, lambda.Id);
+            var newest = await NewestAsync(database, lambda.Id, cancellation);
 
             if (newest != entity.BaseVersion)
             {
@@ -620,7 +640,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             return new FeatureMerge(name, false, null, check.Diagnostics, null);
         }
 
-        var (version, lambdaId, featureId, origin) = Merged(privateKey, feature, note, code, revision);
+        var (version, lambdaId, featureId, origin) = await MergedAsync(privateKey, feature, note, code, revision);
 
         // the version is there from here on: what follows is seen through
         // however the caller fares, or a feature would stay behind that was merged
@@ -650,11 +670,16 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Makes the feature the next version, in its turn - its data is
     /// removed once the turn is over.
     /// </summary>
-    private (LambdaVersionInfo Version, long LambdaId, long FeatureId, string Origin) Merged(string privateKey, string feature, VersionNote? note, string code, int revision)
+    /// <remarks>
+    /// Without a cancellation token: a version made of the feature and a
+    /// feature left behind would be merged twice.
+    /// </remarks>
+    private async ValueTask<(LambdaVersionInfo Version, long LambdaId, long FeatureId, string Origin)> MergedAsync(string privateKey, string feature, VersionNote? note,
+                                                                                                                  string code, int revision)
     {
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
@@ -671,9 +696,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // refused if a version was saved since the feature was based on its
         // newest, by the same turn every save of the lambda takes
-        var version = meta.Save(privateKey, code, merged, after: entity.BaseVersion);
+        var version = await meta.SaveAsync(privateKey, code, merged, after: entity.BaseVersion);
 
-        Forget(database, lambda.Id, entity);
+        await ForgetAsync(database, lambda.Id, entity);
 
         logger.LogInformation("Merged feature #{FeatureId} of lambda #{LambdaId} as version {Version}", entity.Id, lambda.Id, version.Version);
 
@@ -682,7 +707,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
     public async ValueTask<string> DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId, name) = Deleted(privateKey, feature);
+        var (lambdaId, featureId, name) = await DeletedAsync(privateKey, feature, cancellation);
 
         // seen through however the caller fares, once the feature is gone
         await RemoveAsync(lambdaId, featureId);
@@ -696,22 +721,22 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Deletes the feature, in its turn - its data is removed once the turn
     /// is over.
     /// </summary>
-    private (long LambdaId, long FeatureId, string Name) Deleted(string privateKey, string feature)
+    private async ValueTask<(long LambdaId, long FeatureId, string Name)> DeletedAsync(string privateKey, string feature, CancellationToken cancellation)
     {
-        var (database, lambda, entity, turn) = Locked(privateKey, feature);
+        var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
-        using var context = database;
+        await using var context = database;
 
         using var held = turn;
 
-        Forget(database, lambda.Id, entity);
+        await ForgetAsync(database, lambda.Id, entity);
 
         return (lambda.Id, entity.Id, entity.Name);
     }
 
-    public int RunMaintenance(DateTime now)
+    public async ValueTask<int> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         var quiet = now - limits.Get().OfflineAfter;
 
@@ -721,11 +746,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // before the lambda moved into it
         var expiring = limits.TiersWhere(p => p.ExpiresWhenUnused);
 
-        var stale = database.Features.AsNoTracking()
-                            .Where(f => f.Previewed != null && f.Modified < quiet && expiring.Contains(f.Lambda!.Tier)
-                                        && (f.Lambda.TierChanged == null || f.Lambda.TierChanged < quiet))
-                            .Select(f => new { f.Id, f.LambdaId })
-                            .ToList();
+        var stale = await database.Features.AsNoTracking()
+                                  .Where(f => f.Previewed != null && f.Modified < quiet && expiring.Contains(f.Lambda!.Tier)
+                                              && (f.Lambda.TierChanged == null || f.Lambda.TierChanged < quiet))
+                                  .Select(f => new { f.Id, f.LambdaId })
+                                  .ToListAsync(cancellation);
 
         if (stale.Count == 0)
         {
@@ -736,14 +761,15 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // asked again as it is written, so a preview deployed a moment ago -
         // which made it no longer stale - is left online
-        var taken = database.Features
-                            .Where(f => ids.Contains(f.Id) && f.Previewed != null && f.Modified < quiet)
-                            .ExecuteUpdate(u => u.SetProperty(f => f.Previewed, (DateTime?)null));
+        var taken = await database.Features
+                                  .Where(f => ids.Contains(f.Id) && f.Previewed != null && f.Modified < quiet)
+                                  .ExecuteUpdateAsync(u => u.SetProperty(f => f.Previewed, (DateTime?)null), cancellation);
 
-        // offline in the database first, so no request builds one again
+        // offline in the database first, so no request builds one again - and
+        // let go of whoever cancels, now that it is
         foreach (var feature in stale)
         {
-            if (!database.Features.Any(f => f.Id == feature.Id && f.Previewed != null))
+            if (!await database.Features.AnyAsync(f => f.Id == feature.Id && f.Previewed != null, CancellationToken.None))
             {
                 deployments.EvictPreview(feature.LambdaId, feature.Id);
             }
@@ -761,9 +787,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // a row is written before its folder and removed before it, so a
         // folder without a row is one left behind - by a request that was
         // still writing to the copy of the data when its feature went
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            known = [.. database.Features.AsNoTracking().Select(f => f.Id)];
+            known = await database.Features.AsNoTracking().Select(f => f.Id).ToHashSetAsync(cancellation);
         }
 
         var swept = 0;
@@ -868,11 +894,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Removes the row of a feature, in its turn, so no request finds its
     /// preview from then on.
     /// </summary>
-    private void Forget(LambdaDbContext database, long lambdaId, FeatureEntity feature)
+    private async ValueTask ForgetAsync(LambdaDbContext database, long lambdaId, FeatureEntity feature)
     {
         database.Features.Remove(feature);
 
-        database.SaveChanges();
+        await database.SaveChangesAsync();
 
         deployments.EvictPreview(lambdaId, feature.Id);
     }
@@ -882,8 +908,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// wherever the integrations keep it, and its files.
     /// </summary>
     /// <remarks>
-    /// After its turn, which is a lock and is not held across what an
-    /// integration awaits. A copy of its data that its turn left behind -
+    /// After its turn, which a save would otherwise wait for across what the
+    /// integrations take to remove. A copy of its data that its turn left behind -
     /// one being written by a request that found the preview a moment
     /// before - is what the sweep removes. The handler is let go twice,
     /// because such a request may still be building it, and would otherwise
@@ -901,34 +927,36 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// <summary>
     /// The lambda and the feature, read once it is the feature's turn to change.
     /// </summary>
+    /// <param name="cancellation">Stops it before the turn is taken; the turn itself is waited for whoever cancels</param>
     /// <returns>
     /// The context both were read with and are to be written through, the
     /// lambda, the feature, and the turn - to be disposed of once the change
     /// is written
     /// </returns>
-    private (LambdaDbContext Database, LambdaEntity Lambda, FeatureEntity Feature, IDisposable Turn) Locked(string privateKey, string feature)
+    private async ValueTask<(LambdaDbContext Database, LambdaEntity Lambda, FeatureEntity Feature, IDisposable Turn)> LockedAsync(string privateKey, string feature,
+                                                                                                                                 CancellationToken cancellation = default)
     {
         // refuses a demo, whose key is announced and which nobody may change
-        var lambdaId = meta.RequireEditable(privateKey);
+        var lambdaId = await meta.RequireEditableAsync(privateKey, cancellation);
 
-        var database = databases.CreateDbContext();
+        var database = await databases.CreateDbContextAsync(cancellation);
 
         try
         {
-            var id = RequireFeature(database, lambdaId, feature).Id;
+            var id = (await RequireFeatureAsync(database, lambdaId, feature, cancellation)).Id;
 
             // looked up again once it is its turn, so what the change decides
             // on is what the change before it left behind
             database.ChangeTracker.Clear();
 
-            var turn = new Turn(_stripes[(int)((ulong)id % (ulong)_stripes.Length)]);
+            var turn = await _turns.TakeAsync(id);
 
             try
             {
-                var entity = database.Features.FirstOrDefault(f => f.Id == id)
+                var entity = await database.Features.FirstOrDefaultAsync(f => f.Id == id, cancellation)
                           ?? throw LambdaException.NotFound("This feature does not exist (or has been merged or deleted).");
 
-                var lambda = database.Lambdas.First(l => l.Id == lambdaId);
+                var lambda = await database.Lambdas.FirstAsync(l => l.Id == lambdaId, cancellation);
 
                 return (database, lambda, entity, turn);
             }
@@ -940,52 +968,28 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         }
         catch
         {
-            database.Dispose();
+            await database.DisposeAsync();
             throw;
         }
     }
 
-    /// <summary>
-    /// A stripe taken, given back once.
-    /// </summary>
-    private sealed class Turn : IDisposable
-    {
-        private readonly Lock _stripe;
-
-        private int _released;
-
-        public Turn(Lock stripe)
-        {
-            _stripe = stripe;
-            _stripe.Enter();
-        }
-
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _released, 1) == 0)
-            {
-                _stripe.Exit();
-            }
-        }
-    }
-
-    private static LambdaEntity RequireLambda(LambdaDbContext database, string privateKey)
-        => database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+    private static async ValueTask<LambdaEntity> RequireLambdaAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+        => await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-    private static FeatureEntity RequireFeature(LambdaDbContext database, long lambdaId, string feature)
+    private static async ValueTask<FeatureEntity> RequireFeatureAsync(LambdaDbContext database, long lambdaId, string feature, CancellationToken cancellation)
     {
         var key = feature.Trim().ToLowerInvariant();
 
-        return database.Features.AsNoTracking().FirstOrDefault(f => f.LambdaId == lambdaId && f.Key == key)
+        return await database.Features.AsNoTracking().FirstOrDefaultAsync(f => f.LambdaId == lambdaId && f.Key == key, cancellation)
             ?? throw LambdaException.NotFound($"This lambda has no feature '{feature}' (it may have been merged or deleted). read_lambda lists the ones it has.");
     }
 
-    private static int? Newest(LambdaDbContext database, long lambdaId)
-        => database.Deployments.Where(d => d.LambdaId == lambdaId).Max(d => (int?)d.Version);
+    private static async ValueTask<int?> NewestAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation = default)
+        => await database.Deployments.Where(d => d.LambdaId == lambdaId).MaxAsync(d => (int?)d.Version, cancellation);
 
-    private static bool WorkspaceEnabled(LambdaDbContext database, long lambdaId)
-        => DataSwitches.IsEnabled(database, lambdaId, DataKinds.Workspace);
+    private static ValueTask<bool> WorkspaceEnabledAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)
+        => DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Workspace, cancellation);
 
     #endregion
 

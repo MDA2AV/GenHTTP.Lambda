@@ -16,7 +16,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// as nothing was (see <see cref="DatabaseChanges"/>) and read again on the
 /// first request after. Requests run on the threads that do the engine's
 /// I/O, and three queries per request was most of what serving a small lambda
-/// cost.
+/// cost. What is remembered is answered with a task that has completed, so
+/// a request that finds it awaits nothing; only a load is awaited.
 ///
 /// That nothing answers to a key is kept as well: a scanner trying keys is
 /// otherwise a query per guess. Bounded, because the keys come from whoever
@@ -35,7 +36,7 @@ internal sealed class ResolutionCache<TKey>(DatabaseChanges changes) where TKey 
     /// What answers to the key: as remembered, or as loaded now if anything
     /// was written since it was remembered.
     /// </summary>
-    public ResolvedLambda? Resolve(TKey key, Func<TKey, ResolvedLambda?> load)
+    public ValueTask<ResolvedLambda?> ResolveAsync(TKey key, Func<TKey, ValueTask<ResolvedLambda?>> load)
     {
         // read before loading, so a write landing while it loads leaves the
         // entry stale rather than current
@@ -43,10 +44,15 @@ internal sealed class ResolutionCache<TKey>(DatabaseChanges changes) where TKey 
 
         if (_entries.TryGetValue(key, out var known) && known.Generation == generation)
         {
-            return known.Lambda;
+            return ValueTask.FromResult(known.Lambda);
         }
 
-        var loaded = load(key);
+        return LoadAsync(key, generation, load);
+    }
+
+    private async ValueTask<ResolvedLambda?> LoadAsync(TKey key, long generation, Func<TKey, ValueTask<ResolvedLambda?>> load)
+    {
+        var loaded = await load(key);
 
         if (_entries.Count >= MostEntries)
         {

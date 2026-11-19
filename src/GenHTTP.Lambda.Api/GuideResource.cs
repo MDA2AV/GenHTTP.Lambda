@@ -56,9 +56,9 @@ public sealed class GuideResource(IGuideService guide, ILogger<GuideResource> lo
                                          or second level, or a code block that is never closed. Nothing was changed.
                                          """, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The section, as kept")]
-    public GuideSectionResponse Change(GuideRequest body)
+    public async ValueTask<GuideSectionResponse> Change(GuideRequest body)
     {
-        var section = guide.Change(body.Title, body.Text);
+        var section = await guide.ChangeAsync(body.Title, body.Text);
 
         logger.LogInformation("Changed guide section '{Title}' bytes {Bytes} by operator", section.Title, section.Bytes);
 
@@ -69,9 +69,9 @@ public sealed class GuideResource(IGuideService guide, ILogger<GuideResource> lo
     [Summary("Removes the operator's section")]
     [Remarks("Agents read the platform's guide alone from their next call on. The title and the text are deleted. Nothing happens where there is no section.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
-    public void Remove()
+    public async ValueTask Remove()
     {
-        if (guide.Remove() is { } removed)
+        if (await guide.RemoveAsync() is { } removed)
         {
             logger.LogInformation("Removed guide section '{Title}' by operator", removed.Title);
         }

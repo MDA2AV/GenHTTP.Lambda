@@ -55,7 +55,7 @@ public sealed class CodeResource(IMetaService meta, IDatabaseProvider database)
     [return: Summary("Every name of the file, and what it means")]
     public async ValueTask<SemanticsResponse> Semantics([Summary(ApiDocumentation.PrivateKey)] string privateKey, CodeRequest request)
     {
-        meta.RequireId(privateKey);
+        await meta.RequireIdAsync(privateKey);
 
         // binding with Roslyn, asked while somebody types: tens to hundreds of
         // milliseconds that a reactor would not be serving anybody (see Offload)
@@ -71,7 +71,7 @@ public sealed class CodeResource(IMetaService meta, IDatabaseProvider database)
     [return: Summary("What could be written there")]
     public async ValueTask<CompletionsResponse> Completions([Summary(ApiDocumentation.PrivateKey)] string privateKey, CodeRequest request)
     {
-        meta.RequireId(privateKey);
+        await meta.RequireIdAsync(privateKey);
 
         var found = await Offload.Run(() => CompletionResolver.Resolve(Select(request), request.Line, request.Column, database.Binding));
 
@@ -90,7 +90,7 @@ public sealed class CodeResource(IMetaService meta, IDatabaseProvider database)
     [return: Summary("Where the name was declared, or no file where that is in none of them")]
     public async ValueTask<DefinitionResponse> Definition([Summary(ApiDocumentation.PrivateKey)] string privateKey, CodeRequest request)
     {
-        meta.RequireId(privateKey);
+        await meta.RequireIdAsync(privateKey);
 
         var files = request.Files ?? [];
 

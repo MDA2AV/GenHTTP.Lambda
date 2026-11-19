@@ -140,7 +140,7 @@ public sealed class PostgreSqlTests
         await NeutralNotes.ServedAsync(fixture, "/lambda/full/add?text=first");
 
         // a megabyte of what does not compress, in one connection opened while there was room
-        var id = fixture.Meta.GetId(lambda.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
 
         await database.QueryAsync($"""
             INSERT INTO lambda_{id}.notes (id, text, created)
@@ -183,7 +183,7 @@ public sealed class PostgreSqlTests
         Assert.AreEqual("milk,bread", await NeutralNotes.ServedAsync(fixture, "/lambda/notes/notes"));
         Assert.AreEqual("bread", await NeutralNotes.ServedAsync(fixture, "/lambda/notes/done"), "names folded to lower case, flags as booleans");
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
 
         Assert.AreEqual(2L, await database.QueryAsync($"SELECT COUNT(*) FROM lambda_{id}.notes"));
 
@@ -216,7 +216,7 @@ public sealed class PostgreSqlTests
 
         await NeutralNotes.ServedAsync(fixture, "/lambda/other/add?text=private");
 
-        var id = fixture.Meta.GetId(other.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(other.PrivateKey);
 
         var prying = await fixture.CreateLambdaAsync("prying");
 
@@ -292,7 +292,7 @@ public sealed class PostgreSqlTests
             Assert.IsTrue(deleted.IsSuccessStatusCode, await deleted.Content.ReadAsStringAsync());
         }
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
 
         Assert.AreEqual(0L, await database.QueryAsync($"SELECT COUNT(*) FROM pg_namespace WHERE nspname LIKE 'lambda\\_{id}\\_feature\\_%'"), "the copy goes with its draft");
     }
@@ -389,7 +389,7 @@ public sealed class PostgreSqlTests
 
         await NeutralNotes.SaveAsync(fixture, lambda.PrivateKey);
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey);
+        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
 
         Assert.AreEqual(1L, await database.QueryAsync($"SELECT COUNT(*) FROM pg_namespace WHERE nspname = 'lambda_{id}'"));
 
@@ -426,7 +426,7 @@ public sealed class PostgreSqlTests
 
         foreach (var demo in DemoCatalog.All)
         {
-            var lambda = fixture.Meta.Get(demo.Key);
+            var lambda = await fixture.Meta.GetAsync(demo.Key);
 
             Assert.IsNotNull(lambda?.ActiveVersion, $"{demo.Id} went online");
 

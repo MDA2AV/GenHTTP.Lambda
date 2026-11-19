@@ -31,13 +31,13 @@ internal sealed class LambdaSummaries(IMetaService meta, IWorkspaceService works
 
     public async ValueTask<LambdaSummaryResponse> OfAsync(string privateKey)
     {
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
-        var id = meta.RequireId(privateKey);
+        var id = await meta.RequireIdAsync(privateKey);
 
-        var versions = meta.GetVersions(privateKey);
+        var versions = await meta.GetVersionsAsync(privateKey);
 
-        var activations = meta.GetActivations(privateKey);
+        var activations = await meta.GetActivationsAsync(privateKey);
 
         var now = DateTime.UtcNow;
 

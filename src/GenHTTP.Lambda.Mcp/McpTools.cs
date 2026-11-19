@@ -115,10 +115,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("update_lambda", Title = "Change a lambda's settings", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Change how a lambda's editor opens: view 'Simple' shows the app, how it is doing and a box to ask for a change - for an owner who does not write code - and 'Full' every section, the code, files, data, versions and logs included. Only the default: whoever opens the editor can switch for themselves, and that choice stays theirs. Only do this when the user asks for it.")]
-    public object UpdateLambda(IRequest request,
-                               [Summary(PrivateKey)] string privateKey,
-                               [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView view)
-        => Refusing(() => Update(privateKey, view, RequestOrigin.Of(request)));
+    public ValueTask<object> UpdateLambda(IRequest request,
+                                          [Summary(PrivateKey)] string privateKey,
+                                          [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView view)
+        => RefusingAsync(() => UpdateAsync(privateKey, view, RequestOrigin.Of(request)));
 
     [Tool("write_code", Title = "Save all files", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Summary("Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. A version is its code and its resources. The code is every file not in resources/: its .cs files are compiled, in any folder, as in a C# project - lambda.cs returns the handler, the others hold types - and every other file is kept with it and never compiled or served: docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and whatever else - what a front end is built from, a tool's configuration - is laid out as you like (platform_guide, code). resources/ is what the lambda reads and serves while it runs, as Resources: the whole front end (pages, scripts, styles, icons) goes there, as part of the program - resources/web/index.html is served by Resources.App(\"web\"). What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on await Database.GetConnectionAsync(), awaited; its schema as Evolve migrations in resources/migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.")]
@@ -157,14 +157,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("update_feature", Title = "Change a feature's name, notes or base", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Rename a feature, change what it says about itself, or move its base. merge_feature refuses a feature that is not based on the newest version, since merging it would undo what was saved after it branched off: bring the newer versions' changes into the feature first, then move base to the newest version here. Nothing checks that the changes really are in - that is up to you.")]
-    public object UpdateFeature(IRequest request,
-                                [Summary(PrivateKey)] string privateKey,
-                                [Summary("The feature, from create_feature or read_lambda.")] string feature,
-                                [Summary("A new name."), MaxLength(FeatureService.MaxName)] string? name = null,
-                                [Summary("What the user wants from it and why.")] string? specification = null,
-                                [Summary("What it changes, in one line - what the version it is merged into will say.")] string? change = null,
-                                [Summary("The version the feature is now based on, once that version's changes are in its files.")] int? @base = null)
-        => Refusing(() => ChangeFeature(privateKey, feature, new FeatureUpdate(name, specification, change, @base), RequestOrigin.Of(request)));
+    public ValueTask<object> UpdateFeature(IRequest request,
+                                           [Summary(PrivateKey)] string privateKey,
+                                           [Summary("The feature, from create_feature or read_lambda.")] string feature,
+                                           [Summary("A new name."), MaxLength(FeatureService.MaxName)] string? name = null,
+                                           [Summary("What the user wants from it and why.")] string? specification = null,
+                                           [Summary("What it changes, in one line - what the version it is merged into will say.")] string? change = null,
+                                           [Summary("The version the feature is now based on, once that version's changes are in its files.")] int? @base = null)
+        => RefusingAsync(() => ChangeFeatureAsync(privateKey, feature, new FeatureUpdate(name, specification, change, @base), RequestOrigin.Of(request)));
 
     [Tool("merge_feature", Title = "Merge a feature into the lambda", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Summary("Make a feature's files the next version of the lambda, and delete the feature with its preview and its copy of the data - the lambda's own data is not touched. Its docs/ and tests/ become the version's documentation and tests, so bring them up to date in the feature first, and run its tests against the preview. Refused while the feature is not based on the newest version (update_feature says how to get it there), and while its code does not compile. deploy: true puts the new version online at once; otherwise deploy it when the user wants it live.")]
@@ -208,12 +208,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("read_logs", Title = "Read a lambda's logs", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. With feature, what that feature's preview has been doing instead, kept apart from the lambda's visitors. Call it after deploying to see that it works, and first when something is reported broken.")]
-    public object ReadLogs([Summary(PrivateKeyOrDemo)] string privateKey,
-                           [Summary("Read what this feature's preview did instead.")] string? feature = null,
-                           [Summary("The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures."), AllowedValues("debug", "info", "warn", "warning", "error")] string level = "info",
-                           [Summary("The cursor a previous call answered with, to read only what is new since then.")] long since = 0,
-                           [Summary("At most this many lines, the newest."), Range(1, 1000)] int limit = 100)
-        => Refusing(() => Logs(privateKey, feature, level, since, limit));
+    public ValueTask<object> ReadLogs([Summary(PrivateKeyOrDemo)] string privateKey,
+                                      [Summary("Read what this feature's preview did instead.")] string? feature = null,
+                                      [Summary("The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures."), AllowedValues("debug", "info", "warn", "warning", "error")] string level = "info",
+                                      [Summary("The cursor a previous call answered with, to read only what is new since then.")] long since = 0,
+                                      [Summary("At most this many lines, the newest."), Range(1, 1000)] int limit = 100)
+        => RefusingAsync(() => LogsAsync(privateKey, feature, level, since, limit));
 
     [Tool("upload_file", Title = "Put a file into the lambda's data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or merge touches. With feature, to that feature's copy of the data instead, for trying things out without touching the real one. For files the lambda works with at runtime (pictures people will browse) and large input files that are not program: a model, a dataset, media. Records belong in the database, where the code writes them. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version's resources (write_code).")]
@@ -245,10 +245,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("request_connectivity", Title = "Ask to connect to other servers", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a lambda whose tier connects by default (production, usually) may anyway, and read_lambda says connectivity.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
-    public object RequestConnectivity([Summary(PrivateKey)] string privateKey,
-                                [Summary("What it connects to and why, for the operator who decides: the addresses or services and what the lambda does with them - 'api.stripe.com, to take payments for the shop', not 'HTTP calls'. Needed to ask; left out, it returns where it stands."), MaxLength(ConnectivityRule.MaxPurpose)] string? purpose = null,
-                                [Summary("Take the request back, or give up what was allowed - code that connects then no longer compiles. Only when the user asks.")] bool withdraw = false)
-        => Refusing(() => Connectivity(privateKey, purpose, withdraw));
+    public ValueTask<object> RequestConnectivity([Summary(PrivateKey)] string privateKey,
+                                           [Summary("What it connects to and why, for the operator who decides: the addresses or services and what the lambda does with them - 'api.stripe.com, to take payments for the shop', not 'HTTP calls'. Needed to ask; left out, it returns where it stands."), MaxLength(ConnectivityRule.MaxPurpose)] string? purpose = null,
+                                           [Summary("Take the request back, or give up what was allowed - code that connects then no longer compiles. Only when the user asks.")] bool withdraw = false)
+        => RefusingAsync(() => ConnectivityAsync(privateKey, purpose, withdraw));
 
     [Tool("read_database", Title = "Read the lambda's database", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to 100 at a time. Read only: the lambda writes it, through Database.GetConnectionAsync(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.")]
@@ -294,12 +294,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("open_source", Title = "Publish a lambda's source code", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Publish a lambda's source code at /source/{publicKey} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, resources, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.")]
-    public object OpenSource(IRequest request,
-                             [Summary(PrivateKey)] string privateKey,
-                             [Summary(LicenseField)] string? license = null,
-                             [Summary("Who holds the copyright, as the license names them - the user's name or organization, only if they gave it. Left out, it stays as it is; empty, the license names 'the authors of' the lambda."), MaxLength(SourceLicenses.MaxAuthor)] string? author = null,
-                             [Summary("Take the source down instead. Its stars are kept for when it is published again.")] bool remove = false)
-        => Refusing(() => ChangeSource(privateKey, license, author, remove, RequestOrigin.Of(request)));
+    public ValueTask<object> OpenSource(IRequest request,
+                                        [Summary(PrivateKey)] string privateKey,
+                                        [Summary(LicenseField)] string? license = null,
+                                        [Summary("Who holds the copyright, as the license names them - the user's name or organization, only if they gave it. Left out, it stays as it is; empty, the license names 'the authors of' the lambda."), MaxLength(SourceLicenses.MaxAuthor)] string? author = null,
+                                        [Summary("Take the source down instead. Its stars are kept for when it is published again.")] bool remove = false)
+        => RefusingAsync(() => ChangeSourceAsync(privateKey, license, author, remove, RequestOrigin.Of(request)));
 
     [Tool("analytics", Title = "Read who visits a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which the lambda's tier decides how much is shown (platform_guide, analytics). Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.")]
@@ -341,19 +341,6 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// exception but its own <see cref="ProviderException"/>, logged as an
     /// error. Anything else is left to it: that is a fault, and logged as one.
     /// </remarks>
-    private static object Refusing(Func<object> tool)
-    {
-        try
-        {
-            return tool();
-        }
-        catch (LambdaException e)
-        {
-            return ToolResult.Error(e.Message);
-        }
-    }
-
-    /// <inheritdoc cref="Refusing"/>
     private static async ValueTask<object> RefusingAsync(Func<ValueTask<object>> tool)
     {
         try
@@ -446,9 +433,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         };
     }
 
-    private object Update(string privateKey, EditorView view, string origin)
+    private async ValueTask<object> UpdateAsync(string privateKey, EditorView view, string origin)
     {
-        var lambda = meta.ChangeView(privateKey, view);
+        var lambda = await meta.ChangeViewAsync(privateKey, view);
 
         logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
 
@@ -473,8 +460,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         // what it held before the save replaces it
         var had = save.Feature is { } feature
-            ? LambdaSource.Parse(features.Get(privateKey, feature).Code)
-            : meta.Require(privateKey).LatestVersion != null ? meta.LatestFiles(privateKey) : [];
+            ? LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code)
+            : (await meta.RequireAsync(privateKey)).LatestVersion != null ? await meta.LatestFilesAsync(privateKey) : [];
 
         var saved = Adding(await SaveAsync(privateKey, files, save, origin), "dropped", Dropped(had, files));
 
@@ -523,7 +510,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (save.Feature is { } feature)
         {
-            var content = features.Get(privateKey, feature);
+            var content = await features.GetAsync(privateKey, feature);
 
             current = LambdaSource.Parse(content.Code);
 
@@ -531,7 +518,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
         else
         {
-            current = meta.LatestFiles(privateKey);
+            current = await meta.LatestFilesAsync(privateKey);
         }
 
         var files = LambdaChanges.Apply(current, changed, remove, edits);
@@ -578,9 +565,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return await SaveFeatureAsync(save, privateKey, feature, code, files.Count, note, origin, read, documentation);
         }
 
-        var version = meta.Save(privateKey, code, note);
+        var version = await meta.SaveAsync(privateKey, code, note);
 
-        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", meta.PublicKeyOf(privateKey), version.Version, files.Count);
+        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", await meta.PublicKeyOfAsync(privateKey), version.Version, files.Count);
 
         // said only when it is missing, and as a request rather than a
         // refusal: the code matters more than the note about it
@@ -632,9 +619,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     private async ValueTask<object> SaveFeatureAsync(SaveRequest save, string privateKey, string feature, string code, int files, VersionNote note,
                                                      string origin, int? read, string? documentation)
     {
-        var saved = features.Save(privateKey, feature, code, note, read);
+        var saved = await features.SaveAsync(privateKey, feature, code, note, read);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, meta.PublicKeyOf(privateKey), files);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, await meta.PublicKeyOfAsync(privateKey), files);
 
         if (save.Deploy)
         {
@@ -678,7 +665,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
 
-        logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", meta.PublicKeyOf(privateKey), files.Count, outcome.Success);
+        logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", await meta.PublicKeyOfAsync(privateKey), files.Count, outcome.Success);
 
         return new
         {
@@ -696,7 +683,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var created = await features.CreateAsync(privateKey, new FeatureDraft(name, specification, @base, VersionOrigins.Agent));
 
-        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
+        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
         return new
         {
@@ -706,11 +693,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         };
     }
 
-    private object ChangeFeature(string privateKey, string feature, FeatureUpdate update, string origin)
+    private async ValueTask<object> ChangeFeatureAsync(string privateKey, string feature, FeatureUpdate update, string origin)
     {
-        var updated = features.Update(privateKey, feature, update);
+        var updated = await features.UpdateAsync(privateKey, feature, update);
 
-        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
+        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, await meta.PublicKeyOfAsync(privateKey), updated.Base);
 
         return new
         {
@@ -728,7 +715,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var merged = await features.MergeAsync(privateKey, feature, note, deploy);
 
-        var publicKey = meta.PublicKeyOf(privateKey);
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         if (merged.Merged)
         {
@@ -769,7 +756,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (!deployment.Success)
         {
-            var current = meta.Get(privateKey);
+            var current = await meta.GetAsync(privateKey);
 
             return Failed(new
             {
@@ -802,7 +789,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var name = await features.DeleteAsync(privateKey, feature);
 
-        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, await meta.PublicKeyOfAsync(privateKey));
 
         return new { ok = true, deleted = feature.Trim().ToLowerInvariant() };
     }
@@ -901,7 +888,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </remarks>
     private async ValueTask<object> UploadAsync(string privateKey, string path, string content, string? named, string? encoding)
     {
-        var (id, feature) = WorkspaceOf(privateKey, named, true);
+        var (id, feature) = await WorkspaceOfAsync(privateKey, named, true);
 
         WorkspaceEntry written;
 
@@ -919,11 +906,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         if (named != null)
         {
             logger.LogInformation("Wrote workspace file {Path} of feature '{Feature}' of lambda {Lambda} size {Size}", written.Path,
-                                  features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey), written.Size);
+                                  await features.NameOfAsync(privateKey, named), await meta.PublicKeyOfAsync(privateKey), written.Size);
         }
         else
         {
-            logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, meta.PublicKeyOf(privateKey), written.Size);
+            logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, await meta.PublicKeyOfAsync(privateKey), written.Size);
         }
 
         return new
@@ -939,17 +926,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> FilesAsync(string privateKey, string? named)
     {
-        var (id, feature) = WorkspaceOf(privateKey, named, false);
+        var (id, feature) = await WorkspaceOfAsync(privateKey, named, false);
 
         var listing = await workspace.ListAsync(id, feature);
 
         if (named != null)
         {
-            logger.LogInformation("Listed workspace of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Listed workspace of feature '{Feature}' of lambda {Lambda}", await features.NameOfAsync(privateKey, named), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Listed workspace of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Listed workspace of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new
@@ -969,7 +956,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var store = await data.EnableAsync(privateKey, kind);
 
-        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, await meta.PublicKeyOfAsync(privateKey));
 
         return new
         {
@@ -993,28 +980,28 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// else's and takes a while: the agent is to tell its user and carry on,
     /// not to wait or ask again.
     /// </remarks>
-    private object Connectivity(string privateKey, string? purpose, bool withdraw)
+    private async ValueTask<object> ConnectivityAsync(string privateKey, string? purpose, bool withdraw)
     {
         ConnectivityInfo info;
 
         if (withdraw)
         {
-            info = connectivity.Withdraw(privateKey);
+            info = await connectivity.WithdrawAsync(privateKey);
 
-            logger.LogInformation("Withdrew connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Withdrew connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
         else if (purpose != null)
         {
-            info = connectivity.Request(privateKey, purpose);
+            info = await connectivity.RequestAsync(privateKey, purpose);
 
-            logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey),
+            logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", await meta.PublicKeyOfAsync(privateKey),
                                   info.Status?.ToString() ?? (info.Included ? "Included" : "None"));
         }
         else
         {
-            info = connectivity.Get(privateKey);
+            info = await connectivity.GetAsync(privateKey);
 
-            logger.LogInformation("Read connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new
@@ -1056,11 +1043,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         // the name only - the value is not repeated anywhere, here least of all
         if (feature != null)
         {
-            logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", stored.Name, features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", stored.Name, await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Set secret {Name} of lambda {Lambda}", stored.Name, meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Set secret {Name} of lambda {Lambda}", stored.Name, await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new
@@ -1082,11 +1069,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (named != null)
         {
-            logger.LogInformation("Listed secrets of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Listed secrets of feature '{Feature}' of lambda {Lambda}", await features.NameOfAsync(privateKey, named), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Listed secrets of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Listed secrets of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new
@@ -1115,12 +1102,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         if (feature != null)
         {
-            logger.LogInformation("Read database of feature '{Feature}' of lambda {Lambda} table {Table}", features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey),
+            logger.LogInformation("Read database of feature '{Feature}' of lambda {Lambda} table {Table}", await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey),
                                   table ?? "(all)");
         }
         else
         {
-            logger.LogInformation("Read database of lambda {Lambda} table {Table}", meta.PublicKeyOf(privateKey), table ?? "(all)");
+            logger.LogInformation("Read database of lambda {Lambda} table {Table}", await meta.PublicKeyOfAsync(privateKey), table ?? "(all)");
         }
 
         if (table == null)
@@ -1172,11 +1159,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (feature != null)
         {
-            logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(), features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(), await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new { ok = true, deleted = name.Trim() };
@@ -1184,17 +1171,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> RemoveAsync(string privateKey, string path, string? named)
     {
-        var (id, feature) = WorkspaceOf(privateKey, named, true);
+        var (id, feature) = await WorkspaceOfAsync(privateKey, named, true);
 
         await workspace.DeleteAsync(id, path, feature);
 
         if (named != null)
         {
-            logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path, features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path, await features.NameOfAsync(privateKey, named), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
         }
 
         return new { ok = true, path };
@@ -1203,21 +1190,21 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// <summary>
     /// The workspace a call is about: the lambda's own, or a feature's copy.
     /// </summary>
-    private (long LambdaId, long? FeatureId) WorkspaceOf(string privateKey, string? feature, bool editable)
+    private async ValueTask<(long LambdaId, long? FeatureId)> WorkspaceOfAsync(string privateKey, string? feature, bool editable)
     {
         if (feature != null)
         {
-            var (lambdaId, featureId) = features.Require(privateKey, feature, editable);
+            var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, editable);
 
             return (lambdaId, featureId);
         }
 
         if (editable)
         {
-            return (meta.RequireEditable(privateKey), null);
+            return (await meta.RequireEditableAsync(privateKey), null);
         }
 
-        return (meta.GetId(privateKey) ?? throw LambdaException.NotFound("There is no lambda with that editor key."), null);
+        return (await meta.GetIdAsync(privateKey) ?? throw LambdaException.NotFound("There is no lambda with that editor key."), null);
     }
 
     #endregion
@@ -1228,7 +1215,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
 
-        logger.Deployed(result, meta.PublicKeyOf(privateKey), version);
+        logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), version);
 
         if (!result.Success)
         {
@@ -1240,7 +1227,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              * whether anything had gone offline. Nothing has: a refused
              * deployment leaves the one before it running.
              */
-            var current = meta.Get(privateKey);
+            var current = await meta.GetAsync(privateKey);
 
             return Failed(new
             {
@@ -1281,7 +1268,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var result = await features.DeployAsync(privateKey, feature);
 
-        logger.Previewed(result, meta.PublicKeyOf(privateKey));
+        logger.Previewed(result, await meta.PublicKeyOfAsync(privateKey));
 
         if (!result.Success)
         {
@@ -1296,9 +1283,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
 
         // links that leave the preview for the live lambda, said while there is still time
-        var lambda = meta.Get(privateKey);
+        var lambda = await meta.GetAsync(privateKey);
 
-        var files = LambdaSource.Parse((features.Get(privateKey, feature)).Code);
+        var files = LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code);
 
         var warning = lambda != null ? Leaks(files, lambda.PublicKey) : null;
 
@@ -1329,27 +1316,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// owner gets in the control center, with the same thing left out: who
     /// the visitors were.
     /// </remarks>
-    private object Logs(string privateKey, string? feature, string level, long since, int limit)
+    private async ValueTask<object> LogsAsync(string privateKey, string? feature, string level, long since, int limit)
     {
-        var id = meta.GetId(privateKey)
+        var id = await meta.GetIdAsync(privateKey)
               ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
 
         var lines = FeatureLines.None;
 
         if (feature != null)
         {
-            lines = FeatureLines.Of((features.Require(privateKey, feature, false)).FeatureId);
+            lines = FeatureLines.Of((await features.RequireAsync(privateKey, feature, false)).FeatureId);
         }
 
-        var lambda = meta.Get(privateKey);
+        var lambda = await meta.GetAsync(privateKey);
 
         if (feature != null)
         {
-            logger.LogInformation("Read logs of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read logs of feature '{Feature}' of lambda {Lambda}", await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            logger.LogInformation("Read logs of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read logs of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
 
         var (said, next, missed) = book.Read(since, null, Level(level), limit, lambdaId: id, feature: lines);
@@ -1412,12 +1399,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> ReadAsync(string privateKey, int? asked, string? wanted, string? only, string origin)
     {
-        var lambda = meta.Get(privateKey)
+        var lambda = await meta.GetAsync(privateKey)
                   ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
 
-        var history = meta.GetVersions(privateKey);
+        var history = await meta.GetVersionsAsync(privateKey);
 
-        var open = features.List(privateKey);
+        var open = await features.ListAsync(privateKey);
 
         // read for a feature, the data it works on is its own copy
         var stores = await data.ListAsync(privateKey, wanted);
@@ -1435,7 +1422,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (wanted != null)
         {
-            feature = features.Get(privateKey, wanted);
+            feature = await features.GetAsync(privateKey, wanted);
 
             files = LambdaSource.Parse(feature.Code);
         }
@@ -1445,7 +1432,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
             if (version is { } which)
             {
-                content = meta.GetVersion(privateKey, which);
+                content = await meta.GetVersionAsync(privateKey, which);
 
                 files = LambdaSource.Parse(content.Code);
             }
@@ -1461,7 +1448,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
 
         // whose code is public, which changes what may be written into it
-        var published = sources.Get(privateKey) is { Published: true } source ? source : null;
+        var published = await sources.GetAsync(privateKey) is { Published: true } source ? source : null;
 
         var archive = feature != null
             ? $"GET /api/v1/lambdas/{{privateKey}}/features/{feature.Feature.Key}/zip"
@@ -1798,7 +1785,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             await showcases.RemoveAsync(privateKey);
 
-            logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Removed lambda {Lambda} from showcase", await meta.PublicKeyOfAsync(privateKey));
 
             return new { ok = true, showcased = false };
         }
@@ -1807,9 +1794,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (title == null && description == null && encoded == null)
         {
-            entry = showcases.Get(privateKey);
+            entry = await showcases.GetAsync(privateKey);
 
-            logger.LogInformation("Read showcase entry of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read showcase entry of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
@@ -1828,7 +1815,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             }
 
             // a change of one field keeps the others, as the tool promises
-            var current = showcases.Get(privateKey);
+            var current = await showcases.GetAsync(privateKey);
 
             entry = await showcases.SaveAsync(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
 
@@ -1899,7 +1886,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ok = true,
             analytics = AnalyticsResponse.Of(found),
             note = found.Shown < found.Kept && found.Earliest is { } earliest && earliest < found.From
-                ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: " + (meta.Get(privateKey)?.Above is { } above && above.AnalyticsDays > found.Shown
+                ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: " + ((await meta.GetAsync(privateKey))?.Above is { } above && above.AnalyticsDays > found.Shown
                     ? $"in the tier '{above.Name}', which whoever runs the installation assigns, the owner sees {above.AnalyticsDays} days of it."
                     : "a tier that shows more shows what was kept as well.")
                 : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, by people and programs alike - botViews are those of programs, so people opened views - botViews; hits are every request; visitors are people who opened a page, counted once a day."
@@ -1913,15 +1900,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// One tool, like the showcase, for the same reason: it is used rarely,
     /// and every tool listed is read by every agent in every conversation.
     /// </remarks>
-    private object ChangeSource(string privateKey, string? license, string? author, bool remove, string origin)
+    private async ValueTask<object> ChangeSourceAsync(string privateKey, string? license, string? author, bool remove, string origin)
     {
         SourceSettings? source;
 
         if (remove)
         {
-            source = sources.Withdraw(privateKey);
+            source = await sources.WithdrawAsync(privateKey);
 
-            logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
 
             return new
             {
@@ -1934,13 +1921,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (license == null && author == null)
         {
-            source = sources.Get(privateKey);
+            source = await sources.GetAsync(privateKey);
 
-            logger.LogInformation("Read source status of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read source status of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
-            source = sources.Publish(privateKey, new SourceDraft(license, author));
+            source = await sources.PublishAsync(privateKey, new SourceDraft(license, author));
 
             logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
         }

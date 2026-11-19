@@ -36,12 +36,12 @@ public sealed class ShowcaseResource(IShowcaseService showcases, ILambdaAddresse
              page read later may overlap the one before.
              """)]
     [return: Summary("A page of entries, and where the next one starts")]
-    public Page<ShowcaseResponse> List([Summary("How many entries to leave out, from the start")] int skip = 0,
+    public async ValueTask<Page<ShowcaseResponse>> List([Summary("How many entries to leave out, from the start")] int skip = 0,
                                        [Summary("How many entries to answer with, 1 to 48")] int take = PageSize)
     {
         var from = Math.Max(0, skip);
 
-        var page = showcases.List(from, take);
+        var page = await showcases.ListAsync(from, take);
 
         return Page<ShowcaseResponse>.Of([.. page.Entries.Select(e => ShowcaseResponse.Of(e, addresses))], from, page.Total);
     }

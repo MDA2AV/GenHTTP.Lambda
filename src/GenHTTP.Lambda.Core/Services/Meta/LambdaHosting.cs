@@ -31,18 +31,18 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
     /// Whether a public key could be claimed, and whether a lambda already
     /// answers there.
     /// </summary>
-    public KeyStatus DescribeKey(string? publicKey)
+    public async ValueTask<KeyStatus> DescribeKeyAsync(string? publicKey, CancellationToken cancellation = default)
     {
         // looked up even when it could not be claimed: a key that is refused
         // today may still belong to a lambda from before the rule was made
         var valid = LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = database.Lambdas.AsNoTracking()
-                             .Where(l => l.PublicKey == normalized)
-                             .Select(l => new { l.ActiveVersion })
-                             .FirstOrDefault();
+        var lambda = await database.Lambdas.AsNoTracking()
+                                   .Where(l => l.PublicKey == normalized)
+                                   .Select(l => new { l.ActiveVersion })
+                                   .FirstOrDefaultAsync(cancellation);
 
         if (valid && lambda != null)
         {
@@ -62,22 +62,22 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// Moves the lambda to another public key.
     /// </summary>
-    public LambdaInfo ChangeKey(string privateKey, string? publicKey)
+    public async ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default)
     {
         if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason))
         {
             throw LambdaException.Invalid(reason!);
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = LambdaGuard.Require(database, privateKey);
+        var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
 
         LambdaGuard.EnsureEditable(lambda, limits.PolicyOf(lambda.Tier));
 
         if (lambda.PublicKey == normalized)
         {
-            return describer.Describe(database, lambda);
+            return await describer.DescribeAsync(database, lambda, cancellation);
         }
 
         if (LambdaKeys.IsDemo(normalized))
@@ -85,7 +85,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Invalid(LambdaKeys.DemoReason);
         }
 
-        if (database.Lambdas.Any(l => l.PublicKey == normalized))
+        if (await database.Lambdas.AnyAsync(l => l.PublicKey == normalized, cancellation))
         {
             throw LambdaException.Conflict("This key is already in use.");
         }
@@ -95,18 +95,18 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
         lambda.PublicKey = normalized;
         lambda.Modified = DateTime.UtcNow;
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
 
         // the registry knows a served domain by the key of its lambda as
         // well, for the subdomain that sends visitors on to it
         if (lambda.Domain != null)
         {
-            domains.Reload();
+            await domains.ReloadAsync();
         }
 
         logger.LogInformation("Changed public key of lambda #{LambdaId} from {Previous} to {Lambda}", lambda.Id, previous, normalized);
 
-        return describer.Describe(database, lambda);
+        return await describer.DescribeAsync(database, lambda, CancellationToken.None);
     }
 
     #endregion
@@ -116,7 +116,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// Sets the domain the lambda answers at, or removes it when nothing is given.
     /// </summary>
-    public LambdaInfo ChangeDomain(string privateKey, string? domain)
+    public async ValueTask<LambdaInfo> ChangeDomainAsync(string privateKey, string? domain, CancellationToken cancellation = default)
     {
         string? normalized = null;
 
@@ -125,15 +125,15 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Invalid(reason!);
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = LambdaGuard.Require(database, privateKey);
+        var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
 
         LambdaGuard.EnsureEditable(lambda, limits.PolicyOf(lambda.Tier));
 
         if (lambda.Domain == normalized)
         {
-            return describer.Describe(database, lambda);
+            return await describer.DescribeAsync(database, lambda, cancellation);
         }
 
         if (normalized != null)
@@ -143,7 +143,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
                 throw LambdaException.Forbidden(NoDomain(lambda.Tier));
             }
 
-            if (database.Lambdas.Any(l => l.Domain == normalized && l.Id != lambda.Id))
+            if (await database.Lambdas.AnyAsync(l => l.Domain == normalized && l.Id != lambda.Id, cancellation))
             {
                 throw LambdaException.Conflict("This domain is already used by another lambda.");
             }
@@ -156,7 +156,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
 
         try
         {
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
         }
         catch (DbUpdateException)
         {
@@ -164,12 +164,12 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Conflict("This domain is already used by another lambda.");
         }
 
-        domains.Reload();
+        await domains.ReloadAsync();
 
         logger.LogInformation("Changed domain of lambda {Lambda} #{LambdaId} from {Previous} to {Domain}",
                               lambda.PublicKey, lambda.Id, previous ?? "(none)", normalized ?? "(none)");
 
-        return describer.Describe(database, lambda);
+        return await describer.DescribeAsync(database, lambda, CancellationToken.None);
     }
 
     #endregion
@@ -190,11 +190,11 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
     /// Whether it connects is compiled in, so where the new tier's default
     /// changes that, it is built again on its next request.
     /// </remarks>
-    public LambdaInfo ChangeTier(string privateKey, LambdaTier tier)
+    public async ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = LambdaGuard.Require(database, privateKey);
+        var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
 
         var current = limits.PolicyOf(lambda.Tier);
         var wanted = limits.PolicyOf(tier);
@@ -231,7 +231,7 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
                 lambda.ConnectivityChanged = null;
             }
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             // how large its database may grow, and how much its workspace
             // may write, is its tier's to say, from the next connection and
@@ -240,13 +240,13 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
 
             // a domain is served or not by the tier, so the tier moving can
             // take one on or off the air without the domain itself changing
-            domains.Reload();
+            await domains.ReloadAsync();
 
             logger.LogInformation("Changed tier of lambda {Lambda} #{LambdaId} from {Previous} to {Tier}",
                                   lambda.PublicKey, lambda.Id, previous, tier);
         }
 
-        return describer.Describe(database, lambda);
+        return await describer.DescribeAsync(database, lambda, CancellationToken.None);
     }
 
     /// <summary>

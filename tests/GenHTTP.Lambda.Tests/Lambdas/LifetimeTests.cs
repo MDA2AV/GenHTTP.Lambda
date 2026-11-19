@@ -84,7 +84,7 @@ public sealed class LifetimeTests
 
         Assert.AreEqual(0, report.Undeployed, "a deployment two hours old is not stale");
 
-        var still = meta.Get(lambda.PrivateKey);
+        var still = await meta.GetAsync(lambda.PrivateKey);
 
         Assert.IsNotNull(still?.ActiveVersion);
     }
@@ -104,7 +104,7 @@ public sealed class LifetimeTests
 
         Assert.AreEqual(1, report.Undeployed);
 
-        var after = meta.Get(lambda.PrivateKey);
+        var after = await meta.GetAsync(lambda.PrivateKey);
 
         Assert.IsNull(after?.ActiveVersion);
         Assert.IsNull(after?.DeployedUntil, "and it no longer claims to be online until anything");

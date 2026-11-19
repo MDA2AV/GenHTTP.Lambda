@@ -44,7 +44,11 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     /// </summary>
     private const int RecentDays = 30;
 
-    private readonly Lock _lock = new();
+    /// <summary>
+    /// Makes the identifier of the installation once, however many reports
+    /// are taken at the same moment.
+    /// </summary>
+    private readonly SemaphoreSlim _making = new(1, 1);
 
     #region Get-/Setters
 
@@ -65,35 +69,35 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     {
         var now = DateTime.UtcNow;
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         // the demos, which every installation has
         var demos = limits.TiersWhere(p => p.ReadOnly);
 
-        var lambdas = database.Lambdas.AsNoTracking()
-                              .Where(l => !demos.Contains(l.Tier))
-                              .Select(l => new Row(l.Id, l.Tier, l.ActiveVersion, l.Blocked, l.Created, l.Modified, l.LastSeen, l.View,
-                                                   l.Domain, l.AnalyticsSince, l.Connectivity))
-                              .ToList();
+        var lambdas = await database.Lambdas.AsNoTracking()
+                                    .Where(l => !demos.Contains(l.Tier))
+                                    .Select(l => new Row(l.Id, l.Tier, l.ActiveVersion, l.Blocked, l.Created, l.Modified, l.LastSeen, l.View,
+                                                         l.Domain, l.AnalyticsSince, l.Connectivity))
+                                    .ToListAsync(cancellation);
 
         var ids = lambdas.Select(l => l.Id).ToHashSet();
 
-        var stores = database.DataStores.AsNoTracking()
-                             .Where(s => s.Enabled && !demos.Contains(s.Lambda!.Tier))
-                             .Select(s => new { s.LambdaId, s.Kind })
-                             .ToList();
+        var stores = await database.DataStores.AsNoTracking()
+                                   .Where(s => s.Enabled && !demos.Contains(s.Lambda!.Tier))
+                                   .Select(s => new { s.LambdaId, s.Kind })
+                                   .ToListAsync(cancellation);
 
         var withDatabase = stores.Where(s => s.Kind == DataKinds.DatabaseId).Select(s => s.LambdaId).ToHashSet();
         var withWorkspace = stores.Where(s => s.Kind == DataKinds.WorkspaceId).Select(s => s.LambdaId).ToHashSet();
         var withSecrets = stores.Count(s => s.Kind == DataKinds.SecretsId);
 
-        var versions = database.Deployments.Count(d => !demos.Contains(d.Lambda!.Tier));
+        var versions = await database.Deployments.CountAsync(d => !demos.Contains(d.Lambda!.Tier), cancellation);
 
-        var features = database.Features.Count(f => !demos.Contains(f.Lambda!.Tier));
+        var features = await database.Features.CountAsync(f => !demos.Contains(f.Lambda!.Tier), cancellation);
 
-        var showcased = database.Showcases.Count(s => !demos.Contains(s.Lambda!.Tier));
+        var showcased = await database.Showcases.CountAsync(s => !demos.Contains(s.Lambda!.Tier), cancellation);
 
-        var published = database.Sources.Count(s => s.Published && !demos.Contains(s.Lambda!.Tier));
+        var published = await database.Sources.CountAsync(s => s.Published && !demos.Contains(s.Lambda!.Tier), cancellation);
 
         var recent = now.AddDays(-RecentDays);
 
@@ -101,15 +105,17 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
 
         int InTier(LambdaTier tier) => tiers.GetValueOrDefault(tier);
 
-        var origins = database.Deployments.AsNoTracking()
-                              .Where(d => d.Created >= recent && !demos.Contains(d.Lambda!.Tier))
-                              .GroupBy(d => d.Origin)
-                              .Select(g => new { Origin = g.Key, Count = g.Count() })
-                              .ToList();
+        var origins = await database.Deployments.AsNoTracking()
+                                    .Where(d => d.Created >= recent && !demos.Contains(d.Lambda!.Tier))
+                                    .GroupBy(d => d.Origin)
+                                    .Select(g => new { Origin = g.Key, Count = g.Count() })
+                                    .ToListAsync(cancellation);
+
+        var installation = await InstallationAsync(database, cancellation);
 
         return new UsageReport(
             UsageReport.CurrentSchema,
-            Installation(database),
+            installation,
             PlatformVersion,
             now,
             DescribeSystem(),
@@ -165,11 +171,13 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     /// database, so it moves with a backup and an installation restored on
     /// another server stays the one it was.
     /// </remarks>
-    private string Installation(LambdaDbContext database)
+    private async ValueTask<string> InstallationAsync(LambdaDbContext database, CancellationToken cancellation)
     {
-        lock (_lock)
+        await _making.WaitAsync(cancellation);
+
+        try
         {
-            var stored = database.Settings.Find(InstallationKey);
+            var stored = await database.Settings.FindAsync([InstallationKey], cancellation);
 
             if (stored != null)
             {
@@ -179,9 +187,13 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             var made = Guid.NewGuid().ToString("n");
 
             database.Settings.Add(new SettingEntity { Key = InstallationKey, Value = made });
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             return made;
+        }
+        finally
+        {
+            _making.Release();
         }
     }
 

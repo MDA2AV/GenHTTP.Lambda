@@ -32,7 +32,7 @@ public sealed class DemoResource(IMetaService meta, ILambdaAddresses addresses)
     [Summary("Lists the demos")]
     [Remarks("Public. A few seconds after the server started, a demo may not be online yet (`live`).")]
     [return: Summary("Every demo")]
-    public IReadOnlyList<DemoResponse> Get()
+    public async ValueTask<IReadOnlyList<DemoResponse>> Get()
     {
         var demos = new List<DemoResponse>();
 
@@ -41,7 +41,7 @@ public sealed class DemoResource(IMetaService meta, ILambdaAddresses addresses)
             // read from the lambda rather than assumed: the demos are prepared
             // in the background after startup, so for a few seconds after a
             // restart they exist as code and not yet as something that answers
-            var status = meta.DescribeKey(demo.Key);
+            var status = await meta.DescribeKeyAsync(demo.Key);
 
             demos.Add(new DemoResponse(
                 demo.Id,

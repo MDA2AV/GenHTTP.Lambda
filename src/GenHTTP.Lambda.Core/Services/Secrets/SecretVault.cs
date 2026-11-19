@@ -129,7 +129,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// </summary>
     private async ValueTask<Snapshot> LoadAsync(DataScope scope, long generation, CancellationToken cancellation)
     {
-        var loaded = new Snapshot(generation, Enabled(scope.LambdaId) ? await provider.LoadAsync(scope, cancellation) : null);
+        var loaded = new Snapshot(generation, await EnabledAsync(scope.LambdaId, cancellation) ? await provider.LoadAsync(scope, cancellation) : null);
 
         _snapshots[scope] = loaded;
 
@@ -139,14 +139,14 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// Whether the owner left the secrets of a lambda on.
     /// </summary>
-    private bool Enabled(long lambdaId)
+    private async ValueTask<bool> EnabledAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.DataStores.AsNoTracking()
-                       .Where(s => s.LambdaId == lambdaId && s.Kind == DataKinds.SecretsId)
-                       .Select(s => (bool?)s.Enabled)
-                       .FirstOrDefault() ?? DataKinds.Secrets.Default;
+        return await database.DataStores.AsNoTracking()
+                             .Where(s => s.LambdaId == lambdaId && s.Kind == DataKinds.SecretsId)
+                             .Select(s => (bool?)s.Enabled)
+                             .FirstOrDefaultAsync(cancellation) ?? DataKinds.Secrets.Default;
     }
 
     #endregion

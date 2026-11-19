@@ -114,10 +114,10 @@ public sealed class LayoutMigrationTests
 
         Assert.AreEqual("<h1>still here, brighter</h1>", await fixture.CallAsync("http://veteran.localhost/"));
 
-        var stored = await File.ReadAllTextAsync(VersionFile(fixture, lambda, 3));
+        var stored = await File.ReadAllTextAsync(await VersionFileAsync(fixture, lambda, 3));
 
         StringAssert.StartsWith(stored, "{\"version\":2,", "what is saved now is saved in today's layout");
-        StringAssert.StartsWith(await File.ReadAllTextAsync(VersionFile(fixture, lambda, 2)), "{\"version\":1,", "and what was saved then is left as it was");
+        StringAssert.StartsWith(await File.ReadAllTextAsync(await VersionFileAsync(fixture, lambda, 2)), "{\"version\":1,", "and what was saved then is left as it was");
     }
 
     [TestMethod]
@@ -129,7 +129,7 @@ public sealed class LayoutMigrationTests
 
         var feature = await fixture.CreateFeatureAsync(lambda, "Old draft");
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var directory = Directory.GetDirectories(Path.Combine(fixture.Options.FeatureDirectory, id.ToString())).Single();
 
@@ -164,7 +164,7 @@ public sealed class LayoutMigrationTests
         // on top of 2, laid out as they were then - assets/ for what is served
         var store = new GitStore(fixture.Options);
 
-        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var first = await OldCommitAsync(store, id, [], 1, "Version 1", ("Project.cs", "public static class Project { }\n", "lambda.cs"));
 
@@ -242,11 +242,11 @@ public sealed class LayoutMigrationTests
     {
         await fixture.SaveAsync(lambda, "Adds a page", LambdaSource.Parse(stored).ToArray());
 
-        await File.WriteAllTextAsync(VersionFile(fixture, lambda, 2), stored);
+        await File.WriteAllTextAsync(await VersionFileAsync(fixture, lambda, 2), stored);
     }
 
-    private static string VersionFile(LambdaFixture fixture, LambdaResponse lambda, int version)
-        => Path.Combine(fixture.Options.CodeDirectory, fixture.Meta.GetId(lambda.PrivateKey)!.ToString()!, $"v{version}.cs");
+    private static async Task<string> VersionFileAsync(LambdaFixture fixture, LambdaResponse lambda, int version)
+        => Path.Combine(fixture.Options.CodeDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.ToString()!, $"v{version}.cs");
 
     /// <summary>
     /// A commit kept as it was made before there was more than one layout:

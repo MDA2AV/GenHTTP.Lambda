@@ -166,7 +166,7 @@ public sealed class WorkspaceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         var workspace = fixture.Platform.Services.GetRequiredService<IWorkspaceService>();
 

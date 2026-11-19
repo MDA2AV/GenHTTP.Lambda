@@ -37,9 +37,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     [ResourceMethod("lambdas/:privateKey/source")]
     [Summary("Reads whether the code is published")]
     [return: Summary("What it is published under, if it ever was, and the licenses it can be published under")]
-    public OwnSourceResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<OwnSourceResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var source = sources.Get(privateKey);
+        var source = await sources.GetAsync(privateKey);
 
         return new OwnSourceResponse(source == null ? null : SourceSettingsResponse.Of(source),
                                      [.. SourceLicenses.All.Select(LicenseResponse.Of)], SourceLicenses.Default, SourceLicenses.MaxAuthor);
@@ -57,9 +57,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("What it is published under now")]
-    public SourceSettingsResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request)
+    public async ValueTask<SourceSettingsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request)
     {
-        var source = sources.Publish(privateKey, new SourceDraft(request.License, request.Author));
+        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author));
 
         logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
 
@@ -75,11 +75,11 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
              """)]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var source = sources.Withdraw(privateKey);
+        var source = await sources.WithdrawAsync(privateKey);
 
-        logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
     }
 
 }

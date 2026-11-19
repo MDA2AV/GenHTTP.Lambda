@@ -5,6 +5,8 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
@@ -22,10 +24,10 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
     /// <summary>
     /// What the editor is told about a lambda.
     /// </summary>
-    public LambdaInfo Describe(LambdaDbContext database, LambdaEntity lambda)
+    public async ValueTask<LambdaInfo> DescribeAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation = default)
     {
-        var latest = database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                             .Max(d => (int?)d.Version);
+        var latest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                                   .MaxAsync(d => (int?)d.Version, cancellation);
 
         var policy = limits.PolicyOf(lambda.Tier);
 

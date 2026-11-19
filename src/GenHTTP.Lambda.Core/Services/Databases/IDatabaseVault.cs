@@ -76,7 +76,7 @@ public interface IDatabaseVault
     /// What a compiled lambda reads the room of its data with - its database
     /// and its workspace together, as its tier allows it now.
     /// </summary>
-    Func<long> DataRoomFor(long lambdaId, long? featureId);
+    Func<CancellationToken, ValueTask<long>> DataRoomFor(long lambdaId, long? featureId);
 
     /// <summary>
     /// Writes the database of a lambda into a SQLite file of its own, whole,
