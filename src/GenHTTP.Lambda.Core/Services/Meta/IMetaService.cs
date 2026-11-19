@@ -135,7 +135,7 @@ public interface IMetaService
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
     /// <param name="origin">Who is asking: the operator may delete a lambda they blocked, its owner may not</param>
-    ValueTask DeleteAsync(string privateKey, string? origin = null, CancellationToken cancellation = default);
+    ValueTask DeleteAsync(string privateKey, string? origin = null);
 
     /// <summary>
     /// Blocks the lambda: takes it and the previews of its features offline,

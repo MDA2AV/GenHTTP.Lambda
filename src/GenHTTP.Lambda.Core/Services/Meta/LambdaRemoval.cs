@@ -21,13 +21,16 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// <remarks>
 /// One place for it, because a lambda goes away two ways - its owner deletes
 /// it, or the sweep finds it abandoned - and both have to leave nothing behind.
+/// So it is seen through once begun, whoever asked and however they fare: a
+/// lambda whose row went and whose data stayed behind would hold its data for
+/// nobody, and nothing here takes a token to be cancelled with.
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
                                   IDatabaseVault databaseVault, IWorkspaceVault workspaces, IShowcaseService showcases, IDomainRegistry domains, IStorageService storage,
                                   IAnalyticsStore analytics)
 {
 
-    public async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation = default)
+    public async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda)
     {
         // with every preview of its features, which go with it
         deployments.EvictAll(lambda.Id);
@@ -43,12 +46,12 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDelete();
 
         // its entry and its picture, wherever the files are kept
-        await showcases.ForgetAsync(lambda.Id, cancellation);
+        await showcases.ForgetAsync(lambda.Id);
 
         database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
         // wherever they are kept, before the lambda they belong to goes
-        await secrets.ClearAsync(lambda.Id, cancellation);
+        await secrets.ClearAsync(lambda.Id);
 
         database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDelete();
 
@@ -59,9 +62,9 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         secrets.Invalidate(lambda.Id);
 
         // its data, wherever it is kept, with the copies of its features
-        await databaseVault.ClearAsync(lambda.Id, cancellation);
+        await databaseVault.ClearAsync(lambda.Id);
 
-        await workspaces.DeleteAllAsync(lambda.Id, cancellation);
+        await workspaces.DeleteAllAsync(lambda.Id);
 
         if (lambda.Domain != null)
         {
@@ -71,7 +74,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         storage.Delete(lambda.Id);
 
         // what its owner counted of its visitors goes with it
-        await analytics.ForgetAsync(lambda.Id, cancellation);
+        await analytics.ForgetAsync(lambda.Id);
     }
 
 }

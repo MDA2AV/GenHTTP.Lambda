@@ -239,7 +239,8 @@ public sealed class MetaService : IMetaService
             // with one, or the first thing it does is fail for want of it
             if (DemoCatalog.Find(template)?.Database == true)
             {
-                await DatabaseVault.CreateAsync(entity.Id, cancellation);
+                // the lambda is there from here on, so its database is made whoever cancels
+                await DatabaseVault.CreateAsync(entity.Id, CancellationToken.None);
             }
 
             Logger.LogInformation("Created lambda {Lambda} #{LambdaId}", entity.PublicKey, entity.Id);
@@ -265,7 +266,7 @@ public sealed class MetaService : IMetaService
         }
     }
 
-    public async ValueTask DeleteAsync(string privateKey, string? origin = null, CancellationToken cancellation = default)
+    public async ValueTask DeleteAsync(string privateKey, string? origin = null)
     {
         using var database = Databases.CreateDbContext();
 
@@ -278,7 +279,7 @@ public sealed class MetaService : IMetaService
         // a demo stays the installation's either way
         if (origin == VersionOrigins.Admin && !policy.ReadOnly)
         {
-            await Removal.RemoveAsync(database, lambda, cancellation);
+            await Removal.RemoveAsync(database, lambda);
 
             Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
@@ -293,7 +294,7 @@ public sealed class MetaService : IMetaService
                                           + "it is not deleted with its editor key. Only the operator of the installation can delete it.");
         }
 
-        await Removal.RemoveAsync(database, lambda, cancellation);
+        await Removal.RemoveAsync(database, lambda);
 
         Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
     }

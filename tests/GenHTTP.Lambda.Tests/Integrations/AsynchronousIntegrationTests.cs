@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Net;
 using System.Text;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Secrets;
@@ -11,6 +13,7 @@ using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Tests.Integrations;
@@ -153,6 +156,8 @@ public sealed class AsynchronousIntegrationTests
         Assert.IsTrue(counter.Secrets > 0, "and the secrets");
 
         await DraftsCopyItAsync(fixture, lambda.PrivateKey);
+
+        await MergesExportsAndSwitchesOffAsync(fixture, lambda.PrivateKey, Awaited);
     }
 
     [TestMethod]
@@ -193,6 +198,71 @@ public sealed class AsynchronousIntegrationTests
         Assert.IsFalse(await services.GetRequiredService<IDatabaseVault>().ExistsAsync(id), "its database is gone");
         Assert.AreEqual(0L, await services.GetRequiredService<IWorkspaceVault>().SizeOfAsync(id, null), "its files");
         Assert.IsEmpty(await services.GetRequiredService<ISecretVault>().ListAsync(id, null), "and its secrets");
+    }
+
+    /// <summary>
+    /// What an installation on the Ioxide engine relies on: the platform's own
+    /// integrations - SQLite, local directories, secrets in its own records -
+    /// answer on the thread that asks, so a request awaiting them never
+    /// leaves its reactor, and the plain calls of older code wait for nothing.
+    /// The same for what a lambda sends over the connection it is handed,
+    /// through ADO.NET and Entity Framework.
+    /// </summary>
+    [TestMethod]
+    public async Task ThePlatformsOwnIntegrationsAnswerOnTheThreadThatAsks()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        foreach (var kind in new[] { "database", "secrets" })
+        {
+            using var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/data/{kind}");
+
+            Assert.AreEqual(HttpStatusCode.OK, on.StatusCode, await on.Content.ReadAsStringAsync());
+        }
+
+        using (var secret = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/secrets/TOKEN", new SecretRequest("s3cret")))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, secret.StatusCode, await secret.Content.ReadAsStringAsync());
+        }
+
+        var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
+
+        var services = fixture.Platform.Services;
+
+        var databases = services.GetRequiredService<IDatabaseVault>();
+
+        var files = services.GetRequiredService<IWorkspaceVault>().Bind(id, null, databases.DataRoomFor(id, null), c => databases.SizeOfAsync(id, null, c));
+
+        AtOnce(files.CreateFolderAsync("notes", CancellationToken.None), "a folder is made");
+        AtOnce(files.WriteAsync("notes/a.txt", Encoding.UTF8.GetBytes("first"), CancellationToken.None), "a file is written");
+        Assert.AreEqual("first", Encoding.UTF8.GetString(AtOnce(files.ReadAsync("notes/a.txt", CancellationToken.None), "and read")));
+        Assert.IsTrue(AtOnce(files.ExistsAsync("notes/a.txt", CancellationToken.None), "and found"));
+        CollectionAssert.AreEqual(new[] { "notes/a.txt" }, AtOnce(files.ListAsync(CancellationToken.None), "and listed"));
+        AtOnce(files.DeleteAsync("notes/a.txt", CancellationToken.None), "and deleted");
+
+        var secrets = services.GetRequiredService<ISecretVault>().ReaderFor(id, null);
+
+        Assert.AreEqual("s3cret", AtOnce(secrets.ReadAsync("TOKEN", true, CancellationToken.None), "a secret is loaded"));
+        Assert.AreEqual("s3cret", AtOnce(secrets.ReadAsync("TOKEN", true, CancellationToken.None), "and read from memory"));
+
+        await using var connection = AtOnce(databases.ConnectorFor(id, null).ConnectAsync(CancellationToken.None), "a connection is opened");
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "CREATE TABLE notes (id TEXT NOT NULL PRIMARY KEY, text TEXT NOT NULL)";
+
+            AtOnce(command.ExecuteNonQueryAsync(), "a statement is executed");
+        }
+
+        await using var db = new Probe(connection, services.GetRequiredService<IDatabaseProvider>());
+
+        db.Notes.Add(new ProbeNote { Id = "1", Text = "milk" });
+
+        Assert.AreEqual(1, AtOnce(db.SaveChangesAsync(), "Entity Framework saves"));
+        Assert.AreEqual("milk", AtOnce(db.Notes.AsNoTracking().ToListAsync(), "and queries").Single().Text);
+        Assert.AreEqual(1, AtOnce(db.Notes.CountAsync(), "and counts"));
     }
 
     /// <summary>
@@ -346,6 +416,99 @@ public sealed class AsynchronousIntegrationTests
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode, content);
 
         return content;
+    }
+
+    /// <summary>
+    /// Merging a draft, making its test data again, exporting the app and
+    /// switching a kind of data off - each through integrations that wait.
+    /// </summary>
+    private static async Task MergesExportsAndSwitchesOffAsync(LambdaFixture fixture, string privateKey, string code)
+    {
+        using var created = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/features", new CreateFeatureRequest("Merged"));
+
+        var feature = await created.GetContentAsync<FeatureResponse>();
+
+        using (var refreshed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/features/{feature.Key}/data/refresh"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, refreshed.StatusCode, await refreshed.Content.ReadAsStringAsync());
+        }
+
+        using (var put = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{privateKey}/features/{feature.Key}/files", new FeatureFilesRequest(
+               [
+                   new LambdaFile(LambdaSource.EntryName, code),
+                   new LambdaFile("resources/migrations/V1__Notes.sql", Migration),
+                   new LambdaFile("docs/product.md", "Notes, kept elsewhere.")
+               ], Change: "Says what it is")))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
+        }
+
+        using (var merged = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/features/{feature.Key}/merge", new MergeFeatureRequest(Deploy: true)))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, merged.StatusCode, await merged.Content.ReadAsStringAsync());
+
+            Assert.IsTrue((await merged.GetContentAsync<FeatureMergeResponse>()).Deployment!.Success);
+        }
+
+        using (var export = await fixture.GetAsync($"/api/v1/lambdas/{privateKey}/export"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, export.StatusCode, await export.Content.ReadAsStringAsync());
+
+            using var archive = new System.IO.Compression.ZipArchive(await export.Content.ReadAsStreamAsync());
+
+            Assert.IsTrue(archive.Entries.Any(e => e.FullName.EndsWith("/database/database.db", StringComparison.Ordinal)), "the records go with the code");
+        }
+
+        foreach (var kind in new[] { "workspace", "database" })
+        {
+            using var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{privateKey}/data/{kind}");
+
+            Assert.AreEqual(HttpStatusCode.OK, off.StatusCode, await off.Content.ReadAsStringAsync());
+        }
+
+        using var database = await fixture.GetAsync($"/api/v1/lambdas/{privateKey}/database");
+
+        Assert.IsFalse((await database.GetContentAsync<DatabaseResponse>()).Enabled);
+    }
+
+    /// <summary>
+    /// The result of what was asked, which has to be there before anything is awaited.
+    /// </summary>
+    private static T AtOnce<T>(ValueTask<T> pending, string what)
+    {
+        Assert.IsTrue(pending.IsCompletedSuccessfully, $"{what} on the thread that asked");
+
+        return pending.Result;
+    }
+
+    private static T AtOnce<T>(Task<T> pending, string what)
+    {
+        Assert.IsTrue(pending.IsCompletedSuccessfully, $"{what} on the thread that asked");
+
+        return pending.Result;
+    }
+
+    private static void AtOnce(ValueTask pending, string what)
+    {
+        Assert.IsTrue(pending.IsCompletedSuccessfully, $"{what} on the thread that asked");
+
+        pending.GetAwaiter().GetResult();
+    }
+
+    private sealed class ProbeNote
+    {
+        public string Id { get; set; } = "";
+
+        public string Text { get; set; } = "";
+    }
+
+    private sealed class Probe(DbConnection connection, IDatabaseProvider provider) : DbContext
+    {
+        public DbSet<ProbeNote> Notes => Set<ProbeNote>();
+
+        protected override void OnConfiguring(DbContextOptionsBuilder options) => provider.ConfigureContext(options, connection);
+
+        protected override void OnModelCreating(ModelBuilder model) => model.Entity<ProbeNote>().ToTable("notes");
     }
 
     /// <summary>

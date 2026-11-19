@@ -80,10 +80,11 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         if ((Read(id))[wanted.Id].Enabled)
         {
-            // switched off first, so nothing new arrives while the rest goes
+            // switched off first, so nothing new arrives while the rest goes -
+            // and the rest goes whoever cancels, or it would stay behind unseen
             Switch(id, wanted, false);
 
-            await ClearAsync(id, wanted, cancellation);
+            await ClearAsync(id, wanted, CancellationToken.None);
 
             logger.LogInformation("Disabled and deleted {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }

@@ -110,7 +110,10 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         foreach (var lambda in expired)
         {
-            await removal.RemoveAsync(database, lambda, cancellation);
+            // stopped between two lambdas, never within one
+            cancellation.ThrowIfCancellationRequested();
+
+            await removal.RemoveAsync(database, lambda);
         }
 
         var quiet = now - limits.Get().OfflineAfter;

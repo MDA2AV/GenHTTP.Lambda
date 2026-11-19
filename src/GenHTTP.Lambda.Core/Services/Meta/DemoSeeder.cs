@@ -94,7 +94,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
                 database.SaveChanges();
 
-                await meta.DeleteAsync(lambda.PrivateKey, cancellation: cancellation);
+                await meta.DeleteAsync(lambda.PrivateKey);
 
                 logger.LogInformation("Retired demo {Lambda}", lambda.PublicKey);
             }
