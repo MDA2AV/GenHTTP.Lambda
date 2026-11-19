@@ -155,9 +155,8 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
     }
 
     public IntegrationInfo Describe() => new(IntegrationKinds.Secrets, "Database",
-                                             "Sealed with AES-GCM in the platform's database, under a key made of the installation's key and a salt per lambda.",
                                              [
-                                                 new IntegrationDetail("Values", "the platform's database"),
+                                                 new IntegrationDetail("Sealed", "AES-GCM, a key per lambda"),
                                                  new IntegrationDetail("Installation key", cipher.Source)
                                              ]);
 

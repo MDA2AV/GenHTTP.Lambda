@@ -132,7 +132,7 @@ with Docker Compose and can optionally include the build agent:
 
 ```bash
 cd samples/community
-cp .env.example .env     # set at least LAMBDA_ADMIN_TOKEN
+cp .env.example .env     # the panel's password is secure-password - change it
 docker compose up -d
 ```
 

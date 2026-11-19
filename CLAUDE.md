@@ -1495,7 +1495,10 @@ integrations (yet - the owner's words: "not for now").
 - **The operator sees which are used - asked for by the owner, on both
   editions**: the panel's **Integrations** section (group Configuration, read
   only, cards) over `GET /admin/integrations`, from what each says of itself
-  (`Describe`) - never a password, a key or a connection string. The usage
+  (`Describe`) - never a password, a key or a connection string. **Terse,
+  and each named by its assembly - asked for by the owner**, who found the
+  panel wordy and "the platform's own" unclear: a card is the kind, the name,
+  the assembly and the facts, with no sentence about either. The usage
   report names them (`database`, `files`, `secrets`), never where they are.
 - **PostgreSQL is the community edition's - decided by the owner**: genhttp.dev
   keeps SQLite, and its host refuses `LAMBDA_DATABASE=postgresql`

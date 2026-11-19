@@ -38,7 +38,8 @@ public sealed class IntegrationTests
         CollectionAssert.AreEqual(new[] { "database", "files", "secrets" }, integrations.Select(i => i.Kind).ToArray(), "in that order");
         CollectionAssert.AreEqual(new[] { "SQLite", "Local", "Database" }, integrations.Select(i => i.Name).ToArray());
 
-        Assert.IsTrue(integrations.All(i => i.Default), "the platform's own, since the host chose none");
+        CollectionAssert.AreEqual(new[] { "GenHTTP.Lambda.Integrations.Sqlite", "GenHTTP.Lambda.Integrations.Local", "GenHTTP.Lambda.Core" },
+                                  integrations.Select(i => i.Assembly).ToArray(), "each named by the assembly a host references for it");
 
         var database = integrations[0];
 
@@ -47,10 +48,10 @@ public sealed class IntegrationTests
 
     /// <summary>
     /// The community host names SQLite where its environment chooses no other
-    /// database, which is still the platform's own.
+    /// database: the same integration as the platform's own.
     /// </summary>
     [TestMethod]
-    public async Task NamingThePlatformsOwnDatabaseIsNoChoiceOfAnother()
+    public async Task NamingThePlatformsOwnDatabaseIsTheSameIntegration()
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel, SqliteDatabase.Create());
 
@@ -58,7 +59,7 @@ public sealed class IntegrationTests
 
         var integrations = await response.GetContentAsync<List<IntegrationResponse>>();
 
-        Assert.IsTrue(integrations[0].Default);
+        Assert.AreEqual("GenHTTP.Lambda.Integrations.Sqlite", integrations[0].Assembly);
     }
 
     [TestMethod]

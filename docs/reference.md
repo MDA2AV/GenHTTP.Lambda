@@ -1841,7 +1841,8 @@ case, what a draft's copy holds and what the room means there.
 
 **What the operator is told.** Each says what it is and where it keeps what it
 keeps (`IIntegration.Describe`) - never a password, a key or a connection
-string - which the panel's **Integrations** section shows (`GET
+string - and is named by the assembly it is in, which the panel's
+**Integrations** section shows (`GET
 /admin/integrations`), and the usage report names (`database`, `files`,
 `secrets`).
 
@@ -2554,7 +2555,7 @@ The routes the panel draws its dashboards from:
 | `GET /admin/storage`, `POST /admin/storage/measure` | the volume, and what the data directory holds by part and by lambda as last measured; measures again at once |
 | `GET /admin/lambdas`                     | a page of lambdas (`search`, `tier`, `state`, `uses`, `view`, `created`, `sort`, `page`), each with which features it uses; the demos are left out unless `tier=Demo` or `demos=true` asks for them, so every count of the overview leads to a list of as many |
 | `GET /admin/lambdas/{publicKey}`         | one lambda in full: the owner's summary, what it uses, its showcase entry, published source and drafts beside its versions and deployments |
-| `GET /admin/integrations`                | what keeps the database, the files and the secrets: each one's name, what it says about where it keeps what it keeps, and whether it is the platform's own - never a password, a key or a connection string |
+| `GET /admin/integrations`                | what keeps the database, the files and the secrets: each one's name, the assembly it is in, and where it keeps what it keeps - never a password, a key or a connection string |
 
 The counts are the platform's database, read as they are asked for
 (`ICensusService`, `LambdaTally`); the workspace counts as switched on unless

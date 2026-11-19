@@ -561,7 +561,7 @@ public sealed class LambdaPlatformBuilder
             var secrets = _secrets is { } chosen ? Keep(built, chosen.Build(context)) : null;
 
             // a host naming the platform's own has not chosen another
-            return new PlatformIntegrations(database, files, secrets, _database is not (null or SqliteDatabaseBuilder), _files is not (null or LocalFilesBuilder));
+            return new PlatformIntegrations(database, files, secrets);
         }
         catch
         {

@@ -13,9 +13,7 @@ namespace GenHTTP.Lambda.Services.Integrations;
 /// services start - so the platform lets go of them itself.
 /// </remarks>
 /// <param name="Secrets">What the host chose for the secrets, or nothing where the platform keeps them itself</param>
-/// <param name="DatabaseChosen">Whether the host chose another database than the platform's own</param>
-/// <param name="FilesChosen">Whether the host chose another place for the files than the platform's own</param>
-public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvider Files, ISecretProvider? Secrets, bool DatabaseChosen, bool FilesChosen)
+public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvider Files, ISecretProvider? Secrets)
     : IAsyncDisposable, IDisposable
 {
 

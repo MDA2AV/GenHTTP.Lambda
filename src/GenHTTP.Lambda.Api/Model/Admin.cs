@@ -239,17 +239,15 @@ public sealed record IntegrationResponse(
     string Kind,
     [Summary("What it is called: `SQLite`, `PostgreSQL`, `Local`, `Database`")]
     string Name,
-    [Summary("What it does here, in a sentence")]
-    string Summary,
+    [Summary("The assembly it is in, which names it: what a host references to use it, such as `GenHTTP.Lambda.Integrations.Sqlite`")]
+    string Assembly,
     [Summary("Where it keeps what it keeps, as label and value - never a password, a key or a connection string")]
-    IReadOnlyList<IntegrationDetailResponse> Details,
-    [Summary("Whether it is the platform's own, which every installation has unless its host chooses another")]
-    bool Default
+    IReadOnlyList<IntegrationDetailResponse> Details
 )
 {
 
     public static IntegrationResponse Of(IntegrationState state)
-        => new(state.Info.Kind, state.Info.Name, state.Info.Summary, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))], state.Default);
+        => new(state.Info.Kind, state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
 
 }
 

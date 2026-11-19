@@ -337,7 +337,6 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKinds.Files, "Local",
-                                             "A directory per workspace, and per store of the platform, in the data directory.",
                                              [
                                                  new IntegrationDetail("Lambdas", Path.Combine(dataDirectory, "workspaces", "{lambda}")),
                                                  new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace")),

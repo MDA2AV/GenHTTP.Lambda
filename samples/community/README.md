@@ -4,11 +4,14 @@ The community edition on <http://localhost:8080>, with everything it keeps in
 the volume `lambda-data`.
 
 ```bash
-cp .env.example .env     # and set LAMBDA_ADMIN_TOKEN, at least
+cp .env.example .env
 docker compose up -d
 ```
 
-Open <http://localhost:8080>, and connect your agent - for Claude Code:
+Open <http://localhost:8080>, and the panel at <http://localhost:8080/admin>
+with the password `secure-password`. Change it (`LAMBDA_ADMIN_TOKEN` in `.env`)
+before anybody else can reach the server. Then connect your agent - for Claude
+Code:
 
 ```bash
 claude mcp add --transport http genhttp http://localhost:8080/mcp

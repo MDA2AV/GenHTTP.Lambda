@@ -14,9 +14,9 @@ public sealed class IntegrationService(PlatformIntegrations integrations, ISecre
 
     public IReadOnlyList<IntegrationState> List() =>
     [
-        new(integrations.Database.Describe(), !integrations.DatabaseChosen),
-        new(integrations.Files.Describe(), !integrations.FilesChosen),
-        new(secrets.Describe(), integrations.Secrets == null)
+        IntegrationState.Of(integrations.Database),
+        IntegrationState.Of(integrations.Files),
+        IntegrationState.Of(secrets)
     ];
 
 }

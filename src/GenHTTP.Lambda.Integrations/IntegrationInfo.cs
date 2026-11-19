@@ -13,7 +13,8 @@ public static class IntegrationKinds
     public const string Database = "database";
 
     /// <summary>
-    /// The files a lambda writes and reads as data: its workspace.
+    /// The files a lambda writes and reads as data - its workspace - and the
+    /// platform's pictures.
     /// </summary>
     public const string Files = "files";
 
@@ -29,9 +30,8 @@ public static class IntegrationKinds
 /// </summary>
 /// <param name="Kind">Which kind it is, one of <see cref="IntegrationKinds"/></param>
 /// <param name="Name">What it is called, such as SQLite or PostgreSQL</param>
-/// <param name="Summary">What it does here, in a sentence</param>
 /// <param name="Details">Where it keeps what it keeps, as label and value - nothing that grants access</param>
-public sealed record IntegrationInfo(string Kind, string Name, string Summary, IReadOnlyList<IntegrationDetail> Details);
+public sealed record IntegrationInfo(string Kind, string Name, IReadOnlyList<IntegrationDetail> Details);
 
 /// <summary>
 /// One fact about an integration, such as the server it talks to.

@@ -5,17 +5,16 @@ import { Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
 import { Card, Fact, Reading } from './parts';
 
-/** What each kind of integration keeps, as the operator reads it. */
-const KEEPS: Record<Integration['kind'], { title: string; keeps: string }> = {
-  database: { title: 'Database', keeps: 'The platform’s records, its analytics, and the database of every lambda and draft.' },
-  files: { title: 'Files', keeps: 'The workspace of every lambda and draft - what the lambdas save and what is uploaded to them - and the platform’s pictures: the logo and the showcase.' },
-  secrets: { title: 'Secrets', keeps: 'The API keys and passwords of the lambdas, which only the lambda they belong to reads.' },
+const KINDS: Record<Integration['kind'], string> = {
+  database: 'Database',
+  files: 'Files',
+  secrets: 'Secrets',
 };
 
 /**
  * What the installation keeps its data in - read only, since the host chooses
- * it as it starts. A card per kind: what it keeps, which integration keeps it
- * and what it says about where, and whether that is the platform's own.
+ * it as it starts. A card per kind: the integration, the assembly that names
+ * it, and where it keeps what it keeps.
  */
 export function IntegrationsSection({ access }: { access: Access }) {
   const { token, deny } = access;
@@ -36,10 +35,7 @@ export function IntegrationsSection({ access }: { access: Access }) {
   }, [token, deny]);
 
   return (
-    <Section
-      title="Integrations"
-      hint="What the installation keeps its data in. Chosen as it starts - LAMBDA_DATABASE on the community edition - and moving data from one to another is not done for you."
-    >
+    <Section title="Integrations" hint="What the installation keeps its data in, chosen as it starts.">
       {integrations === null ? (
         <Reading what="the integrations" failure={error} />
       ) : (
@@ -47,31 +43,18 @@ export function IntegrationsSection({ access }: { access: Access }) {
           {integrations.map((integration) => (
             <Card
               key={integration.kind}
-              title={(
-                <span className="flex flex-wrap items-center gap-2">
-                  {KEEPS[integration.kind]?.title ?? integration.kind}
-                  <span className="text-slate-400">·</span>
-                  <span>{integration.name}</span>
-                  <span className="rounded bg-grey-200 px-1.5 py-0.5 text-[11px] font-normal text-slate-600 dark:bg-ink-800 dark:text-slate-400">
-                    {integration.default ? 'The platform’s own' : 'Chosen by the host'}
-                  </span>
-                </span>
-              )}
-              hint={KEEPS[integration.kind]?.keeps}
+              title={`${KINDS[integration.kind] ?? integration.kind} · ${integration.name}`}
+              hint={<span className="font-mono text-[12px]">{integration.assembly}</span>}
             >
-              <p className="text-[13px] text-slate-600 dark:text-slate-400">{integration.summary}</p>
-
-              {integration.details.length > 0 && (
-                // one column on a phone: the values are paths and addresses,
-                // which read badly broken into two narrow ones
-                <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-3 text-[13px] sm:grid-cols-2">
-                  {integration.details.map((detail) => (
-                    <Fact key={detail.label} label={detail.label}>
-                      <span className="break-all font-mono text-[12px]">{detail.value}</span>
-                    </Fact>
-                  ))}
-                </dl>
-              )}
+              {/* one column on a phone: the values are paths and addresses,
+                  which read badly broken into two narrow ones */}
+              <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-[13px] sm:grid-cols-2">
+                {integration.details.map((detail) => (
+                  <Fact key={detail.label} label={detail.label}>
+                    <span className="break-all font-mono text-[12px]">{detail.value}</span>
+                  </Fact>
+                ))}
+              </dl>
             </Card>
           ))}
         </div>

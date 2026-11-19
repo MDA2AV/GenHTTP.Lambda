@@ -62,7 +62,7 @@ public sealed class PostgreSqlTests
         var listed = await integrations.GetContentAsync<List<IntegrationResponse>>();
 
         Assert.AreEqual("PostgreSQL", listed[0].Name);
-        Assert.IsFalse(listed[0].Default, "chosen by the host");
+        Assert.AreEqual("GenHTTP.Lambda.Integrations.PostgreSql", listed[0].Assembly);
         Assert.IsFalse(listed.SelectMany(i => i.Details).Any(d => d.Value.Contains("Password", StringComparison.OrdinalIgnoreCase)), "never what grants access");
 
         var guide = await Guide.ReadAsync(fixture);

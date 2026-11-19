@@ -1442,12 +1442,10 @@ export interface Integration {
   kind: 'database' | 'files' | 'secrets';
   /** What it is called, such as SQLite or PostgreSQL. */
   name: string;
-  /** What it does here, in a sentence. */
-  summary: string;
+  /** The assembly it is in, which names it - what a host references to use it. */
+  assembly: string;
   /** Where it keeps what it keeps - never a password, a key or a connection string. */
   details: { label: string; value: string }[];
-  /** Whether it is the platform's own, which every installation has unless its host chooses another. */
-  default: boolean;
 }
 
 /** What a lambda of one tier may have, and what the tier is called, as the operator set it. */
