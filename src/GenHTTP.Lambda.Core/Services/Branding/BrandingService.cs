@@ -74,7 +74,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
         var logo = database.BrandingPictures.AsNoTracking().FirstOrDefault(p => p.Purpose == LogoPurpose);
 
         // the row's own bytes where the logo was not moved out of it yet
-        var content = logo == null ? null : files.Read(FileStores.Branding, LogoPurpose) ?? (logo.Content.Length > 0 ? logo.Content : null);
+        var content = logo == null ? null : files.Read(FileStores.Branding, PictureNames.Branding(LogoPurpose)) ?? (logo.Content.Length > 0 ? logo.Content : null);
 
         return Brand.Of(name, logo == null || content == null ? null : new BrandPicture(content, logo.Type, logo.Updated));
     }
@@ -138,7 +138,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
         {
             var current = _current ?? Read();
 
-            files.Write(FileStores.Branding, LogoPurpose, logo.Content);
+            files.Write(FileStores.Branding, PictureNames.Branding(LogoPurpose), logo.Content);
 
             using var database = databases.CreateDbContext();
 
@@ -178,7 +178,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
                 database.SaveChanges();
             }
 
-            files.Delete(FileStores.Branding, LogoPurpose);
+            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
 
             return _current = Brand.Of(current.Given, null);
         }
@@ -207,7 +207,7 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
             database.SaveChanges();
 
-            files.Delete(FileStores.Branding, LogoPurpose);
+            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
 
             return _current = Brand.Platform;
         }

@@ -8,7 +8,7 @@ import { Card, Fact, Reading } from './parts';
 /** What each kind of integration keeps, as the operator reads it. */
 const KEEPS: Record<Integration['kind'], { title: string; keeps: string }> = {
   database: { title: 'Database', keeps: 'The platform’s records, its analytics, and the database of every lambda and draft.' },
-  files: { title: 'Files', keeps: 'The workspace of every lambda and draft: what the lambdas save and what is uploaded to them.' },
+  files: { title: 'Files', keeps: 'The workspace of every lambda and draft - what the lambdas save and what is uploaded to them - and the platform’s pictures: the logo and the showcase.' },
   secrets: { title: 'Secrets', keeps: 'The API keys and passwords of the lambdas, which only the lambda they belong to reads.' },
 };
 

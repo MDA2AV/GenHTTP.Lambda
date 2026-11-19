@@ -196,6 +196,7 @@ the environment:
 | Engine, ports, TLS, the environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
 | What data is kept in: the contracts | `GenHTTP.Lambda.Integrations` | - | - |
 | SQLite, the default database | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
+| Local directories, the default files | `GenHTTP.Lambda.Integrations.Local` | - (the platform's own) | `.Files(...)` |
 | PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
 
 - **A host's `Program.cs` is the composition, and stays short and plain**:

@@ -237,7 +237,7 @@ public sealed record UsageReportResponse(
 public sealed record IntegrationResponse(
     [Summary("What it keeps: `database` - the platform's records, its analytics and the lambdas' databases; `files` - the lambdas' workspaces; `secrets` - their API keys and passwords")]
     string Kind,
-    [Summary("What it is called: `SQLite`, `PostgreSQL`, `Local`, `Internal`")]
+    [Summary("What it is called: `SQLite`, `PostgreSQL`, `Local`, `Database`")]
     string Name,
     [Summary("What it does here, in a sentence")]
     string Summary,

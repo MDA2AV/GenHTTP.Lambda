@@ -103,7 +103,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         // the picture first: a row is never there without the file it names
         if (draft.Image != null)
         {
-            files.Write(FileStores.Showcase, PictureOf(lambda.Id), draft.Image);
+            files.Write(FileStores.Showcase, PictureNames.Showcase(lambda.Id), draft.Image);
         }
 
         if (entry == null)
@@ -153,7 +153,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
             logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
         }
 
-        files.Delete(FileStores.Showcase, PictureOf(lambda.Id));
+        files.Delete(FileStores.Showcase, PictureNames.Showcase(lambda.Id));
     }
 
     public void Forget(long lambdaId)
@@ -162,7 +162,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
 
-        files.Delete(FileStores.Showcase, PictureOf(lambdaId));
+        files.Delete(FileStores.Showcase, PictureNames.Showcase(lambdaId));
     }
 
     #endregion
@@ -208,16 +208,12 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         }
 
         // the row's own bytes where the picture was not moved out of it yet
-        var content = files.Read(FileStores.Showcase, PictureOf(entry.LambdaId))
+        var content = files.Read(FileStores.Showcase, PictureNames.Showcase(entry.LambdaId))
                    ?? database.Showcases.AsNoTracking().Where(s => s.LambdaId == entry.LambdaId).Select(s => s.Image).FirstOrDefault();
 
         return content is { Length: > 0 } ? new ShowcaseImage(content, entry.ImageType, entry.Updated) : null;
     }
 
-    /// <summary>
-    /// What the picture of a lambda's entry is called in the store of the showcase.
-    /// </summary>
-    internal static string PictureOf(long lambdaId) => lambdaId.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     #endregion
 

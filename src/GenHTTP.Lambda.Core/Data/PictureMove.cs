@@ -1,5 +1,4 @@
 using GenHTTP.Lambda.Integrations.Files;
-using GenHTTP.Lambda.Services.Showcase;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,7 +33,7 @@ internal static class PictureMove
             {
                 var picture = database.BrandingPictures.First(p => p.Purpose == purpose);
 
-                files.Write(FileStores.Branding, purpose, picture.Content);
+                files.Write(FileStores.Branding, PictureNames.Branding(purpose), picture.Content);
 
                 picture.Content = [];
 
@@ -52,7 +51,7 @@ internal static class PictureMove
             {
                 var entry = database.Showcases.First(s => s.LambdaId == lambda);
 
-                files.Write(FileStores.Showcase, ShowcaseService.PictureOf(lambda), entry.Image);
+                files.Write(FileStores.Showcase, PictureNames.Showcase(lambda), entry.Image);
 
                 entry.ImageBytes = entry.Image.Length;
                 entry.Image = [];

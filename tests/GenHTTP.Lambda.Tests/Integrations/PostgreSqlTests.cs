@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -68,6 +69,55 @@ public sealed class PostgreSqlTests
 
         Assert.Contains("Here: PostgreSQL", Guide.Section(guide, "database"), "what the integration adds to its section");
         Assert.IsLessThan(24_000, Encoding.UTF8.GetByteCount(guide), "within the guide's room, as on SQLite");
+    }
+
+    /// <summary>
+    /// The pictures are files there too, and one an installation kept in its
+    /// records before is moved out as it starts (V2 and <c>PictureMove</c>
+    /// on PostgreSQL).
+    /// </summary>
+    [TestMethod]
+    public async Task APictureKeptInTheRecordsBeforeIsMovedOutAsThePlatformStarts()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
+
+        LambdaOptions Configure(LambdaOptions options) => LambdaFixture.WithPanel(options) with { DataDirectory = directory };
+
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+
+        await using (var first = await LambdaFixture.CreateCommunityAsync(Configure, database.Integration))
+        {
+            var lambda = await first.CreateLambdaAsync("framed");
+
+            await first.DeployAsync(lambda.PrivateKey);
+
+            using var put = await first.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/showcase",
+                                                  new ShowcaseRequest("Title", "Description.", Convert.ToBase64String(png)));
+
+            Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
+        }
+
+        Assert.AreEqual(0L, await database.QueryAsync("SELECT CAST(COALESCE(SUM(octet_length(image)), 0) AS bigint) FROM platform.showcases"), "no picture in the database");
+
+        // as an installation from before kept it: in its row, no file
+        foreach (var file in Directory.GetFiles(Path.Combine(directory, "showcase")))
+        {
+            File.Delete(file);
+        }
+
+        await database.QueryAsync($"UPDATE platform.showcases SET image = '\\x{Convert.ToHexString(png)}'::bytea, image_bytes = 0");
+
+        await using var second = await LambdaFixture.CreateCommunityAsync(Configure, database.Integration);
+
+        Assert.AreEqual(0L, await database.QueryAsync("SELECT CAST(COALESCE(SUM(octet_length(image)), 0) AS bigint) FROM platform.showcases"), "moved out of its row");
+        Assert.AreEqual((long)png.Length, await database.QueryAsync("SELECT CAST(SUM(image_bytes) AS bigint) FROM platform.showcases"));
+
+        using var image = await second.GetAsync("/api/v1/showcases/framed/image");
+
+        Assert.AreEqual(HttpStatusCode.OK, image.StatusCode);
+        CollectionAssert.AreEqual(png, await image.Content.ReadAsByteArrayAsync());
     }
 
     /// <summary>
