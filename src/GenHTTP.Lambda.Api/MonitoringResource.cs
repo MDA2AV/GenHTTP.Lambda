@@ -55,8 +55,8 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
              are about the version online, or the newest where none is.
              """)]
     [return: Summary("The lambda at a glance")]
-    public LambdaSummaryResponse Summary([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => _summaries.Of(privateKey);
+    public async ValueTask<LambdaSummaryResponse> Summary([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => await _summaries.OfAsync(privateKey);
 
     [ResourceMethod("lambdas/:privateKey/traffic")]
     [Summary("Reads the traffic of a lambda")]

@@ -34,11 +34,11 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     [Summary("Lists the files of a feature's workspace")]
     [Remarks("What the feature's preview reads and writes. The lambda's own workspace is not touched by it.")]
     [return: Summary("The files and folders of the feature's copy")]
-    public WorkspaceListing List([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+    public async ValueTask<WorkspaceListing> List([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
     {
         var (lambdaId, featureId) = features.Require(privateKey, feature, false);
 
-        return workspace.List(lambdaId, featureId);
+        return await workspace.ListAsync(lambdaId, featureId);
     }
 
     [ResourceMethod("lambdas/:privateKey/features/:feature/workspace/:path")]
@@ -59,12 +59,12 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     [Summary("Downloads a file of a feature's workspace")]
     [Response(ResponseStatus.Ok, "The bytes of the file", ContentType = "application/octet-stream")]
     [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, with the name of the file")]
-    public IResponse GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
+    public async ValueTask<IResponse> GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                                 [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
     {
         var (lambdaId, featureId) = features.Require(privateKey, feature, false);
 
-        return WorkspaceFiles.Send(workspace, lambdaId, featureId, path, request);
+        return await WorkspaceFiles.SendAsync(workspace, lambdaId, featureId, path, request);
     }
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/workspace/:path/content")]
@@ -101,12 +101,12 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     [Summary("Deletes from a feature's workspace")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.BadRequest, "The path is empty or leads outside of the workspace.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                       [Summary(ApiDocumentation.WorkspacePath)] string path)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                  [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
         var (lambdaId, featureId) = features.Require(privateKey, feature, true);
 
-        workspace.Delete(lambdaId, path, featureId);
+        await workspace.DeleteAsync(lambdaId, path, featureId);
 
         logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
@@ -118,12 +118,12 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "The lambda's workspace is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The feature's copy of the workspace afterwards")]
-    public WorkspaceListing PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                      [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
+    public async ValueTask<WorkspaceListing> PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                                       [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
     {
         var (lambdaId, featureId) = features.Require(privateKey, feature, true);
 
-        var listing = WorkspaceFiles.CreateFolder(workspace, lambdaId, featureId, path);
+        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, lambdaId, featureId, path);
 
         logger.LogInformation("Created workspace folder {Path} of feature '{Feature}' of lambda {Lambda}", path,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));

@@ -11,11 +11,11 @@ namespace Platform;
 /// </summary>
 public static class DatabaseOptions
 {
-    /// <summary>Configures a context on the connection Database.GetConnection() opened, which the context then owns.</summary>
+    /// <summary>Configures a context on the connection Database.GetConnectionAsync() opened, which the context then owns.</summary>
     public static DbContextOptionsBuilder UseDatabase(this DbContextOptionsBuilder options, DbConnection connection)
         => options.UseSqlite(connection, contextOwnsConnection: true);
 
-    /// <summary>Configures a context on the connection Database.GetConnection() opened, which the context then owns.</summary>
+    /// <summary>Configures a context on the connection Database.GetConnectionAsync() opened, which the context then owns.</summary>
     public static DbContextOptionsBuilder<TContext> UseDatabase<TContext>(this DbContextOptionsBuilder<TContext> options, DbConnection connection)
         where TContext : DbContext
         => options.UseSqlite(connection, contextOwnsConnection: true);

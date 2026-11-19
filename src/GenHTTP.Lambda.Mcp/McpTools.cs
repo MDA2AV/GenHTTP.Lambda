@@ -106,12 +106,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("create_lambda", Title = "Create a lambda", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Summary("Create a lambda. Returns its public address and a private editor key, the only way back in. It starts with version 1 - an empty starter, or a copy of a demo. Nothing is online until deploy.")]
-    public object CreateLambda(IRequest request,
-                               [Summary("Must be true where the installation has terms - on a free shared machine, say, that deployments may be removed and nothing malicious is run (platform_guide, terms): the user accepts them. Ignored where it has none.")] bool acceptTerms,
-                               [Summary("Requested address: lower case letters, digits and dashes. Generated if omitted.")] string? publicKey = null,
-                               [Summary("Left out, the lambda starts empty. The id of a demo from list_demos starts it as a copy of that demo, which is yours to change.")] string? template = null,
-                               [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView? view = null)
-        => Refusing(() => Create(acceptTerms, publicKey, template, view, RequestOrigin.Of(request)));
+    public ValueTask<object> CreateLambda(IRequest request,
+                                          [Summary("Must be true where the installation has terms - on a free shared machine, say, that deployments may be removed and nothing malicious is run (platform_guide, terms): the user accepts them. Ignored where it has none.")] bool acceptTerms,
+                                          [Summary("Requested address: lower case letters, digits and dashes. Generated if omitted.")] string? publicKey = null,
+                                          [Summary("Left out, the lambda starts empty. The id of a demo from list_demos starts it as a copy of that demo, which is yours to change.")] string? template = null,
+                                          [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView? view = null)
+        => RefusingAsync(() => CreateAsync(acceptTerms, publicKey, template, view, RequestOrigin.Of(request)));
 
     [Tool("update_lambda", Title = "Change a lambda's settings", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Change how a lambda's editor opens: view 'Simple' shows the app, how it is doing and a box to ask for a change - for an owner who does not write code - and 'Full' every section, the code, files, data, versions and logs included. Only the default: whoever opens the editor can switch for themselves, and that choice stays theirs. Only do this when the user asks for it.")]
@@ -121,7 +121,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => Refusing(() => Update(privateKey, view, RequestOrigin.Of(request)));
 
     [Tool("write_code", Title = "Save all files", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
-    [Summary("Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. A version is its code and its resources. The code is every file not in resources/: its .cs files are compiled, in any folder, as in a C# project - lambda.cs returns the handler, the others hold types - and every other file is kept with it and never compiled or served: docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and whatever else - what a front end is built from, a tool's configuration - is laid out as you like (platform_guide, code). resources/ is what the lambda reads and serves while it runs, as Resources: the whole front end (pages, scripts, styles, icons) goes there, as part of the program - resources/web/index.html is served by Resources.App(\"web\"). What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations in resources/migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.")]
+    [Summary("Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. A version is its code and its resources. The code is every file not in resources/: its .cs files are compiled, in any folder, as in a C# project - lambda.cs returns the handler, the others hold types - and every other file is kept with it and never compiled or served: docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and whatever else - what a front end is built from, a tool's configuration - is laid out as you like (platform_guide, code). resources/ is what the lambda reads and serves while it runs, as Resources: the whole front end (pages, scripts, styles, icons) goes there, as part of the program - resources/web/index.html is served by Resources.App(\"web\"). What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on await Database.GetConnectionAsync(), awaited; its schema as Evolve migrations in resources/migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.")]
     public ValueTask<object> WriteCode(IRequest request,
                                        [Summary("The editor key from create_lambda.")] string privateKey,
                                        [Summary("lambda.cs first.")] List<CodeFile> files,
@@ -177,9 +177,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("delete_feature", Title = "Delete a feature", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Throw a feature away: its files, its preview and its copy of the data. The lambda is not touched. For a feature the user does not want after all.")]
-    public object DeleteFeature([Summary(PrivateKey)] string privateKey,
-                                [Summary("The feature.")] string feature)
-        => Refusing(() => RemoveFeature(privateKey, feature));
+    public ValueTask<object> DeleteFeature([Summary(PrivateKey)] string privateKey,
+                                           [Summary("The feature.")] string feature)
+        => RefusingAsync(() => RemoveFeatureAsync(privateKey, feature));
 
     [Tool("check_code", Title = "Check that code compiles", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("Compile without saving or deploying; returns diagnostics with file and line. Does not build the handler, so deploy can still refuse a route whose return type cannot be served.")]
@@ -199,12 +199,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("read_lambda", Title = "Read a lambda", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (docs/: what the app is and why, the technical decisions), how it is tested (tests/), and its files. The documentation comes first and in full up to 20,000 characters; the files come in full while they fit into 30,000 characters - the C# first, then the resources, then the rest of the code - and by name and length after that, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.")]
-    public object ReadLambda(IRequest request,
-                             [Summary(PrivateKeyOrDemo)] string privateKey,
-                             [Summary("Defaults to the newest.")] int? version = null,
-                             [Summary("Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version.")] string? feature = null,
-                             [Summary("Return only this file, in full however large the rest is - up to 1,048,576 characters, beyond which the zip has it. Any file of the version, 'tests/smoke.mjs' and 'resources/web/index.html' included.")] string? file = null)
-        => Refusing(() => Read(privateKey, version, feature, file, RequestOrigin.Of(request)));
+    public ValueTask<object> ReadLambda(IRequest request,
+                                        [Summary(PrivateKeyOrDemo)] string privateKey,
+                                        [Summary("Defaults to the newest.")] int? version = null,
+                                        [Summary("Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version.")] string? feature = null,
+                                        [Summary("Return only this file, in full however large the rest is - up to 1,048,576 characters, beyond which the zip has it. Any file of the version, 'tests/smoke.mjs' and 'resources/web/index.html' included.")] string? file = null)
+        => RefusingAsync(() => ReadAsync(privateKey, version, feature, file, RequestOrigin.Of(request)));
 
     [Tool("read_logs", Title = "Read a lambda's logs", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. With feature, what that feature's preview has been doing instead, kept apart from the lambda's visitors. Call it after deploying to see that it works, and first when something is reported broken.")]
@@ -226,22 +226,22 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("list_files", Title = "List the lambda's data", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("The lambda's data: whether its workspace is switched on, and every file in it with size and last write - the same whichever version is online. With feature, that feature's copy of it. The code and resources of a version are in read_lambda.")]
-    public object ListFiles([Summary(PrivateKeyOrDemo)] string privateKey,
-                            [Summary("List this feature's copy of the data instead.")] string? feature = null)
-        => Refusing(() => Files(privateKey, feature));
+    public ValueTask<object> ListFiles([Summary(PrivateKeyOrDemo)] string privateKey,
+                                       [Summary("List this feature's copy of the data instead.")] string? feature = null)
+        => RefusingAsync(() => FilesAsync(privateKey, feature));
 
     [Tool("delete_file", Title = "Delete a file from the lambda's data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Remove a file, or a folder with its contents, from the workspace - the lambda's data, shared by every version. No deploy or rollback brings it back. With feature, from that feature's copy instead.")]
-    public object DeleteFile([Summary(PrivateKey)] string privateKey,
-                             [Summary("Relative to the workspace.")] string path,
-                             [Summary("Delete from this feature's copy of the data instead.")] string? feature = null)
-        => Refusing(() => Remove(privateKey, path, feature));
+    public ValueTask<object> DeleteFile([Summary(PrivateKey)] string privateKey,
+                                        [Summary("Relative to the workspace.")] string path,
+                                        [Summary("Delete from this feature's copy of the data instead.")] string? feature = null)
+        => RefusingAsync(() => RemoveAsync(privateKey, path, feature));
 
     [Tool("enable_data", Title = "Switch on a kind of data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Switch on a kind of data the lambda needs and does not have: 'database' (a database of its own for its records - off until switched on, which makes it, empty), 'secrets' (off until switched on) or 'workspace' (on unless the owner switched it off). Do it when what you build needs it - records need the database, an API key for a service it calls needs secrets. Takes effect at once, without a deploy; switching the database on starts the lambda again on its next request, so its migrations run. There is no tool to switch one off: that deletes what it held, and is the owner's to do in the editor.")]
-    public object EnableData([Summary(PrivateKey)] string privateKey,
-                             [Summary("Which kind."), AllowedValues(DataKinds.DatabaseId, DataKinds.SecretsId, DataKinds.WorkspaceId)] string kind)
-        => Refusing(() => SwitchOn(privateKey, kind));
+    public ValueTask<object> EnableData([Summary(PrivateKey)] string privateKey,
+                                        [Summary("Which kind."), AllowedValues(DataKinds.DatabaseId, DataKinds.SecretsId, DataKinds.WorkspaceId)] string kind)
+        => RefusingAsync(() => SwitchOnAsync(privateKey, kind));
 
     [Tool("request_connectivity", Title = "Ask to connect to other servers", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Ask the operator of the installation to let a lambda's code connect to other servers - call an API with HttpClient, open a socket, a WebSocket or mail client - or read where that stands. Without it, code that connects does not compile (LAMBDA0003); a lambda whose tier connects by default (production, usually) may anyway, and read_lambda says connectivity.allowed. Ask only where the server has to make the call - a key that must not reach the browser, an API browsers may not call - and fetch a public API from the lambda's page otherwise. Say what it connects to and why. The operator decides, which takes a while: tell the user it was asked, and build what does not connect meanwhile. withdraw: true takes the request back, or gives up what was allowed - only when the user asks. With only privateKey it returns where it stands.")]
@@ -251,7 +251,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => Refusing(() => Connectivity(privateKey, purpose, withdraw));
 
     [Tool("read_database", Title = "Read the lambda's database", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Summary("The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to 100 at a time. Read only: the lambda writes it, through Database.GetConnection(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.")]
+    [Summary("The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to 100 at a time. Read only: the lambda writes it, through Database.GetConnectionAsync(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.")]
     public ValueTask<object> ReadDatabase([Summary(PrivateKeyOrDemo)] string privateKey,
                                           [Summary("Read this feature's copy of the database instead.")] string? feature = null,
                                           [Summary("A table or view to read the rows of; left out, the tables are listed.")] string? table = null,
@@ -262,35 +262,35 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         => RefusingAsync(() => DatabaseAsync(privateKey, feature, table, offset, limit, order, ascending));
 
     [Tool("set_secret", Title = "Store a secret", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("Store an API key, password or token under a name the code reads with Secret.Read(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.Read and tell the user to set it under Secrets in the editor (Keys and passwords in its simple view) - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to 100 secrets of 32 KB each.")]
-    public object SetSecret([Summary(PrivateKey)] string privateKey,
-                            [Summary("Letters, digits and underscores, not starting with a digit - conventionally upper case: 'STRIPE_KEY'. The name of an environment variable in an exported project.")] string name,
-                            [Summary("The value, as the user gave it.")] string value,
-                            [Summary("Store it in this feature's copy of the secrets instead.")] string? feature = null)
-        => Refusing(() => StoreSecret(privateKey, name, value, feature));
+    [Summary("Store an API key, password or token under a name the code reads with Secret.ReadAsync(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.ReadAsync and tell the user to set it under Secrets in the editor (Keys and passwords in its simple view) - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to 100 secrets of 32 KB each.")]
+    public ValueTask<object> SetSecret([Summary(PrivateKey)] string privateKey,
+                                       [Summary("Letters, digits and underscores, not starting with a digit - conventionally upper case: 'STRIPE_KEY'. The name of an environment variable in an exported project.")] string name,
+                                       [Summary("The value, as the user gave it.")] string value,
+                                       [Summary("Store it in this feature's copy of the secrets instead.")] string? feature = null)
+        => RefusingAsync(() => StoreSecretAsync(privateKey, name, value, feature));
 
     [Tool("list_secrets", Title = "List a lambda's secrets", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Summary("The lambda's secrets by name - never their values: whether secrets are switched on, what is stored and when, which names the code reads with Secret.Read and have no value yet (missing) - what the user still has to set - and which it only uses when they are there, checked with Secret.Exists (optional). With feature, that feature's copy.")]
-    public object ListSecrets([Summary(PrivateKeyOrDemo)] string privateKey,
-                              [Summary("List this feature's copy instead.")] string? feature = null)
-        => Refusing(() => Secrets(privateKey, feature));
+    [Summary("The lambda's secrets by name - never their values: whether secrets are switched on, what is stored and when, which names the code reads with Secret.ReadAsync and have no value yet (missing) - what the user still has to set - and which it only uses when they are there, checked with Secret.ExistsAsync (optional). With feature, that feature's copy.")]
+    public ValueTask<object> ListSecrets([Summary(PrivateKeyOrDemo)] string privateKey,
+                                         [Summary("List this feature's copy instead.")] string? feature = null)
+        => RefusingAsync(() => SecretsAsync(privateKey, feature));
 
     [Tool("delete_secret", Title = "Delete a secret", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("Remove a secret. Code that reads it with Secret.Read fails from its next call on. Only when the user asks for it, or a secret you stored yourself is no longer used. With feature, from that feature's copy instead.")]
-    public object DeleteSecret([Summary(PrivateKey)] string privateKey,
-                               [Summary("The name, as stored - names are case sensitive.")] string name,
-                               [Summary("Delete from this feature's copy instead.")] string? feature = null)
-        => Refusing(() => RemoveSecret(privateKey, name, feature));
+    [Summary("Remove a secret. Code that reads it with Secret.ReadAsync fails from its next call on. Only when the user asks for it, or a secret you stored yourself is no longer used. With feature, from that feature's copy instead.")]
+    public ValueTask<object> DeleteSecret([Summary(PrivateKey)] string privateKey,
+                                          [Summary("The name, as stored - names are case sensitive.")] string name,
+                                          [Summary("Delete from this feature's copy instead.")] string? feature = null)
+        => RefusingAsync(() => RemoveSecretAsync(privateKey, name, feature));
 
     [Tool("showcase", Title = "Showcase a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. " + ShowcaseLimits.Tone)]
-    public object Showcase(IRequest request,
-                           [Summary(PrivateKey)] string privateKey,
-                           [Summary("What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'."), MaxLength(ShowcaseLimits.MaxTitle)] string? title = null,
-                           [Summary("One to three plain sentences on what a visitor can do with it."), MaxLength(ShowcaseLimits.MaxDescription)] string? description = null,
-                           [Summary("The picture, base64: PNG, JPEG, GIF or WebP, up to the size platform_guide names under showcase. Needed for a new entry; left out, the current one is kept.")] string? image = null,
-                           [Summary("Take the lambda off the showcase instead.")] bool remove = false)
-        => Refusing(() => ChangeShowcase(privateKey, title, description, image, remove, RequestOrigin.Of(request)));
+    public ValueTask<object> Showcase(IRequest request,
+                                      [Summary(PrivateKey)] string privateKey,
+                                      [Summary("What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'."), MaxLength(ShowcaseLimits.MaxTitle)] string? title = null,
+                                      [Summary("One to three plain sentences on what a visitor can do with it."), MaxLength(ShowcaseLimits.MaxDescription)] string? description = null,
+                                      [Summary("The picture, base64: PNG, JPEG, GIF or WebP, up to the size platform_guide names under showcase. Needed for a new entry; left out, the current one is kept.")] string? image = null,
+                                      [Summary("Take the lambda off the showcase instead.")] bool remove = false)
+        => RefusingAsync(() => ChangeShowcaseAsync(privateKey, title, description, image, remove, RequestOrigin.Of(request)));
 
     [Tool("open_source", Title = "Publish a lambda's source code", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Publish a lambda's source code at /source/{publicKey} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, resources, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.")]
@@ -303,10 +303,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     [Tool("analytics", Title = "Read who visits a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which the lambda's tier decides how much is shown (platform_guide, analytics). Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.")]
-    public object Analytics([Summary(PrivateKey)] string privateKey,
-                            [Summary("How many days, today included. Left out, as many as the lambda's tier shows, which is also the most.")] int? days = null,
-                            [Summary("Switch analytics on, counting from the next request - only when the user asked for it.")] bool enable = false)
-        => Refusing(() => ReadAnalytics(privateKey, days, enable));
+    public ValueTask<object> Analytics([Summary(PrivateKey)] string privateKey,
+                                       [Summary("How many days, today included. Left out, as many as the lambda's tier shows, which is also the most.")] int? days = null,
+                                       [Summary("Switch analytics on, counting from the next request - only when the user asked for it.")] bool enable = false)
+        => RefusingAsync(() => ReadAnalyticsAsync(privateKey, days, enable));
 
     [Tool("list_demos", Title = "List the demos", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Summary("Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.")]
@@ -420,14 +420,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     #region Code
 
-    private object Create(bool acceptTerms, string? publicKey, string? template, EditorView? view, string origin)
+    private async ValueTask<object> CreateAsync(bool acceptTerms, string? publicKey, string? template, EditorView? view, string origin)
     {
         if (options.Terms != null && !acceptTerms)
         {
             return ToolResult.Error("acceptTerms must be true. Show the user the terms from platform_guide first.");
         }
 
-        var lambda = meta.Create(publicKey, template, view ?? EditorView.Full);
+        var lambda = await meta.CreateAsync(publicKey, template, view ?? EditorView.Full);
 
         logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey,
                               template ?? "(none)", lambda.View);
@@ -798,9 +798,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         };
     }
 
-    private object RemoveFeature(string privateKey, string feature)
+    private async ValueTask<object> RemoveFeatureAsync(string privateKey, string feature)
     {
-        var name = features.Delete(privateKey, feature);
+        var name = await features.DeleteAsync(privateKey, feature);
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
 
@@ -937,11 +937,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         };
     }
 
-    private object Files(string privateKey, string? named)
+    private async ValueTask<object> FilesAsync(string privateKey, string? named)
     {
         var (id, feature) = WorkspaceOf(privateKey, named, false);
 
-        var listing = workspace.List(id, feature);
+        var listing = await workspace.ListAsync(id, feature);
 
         if (named != null)
         {
@@ -965,9 +965,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         };
     }
 
-    private object SwitchOn(string privateKey, string kind)
+    private async ValueTask<object> SwitchOnAsync(string privateKey, string kind)
     {
-        var store = data.Enable(privateKey, kind);
+        var store = await data.EnableAsync(privateKey, kind);
 
         logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
@@ -978,8 +978,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             enabled = store.Enabled,
             next = store.Kind switch
             {
-                DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Secrets in the editor (Keys and passwords in its simple view). The code reads it with Secret.Read(\"NAME\").",
-                DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in resources/migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code keeps its records with a DbContext of Entity Framework Core on the connection Database.GetConnection() opens, synchronously; read_database shows what it holds.",
+                DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Secrets in the editor (Keys and passwords in its simple view). The code reads it with await Secret.ReadAsync(\"NAME\").",
+                DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in resources/migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code keeps its records with a DbContext of Entity Framework Core on the connection await Database.GetConnectionAsync() opens, awaited; read_database shows what it holds.",
                 _ => "On from the lambda's next request, without a deploy."
             }
         };
@@ -1049,9 +1049,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// The answer repeats the name and never the value, so the value is in the
     /// conversation once - where the user put it - rather than twice.
     /// </remarks>
-    private object StoreSecret(string privateKey, string name, string value, string? feature)
+    private async ValueTask<object> StoreSecretAsync(string privateKey, string name, string value, string? feature)
     {
-        var stored = secrets.Set(privateKey, name, value, feature);
+        var stored = await secrets.SetAsync(privateKey, name, value, feature);
 
         // the name only - the value is not repeated anywhere, here least of all
         if (feature != null)
@@ -1071,14 +1071,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             note = (feature == null
                        ? "Stored in the lambda's secrets: its code reads it from its next call on, without a deploy. "
                        : "Stored in the feature's copy: its preview reads it; the lambda's own secrets are not touched. ")
-                 + (stored.Used ? "" : $"No code reads it yet - read it with Secret.Read(\"{stored.Name}\"). ")
+                 + (stored.Used ? "" : $"No code reads it yet - read it with await Secret.ReadAsync(\"{stored.Name}\"). ")
                  + "Do not repeat the value anywhere - not in code, notes, logs or your answer."
         };
     }
 
-    private object Secrets(string privateKey, string? named)
+    private async ValueTask<object> SecretsAsync(string privateKey, string? named)
     {
-        var listing = secrets.List(privateKey, named);
+        var listing = await secrets.ListAsync(privateKey, named);
 
         if (named != null)
         {
@@ -1099,7 +1099,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             note = !listing.Enabled
                 ? "Secrets are switched off. enable_data with kind 'secrets' switches them on when what you build needs one."
                 : listing.Missing.Count > 0
-                    ? $"The code reads {string.Join(", ", listing.Missing)}, which have no value: Secret.Read throws until they are set. Ask the user to set them under Secrets in the editor (Keys and passwords in its simple view), or store one they gave you with set_secret."
+                    ? $"The code reads {string.Join(", ", listing.Missing)}, which have no value: Secret.ReadAsync throws until they are set. Ask the user to set them under Secrets in the editor (Keys and passwords in its simple view), or store one they gave you with set_secret."
                     : null
         };
     }
@@ -1166,9 +1166,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private const int MaxDatabaseRows = 100;
 
-    private object RemoveSecret(string privateKey, string name, string? feature)
+    private async ValueTask<object> RemoveSecretAsync(string privateKey, string name, string? feature)
     {
-        secrets.Delete(privateKey, name, feature);
+        await secrets.DeleteAsync(privateKey, name, feature);
 
         if (feature != null)
         {
@@ -1182,11 +1182,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         return new { ok = true, deleted = name.Trim() };
     }
 
-    private object Remove(string privateKey, string path, string? named)
+    private async ValueTask<object> RemoveAsync(string privateKey, string path, string? named)
     {
         var (id, feature) = WorkspaceOf(privateKey, named, true);
 
-        workspace.Delete(id, path, feature);
+        await workspace.DeleteAsync(id, path, feature);
 
         if (named != null)
         {
@@ -1410,7 +1410,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         _ => LogLevel.Information
     };
 
-    private object Read(string privateKey, int? asked, string? wanted, string? only, string origin)
+    private async ValueTask<object> ReadAsync(string privateKey, int? asked, string? wanted, string? only, string origin)
     {
         var lambda = meta.Get(privateKey)
                   ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
@@ -1420,10 +1420,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var open = features.List(privateKey);
 
         // read for a feature, the data it works on is its own copy
-        var stores = data.List(privateKey, wanted);
+        var stores = await data.ListAsync(privateKey, wanted);
 
         // by name only, and which the code waits for
-        var kept = secrets.List(privateKey, wanted);
+        var kept = await secrets.ListAsync(privateKey, wanted);
 
         int? version = null;
 
@@ -1562,7 +1562,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     names = kept.Secrets.Select(n => n.Name),
                     missing = kept.Missing.Count > 0 ? kept.Missing : null,
                     note = kept.Missing.Count > 0
-                        ? "The code reads secrets that have no value yet: Secret.Read throws until the user sets them under Secrets in the editor (Keys and passwords in its simple view), or you store one they gave you with set_secret."
+                        ? "The code reads secrets that have no value yet: Secret.ReadAsync throws until the user sets them under Secrets in the editor (Keys and passwords in its simple view), or you store one they gave you with set_secret."
                         : null
                 },
                 DataKinds.DatabaseId => new
@@ -1572,7 +1572,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     s.UsedBytes,
                     s.QuotaBytes,
                     note = !s.Enabled && files.Any(f => f.IsCode && DatabaseService.Uses(f.Code))
-                        ? "The code connects to the database, which is switched off: Database.GetConnection() throws until it is on (enable_data with kind 'database')."
+                        ? "The code connects to the database, which is switched off: Database.GetConnectionAsync() throws until it is on (enable_data with kind 'database')."
                         : s.Enabled ? "read_database lists its tables and reads their rows." : null
                 },
                 _ => new { s.Enabled, items = s.Items, s.UsedBytes, s.QuotaBytes }
@@ -1792,11 +1792,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// read by every agent on every conversation whether it showcases
     /// anything or not.
     /// </remarks>
-    private object ChangeShowcase(string privateKey, string? title, string? description, string? encoded, bool remove, string origin)
+    private async ValueTask<object> ChangeShowcaseAsync(string privateKey, string? title, string? description, string? encoded, bool remove, string origin)
     {
         if (remove)
         {
-            showcases.Remove(privateKey);
+            await showcases.RemoveAsync(privateKey);
 
             logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
 
@@ -1830,7 +1830,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             // a change of one field keeps the others, as the tool promises
             var current = showcases.Get(privateKey);
 
-            entry = showcases.Save(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
+            entry = await showcases.SaveAsync(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
 
             logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", entry.PublicKey, entry.Title);
         }
@@ -1860,24 +1860,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// <summary>
     /// Reads what was counted of a lambda's visitors, and switches counting on.
     /// </summary>
-    private object ReadAnalytics(string privateKey, int? days, bool enable)
+    private async ValueTask<object> ReadAnalyticsAsync(string privateKey, int? days, bool enable)
     {
         LambdaAnalytics found;
 
         if (enable)
         {
-            found = analytics.Enable(privateKey);
+            found = await analytics.EnableAsync(privateKey);
 
             logger.LogInformation("Switched on analytics of lambda {Lambda}", found.PublicKey);
 
             if (days != null)
             {
-                found = analytics.Get(privateKey, days);
+                found = await analytics.GetAsync(privateKey, days);
             }
         }
         else
         {
-            found = analytics.Get(privateKey, days);
+            found = await analytics.GetAsync(privateKey, days);
 
             logger.LogInformation("Read analytics of lambda {Lambda} days {Days}", found.PublicKey, found.Shown);
         }

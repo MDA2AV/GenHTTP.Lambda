@@ -1,10 +1,7 @@
 using System.Data.Common;
 using System.Globalization;
 
-using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Integrations.Databases;
-
-using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Analytics;
 
@@ -13,7 +10,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// counts visits, a row per lambda, day and value.
 /// </summary>
 /// <remarks>
-/// A store of its own beside the platform's (<see cref="DatabaseStores.Analytics"/>,
+/// A store of its own beside the platform's (<see cref="DatabaseStore.Analytics"/>,
 /// <c>analytics.db</c> on SQLite), laid out as a star - see the migration for
 /// why. Spoken to with plain commands rather than Entity Framework: a writing
 /// is a few hundred upserts in one transaction, and a reading a handful of sums
@@ -21,8 +18,10 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// in SQL that every database the platform supports accepts, so the commands
 /// are the same whatever keeps them; only the schema is written per dialect.
 ///
-/// Synchronous, as the platform's services are: written by the background
-/// job, and read for an owner a lambda's year at most, by its key.
+/// Awaited, as everything sent over a connection the database integration
+/// opened: written by the background job, and read for an owner a lambda's
+/// year at most, by its key. Migrated with the platform's records as the
+/// platform starts.
 /// </remarks>
 public sealed class AnalyticsStore : IAnalyticsStore
 {
@@ -35,11 +34,9 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
     #region Initialization
 
-    public AnalyticsStore(IDatabaseProvider database, ILogger<AnalyticsStore> logger)
+    public AnalyticsStore(IDatabaseProvider database)
     {
         _database = database;
-
-        Migrator.Migrate(database, DatabaseStores.Analytics, logger);
     }
 
     #endregion
@@ -55,28 +52,28 @@ public sealed class AnalyticsStore : IAnalyticsStore
     /// is added to <see cref="AnalyticsDimensions.Other"/>. Values the day
     /// already has keep being counted under their own.
     /// </remarks>
-    public void Write(VisitTally tally, DateTime now)
+    public async ValueTask WriteAsync(VisitTally tally, DateTime now, CancellationToken cancellation = default)
     {
         if (tally.IsEmpty)
         {
             return;
         }
 
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
-        using var transaction = connection.BeginTransaction();
+        await using var transaction = await connection.BeginTransactionAsync(cancellation);
 
-        using (var lambdas = Command(connection, "INSERT INTO lambdas (id, created) VALUES (@lambda, @created) ON CONFLICT (id) DO NOTHING", "@lambda", "@created"))
+        await using (var lambdas = Command(connection, "INSERT INTO lambdas (id, created) VALUES (@lambda, @created) ON CONFLICT (id) DO NOTHING", "@lambda", "@created"))
         {
             foreach (var lambda in tally.Lambdas)
             {
                 lambdas.Parameters["@lambda"].Value = lambda;
                 lambdas.Parameters["@created"].Value = now.ToString("O", CultureInfo.InvariantCulture);
-                lambdas.ExecuteNonQuery();
+                await lambdas.ExecuteNonQueryAsync(cancellation);
             }
         }
 
-        using (var days = Command(connection, """
+        await using (var days = Command(connection, """
                    INSERT INTO days (lambda, year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis)
                    VALUES (@lambda, @year, @month, @day, @hits, @views, @botViews, @visitors, @failed, @rejected, @bytes, @millis)
                    ON CONFLICT (lambda, year, month, day) DO UPDATE SET
@@ -96,7 +93,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
                 days.Parameters["@rejected"].Value = totals.Rejected;
                 days.Parameters["@bytes"].Value = totals.Bytes;
                 days.Parameters["@millis"].Value = totals.Millis;
-                days.ExecuteNonQuery();
+                await days.ExecuteNonQueryAsync(cancellation);
             }
         }
 
@@ -106,14 +103,14 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             var most = AnalyticsDimensions.MostOf(group.Key);
 
-            using var upsert = Command(connection, $"""
+            await using var upsert = Command(connection, $"""
                 INSERT INTO {table} (lambda, year, month, day, value, hits, views, bot_views)
                 VALUES (@lambda, @year, @month, @day, @value, @hits, @views, @botViews)
                 ON CONFLICT (lambda, year, month, day, value) DO UPDATE SET
                     hits = {table}.hits + excluded.hits, views = {table}.views + excluded.views, bot_views = {table}.bot_views + excluded.bot_views
                 """, [.. DayKey, "@value", "@hits", "@views", "@botViews"]);
 
-            using var known = Command(connection, $"SELECT value FROM {table} WHERE lambda = @lambda AND year = @year AND month = @month AND day = @day", DayKey);
+            await using var known = Command(connection, $"SELECT value FROM {table} WHERE lambda = @lambda AND year = @year AND month = @month AND day = @day", DayKey);
 
             // the busiest first, so where a day runs out of room it is the
             // values that came up least that are gathered under other
@@ -124,7 +121,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
                 if (most != null)
                 {
                     Day(known, day.Key.Lambda, day.Key.Day);
-                    values = Strings(known);
+                    values = await StringsAsync(known, cancellation);
                 }
 
                 foreach (var (cell, hits, views, botViews) in day.OrderByDescending(c => c.Views).ThenByDescending(c => c.Hits))
@@ -148,38 +145,38 @@ public sealed class AnalyticsStore : IAnalyticsStore
                     upsert.Parameters["@hits"].Value = hits;
                     upsert.Parameters["@views"].Value = views;
                     upsert.Parameters["@botViews"].Value = botViews;
-                    upsert.ExecuteNonQuery();
+                    await upsert.ExecuteNonQueryAsync(cancellation);
                 }
             }
         }
 
-        transaction.Commit();
+        await transaction.CommitAsync(cancellation);
     }
 
     /// <summary>
     /// Removes everything counted of a lambda.
     /// </summary>
-    public void Forget(long lambda)
+    public async ValueTask ForgetAsync(long lambda, CancellationToken cancellation = default)
     {
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
-        using var transaction = connection.BeginTransaction();
+        await using var transaction = await connection.BeginTransactionAsync(cancellation);
 
         foreach (var table in Tables)
         {
-            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda", "@lambda");
+            await using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda", "@lambda");
 
             delete.Parameters["@lambda"].Value = lambda;
-            delete.ExecuteNonQuery();
+            await delete.ExecuteNonQueryAsync(cancellation);
         }
 
-        using (var row = Command(connection, "DELETE FROM lambdas WHERE id = @lambda", "@lambda"))
+        await using (var row = Command(connection, "DELETE FROM lambdas WHERE id = @lambda", "@lambda"))
         {
             row.Parameters["@lambda"].Value = lambda;
-            row.ExecuteNonQuery();
+            await row.ExecuteNonQueryAsync(cancellation);
         }
 
-        transaction.Commit();
+        await transaction.CommitAsync(cancellation);
     }
 
     /// <summary>
@@ -190,16 +187,16 @@ public sealed class AnalyticsStore : IAnalyticsStore
     /// look at every row of a table.
     /// </remarks>
     /// <returns>How many rows were removed</returns>
-    public int Expire(DateOnly before)
+    public async ValueTask<int> ExpireAsync(DateOnly before, CancellationToken cancellation = default)
     {
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
         var lambdas = new List<long>();
 
-        using (var list = Command(connection, "SELECT id FROM lambdas"))
-        using (var reader = list.ExecuteReader())
+        await using (var list = Command(connection, "SELECT id FROM lambdas"))
+        await using (var reader = await list.ExecuteReaderAsync(cancellation))
         {
-            while (reader.Read())
+            while (await reader.ReadAsync(cancellation))
             {
                 lambdas.Add(reader.GetInt64(0));
             }
@@ -207,20 +204,20 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         var removed = 0;
 
-        using var transaction = connection.BeginTransaction();
+        await using var transaction = await connection.BeginTransactionAsync(cancellation);
 
         foreach (var table in Tables)
         {
-            using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda AND (year, month, day) < (@year, @month, @day)", DayKey);
+            await using var delete = Command(connection, $"DELETE FROM {table} WHERE lambda = @lambda AND (year, month, day) < (@year, @month, @day)", DayKey);
 
             foreach (var lambda in lambdas)
             {
                 Day(delete, lambda, before);
-                removed += delete.ExecuteNonQuery();
+                removed += await delete.ExecuteNonQueryAsync(cancellation);
             }
         }
 
-        transaction.Commit();
+        await transaction.CommitAsync(cancellation);
 
         return removed;
     }
@@ -233,19 +230,19 @@ public sealed class AnalyticsStore : IAnalyticsStore
     /// What was counted of a lambda from one day to another, both included.
     /// </summary>
     /// <param name="most">How many values of a dimension are listed at most, the rest left out</param>
-    public AnalyticsReport Read(long lambda, DateOnly from, DateOnly to, int most)
+    public async ValueTask<AnalyticsReport> ReadAsync(long lambda, DateOnly from, DateOnly to, int most, CancellationToken cancellation = default)
     {
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
         var counted = new Dictionary<DateOnly, AnalyticsTotals>();
 
-        using (var days = Ranged(connection, lambda, from, to, """
+        await using (var days = Ranged(connection, lambda, from, to, """
                    SELECT year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis FROM days
                    WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
                    """))
-        using (var reader = days.ExecuteReader())
+        await using (var reader = await days.ExecuteReaderAsync(cancellation))
         {
-            while (reader.Read())
+            while (await reader.ReadAsync(cancellation))
             {
                 counted[new DateOnly(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2))] = Totals(reader, 3);
             }
@@ -268,7 +265,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
         foreach (var dimension in AnalyticsDimensions.All)
         {
-            using var values = Ranged(connection, lambda, from, to, $"""
+            await using var values = Ranged(connection, lambda, from, to, $"""
                 SELECT value, CAST(SUM(hits) AS BIGINT) AS hits, CAST(SUM(views) AS BIGINT) AS views, CAST(SUM(bot_views) AS BIGINT) AS bot_views
                 FROM {AnalyticsDimensions.TableOf(dimension)}
                 WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
@@ -277,11 +274,11 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             Add(values, "@most", most);
 
-            using var reader = values.ExecuteReader();
+            await using var reader = await values.ExecuteReaderAsync(cancellation);
 
             var listed = new List<AnalyticsValue>();
 
-            while (reader.Read())
+            while (await reader.ReadAsync(cancellation))
             {
                 listed.Add(new AnalyticsValue(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3)));
             }
@@ -295,36 +292,36 @@ public sealed class AnalyticsStore : IAnalyticsStore
     /// <summary>
     /// What was counted of a lambda from one day to another, summed.
     /// </summary>
-    public AnalyticsTotals Sum(long lambda, DateOnly from, DateOnly to)
+    public async ValueTask<AnalyticsTotals> SumAsync(long lambda, DateOnly from, DateOnly to, CancellationToken cancellation = default)
     {
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
-        using var sum = Ranged(connection, lambda, from, to, """
+        await using var sum = Ranged(connection, lambda, from, to, """
             SELECT CAST(COALESCE(SUM(hits), 0) AS BIGINT), CAST(COALESCE(SUM(views), 0) AS BIGINT), CAST(COALESCE(SUM(bot_views), 0) AS BIGINT),
                    CAST(COALESCE(SUM(visitors), 0) AS BIGINT), CAST(COALESCE(SUM(failed), 0) AS BIGINT), CAST(COALESCE(SUM(rejected), 0) AS BIGINT),
                    CAST(COALESCE(SUM(bytes), 0) AS BIGINT), CAST(COALESCE(SUM(millis), 0) AS DOUBLE PRECISION) FROM days
             WHERE lambda = @lambda AND (year, month, day) >= (@fromYear, @fromMonth, @fromDay) AND (year, month, day) <= (@toYear, @toMonth, @toDay)
             """);
 
-        using var reader = sum.ExecuteReader();
+        await using var reader = await sum.ExecuteReaderAsync(cancellation);
 
-        return reader.Read() ? Totals(reader, 0) : AnalyticsTotals.None;
+        return await reader.ReadAsync(cancellation) ? Totals(reader, 0) : AnalyticsTotals.None;
     }
 
     /// <summary>
     /// The first day anything was counted of a lambda on, or nothing.
     /// </summary>
-    public DateOnly? Earliest(long lambda)
+    public async ValueTask<DateOnly?> EarliestAsync(long lambda, CancellationToken cancellation = default)
     {
-        using var connection = Open();
+        await using var connection = await OpenAsync(cancellation);
 
-        using var first = Command(connection, "SELECT year, month, day FROM days WHERE lambda = @lambda ORDER BY year, month, day LIMIT 1", "@lambda");
+        await using var first = Command(connection, "SELECT year, month, day FROM days WHERE lambda = @lambda ORDER BY year, month, day LIMIT 1", "@lambda");
 
         first.Parameters["@lambda"].Value = lambda;
 
-        using var reader = first.ExecuteReader();
+        await using var reader = await first.ExecuteReaderAsync(cancellation);
 
-        return reader.Read() ? new DateOnly(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2)) : null;
+        return await reader.ReadAsync(cancellation) ? new DateOnly(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2)) : null;
     }
 
     #endregion
@@ -333,7 +330,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
     private static IEnumerable<string> Tables => AnalyticsDimensions.All.Select(AnalyticsDimensions.TableOf).Prepend("days");
 
-    private DbConnection Open() => _database.Open(DatabaseStores.Analytics);
+    private ValueTask<DbConnection> OpenAsync(CancellationToken cancellation) => _database.OpenAsync(DatabaseStore.Analytics, cancellation);
 
     /// <summary>
     /// The parameters that name a day of a lambda.
@@ -392,13 +389,13 @@ public sealed class AnalyticsStore : IAnalyticsStore
         command.Parameters["@day"].Value = day.Day;
     }
 
-    private static HashSet<string> Strings(DbCommand command)
+    private static async ValueTask<HashSet<string>> StringsAsync(DbCommand command, CancellationToken cancellation)
     {
         var values = new HashSet<string>(StringComparer.Ordinal);
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-        while (reader.Read())
+        while (await reader.ReadAsync(cancellation))
         {
             values.Add(reader.GetString(0));
         }

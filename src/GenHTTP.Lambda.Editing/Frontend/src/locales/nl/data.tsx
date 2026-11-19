@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'Een eigen database waarin de lambda zijn records bewaart, bereikbaar met Database.GetConnection().',
+      what: 'Een eigen database waarin de lambda zijn records bewaart, bereikbaar met Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 tabel' : `${items} tabellen`),
       confirmOff: 'De database uitzetten?',
       switchedOn: 'De database staat aan, en is leeg. Bij zijn volgende request start de lambda opnieuw, met de database erbij.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'In de code',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} opent er een verbinding mee – voor een {code('DbContext')} van Entity
+        {code('Database.GetConnectionAsync()')} opent er een verbinding mee – voor een {code('DbContext')} van Entity
         Framework Core, of voor SQL – en de migraties in {code('migrations/')} maken de tabellen aan, toegepast door
         Evolve. In een gedownload project is het gewoon het SQLite-bestand {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} is verwijderd.`,
     deleteFailed: 'Het secret kon niet worden verwijderd.',
     used: 'gelezen door de code',
-    usedHint: 'De code leest het met Secret.Read of Secret.Exists.',
+    usedHint: 'De code leest het met Secret.ReadAsync of Secret.ExistsAsync.',
     unused: 'niet gelezen door de code',
     unusedHint: 'Geen code leest het onder deze naam. Is het gespeld zoals in de code?',
     set: (when) => <>ingesteld {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'In de code',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} leest een waarde, {code('Secret.Exists("NAME")')} zegt of hij is ingesteld. In
+        {code('Secret.ReadAsync("NAME")')} leest een waarde, {code('Secret.ExistsAsync("NAME")')} zegt of hij is ingesteld. In
         een gedownload project lezen ze allebei de omgevingsvariabele met dezelfde naam.
       </>
     ),

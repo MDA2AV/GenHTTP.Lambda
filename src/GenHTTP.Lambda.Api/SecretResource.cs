@@ -22,7 +22,7 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Secrets)]
 [Summary("The secrets of a lambda - API keys, passwords, tokens - which its code reads and nobody else does.")]
 [Remarks("""
-         The code reads a secret with `Secret.Read("NAME")`, or asks whether it is there with `Secret.Exists("NAME")`. A value
+         The code reads a secret with `Secret.ReadAsync("NAME")`, or asks whether it is there with `Secret.ExistsAsync("NAME")`. A value
          is **written and never read back**: no operation of this API answers with one, and neither does the editor. What can
          be seen is the name, when it was set, whether the code reads it - and which names the code reads that have no value
          yet (`missing`), which is what somebody still has to enter.
@@ -31,7 +31,7 @@ namespace GenHTTP.Lambda.Api;
          copy of them. They are off until they are switched on (`PUT /lambdas/{privateKey}/data/secrets`), and switching them
          off deletes them. A lambda may keep 100.
 
-         The values are kept encrypted at rest, and a lambda reads a changed value from its next `Secret.Read` on.
+         The values are kept encrypted at rest, and a lambda reads a changed value from its next `Secret.ReadAsync` on.
          An exported project reads them from environment variables of the same names.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
@@ -44,13 +44,13 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Summary("Lists the secrets by name")]
     [Remarks("Never their values. The names the code reads are found in the code of the version online and of the newest one.")]
     [return: Summary("The secrets by name, and the names the code reads")]
-    public SecretListingResponse List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => Describe(secrets.List(privateKey));
+    public async ValueTask<SecretListingResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => Describe(await secrets.ListAsync(privateKey));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/secrets/:name")]
     [Summary("Stores a secret")]
     [Remarks("""
-             The lambda reads it from its next `Secret.Read` on, without being deployed again. The value cannot be read back
+             The lambda reads it from its next `Secret.ReadAsync` on, without being deployed again. The value cannot be read back
              afterwards - not even by whoever stored it. Its features keep the copies they have.
              """)]
     [Response(ResponseStatus.BadRequest, "The name is not one a secret may have, or the value is empty or larger than 32 KB.",
@@ -58,11 +58,11 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Response(ResponseStatus.Conflict, "Secrets are switched off, or the lambda has as many secrets as it may keep.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The secret, without its value")]
-    public SecretResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                              [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit, up to 128 characters - `STRIPE_KEY`. Case sensitive.")] string name,
-                              SecretRequest request)
+    public async ValueTask<SecretResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                               [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit, up to 128 characters - `STRIPE_KEY`. Case sensitive.")] string name,
+                                               SecretRequest request)
     {
-        var secret = secrets.Set(privateKey, name, request.Value);
+        var secret = await secrets.SetAsync(privateKey, name, request.Value);
 
         logger.LogInformation("Set secret {Name} of lambda {Lambda}", secret.Name, meta.PublicKeyOf(privateKey));
 
@@ -71,13 +71,13 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
 
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/secrets/:name")]
     [Summary("Deletes a secret")]
-    [Remarks("From its next request on, code that reads it fails, and code that asks `Secret.Exists` is told it is not there.")]
+    [Remarks("From its next request on, code that reads it fails, and code that asks `Secret.ExistsAsync` is told it is not there.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no secret of that name.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Its name, case sensitive")] string name)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Its name, case sensitive")] string name)
     {
-        secrets.Delete(privateKey, name);
+        await secrets.DeleteAsync(privateKey, name);
 
         logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
     }
@@ -91,8 +91,8 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Remarks("The copy its preview reads. The names the code reads are found in the feature's files.")]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoFeature, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The feature's secrets by name, and the names its code reads")]
-    public SecretListingResponse ListOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
-        => Describe(secrets.List(privateKey, feature));
+    public async ValueTask<SecretListingResponse> ListOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+        => Describe(await secrets.ListAsync(privateKey, feature));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/secrets/:name")]
     [Summary("Stores a secret in a feature's copy")]
@@ -102,11 +102,11 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Response(ResponseStatus.Conflict, "Secrets are switched off, or the copy has as many secrets as a lambda may keep.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoFeature, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The secret, without its value")]
-    public SecretResponse PutOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                       [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit. Case sensitive.")] string name,
-                                       SecretRequest request)
+    public async ValueTask<SecretResponse> PutOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                                        [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit. Case sensitive.")] string name,
+                                                        SecretRequest request)
     {
-        var secret = secrets.Set(privateKey, name, request.Value, feature);
+        var secret = await secrets.SetAsync(privateKey, name, request.Value, feature);
 
         logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
@@ -119,10 +119,10 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature, or the copy has no secret of that name.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void DeleteOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                [Summary("Its name, case sensitive")] string name)
+    public async ValueTask DeleteOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                           [Summary("Its name, case sensitive")] string name)
     {
-        secrets.Delete(privateKey, name, feature);
+        await secrets.DeleteAsync(privateKey, name, feature);
 
         logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));

@@ -21,7 +21,7 @@ public interface IWorkspaceVault
     /// </summary>
     /// <param name="room">The room of the lambda's data, as its tier allows it now</param>
     /// <param name="beside">The room the rest of its data - its database - takes</param>
-    WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<long> beside);
+    WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<CancellationToken, ValueTask<long>> beside);
 
     /// <summary>
     /// The room the workspace of a lambda - or a feature's copy of it -
@@ -31,7 +31,7 @@ public interface IWorkspaceVault
     /// Measured a moment ago at most: walking a workspace of many files is
     /// not something to do for every request.
     /// </remarks>
-    long SizeOf(long lambdaId, long? featureId);
+    ValueTask<long> SizeOfAsync(long lambdaId, long? featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Forgets what was measured of a workspace, which was just written to.
@@ -46,11 +46,11 @@ public interface IWorkspaceVault
     /// <summary>
     /// Removes a feature's copy of the workspace.
     /// </summary>
-    void RemoveCopy(long lambdaId, long featureId);
+    ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes the workspace of a lambda and every copy of its features.
     /// </summary>
-    void DeleteAll(long lambdaId);
+    ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default);
 
 }

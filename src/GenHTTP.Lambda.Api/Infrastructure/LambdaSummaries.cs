@@ -29,7 +29,7 @@ internal sealed class LambdaSummaries(IMetaService meta, IWorkspaceService works
 
     #region Functionality
 
-    public LambdaSummaryResponse Of(string privateKey)
+    public async ValueTask<LambdaSummaryResponse> OfAsync(string privateKey)
     {
         var lambda = meta.Require(privateKey);
 
@@ -83,7 +83,7 @@ internal sealed class LambdaSummaries(IMetaService meta, IWorkspaceService works
                                          (long)(now - current.Started).TotalSeconds),
             Summarize(traffic),
             [.. problems.Select(MonitoringResource.Describe)],
-            Measure(privateKey, id, measured, known),
+            await MeasureAsync(privateKey, id, measured, known),
             new SummaryLimits(
                 policy.MaxVersionBytes,
                 policy.MaxDataBytes,
@@ -134,13 +134,13 @@ internal sealed class LambdaSummaries(IMetaService meta, IWorkspaceService works
     /// <summary>
     /// What the lambda keeps: the files of a version, and its data beside it.
     /// </summary>
-    private StorageSummary Measure(string privateKey, long id, int? version, VersionFacts known)
+    private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version, VersionFacts known)
     {
-        var listing = workspace.List(id);
+        var listing = await workspace.ListAsync(id);
 
-        var kept = secrets.List(privateKey);
+        var kept = await secrets.ListAsync(privateKey);
 
-        var database = data.Get(privateKey, DataKinds.DatabaseId);
+        var database = await data.GetAsync(privateKey, DataKinds.DatabaseId);
 
         return new StorageSummary(
             version,

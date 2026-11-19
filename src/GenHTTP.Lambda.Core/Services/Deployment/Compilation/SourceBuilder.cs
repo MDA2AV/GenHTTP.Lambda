@@ -43,9 +43,16 @@ internal static class SourceBuilder
 
     /// <summary>
     /// The field of the generated secrets and database classes the platform
-    /// puts the function they read with into, once the lambda is loaded.
+    /// puts the function they read with into, once the lambda is loaded: the
+    /// plain call, which code written before the awaited one makes.
     /// </summary>
     internal const string SecretSource = "_source";
+
+    /// <summary>
+    /// The field of the generated secrets and database classes the platform
+    /// puts the awaited function they read with into.
+    /// </summary>
+    internal const string AsyncSource = "_sourceAsync";
 
     /// <summary>
     /// The field of the generated scope the platform puts what configures a
@@ -57,7 +64,8 @@ internal static class SourceBuilder
     /// <summary>
     /// The fields of the generated workspace class the platform puts the
     /// functions it works through into, once the lambda is loaded - one per
-    /// thing its code can do with its files, as <see cref="Services.Workspace.WorkspaceBinding"/> has them.
+    /// thing its code can do with its files, awaited and plain, as
+    /// <see cref="Services.Workspace.WorkspaceBinding"/> has them.
     /// </summary>
     internal static class WorkspaceFields
     {
@@ -69,6 +77,13 @@ internal static class SourceBuilder
         internal const string Folders = "_folders";
         internal const string CreateFolder = "_createFolder";
         internal const string Tree = "_tree";
+        internal const string ExistsAsync = "_existsAsync";
+        internal const string ReadAsync = "_readAsync";
+        internal const string WriteAsync = "_writeAsync";
+        internal const string DeleteAsync = "_deleteAsync";
+        internal const string ListAsync = "_listAsync";
+        internal const string FoldersAsync = "_foldersAsync";
+        internal const string CreateFolderAsync = "_createFolderAsync";
     }
 
     /// <summary>
@@ -481,15 +496,20 @@ internal static class SourceBuilder
         """;
 
     /// <summary>
-    /// The secrets of the lambda, as its code reads them: <c>Secret.Read("STRIPE_KEY")</c>.
+    /// The secrets of the lambda, as its code reads them:
+    /// <c>await Secret.ReadAsync("STRIPE_KEY")</c>, or <c>Secret.Read("STRIPE_KEY")</c>
+    /// as code written before does.
     /// </summary>
     /// <remarks>
-    /// The values are not compiled in. The class holds a function the
-    /// platform hands it once the lambda is loaded, which reads the current
+    /// The values are not compiled in. The class holds functions the
+    /// platform hands it once the lambda is loaded, which read the current
     /// value on every call - so a secret changed in the editor is what the
     /// next request reads, and no value ends up in an assembly on the disk.
-    /// The field is private: code of the lambda that names it does not compile,
-    /// and reaching it any other way needs reflection, which the guard refuses.
+    /// The fields are private: code of the lambda that names them does not
+    /// compile, and reaching them any other way needs reflection, which the
+    /// guard refuses. The plain calls are the awaited ones through the
+    /// platform's bridge, which waits for nothing where the secrets
+    /// integration answers at once.
     ///
     /// Exists answers false while secrets are switched off rather than
     /// throwing, so code that works with and without a value works in either
@@ -500,31 +520,51 @@ internal static class SourceBuilder
         {
             private static global::System.Func<string, bool, string> {{SecretSource}} = null;
 
+            private static global::System.Func<string, bool, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>> {{AsyncSource}} = null;
+
             /// <summary>
             /// The value of a secret. Throws, saying how to set it, when there
             /// is none of that name.
             /// </summary>
-            public string Read(string name) => Source()(name, true);
+            public global::System.Threading.Tasks.ValueTask<string> ReadAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+                => AsyncSource()(name, true, cancellation);
 
             /// <summary>Whether a secret of that name is set.</summary>
+            public async global::System.Threading.Tasks.ValueTask<bool> ExistsAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+                => await AsyncSource()(name, false, cancellation) != null;
+
+            /// <summary>
+            /// The value of a secret, read with a plain call - prefer ReadAsync, which
+            /// waits for nothing where the secrets are kept elsewhere. Throws,
+            /// saying how to set it, when there is none of that name.
+            /// </summary>
+            public string Read(string name) => Source()(name, true);
+
+            /// <summary>Whether a secret of that name is set, asked with a plain call - prefer ExistsAsync.</summary>
             public bool Exists(string name) => Source()(name, false) != null;
 
             private static global::System.Func<string, bool, string> Source()
                 => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The secrets of this lambda are not available here.");
+
+            private static global::System.Func<string, bool, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string>> AsyncSource()
+                => {{AsyncSource}} ?? throw new global::System.InvalidOperationException("The secrets of this lambda are not available here.");
         }
         """;
 
     /// <summary>
     /// The database of the lambda, as its code connects to it:
-    /// <c>using var connection = Database.GetConnection();</c>, or
-    /// <c>using var db = new Records(Database.GetConnection());</c> for a
-    /// context of Entity Framework Core.
+    /// <c>await using var connection = await Database.GetConnectionAsync();</c>,
+    /// or <c>await using var db = new Records(await Database.GetConnectionAsync());</c>
+    /// for a context of Entity Framework Core - and <c>Database.GetConnection()</c>,
+    /// as code written before calls it.
     /// </summary>
     /// <remarks>
-    /// Like the secrets, the class holds a function the platform hands it once
+    /// Like the secrets, the class holds functions the platform hands it once
     /// the lambda is loaded, and the code never sees where the database is.
     /// Each call opens a connection of its own, taken from a pool, which the
     /// caller disposes of - one per request, not one shared between requests.
+    /// The plain call is the awaited one through the platform's bridge, which
+    /// waits for nothing where the database answers at once.
     ///
     /// Declared to return what the database integration says (<see cref="DatabaseBinding.Connection"/>):
     /// a <c>DbConnection</c>, which every database has, or the connection of
@@ -538,17 +578,30 @@ internal static class SourceBuilder
         {
             private static global::System.Func<global::System.Data.Common.DbConnection> {{SecretSource}} = null;
 
+            private static global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<global::System.Data.Common.DbConnection>> {{AsyncSource}} = null;
+
             /// <summary>
-            /// An open connection to the database of this lambda, for plain SQL
+            /// Opens a connection to the database of this lambda, for plain SQL
             /// or for a DbContext of Entity Framework Core (options.UseDatabase(connection)).
             /// Dispose of it when done - it goes back to a pool, so one per request
-            /// costs nothing. Use it synchronously: ToList and SaveChanges, not
-            /// their Async forms.
+            /// costs nothing. Await what is sent over it too: ToListAsync and
+            /// SaveChangesAsync.
+            /// </summary>
+            public async global::System.Threading.Tasks.ValueTask<global::{{binding.Connection.FullName}}> GetConnectionAsync(global::System.Threading.CancellationToken cancellation = default)
+                => (global::{{binding.Connection.FullName}})await AsyncSource()(cancellation);
+
+            /// <summary>
+            /// An open connection to the database of this lambda, opened with a plain
+            /// call - prefer GetConnectionAsync, which waits for nothing where the
+            /// database is on another machine. Dispose of it when done.
             /// </summary>
             public global::{{binding.Connection.FullName}} GetConnection() => (global::{{binding.Connection.FullName}})Source()();
 
             private static global::System.Func<global::System.Data.Common.DbConnection> Source()
                 => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The database of this lambda is not available here.");
+
+            private static global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<global::System.Data.Common.DbConnection>> AsyncSource()
+                => {{AsyncSource}} ?? throw new global::System.InvalidOperationException("The database of this lambda is not available here.");
         }
         """;
 
@@ -569,7 +622,7 @@ internal static class SourceBuilder
 
             /// <summary>
             /// Configures a DbContext of Entity Framework Core on the connection
-            /// Database.GetConnection() opened, which the context then owns.
+            /// Database.GetConnectionAsync() opened, which the context then owns.
             /// </summary>
             internal static global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder UseDatabase(this global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder options,
                                                                                                     global::System.Data.Common.DbConnection connection)
@@ -580,7 +633,7 @@ internal static class SourceBuilder
 
             /// <summary>
             /// Configures a DbContext of Entity Framework Core on the connection
-            /// Database.GetConnection() opened, which the context then owns.
+            /// Database.GetConnectionAsync() opened, which the context then owns.
             /// </summary>
             internal static global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> UseDatabase<TContext>(this global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> options,
                                                                                                                        global::System.Data.Common.DbConnection connection)
@@ -602,13 +655,16 @@ internal static class SourceBuilder
     /// </summary>
     /// <remarks>
     /// Like the secrets, the class holds functions the platform hands it once
-    /// the lambda is loaded - one for each thing it does - and does nothing
-    /// with files itself: the platform resolves the names, holds a write to
-    /// the room of the lambda's data and asks the files integration, the same
-    /// way for what the lambda writes and what its owner puts there (see
-    /// <c>LambdaWorkspace</c>). So the code is the same whatever keeps its
-    /// files, and never learns where they are. Without the platform's
-    /// functions - nothing is running - there is nothing to read or write.
+    /// the lambda is loaded - one for each thing it does, awaited and plain -
+    /// and does nothing with files itself: the platform resolves the names,
+    /// holds a write to the room of the lambda's data and asks the files
+    /// integration, the same way for what the lambda writes and what its owner
+    /// puts there (see <c>LambdaWorkspace</c>). So the code is the same
+    /// whatever keeps its files, and never learns where they are. Without the
+    /// platform's functions - nothing is running - there is nothing to read
+    /// or write. The plain calls are the awaited ones through the platform's
+    /// bridge, which waits for nothing where the files answer at once; a tree
+    /// is made rather than read, and has a plain form only.
     ///
     /// A workspace its owner switched off is still the same class, so code
     /// that names it compiles, but every member refuses with the reason and
@@ -635,53 +691,116 @@ internal static class SourceBuilder
 
             private static global::System.Func<string, global::GenHTTP.Api.Content.IO.IResourceTree> {{WorkspaceFields.Tree}} = null;
 
+            private static global::System.Func<string, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<bool>> {{WorkspaceFields.ExistsAsync}} = null;
+
+            private static global::System.Func<string, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<byte[]>> {{WorkspaceFields.ReadAsync}} = null;
+
+            private static global::System.Func<string, byte[], global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> {{WorkspaceFields.WriteAsync}} = null;
+
+            private static global::System.Func<string, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> {{WorkspaceFields.DeleteAsync}} = null;
+
+            private static global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string[]>> {{WorkspaceFields.ListAsync}} = null;
+
+            private static global::System.Func<global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask<string[]>> {{WorkspaceFields.FoldersAsync}} = null;
+
+            private static global::System.Func<string, global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> {{WorkspaceFields.CreateFolderAsync}} = null;
+
             {{(enabled
                 ? "private static void Guard() { }"
                 : $"private static void Guard() => throw new global::System.InvalidOperationException({Literal(DataKinds.WorkspaceOff)});")}}
 
             /// <summary>Checks whether the given file exists.</summary>
+            public global::System.Threading.Tasks.ValueTask<bool> ExistsAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.ExistsAsync}})(name, cancellation);
+            }
+
+            /// <summary>Reads a file as UTF-8 text.</summary>
+            public async global::System.Threading.Tasks.ValueTask<string> ReadTextAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+                => Text(await ReadBytesAsync(name, cancellation));
+
+            /// <summary>Reads a file as bytes.</summary>
+            public global::System.Threading.Tasks.ValueTask<byte[]> ReadBytesAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.ReadAsync}})(name, cancellation);
+            }
+
+            /// <summary>Writes UTF-8 text into a file, replacing it if it exists.</summary>
+            public global::System.Threading.Tasks.ValueTask WriteTextAsync(string name, string content, global::System.Threading.CancellationToken cancellation = default)
+                => WriteBytesAsync(name, Bytes(content), cancellation);
+
+            /// <summary>Writes bytes into a file, replacing it if it exists.</summary>
+            public global::System.Threading.Tasks.ValueTask WriteBytesAsync(string name, byte[] content, global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.WriteAsync}})(name, content, cancellation);
+            }
+
+            /// <summary>Removes a file, if it exists.</summary>
+            public global::System.Threading.Tasks.ValueTask DeleteAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.DeleteAsync}})(name, cancellation);
+            }
+
+            /// <summary>Lists the files in this workspace, relative to its root.</summary>
+            public global::System.Threading.Tasks.ValueTask<string[]> ListAsync(global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.ListAsync}})(cancellation);
+            }
+
+            /// <summary>The folders of this workspace, relative to its root.</summary>
+            public global::System.Threading.Tasks.ValueTask<string[]> FoldersAsync(global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.FoldersAsync}})(cancellation);
+            }
+
+            /// <summary>Makes a folder, so files can be written into it.</summary>
+            public global::System.Threading.Tasks.ValueTask CreateFolderAsync(string name, global::System.Threading.CancellationToken cancellation = default)
+            {
+                Guard();
+                return Port({{WorkspaceFields.CreateFolderAsync}})(name, cancellation);
+            }
+
+            /// <summary>Checks whether the given file exists, with a plain call - prefer ExistsAsync.</summary>
             public bool Exists(string name)
             {
                 Guard();
                 return Port({{WorkspaceFields.Exists}})(name);
             }
 
-            /// <summary>Reads a file as UTF-8 text.</summary>
-            public string ReadText(string name)
-            {
-                var bytes = ReadBytes(name);
+            /// <summary>Reads a file as UTF-8 text, with a plain call - prefer ReadTextAsync.</summary>
+            public string ReadText(string name) => Text(ReadBytes(name));
 
-                using var reader = new global::System.IO.StreamReader(new global::System.IO.MemoryStream(bytes), global::System.Text.Encoding.UTF8, true);
-
-                return reader.ReadToEnd();
-            }
-
-            /// <summary>Reads a file as bytes.</summary>
+            /// <summary>Reads a file as bytes, with a plain call - prefer ReadBytesAsync.</summary>
             public byte[] ReadBytes(string name)
             {
                 Guard();
                 return Port({{WorkspaceFields.Read}})(name);
             }
 
-            /// <summary>Writes UTF-8 text into a file, replacing it if it exists.</summary>
-            public void WriteText(string name, string content)
-                => WriteBytes(name, content == null ? new byte[0] : global::System.Text.Encoding.UTF8.GetBytes(content));
+            /// <summary>Writes UTF-8 text into a file, replacing it if it exists, with a plain call - prefer WriteTextAsync.</summary>
+            public void WriteText(string name, string content) => WriteBytes(name, Bytes(content));
 
-            /// <summary>Writes bytes into a file, replacing it if it exists.</summary>
+            /// <summary>Writes bytes into a file, replacing it if it exists, with a plain call - prefer WriteBytesAsync.</summary>
             public void WriteBytes(string name, byte[] content)
             {
                 Guard();
                 Port({{WorkspaceFields.Write}})(name, content);
             }
 
-            /// <summary>Removes a file, if it exists.</summary>
+            /// <summary>Removes a file, if it exists, with a plain call - prefer DeleteAsync.</summary>
             public void Delete(string name)
             {
                 Guard();
                 Port({{WorkspaceFields.Delete}})(name);
             }
 
-            /// <summary>Lists the files in this workspace, relative to its root.</summary>
+            /// <summary>Lists the files in this workspace, relative to its root, with a plain call - prefer ListAsync.</summary>
             public string[] List()
             {
                 Guard();
@@ -726,14 +845,14 @@ internal static class SourceBuilder
             public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files(string folder)
                 => global::GenHTTP.Modules.Files.Assets.From(Tree(folder));
 
-            /// <summary>Makes a folder, so files can be written into it.</summary>
+            /// <summary>Makes a folder, so files can be written into it, with a plain call - prefer CreateFolderAsync.</summary>
             public void CreateFolder(string name)
             {
                 Guard();
                 Port({{WorkspaceFields.CreateFolder}})(name);
             }
 
-            /// <summary>The folders of this workspace, relative to its root.</summary>
+            /// <summary>The folders of this workspace, relative to its root, with a plain call - prefer FoldersAsync.</summary>
             public string[] Folders()
             {
                 Guard();
@@ -743,6 +862,15 @@ internal static class SourceBuilder
             /// <summary>Creates a handler that serves the files of this workspace.</summary>
             public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
                 => global::GenHTTP.Modules.Files.Assets.From(Tree());
+
+            private static string Text(byte[] bytes)
+            {
+                using var reader = new global::System.IO.StreamReader(new global::System.IO.MemoryStream(bytes), global::System.Text.Encoding.UTF8, true);
+
+                return reader.ReadToEnd();
+            }
+
+            private static byte[] Bytes(string content) => content == null ? new byte[0] : global::System.Text.Encoding.UTF8.GetBytes(content);
 
             private static T Port<T>(T function) where T : class
                 => function ?? throw new global::System.InvalidOperationException("The workspace of this lambda is not available here.");

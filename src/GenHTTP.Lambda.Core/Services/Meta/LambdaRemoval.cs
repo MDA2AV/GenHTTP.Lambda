@@ -27,7 +27,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
                                   IAnalyticsStore analytics)
 {
 
-    public void Remove(LambdaDbContext database, LambdaEntity lambda)
+    public async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation = default)
     {
         // with every preview of its features, which go with it
         deployments.EvictAll(lambda.Id);
@@ -43,12 +43,12 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDelete();
 
         // its entry and its picture, wherever the files are kept
-        showcases.Forget(lambda.Id);
+        await showcases.ForgetAsync(lambda.Id, cancellation);
 
         database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
         // wherever they are kept, before the lambda they belong to goes
-        secrets.Clear(lambda.Id);
+        await secrets.ClearAsync(lambda.Id, cancellation);
 
         database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDelete();
 
@@ -59,9 +59,9 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         secrets.Invalidate(lambda.Id);
 
         // its data, wherever it is kept, with the copies of its features
-        databaseVault.Clear(lambda.Id);
+        await databaseVault.ClearAsync(lambda.Id, cancellation);
 
-        workspaces.DeleteAll(lambda.Id);
+        await workspaces.DeleteAllAsync(lambda.Id, cancellation);
 
         if (lambda.Domain != null)
         {
@@ -71,7 +71,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         storage.Delete(lambda.Id);
 
         // what its owner counted of its visitors goes with it
-        analytics.Forget(lambda.Id);
+        await analytics.ForgetAsync(lambda.Id, cancellation);
     }
 
 }

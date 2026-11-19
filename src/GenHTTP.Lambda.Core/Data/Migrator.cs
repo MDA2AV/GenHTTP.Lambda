@@ -24,31 +24,41 @@ public static class Migrator
     /// <summary>
     /// Where the migrations of each store are embedded, by dialect.
     /// </summary>
-    private static readonly Dictionary<(string Store, string Dialect), string> Locations = new()
+    private static readonly Dictionary<(DatabaseStore Store, DatabaseDialect Dialect), string> Locations = new()
     {
-        [(DatabaseStores.Platform, "sqlite")] = "GenHTTP.Lambda.Data.Migrations",
-        [(DatabaseStores.Platform, "postgresql")] = "GenHTTP.Lambda.Data.PostgreSql",
-        [(DatabaseStores.Analytics, "sqlite")] = "GenHTTP.Lambda.Services.Analytics.Migrations",
-        [(DatabaseStores.Analytics, "postgresql")] = "GenHTTP.Lambda.Services.Analytics.PostgreSql"
+        [(DatabaseStore.Platform, DatabaseDialect.Sqlite)] = "GenHTTP.Lambda.Data.Migrations",
+        [(DatabaseStore.Platform, DatabaseDialect.PostgreSql)] = "GenHTTP.Lambda.Data.PostgreSql",
+        [(DatabaseStore.Analytics, DatabaseDialect.Sqlite)] = "GenHTTP.Lambda.Services.Analytics.Migrations",
+        [(DatabaseStore.Analytics, DatabaseDialect.PostgreSql)] = "GenHTTP.Lambda.Services.Analytics.PostgreSql"
     };
 
     /// <summary>
-    /// Migrates the platform's own store.
+    /// Migrates every store of the platform: its own records and its analytics.
     /// </summary>
-    public static void Migrate(IDatabaseProvider database, ILogger logger) => Migrate(database, DatabaseStores.Platform, logger);
+    /// <remarks>
+    /// Evolve applies the scripts with plain calls, on a connection the
+    /// integration opened - as the platform starts, before anything is served.
+    /// </remarks>
+    public static async ValueTask MigrateAsync(IDatabaseProvider database, ILogger logger, CancellationToken cancellation = default)
+    {
+        foreach (var store in Enum.GetValues<DatabaseStore>())
+        {
+            await MigrateAsync(database, store, logger, cancellation);
+        }
+    }
 
     /// <summary>
     /// Migrates one store of the platform.
     /// </summary>
-    public static void Migrate(IDatabaseProvider database, string store, ILogger logger)
+    public static async ValueTask MigrateAsync(IDatabaseProvider database, DatabaseStore store, ILogger logger, CancellationToken cancellation = default)
     {
         if (!Locations.TryGetValue((store, database.Dialect), out var location))
         {
-            throw new InvalidOperationException($"The platform has no schema for its {store} store in the dialect '{database.Dialect}' its database speaks. "
+            throw new InvalidOperationException($"The platform has no schema for its {store} store in the dialect {database.Dialect} its database speaks. "
                                               + $"The dialects it has one in: {string.Join(", ", Locations.Keys.Where(k => k.Store == store).Select(k => k.Dialect))}.");
         }
 
-        using var connection = database.Open(store);
+        await using var connection = await database.OpenAsync(store, cancellation);
 
         var evolve = new EvolveDb.Evolve(connection, message => logger.LogDebug("{Message}", message))
         {

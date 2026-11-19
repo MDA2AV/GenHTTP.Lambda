@@ -253,12 +253,12 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Remarks("What it is - its editor key included - what it has been doing, its versions and when it was online.")]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Everything about the lambda")]
-    public AdminLambdaDetail GetLambda([Summary("The public key of the lambda")] string publicKey, IRequest request)
+    public async ValueTask<AdminLambdaDetail> GetLambda([Summary("The public key of the lambda")] string publicKey, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     [ResourceMethod("lambdas/:publicKey/versions/:version")]
@@ -292,7 +292,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Conflict, "The lambda is blocked, and the tier asked for cannot be: the block is lifted first.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail ChangeTier([Summary("The public key of the lambda")] string publicKey, TierRequest body, IRequest request)
+    public async ValueTask<AdminLambdaDetail> ChangeTier([Summary("The public key of the lambda")] string publicKey, TierRequest body, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
@@ -301,7 +301,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", changed.PublicKey, changed.Tier);
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     [ResourceMethod(Method.Put, "lambdas/:publicKey/domain")]
@@ -311,7 +311,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Conflict, "Another lambda answers at that domain.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail ChangeDomain([Summary("The public key of the lambda")] string publicKey, DomainChangeRequest body, IRequest request)
+    public async ValueTask<AdminLambdaDetail> ChangeDomain([Summary("The public key of the lambda")] string publicKey, DomainChangeRequest body, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
@@ -320,7 +320,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", changed.PublicKey, changed.Domain ?? "(none)");
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     [ResourceMethod(Method.Post, "lambdas/:publicKey/deployment/start")]
@@ -361,10 +361,9 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Remarks("As its owner would, for good - a blocked lambda as well, which its owner cannot delete. Demos cannot be deleted: the installation keeps them.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary("The public key of the lambda")] string publicKey)
+    public async ValueTask Delete([Summary("The public key of the lambda")] string publicKey)
     {
-
-        meta.Delete(meta.RequirePrivateKey(publicKey), VersionOrigins.Admin);
+        await meta.DeleteAsync(meta.RequirePrivateKey(publicKey), VersionOrigins.Admin);
 
         logger.LogInformation("Deleted lambda {Lambda} by operator", publicKey);
     }
@@ -392,7 +391,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Forbidden, "The lambda is a demo, which the installation keeps: there is nothing to block.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail Block([Summary("The public key of the lambda")] string publicKey, BlockRequest? body, IRequest request)
+    public async ValueTask<AdminLambdaDetail> Block([Summary("The public key of the lambda")] string publicKey, BlockRequest? body, IRequest request)
     {
         var privateKey = meta.RequirePrivateKey(publicKey);
 
@@ -414,7 +413,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Blocked lambda {Lambda} addresses {Addresses} by operator", blocked.PublicKey, addresses.Count);
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     [ResourceMethod(Method.Delete, "lambdas/:publicKey/block")]
@@ -426,7 +425,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
              """)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail Unblock([Summary("The public key of the lambda")] string publicKey, IRequest request)
+    public async ValueTask<AdminLambdaDetail> Unblock([Summary("The public key of the lambda")] string publicKey, IRequest request)
     {
         var privateKey = meta.RequirePrivateKey(publicKey);
 
@@ -434,7 +433,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Unblocked lambda {Lambda} by operator", lambda.PublicKey);
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     [ResourceMethod("blocks")]
@@ -514,7 +513,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Conflict, "Declining, where nothing was asked for and nothing is allowed.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail DecideConnectivity([Summary("The public key of the lambda")] string publicKey, ConnectivityDecision body, IRequest request)
+    public async ValueTask<AdminLambdaDetail> DecideConnectivity([Summary("The public key of the lambda")] string publicKey, ConnectivityDecision body, IRequest request)
     {
         var privateKey = meta.RequirePrivateKey(publicKey);
 
@@ -522,7 +521,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation(body.Allow ? "Allowed connectivity for lambda {Lambda} by operator" : "Declined connectivity for lambda {Lambda} by operator", publicKey);
 
-        return Detail(privateKey, request);
+        return await DetailAsync(privateKey, request);
     }
 
     private static AdminConnectivityEntry Describe(ConnectivityListing listing)
@@ -662,7 +661,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     /// </summary>
     private const int PageSize = 20;
 
-    private AdminLambdaDetail Detail(string privateKey, IRequest request)
+    private async ValueTask<AdminLambdaDetail> DetailAsync(string privateKey, IRequest request)
     {
         var lambda = meta.Require(privateKey);
 
@@ -687,7 +686,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
             You(request),
             connectivity.Connects(id, lambda.ActiveVersion, lambda.LatestVersion),
-            _summaries.Of(privateKey),
+            await _summaries.OfAsync(privateKey),
             AdminLambdaUses.Of(meta.GetUses(privateKey)),
             showcases.Get(privateKey) is { } entry ? ShowcaseResponse.Of(entry, addresses) : null,
             sources.Get(privateKey) is { } source ? SourceSettingsResponse.Of(source) : null,

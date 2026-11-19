@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Secrets;
 using GenHTTP.Lambda.Services.Data;
@@ -68,14 +69,21 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Called with a name and whether the caller insists on it: insisting,
     /// it throws with what to do about a secret that is not there; not, it
     /// answers null - which is what <c>Secret.Exists</c> turns into false,
-    /// for code that works with and without a value.
+    /// for code that works with and without a value. The plain call goes
+    /// through <see cref="Synchronous"/>, which waits for nothing where the
+    /// integration answers at once.
     /// </remarks>
-    public Func<string, bool, string?> ReaderFor(long lambdaId, long? featureId)
-        => (name, required) => Read(new DataScope(lambdaId, featureId), name, required);
-
-    private string? Read(DataScope scope, string name, bool required)
+    public SecretReader ReaderFor(long lambdaId, long? featureId)
     {
-        var snapshot = Current(scope);
+        var scope = new DataScope(lambdaId, featureId);
+
+        return new SecretReader((name, required) => Synchronous.Run(() => ReadAsync(scope, name, required, CancellationToken.None)),
+                                (name, required, cancellation) => ReadAsync(scope, name, required, cancellation));
+    }
+
+    private async ValueTask<string?> ReadAsync(DataScope scope, string name, bool required, CancellationToken cancellation)
+    {
+        var snapshot = await CurrentAsync(scope, cancellation);
 
         if (snapshot.Values == null)
         {
@@ -98,18 +106,30 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
         return value;
     }
 
-    private Snapshot Current(DataScope scope)
+    /// <summary>
+    /// What a lambda reads its secrets from now - from memory, but after a
+    /// change.
+    /// </summary>
+    private ValueTask<Snapshot> CurrentAsync(DataScope scope, CancellationToken cancellation)
     {
         var generation = _generations.GetValueOrDefault(scope.LambdaId);
 
         if (_snapshots.TryGetValue(scope, out var known) && known.Generation == generation)
         {
-            return known;
+            return ValueTask.FromResult(known);
         }
 
-        // taken with the generation read before it, so a change landing while
-        // it loads leaves it old, and the next read loads again
-        var loaded = Load(scope, generation);
+        return LoadAsync(scope, generation, cancellation);
+    }
+
+    /// <summary>
+    /// Reads the secrets of a lambda or feature and keeps them, taken with
+    /// the generation read before - so a change landing while they load
+    /// leaves them old, and the next read loads again.
+    /// </summary>
+    private async ValueTask<Snapshot> LoadAsync(DataScope scope, long generation, CancellationToken cancellation)
+    {
+        var loaded = new Snapshot(generation, Enabled(scope.LambdaId) ? await provider.LoadAsync(scope, cancellation) : null);
 
         _snapshots[scope] = loaded;
 
@@ -117,19 +137,16 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     }
 
     /// <summary>
-    /// Reads the secrets of a lambda or feature, synchronously: a lambda reads
-    /// a secret with a plain call, from wherever it happens to be.
+    /// Whether the owner left the secrets of a lambda on.
     /// </summary>
-    private Snapshot Load(DataScope scope, long generation)
+    private bool Enabled(long lambdaId)
     {
         using var database = databases.CreateDbContext();
 
-        var enabled = database.DataStores.AsNoTracking()
-                              .Where(s => s.LambdaId == scope.LambdaId && s.Kind == DataKinds.SecretsId)
-                              .Select(s => (bool?)s.Enabled)
-                              .FirstOrDefault() ?? DataKinds.Secrets.Default;
-
-        return new Snapshot(generation, enabled ? provider.Load(scope) : null);
+        return database.DataStores.AsNoTracking()
+                       .Where(s => s.LambdaId == lambdaId && s.Kind == DataKinds.SecretsId)
+                       .Select(s => (bool?)s.Enabled)
+                       .FirstOrDefault() ?? DataKinds.Secrets.Default;
     }
 
     #endregion
@@ -139,13 +156,14 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// What is stored for the lambda, or for a feature's copy, by name.
     /// </summary>
-    public IReadOnlyList<SecretEntry> List(long lambdaId, long? featureId)
-        => [.. provider.List(new DataScope(lambdaId, featureId)).OrderBy(s => s.Name, StringComparer.Ordinal)];
+    public async ValueTask<IReadOnlyList<SecretEntry>> ListAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+        => [.. (await provider.ListAsync(new DataScope(lambdaId, featureId), cancellation)).OrderBy(s => s.Name, StringComparer.Ordinal)];
 
     /// <summary>
     /// How many secrets the lambda has, or a feature's copy of them.
     /// </summary>
-    public int Count(long lambdaId, long? featureId) => provider.List(new DataScope(lambdaId, featureId)).Count;
+    public async ValueTask<int> CountAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+        => (await provider.ListAsync(new DataScope(lambdaId, featureId), cancellation)).Count;
 
     /// <summary>
     /// Stores a value under a name, replacing the one there.
@@ -154,20 +172,20 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Whether the lambda has secrets switched on is the caller's to check;
     /// the demos are set up here with the check deliberately left out.
     /// </remarks>
-    public SecretEntry Store(long lambdaId, long? featureId, string name, string value)
+    public async ValueTask<SecretEntry> StoreAsync(long lambdaId, long? featureId, string name, string value, CancellationToken cancellation = default)
     {
         Validate(name, value);
 
         var scope = new DataScope(lambdaId, featureId);
 
-        var kept = provider.List(scope);
+        var kept = await provider.ListAsync(scope, cancellation);
 
         if (kept.Count >= MaxSecrets && !kept.Any(s => s.Name == name))
         {
             throw LambdaException.Conflict($"A lambda may keep {MaxSecrets} secrets. Delete one it no longer needs first.");
         }
 
-        var stored = provider.Store(scope, name, value);
+        var stored = await provider.StoreAsync(scope, name, value, cancellation);
 
         Invalidate(lambdaId);
 
@@ -177,9 +195,9 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// Removes a secret, and says whether there was one.
     /// </summary>
-    public bool Remove(long lambdaId, long? featureId, string name)
+    public async ValueTask<bool> RemoveAsync(long lambdaId, long? featureId, string name, CancellationToken cancellation = default)
     {
-        var removed = provider.Delete(new DataScope(lambdaId, featureId), name);
+        var removed = await provider.DeleteAsync(new DataScope(lambdaId, featureId), name, cancellation);
 
         Invalidate(lambdaId);
 
@@ -189,9 +207,9 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// Replaces a feature's copy of the secrets with the lambda's own.
     /// </summary>
-    public void Copy(long lambdaId, long featureId)
+    public async ValueTask CopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
     {
-        provider.Copy(new DataScope(lambdaId), new DataScope(lambdaId, featureId));
+        await provider.CopyAsync(new DataScope(lambdaId), new DataScope(lambdaId, featureId), cancellation);
 
         Invalidate(lambdaId);
     }
@@ -199,9 +217,9 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// Removes a feature's copy of the secrets.
     /// </summary>
-    public void RemoveCopy(long lambdaId, long featureId)
+    public async ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
     {
-        provider.Delete(new DataScope(lambdaId, featureId));
+        await provider.DeleteAsync(new DataScope(lambdaId, featureId), cancellation);
 
         Invalidate(lambdaId);
     }
@@ -210,9 +228,9 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Deletes every secret of a lambda, its features' copies included -
     /// secrets stored later start afresh.
     /// </summary>
-    public void Clear(long lambdaId)
+    public async ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        provider.DeleteAll(lambdaId);
+        await provider.DeleteAllAsync(lambdaId, cancellation);
 
         Invalidate(lambdaId);
     }
@@ -265,8 +283,8 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     private static partial Regex NamePattern();
 
     /// <summary>
-    /// The names code reads with <c>Secret.Read</c> or <c>Secret.Exists</c>,
-    /// written as a literal.
+    /// The names code reads with <c>Secret.Read</c> or <c>Secret.Exists</c> -
+    /// or their asynchronous forms - written as a literal.
     /// </summary>
     /// <remarks>
     /// Read off the text rather than asked of the compiler: a name built at
@@ -277,7 +295,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     public static IEnumerable<(string Name, bool Checked)> ReadBy(string code)
         => UsePattern().Matches(code).Select(m => (m.Groups[2].Value, m.Groups[1].Value == "Exists"));
 
-    [GeneratedRegex("""\bSecret\s*\.\s*(Read|Exists)\s*\(\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*\)""")]
+    [GeneratedRegex("""\bSecret\s*\.\s*(Read|Exists)(?:Async)?\s*\(\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*[,)]""")]
     private static partial Regex UsePattern();
 
     #endregion

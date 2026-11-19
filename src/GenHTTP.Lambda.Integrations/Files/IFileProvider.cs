@@ -19,12 +19,14 @@ namespace GenHTTP.Lambda.Integrations.Files;
 /// A path is relative to the workspace, its folders separated by slashes, and
 /// already checked: it stays inside, and is not empty. Folders are things of
 /// their own - a lambda may make an empty one and rely on it being there - so
-/// a provider without them keeps a marker for each. Synchronous but for an
-/// upload, which arrives as it is sent: a lambda writes a file with a plain
-/// call, wherever it happens to be.
+/// a provider without them keeps a marker for each. Whatever reaches where
+/// the files are is awaited (see <see cref="IIntegration"/>): object storage
+/// awaits the network, a directory on the disk answers at once. A whole
+/// workspace - a copy - is asked for away from the thread a request is
+/// served on.
 /// </para>
 /// <para>
-/// The platform's own files are in named stores (<see cref="FileStores"/>),
+/// The platform's own files are in named stores (<see cref="FileStore"/>),
 /// as its records are in the stores of the database: a picture is a file,
 /// never a row. Their names are the platform's, never anybody's input.
 /// </para>
@@ -37,18 +39,18 @@ public interface IFileProvider : IIntegration
     /// <summary>
     /// A file of one of the platform's stores, or nothing where there is none.
     /// </summary>
-    byte[]? Read(string store, string name);
+    ValueTask<byte[]?> ReadAsync(FileStore store, string name, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes a file into one of the platform's stores, replacing it where
     /// it is there - whole, or not at all.
     /// </summary>
-    void Write(string store, string name, ReadOnlySpan<byte> content);
+    ValueTask WriteAsync(FileStore store, string name, ReadOnlyMemory<byte> content, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a file from one of the platform's stores, where it is there.
     /// </summary>
-    void Delete(string store, string name);
+    ValueTask DeleteAsync(FileStore store, string name, CancellationToken cancellation = default);
 
     #endregion
 
@@ -57,27 +59,31 @@ public interface IFileProvider : IIntegration
     /// <summary>
     /// Every file and folder in a workspace, none where it has none.
     /// </summary>
-    IReadOnlyList<FileEntry> List(DataScope scope);
+    ValueTask<IReadOnlyList<FileEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// The file or folder at a path, or nothing.
     /// </summary>
-    FileEntry? Find(DataScope scope, string path);
+    ValueTask<FileEntry?> FindAsync(DataScope scope, string path, CancellationToken cancellation = default);
 
     /// <summary>
     /// The content of a file, or nothing where there is no file at the path.
     /// </summary>
-    byte[]? Read(DataScope scope, string path);
+    ValueTask<byte[]?> ReadAsync(DataScope scope, string path, CancellationToken cancellation = default);
 
     /// <summary>
     /// A file as it is served, without reading it first - or nothing where
     /// there is no file at the path.
     /// </summary>
-    IResource? Resource(DataScope scope, string path);
+    ValueTask<IResource?> ResourceAsync(DataScope scope, string path, CancellationToken cancellation = default);
 
     /// <summary>
     /// A folder of the workspace, or all of it, as it is served.
     /// </summary>
+    /// <remarks>
+    /// Made without reaching the files: a tree is read as it is served, which
+    /// GenHTTP awaits.
+    /// </remarks>
     /// <param name="folder">The folder, which the caller checked is there, or nothing for the whole workspace</param>
     IResourceTree Tree(DataScope scope, string? folder);
 
@@ -89,7 +95,7 @@ public interface IFileProvider : IIntegration
     /// Writes a file, replacing it where it is there, with the folders it goes
     /// into - whole, or not at all.
     /// </summary>
-    void Write(DataScope scope, string path, ReadOnlySpan<byte> content);
+    ValueTask WriteAsync(DataScope scope, string path, ReadOnlyMemory<byte> content, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes a file as it arrives, replacing it where it is there, with the
@@ -101,18 +107,18 @@ public interface IFileProvider : IIntegration
     /// <summary>
     /// Makes a folder, with the folders it is in.
     /// </summary>
-    void CreateFolder(DataScope scope, string path);
+    ValueTask CreateFolderAsync(DataScope scope, string path, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a file, or a folder with everything in it - nothing where
     /// there is neither.
     /// </summary>
-    void Delete(DataScope scope, string path);
+    ValueTask DeleteAsync(DataScope scope, string path, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes everything in a workspace.
     /// </summary>
-    void Clear(DataScope scope);
+    ValueTask ClearAsync(DataScope scope, CancellationToken cancellation = default);
 
     #endregion
 
@@ -127,17 +133,17 @@ public interface IFileProvider : IIntegration
     /// workspace, so the platform asks for it away from the thread a request
     /// is served on.
     /// </remarks>
-    void Copy(DataScope source, DataScope target, CancellationToken cancellation = default);
+    ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a workspace altogether, such as a feature's copy.
     /// </summary>
-    void Delete(DataScope scope);
+    ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes the workspace of a lambda and every copy of its features.
     /// </summary>
-    void DeleteAll(long lambdaId);
+    ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default);
 
     #endregion
 
@@ -146,18 +152,22 @@ public interface IFileProvider : IIntegration
 /// <summary>
 /// The stores the platform keeps its own files in.
 /// </summary>
-public static class FileStores
+/// <remarks>
+/// What a store is called where it is kept - a directory, a prefix - is the
+/// provider's to decide, and stays what it was once files are kept under it.
+/// </remarks>
+public enum FileStore
 {
 
     /// <summary>
     /// What the installation presents itself with: its logo.
     /// </summary>
-    public const string Branding = "branding";
+    Branding,
 
     /// <summary>
     /// The pictures of the showcase, one per lambda that is listed there.
     /// </summary>
-    public const string Showcase = "showcase";
+    Showcase
 
 }
 

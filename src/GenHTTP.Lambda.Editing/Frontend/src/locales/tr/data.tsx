@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Veritabanı',
-      what: 'Lambdanın kayıtlarını tuttuğu, Database.GetConnection() ile erişilen kendine ait bir veritabanı.',
+      what: 'Lambdanın kayıtlarını tuttuğu, Database.GetConnectionAsync() ile erişilen kendine ait bir veritabanı.',
       count: (items) => `${items} tablo`,
       confirmOff: 'Veritabanı kapatılsın mı?',
       switchedOn: 'Veritabanı açık ve boş. Lambda bir sonraki istekte veritabanıyla birlikte yeniden başlar.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Kodda',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} veritabanına, Entity Framework Core’daki bir {code('DbContext')} ya da SQL
+        {code('Database.GetConnectionAsync()')} veritabanına, Entity Framework Core’daki bir {code('DbContext')} ya da SQL
         için bir bağlantı açar; tablolarını ise {code('migrations/')} içindeki, Evolve’un uyguladığı migration’lar
         oluşturur. İndirilen bir projede bu, düz bir SQLite dosyasıdır: {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} silindi.`,
     deleteFailed: 'Gizli değer silinemedi.',
     used: 'kod tarafından okunuyor',
-    usedHint: 'Kod onu Secret.Read veya Secret.Exists ile okur.',
+    usedHint: 'Kod onu Secret.ReadAsync veya Secret.ExistsAsync ile okur.',
     unused: 'kod tarafından okunmuyor',
     unusedHint: 'Hiçbir kod onu bu adla okumuyor. Koddaki gibi mi yazılmış?',
     set: (when) => <>ayarlandı: {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Kodda',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} bir değeri okur, {code('Secret.Exists("NAME")')} ayarlı olup olmadığını söyler.
+        {code('Secret.ReadAsync("NAME")')} bir değeri okur, {code('Secret.ExistsAsync("NAME")')} ayarlı olup olmadığını söyler.
         İndirilen bir projede ikisi de aynı adlı ortam değişkenini okur.
       </>
     ),

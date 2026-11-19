@@ -15,7 +15,7 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         Assert.AreEqual("Sandbox", lambda.Tier);
         Assert.AreEqual(1, lambda.LatestVersion);
@@ -31,14 +31,14 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        fixture.Meta.Create("taken");
+        await fixture.Meta.CreateAsync("taken");
 
         var availability = fixture.Meta.DescribeKey("taken");
 
         Assert.IsFalse(availability.Available);
         Assert.IsNotNull(availability.Reason);
 
-        var conflict = await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.Meta.Create("taken"));
+        var conflict = await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.Meta.CreateAsync("taken"));
 
         Assert.AreEqual(LambdaError.Conflict, conflict.Error);
     }
@@ -48,7 +48,7 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         var saved = fixture.Meta.Save(lambda.PrivateKey, "return Content.From(Resource.FromString(\"second\"));");
 
@@ -69,7 +69,7 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         var error = await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.Meta.Save(lambda.PrivateKey, "   "));
 
@@ -81,7 +81,7 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -106,7 +106,7 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         fixture.Meta.Save(lambda.PrivateKey, "return this is not csharp;");
 
@@ -122,14 +122,14 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create("before");
+        var lambda = await fixture.Meta.CreateAsync("before");
 
         var moved = fixture.Meta.ChangeKey(lambda.PrivateKey, "after");
 
         Assert.AreEqual("after", moved.PublicKey);
         Assert.IsFalse((fixture.Meta.DescribeKey("before")).Exists);
 
-        fixture.Meta.Create("occupied");
+        await fixture.Meta.CreateAsync("occupied");
 
         var conflict = await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.Meta.ChangeKey(lambda.PrivateKey, "occupied"));
 
@@ -141,9 +141,9 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
-        fixture.Meta.Delete(lambda.PrivateKey);
+        await fixture.Meta.DeleteAsync(lambda.PrivateKey);
 
         Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));
         Assert.IsFalse((fixture.Meta.DescribeKey(lambda.PublicKey)).Exists);
@@ -154,25 +154,25 @@ public sealed class MetaServiceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
-        var untouched = fixture.Meta.RunMaintenance(DateTime.UtcNow);
+        var untouched = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
         Assert.AreEqual(0, untouched.Undeployed);
         Assert.AreEqual(0, untouched.Deleted);
 
         var aged = DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromMinutes(1);
 
-        var retired = fixture.Meta.RunMaintenance(aged);
+        var retired = await fixture.Meta.RunMaintenanceAsync(aged);
 
         Assert.AreEqual(1, retired.Undeployed);
         Assert.IsNull((fixture.Meta.Get(lambda.PrivateKey))?.ActiveVersion);
 
         var abandoned = DateTime.UtcNow + fixture.Options.Retention + TimeSpan.FromDays(1);
 
-        var removed = fixture.Meta.RunMaintenance(abandoned);
+        var removed = await fixture.Meta.RunMaintenanceAsync(abandoned);
 
         Assert.AreEqual(1, removed.Deleted);
         Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));

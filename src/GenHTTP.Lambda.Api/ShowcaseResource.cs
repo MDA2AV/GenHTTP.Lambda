@@ -56,9 +56,9 @@ public sealed class ShowcaseResource(IShowcaseService showcases, ILambdaAddresse
     [Response(ResponseStatus.Ok, "The picture, as it was uploaded", ContentType = "image/*")]
     [ResponseHeader(ResponseStatus.Ok, "Cache-Control", "`public, max-age=31536000, immutable`")]
     [Response(ResponseStatus.NotFound, "The lambda of this public key has no showcase entry.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public IResponse Image([Summary("The public key of the lambda")] string publicKey, IRequest request)
+    public async ValueTask<IResponse> Image([Summary("The public key of the lambda")] string publicKey, IRequest request)
     {
-        var image = showcases.GetImage(publicKey)
+        var image = await showcases.GetImageAsync(publicKey)
                  ?? throw LambdaException.NotFound($"There is no showcase for '{publicKey}'.");
 
         return request.Respond()

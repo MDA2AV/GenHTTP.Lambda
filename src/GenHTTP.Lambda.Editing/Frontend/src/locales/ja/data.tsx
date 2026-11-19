@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'データベース',
-      what: 'lambdaがレコードを保存する専用のデータベースです。Database.GetConnection()で接続します。',
+      what: 'lambdaがレコードを保存する専用のデータベースです。Database.GetConnectionAsync()で接続します。',
       count: (items) => `${items}個のテーブル`,
       confirmOff: 'データベースをオフにしますか？',
       switchedOn: 'データベースをオンにしました。中身は空です。lambdaは次のリクエストで、データベースを使える状態で起動し直します。',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'コードでは',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')}でデータベースへの接続を開きます。Entity Framework Coreの
+        {code('Database.GetConnectionAsync()')}でデータベースへの接続を開きます。Entity Framework Coreの
         {code('DbContext')}にも、SQLにも使えます。テーブルは{code('migrations/')}
         のマイグレーションが作り、Evolveがそれを適用します。ダウンロードしたプロジェクトでは、ただのSQLiteファイル
         {code('database/database.db')}になります。
@@ -137,7 +137,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name}を削除しました。`,
     deleteFailed: 'シークレットを削除できませんでした。',
     used: 'コードが使用中',
-    usedHint: 'コードがSecret.ReadまたはSecret.Existsで読んでいます。',
+    usedHint: 'コードがSecret.ReadAsyncまたはSecret.ExistsAsyncで読んでいます。',
     unused: 'コードは未使用',
     unusedHint: 'この名前で読んでいるコードはありません。コードと同じつづりですか？',
     set: (when) => <>{when}に設定</>,
@@ -154,7 +154,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'コードでは',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')}で値を読み、{code('Secret.Exists("NAME")')}で設定されているかを確かめます。
+        {code('Secret.ReadAsync("NAME")')}で値を読み、{code('Secret.ExistsAsync("NAME")')}で設定されているかを確かめます。
         ダウンロードしたプロジェクトでは、どちらも同じ名前の環境変数を読みます。
       </>
     ),

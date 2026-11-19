@@ -24,7 +24,7 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// </remarks>
 /// <remarks>
 /// A database is a file, so it is held to the same rule: a lambda uses the
-/// connection <c>Database.GetConnection()</c> hands it and makes none of its
+/// connection <c>Database.GetConnectionAsync()</c> hands it and makes none of its
 /// own - nor points one at another file, nor loads native code into one. The
 /// names that would do that are refused here, and making a connection is
 /// refused by <see cref="InspectConstruction"/>, which needs the compiler to
@@ -587,7 +587,7 @@ public static class CodeGuard
                         var span = node.GetLocation().GetMappedLineSpan();
 
                         findings.Add(new CompilationDiagnostic("Error", "LAMBDA0001",
-                            "A lambda does not make database connections of its own: Database.GetConnection() opens one to the lambda's own database.",
+                            "A lambda does not make database connections of its own: Database.GetConnectionAsync() opens one to the lambda's own database.",
                             span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1, span.HasMappedPath ? span.Path : null));
 
                         break;
@@ -603,8 +603,8 @@ public static class CodeGuard
     /// What a lambda is told that configures a context with anything but a connection.
     /// </summary>
     internal const string ContextMessage =
-        "A lambda's DbContext works on the connection Database.GetConnection() opens: options.UseDatabase(connection), " +
-        "with the connection handed to the context from outside it - new Records(Database.GetConnection()). A connection string would open a database of its own.";
+        "A lambda's DbContext works on the connection Database.GetConnectionAsync() opens: options.UseDatabase(connection), " +
+        "with the connection handed to the context from outside it - new Records(await Database.GetConnectionAsync()). A connection string would open a database of its own.";
 
     /// <summary>
     /// What a lambda is told that asks Entity Framework for its schema.
@@ -842,7 +842,7 @@ public static class CodeGuard
         "A lambda does not wait for a task (.Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny): " +
         "requests are served on one thread per core, and the task has to finish on the very thread that would be waiting for it - " +
         "so it never does, and every request on that thread waits with it. Await the task instead and make the method async " +
-        "(GenHTTP handlers and resource methods may return Task<T> or ValueTask<T>), or call the synchronous method where there is one.";
+        "(GenHTTP handlers and resource methods may return Task<T> or ValueTask<T>).";
 
     /// <summary>
     /// What a lambda is told that takes a semaphore synchronously.
@@ -989,11 +989,11 @@ public static class CodeGuard
             "GetProperties", "GetConstructor", "GetConstructors", "GetMember", "GetMembers", "InvokeMember",
             "CreateInstance", "CreateDelegate", "DynamicInvoke", "TypeDescriptor");
 
-        // the connection Database.GetConnection() hands out is the only one: these
+        // the connection Database.GetConnectionAsync() hands out is the only one: these
         // would make another, point one at another file or database - which
         // ChangeDatabase does on a server, as the lambda's own role - or load
         // native code into it
-        Add("use Database.GetConnection() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
+        Add("use Database.GetConnectionAsync() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
             "SqliteFactory", "DbProviderFactories", "DbProviderFactory", "DbDataSource", "CreateDataSource", "LoadExtension",
             "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString", "ChangeDatabase");
 

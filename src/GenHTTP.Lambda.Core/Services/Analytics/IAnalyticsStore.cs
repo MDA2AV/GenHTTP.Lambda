@@ -9,6 +9,6 @@ public interface IAnalyticsStore
     /// <summary>
     /// Removes everything counted of a lambda, called when it is deleted.
     /// </summary>
-    void Forget(long lambda);
+    ValueTask ForgetAsync(long lambda, CancellationToken cancellation = default);
 
 }

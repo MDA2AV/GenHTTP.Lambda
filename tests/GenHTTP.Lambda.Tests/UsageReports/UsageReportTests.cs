@@ -269,8 +269,8 @@ public sealed class UsageReportTests
 
         var branding = fixture.Platform.Services.GetRequiredService<IBrandingService>();
 
-        branding.Rename("Tidewell Apps");
-        branding.ChangeLogo(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="));
+        await branding.RenameAsync("Tidewell Apps");
+        await branding.ChangeLogoAsync(Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="));
 
         await Reports(fixture).SendAsync();
 

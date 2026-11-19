@@ -23,7 +23,7 @@
 
 // every version reads the same database, so each brings it up to the schema
 // it expects first; Evolve applies what is new in resources/migrations/, once each
-using (var connection = Database.GetConnection())
+await using (var connection = await Database.GetConnectionAsync())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
@@ -36,32 +36,32 @@ using (var connection = Database.GetConnection())
 
 // the lobby calls this whenever a game ends; the counts outlive a restart. One
 // row per outcome, counted up where it is
-void Record(string winner)
+async ValueTask Record(string winner)
 {
     var outcome = winner is "X" or "O" ? winner : "draw";
 
-    using var db = new GameContext(Database.GetConnection());
+    await using var db = new GameContext(await Database.GetConnectionAsync());
 
     // the transaction takes the database's one writer's place before it reads,
     // so two games ending at once cannot both find no row and both add one
-    using var transaction = db.Database.BeginTransaction();
+    await using var transaction = await db.Database.BeginTransactionAsync();
 
     // one UPDATE ... SET games = games + 1, without reading the row first
-    if (db.Outcomes.Where(o => o.Winner == outcome).ExecuteUpdate(s => s.SetProperty(o => o.Games, o => o.Games + 1)) == 0)
+    if (await db.Outcomes.Where(o => o.Winner == outcome).ExecuteUpdateAsync(s => s.SetProperty(o => o.Games, o => o.Games + 1)) == 0)
     {
         db.Outcomes.Add(new Outcome { Winner = outcome, Games = 1 });
-        db.SaveChanges();
+        await db.SaveChangesAsync();
     }
 
-    transaction.Commit();
+    await transaction.CommitAsync();
 }
 
 // how the games so far have ended, added up from the outcomes
-Stats Count()
+async ValueTask<Stats> Count()
 {
-    using var db = new GameContext(Database.GetConnection());
+    await using var db = new GameContext(await Database.GetConnectionAsync());
 
-    var counts = db.Outcomes.ToDictionary(o => o.Winner, o => o.Games);
+    var counts = await db.Outcomes.ToDictionaryAsync(o => o.Winner, o => o.Games);
 
     return new Stats(counts.Values.Sum(), counts.GetValueOrDefault("X"), counts.GetValueOrDefault("O"), counts.GetValueOrDefault("draw"));
 }

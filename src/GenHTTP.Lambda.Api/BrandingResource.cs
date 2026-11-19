@@ -49,9 +49,9 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     [Response(ResponseStatus.BadRequest, "The name is longer than 40 characters, or holds line breaks or other control characters. Nothing was changed.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The name and the logo, as they are now")]
-    public BrandingResponse Rename(BrandingRequest body)
+    public async ValueTask<BrandingResponse> Rename(BrandingRequest body)
     {
-        var (brand, previous) = branding.Rename(body.Name);
+        var (brand, previous) = await branding.RenameAsync(body.Name);
 
         if (previous != brand.Given)
         {
@@ -65,11 +65,11 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     [Summary("Gives back the platform's name and mark")]
     [Remarks("Takes the name and the logo away: the pages show GenHTTP Lambda again, with its own mark. Nothing happens where they do already.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
-    public void Reset()
+    public async ValueTask Reset()
     {
         var had = branding.Current.Own;
 
-        branding.Reset();
+        await branding.ResetAsync();
 
         if (had)
         {
@@ -93,7 +93,7 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     {
         var content = await ReadAsync(body);
 
-        var brand = branding.ChangeLogo(content);
+        var brand = await branding.ChangeLogoAsync(content);
 
         logger.LogInformation("Uploaded branding logo type {Type} bytes {Bytes} by operator", brand.Logo!.Type, brand.Logo.Content.Length);
 
@@ -104,11 +104,11 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     [Summary("Takes the logo away")]
     [Remarks("The name stays. Where the installation is named, the pages draw its first letter on a plate beside it; where it is not, the platform's mark. Nothing happens where there is no logo.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
-    public void RemoveLogo()
+    public async ValueTask RemoveLogo()
     {
         var had = branding.Current.Logo != null;
 
-        branding.RemoveLogo();
+        await branding.RemoveLogoAsync();
 
         if (had)
         {

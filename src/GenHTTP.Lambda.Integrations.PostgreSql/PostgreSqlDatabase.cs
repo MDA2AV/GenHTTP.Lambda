@@ -84,7 +84,12 @@ public sealed partial class PostgreSqlDatabaseBuilder : IIntegrationBuilder<IDat
         return this;
     }
 
-    public IDatabaseProvider Build(IntegrationContext context)
+    /// <remarks>
+    /// Connects to the server as it builds, and prepares the schemas of the
+    /// platform's records there - a server that does not answer stops the
+    /// platform from starting, rather than its first request.
+    /// </remarks>
+    public async ValueTask<IDatabaseProvider> BuildAsync(IntegrationContext context, CancellationToken cancellation = default)
     {
         var connection = new NpgsqlConnectionStringBuilder(_connection);
 
@@ -93,7 +98,7 @@ public sealed partial class PostgreSqlDatabaseBuilder : IIntegrationBuilder<IDat
             throw new InvalidOperationException("The connection to PostgreSQL names no database (Database=...): the platform keeps its schemas in the one it names.");
         }
 
-        return new PostgreSqlDatabaseProvider(connection, _rolePrefix, _poolSize, context.Loggers.CreateLogger<PostgreSqlDatabaseProvider>());
+        return await PostgreSqlDatabaseProvider.StartAsync(connection, _rolePrefix, _poolSize, context.Loggers.CreateLogger<PostgreSqlDatabaseProvider>(), cancellation);
     }
 
     [GeneratedRegex("^[a-z][a-z0-9_]{0,39}$")]

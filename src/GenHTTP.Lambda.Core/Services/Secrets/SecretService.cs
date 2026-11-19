@@ -20,7 +20,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Functionality
 
-    public SecretListing List(string privateKey, string? feature = null)
+    public async ValueTask<SecretListing> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
         var (lambdaId, featureId) = Resolve(privateKey, feature, false);
 
@@ -28,7 +28,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
 
         var (used, optional) = Used(lambdaId, featureId);
 
-        var stored = vault.List(lambdaId, featureId);
+        var stored = await vault.ListAsync(lambdaId, featureId, cancellation);
 
         var names = stored.Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
 
@@ -40,7 +40,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
                                  SecretVault.MaxSecrets);
     }
 
-    public SecretInfo Set(string privateKey, string name, string value, string? feature = null)
+    public async ValueTask<SecretInfo> SetAsync(string privateKey, string name, string value, string? feature = null, CancellationToken cancellation = default)
     {
         var (lambdaId, featureId) = Resolve(privateKey, feature, true);
 
@@ -49,7 +49,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Conflict(DataKinds.SecretsOff);
         }
 
-        var stored = vault.Store(lambdaId, featureId, name?.Trim() ?? "", value);
+        var stored = await vault.StoreAsync(lambdaId, featureId, name?.Trim() ?? "", value, cancellation);
 
         // the name, never the value
         if (featureId != null)
@@ -66,11 +66,11 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
         return new SecretInfo(stored.Name, stored.Created, stored.Changed, used.Contains(stored.Name));
     }
 
-    public void Delete(string privateKey, string name, string? feature = null)
+    public async ValueTask DeleteAsync(string privateKey, string name, string? feature = null, CancellationToken cancellation = default)
     {
         var (lambdaId, featureId) = Resolve(privateKey, feature, true);
 
-        if (!vault.Remove(lambdaId, featureId, name?.Trim() ?? ""))
+        if (!await vault.RemoveAsync(lambdaId, featureId, name?.Trim() ?? "", cancellation))
         {
             throw LambdaException.NotFound($"There is no secret called '{name}'{(featureId != null ? " in this feature's copy" : "")}. Names are case sensitive.");
         }

@@ -61,13 +61,13 @@ public sealed class Poll
 
     private readonly object _lock = new();
 
-    public Results Results()
+    public async ValueTask<Results> ResultsAsync()
     {
         Dictionary<string, int> votes;
 
-        using (var db = new PollContext(Database.GetConnection()))
+        await using (var db = new PollContext(await Database.GetConnectionAsync()))
         {
-            votes = db.Tallies.ToDictionary(t => t.Option, t => t.Votes);
+            votes = await db.Tallies.ToDictionaryAsync(t => t.Option, t => t.Votes);
         }
 
         var options = Choices.Select(c => new Option(c.Id, c.Label, votes.GetValueOrDefault(c.Id))).ToList();
@@ -75,7 +75,7 @@ public sealed class Poll
         return new Results(Question, options, options.Sum(o => o.Votes));
     }
 
-    public void Cast(Vote vote)
+    public async ValueTask CastAsync(Vote vote)
     {
         var option = vote?.Option;
 
@@ -84,23 +84,23 @@ public sealed class Poll
             throw new ProviderException(ResponseStatus.BadRequest, $"Vote for one of: {string.Join(", ", Choices.Select(c => c.Id))}.");
         }
 
-        using (var db = new PollContext(Database.GetConnection()))
+        await using (var db = new PollContext(await Database.GetConnectionAsync()))
         {
             // the transaction takes the database's one writer's place before it
             // reads, so two first votes cannot both find no row and both add one
-            using var transaction = db.Database.BeginTransaction();
+            await using var transaction = await db.Database.BeginTransactionAsync();
 
             // one UPDATE ... SET votes = votes + 1, without reading the row first
-            if (db.Tallies.Where(t => t.Option == option).ExecuteUpdate(s => s.SetProperty(t => t.Votes, t => t.Votes + 1)) == 0)
+            if (await db.Tallies.Where(t => t.Option == option).ExecuteUpdateAsync(s => s.SetProperty(t => t.Votes, t => t.Votes + 1)) == 0)
             {
                 db.Tallies.Add(new Tally { Option = option, Votes = 1 });
-                db.SaveChanges();
+                await db.SaveChangesAsync();
             }
 
-            transaction.Commit();
+            await transaction.CommitAsync();
         }
 
-        Tell(new Update(null, Results()));
+        Tell(new Update(null, await ResultsAsync()));
     }
 
     /// <summary>

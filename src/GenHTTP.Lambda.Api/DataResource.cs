@@ -24,10 +24,10 @@ namespace GenHTTP.Lambda.Api;
          A version is the program and is replaced by the next one. Data is what the program keeps, shared by every version
          and left alone by deploying, rolling back and merging. There are three kinds:
 
-         - `database`: a database of its own, which the code reaches with `Database.GetConnection()`. Off until it is switched
+         - `database`: a database of its own, which the code reaches with `Database.GetConnectionAsync()`. Off until it is switched
            on. Its tables are under `…/database`.
          - `workspace`: files the code reads and writes. On unless its owner switched it off. They are under `…/files`.
-         - `secrets`: API keys and passwords the code reads with `Secret.Read("NAME")`, which nobody else can read. Off
+         - `secrets`: API keys and passwords the code reads with `Secret.ReadAsync("NAME")`, which nobody else can read. Off
            until they are switched on. Their names are under `…/secrets`.
 
          A kind is switched on before the lambda can use it, and the lambda can use it from its next request on, without
@@ -43,16 +43,16 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     [ResourceMethod("lambdas/:privateKey/data")]
     [Summary("Lists the kinds of data")]
     [return: Summary("Every kind of data")]
-    public List<DataStoreResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => [.. (data.List(privateKey)).Select(Describe)];
+    public async ValueTask<List<DataStoreResponse>> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => [.. (await data.ListAsync(privateKey)).Select(Describe)];
 
     [ResourceMethod("lambdas/:privateKey/data/:kind")]
     [Summary("Reads one kind of data")]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The kind of data")]
-    public DataStoreResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                 [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
-        => Describe(data.Get(privateKey, kind));
+    public async ValueTask<DataStoreResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                  [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
+        => Describe(await data.GetAsync(privateKey, kind));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/data/:kind")]
     [Summary("Switches a kind of data on")]
@@ -66,10 +66,10 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The kind of data, switched on")]
-    public DataStoreResponse Enable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                    [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
+    public async ValueTask<DataStoreResponse> Enable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                     [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
     {
-        var store = data.Enable(privateKey, kind);
+        var store = await data.EnableAsync(privateKey, kind);
 
         logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
@@ -87,10 +87,10 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The kind of data, switched off and empty")]
-    public DataStoreResponse Disable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                     [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
+    public async ValueTask<DataStoreResponse> Disable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                      [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
     {
-        var store = data.Disable(privateKey, kind);
+        var store = await data.DisableAsync(privateKey, kind);
 
         logger.LogInformation("Disabled and deleted {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 

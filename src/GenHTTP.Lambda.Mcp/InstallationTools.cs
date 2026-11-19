@@ -35,9 +35,9 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
 
     [Tool("customize_installation", Title = "Name this installation and give it a logo", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("For whoever runs this installation: the name and the logo its pages show in place of GenHTTP Lambda's - in the bar of every page, the titles of the pages and their link previews, and the icon of the browser tab. Nothing about a lambda changes. Needs the admin token, which only the operator has: use this only when they ask and give it to you, and never repeat the token. With only adminToken it returns how the installation presents itself.")]
-    public object CustomizeInstallation([Summary("The installation's admin token (LAMBDA_ADMIN_TOKEN), as the operator gave it to you.")] string adminToken,
-                                        [Summary("What the installation is called: one line of at most 40 characters. An empty string gives it back the name GenHTTP Lambda; left out, the name stays as it is."), MaxLength(BrandChecks.MaxName)] string? name = null,
-                                        [Summary("The logo: an SVG's markup as it is, or a PNG, JPEG, GIF, WebP or SVG image base64 encoded - at most 512 KB. A square mark reads best: it stands beside the name in the bar and is the icon of the browser tab, on a light and a dark background. An SVG needs xmlns=\"http://www.w3.org/2000/svg\" on its svg element. An empty string removes the logo; left out, it stays as it is.")] string? logo = null)
+    public async ValueTask<object> CustomizeInstallation([Summary("The installation's admin token (LAMBDA_ADMIN_TOKEN), as the operator gave it to you.")] string adminToken,
+                                                         [Summary("What the installation is called: one line of at most 40 characters. An empty string gives it back the name GenHTTP Lambda; left out, the name stays as it is."), MaxLength(BrandChecks.MaxName)] string? name = null,
+                                                         [Summary("The logo: an SVG's markup as it is, or a PNG, JPEG, GIF, WebP or SVG image base64 encoded - at most 512 KB. A square mark reads best: it stands beside the name in the bar and is the icon of the browser tab, on a light and a dark background. An SVG needs xmlns=\"http://www.w3.org/2000/svg\" on its svg element. An empty string removes the logo; left out, it stays as it is.")] string? logo = null)
     {
         if (!OperatorToken.Matches(options, adminToken))
         {
@@ -46,7 +46,7 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
 
         try
         {
-            return Change(name, logo);
+            return await ChangeAsync(name, logo);
         }
         catch (LambdaException e)
         {
@@ -54,7 +54,7 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
         }
     }
 
-    private object Change(string? name, string? logo)
+    private async ValueTask<object> ChangeAsync(string? name, string? logo)
     {
         // both are checked before either is changed, so a refusal changes nothing
         BrandChecks.Name(name);
@@ -70,7 +70,7 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
 
         if (name != null)
         {
-            (brand, var previous) = branding.Rename(name);
+            (brand, var previous) = await branding.RenameAsync(name);
 
             if (previous != brand.Given)
             {
@@ -84,7 +84,7 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
             {
                 var had = brand.Logo != null;
 
-                brand = branding.RemoveLogo();
+                brand = await branding.RemoveLogoAsync();
 
                 if (had)
                 {
@@ -93,7 +93,7 @@ public sealed class InstallationTools(IBrandingService branding, LambdaOptions o
             }
             else
             {
-                brand = branding.ChangeLogo(picture);
+                brand = await branding.ChangeLogoAsync(picture);
 
                 logger.LogInformation("Uploaded branding logo type {Type} bytes {Bytes} by operator", brand.Logo!.Type, brand.Logo.Content.Length);
             }

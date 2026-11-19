@@ -146,10 +146,11 @@ ship the tables as SQL migrations in `resources/migrations/`
 (`Locations = [Resources.Root + "migrations"]`) - never Entity Framework's
 migrations, `EnsureCreated` or `Migrate`. Read and write them with Entity
 Framework Core: a `DbContext` of your own that maps those tables, on the
-connection `Database.GetConnection()` opens (`new Records(Database.GetConnection())`,
+connection `await Database.GetConnectionAsync()` opens (`new Records(await Database.GetConnectionAsync())`,
 configured with `options.UseDatabase(connection)`), one per request - the code
-names no database, and its SQL is plain SQL any database accepts. Use it synchronously - `ToList`, `FirstOrDefault`, `Find`,
-`SaveChanges`, `ExecuteUpdate`, never their `Async` forms. `demo-crud` shows
+names no database, and its SQL is plain SQL any database accepts. Await what
+it asks of the database - `ToListAsync`, `FirstOrDefaultAsync`, `FindAsync`,
+`SaveChangesAsync`, `ExecuteUpdateAsync` - in routes that are async. `demo-crud` shows
 all of it. Uploaded files go in the workspace. A migration
 that ran is never changed: a change to a table is the next file, and it only
 adds - a column with a default, a new table - so the data already there keeps
@@ -160,12 +161,12 @@ in its resources: `resources/web/index.html` and the rest, served with
 Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
 `Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused.
 Requests run on one thread per core, and a task finishes on the thread that
-would be waiting for it - so it never would. Await it instead (handlers and
-routes may be async), or call the synchronous method where there is one, as
-with the database.
+would be waiting for it - so it never would. Await it instead: handlers and
+routes may be async, and the database, the workspace and the secrets are
+awaited too.
 
 An API key, a password or a token for another service is data too, and never
-code: read it with `Secret.Read("NAME")` - or `Secret.Exists` first, if the
+code: read it with `await Secret.ReadAsync("NAME")` - or `Secret.ExistsAsync` first, if the
 application can do without it - and switch secrets on with `enable_data`. You
 cannot set the value and must not make one up: the owner enters it in their
 control center, which asks them for every name the code reads that has no

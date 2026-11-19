@@ -4,7 +4,7 @@ namespace GenHTTP.Lambda.Data;
 
 /// <summary>
 /// What the pictures the platform keeps are called in the stores of the files
-/// integration (<see cref="GenHTTP.Lambda.Integrations.Files.FileStores"/>).
+/// integration (<see cref="GenHTTP.Lambda.Integrations.Files.FileStore"/>).
 /// </summary>
 /// <remarks>
 /// Beside the rows that describe them, since both the services that keep them

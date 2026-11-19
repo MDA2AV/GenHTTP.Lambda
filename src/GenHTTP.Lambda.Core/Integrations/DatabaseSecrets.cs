@@ -24,6 +24,11 @@ namespace GenHTTP.Lambda.Integrations.Sealed;
 /// lambda's, which is in its row. A feature's copy is copied sealed: it is the
 /// lambda's, under the lambda's key, so nothing is opened to make it. What a
 /// lambda reads is held sealed until it reads it.
+///
+/// Synchronous inside, whatever the contract says: the platform asks Entity
+/// Framework for its own records synchronously, so every task this returns
+/// has completed already - on SQLite, the thread that asks is the one that
+/// reads the row.
 /// </remarks>
 public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<DatabaseSecrets> logger) : ISecretProvider
 {
@@ -33,7 +38,9 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
 
     #region Functionality
 
-    public ISecretSet Load(DataScope scope)
+    public ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default) => ValueTask.FromResult(Load(scope));
+
+    private ISecretSet Load(DataScope scope)
     {
         using var database = databases.CreateDbContext();
 
@@ -56,18 +63,18 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
         return new SealedSet(cipher, salt != null ? cipher.KeyOf(salt) : null, values);
     }
 
-    public IReadOnlyList<SecretEntry> List(DataScope scope)
+    public ValueTask<IReadOnlyList<SecretEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
-        return database.Secrets.AsNoTracking()
-                       .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
-                       .OrderBy(s => s.Name)
-                       .Select(s => new SecretEntry(s.Name, s.Created, s.Changed))
-                       .ToList();
+        return ValueTask.FromResult<IReadOnlyList<SecretEntry>>(database.Secrets.AsNoTracking()
+                                                                        .Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId)
+                                                                        .OrderBy(s => s.Name)
+                                                                        .Select(s => new SecretEntry(s.Name, s.Created, s.Changed))
+                                                                        .ToList());
     }
 
-    public SecretEntry Store(DataScope scope, string name, string value)
+    public ValueTask<SecretEntry> StoreAsync(DataScope scope, string name, string value, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -99,18 +106,18 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
 
         database.SaveChanges();
 
-        return new SecretEntry(existing.Name, existing.Created, existing.Changed);
+        return ValueTask.FromResult(new SecretEntry(existing.Name, existing.Created, existing.Changed));
     }
 
-    public bool Delete(DataScope scope, string name)
+    public ValueTask<bool> DeleteAsync(DataScope scope, string name, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
-        return database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name)
-                       .ExecuteDelete() > 0;
+        return ValueTask.FromResult(database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId && s.Name == name)
+                                            .ExecuteDelete() > 0);
     }
 
-    public void Copy(DataScope source, DataScope target)
+    public ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -131,20 +138,24 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
         }));
 
         database.SaveChanges();
+
+        return ValueTask.CompletedTask;
     }
 
-    public void Delete(DataScope scope)
+    public ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
         database.Secrets.Where(s => s.LambdaId == scope.LambdaId && s.FeatureId == scope.FeatureId).ExecuteDelete();
+
+        return ValueTask.CompletedTask;
     }
 
     /// <remarks>
     /// The lambda's half of its key goes with them, so secrets stored later
     /// are sealed with a new one.
     /// </remarks>
-    public void DeleteAll(long lambdaId)
+    public ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -152,9 +163,11 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
 
         database.Lambdas.Where(l => l.Id == lambdaId)
                         .ExecuteUpdate(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null));
+
+        return ValueTask.CompletedTask;
     }
 
-    public IntegrationInfo Describe() => new(IntegrationKinds.Secrets, "Database",
+    public IntegrationInfo Describe() => new(IntegrationKind.Secrets, "Database",
                                              [
                                                  new IntegrationDetail("Sealed", "AES-GCM, a key per lambda"),
                                                  new IntegrationDetail("Installation key", cipher.Source)

@@ -55,11 +55,11 @@ public static class CompletionCatalog
             """),
 
         new("lambda-workspace", "snippet", "Read and write files in the private workspace", """
-            Workspace.WriteText("notes.txt", "written by my lambda");
+            await Workspace.WriteTextAsync("notes.txt", "written by my lambda");
 
             return Layout.Create()
                          .Add("files", Workspace.Files())
-                         .Index(Inline.Create().Get(() => Workspace.List()));
+                         .Index(Inline.Create().Get(() => Workspace.ListAsync()));
             """),
 
         new("lambda-websocket", "snippet", "A websocket, handled as events", """

@@ -57,19 +57,18 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         var used = Used(lambdaId, featureId);
 
+        var room = await vault.RoomOfAsync(lambdaId, featureId, tier, cancellation);
+
         if (!enabled)
         {
-            return new DatabaseOverview(false, 0, vault.RoomOf(lambdaId, featureId, tier), [], used);
+            return new DatabaseOverview(false, 0, room, [], used);
         }
 
-        var tables = await Offload.Run(() =>
-        {
-            using var connection = vault.OpenForReading(lambdaId, featureId);
+        // statements of the lambda's own - a view is SQL it wrote - which a
+        // database that answers at once runs on the thread they are sent on
+        var tables = await Offload.Run(() => TablesOfAsync(lambdaId, featureId, cancellation), cancellation);
 
-            return connection == null ? [] : Describe(provider, connection);
-        }, cancellation);
-
-        return new DatabaseOverview(true, vault.SizeOf(lambdaId, featureId), vault.RoomOf(lambdaId, featureId, tier), tables, used);
+        return new DatabaseOverview(true, await vault.SizeOfAsync(lambdaId, featureId, cancellation), room, tables, used);
     }
 
     public async ValueTask<DatabaseRows> ReadAsync(string privateKey, string table, int offset = 0, int limit = 50, string? order = null, bool descending = true,
@@ -86,17 +85,13 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         var name = table ?? string.Empty;
 
-        return await Offload.Run(() =>
-        {
-            using var connection = vault.OpenForReading(lambdaId, featureId)
-                                ?? throw LambdaException.NotFound($"There is no table called '{name}': the database is empty.");
-
-            return Read(provider, connection, name, Math.Max(0, offset), Math.Clamp(limit, 1, MaxLimit), order, descending);
-        }, cancellation);
+        return await Offload.Run(() => RowsOfAsync(lambdaId, featureId, name, Math.Max(0, offset), Math.Clamp(limit, 1, MaxLimit), order, descending, cancellation),
+                                 cancellation);
     }
 
     /// <summary>
-    /// Whether code calls <c>Database.GetConnection()</c>.
+    /// Whether code calls <c>Database.GetConnectionAsync()</c>, or
+    /// <c>Database.GetConnection()</c> as code written before does.
     /// </summary>
     /// <remarks>
     /// Read off the text, as the names of the secrets are: it is there to
@@ -105,14 +100,30 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     /// </remarks>
     public static bool Uses(string code) => UsePattern().IsMatch(code);
 
-    [GeneratedRegex(@"\bDatabase\s*\.\s*GetConnection\s*\(")]
+    [GeneratedRegex(@"\bDatabase\s*\.\s*GetConnection(?:Async)?\s*\(")]
     private static partial Regex UsePattern();
 
     #endregion
 
     #region Reading
 
-    public string? Export(long lambdaId) => vault.Export(lambdaId);
+    private async ValueTask<List<DatabaseTable>> TablesOfAsync(long lambdaId, long? featureId, CancellationToken cancellation)
+    {
+        await using var connection = await vault.OpenForReadingAsync(lambdaId, featureId, cancellation);
+
+        return connection == null ? [] : await DescribeAsync(provider, connection, cancellation);
+    }
+
+    private async ValueTask<DatabaseRows> RowsOfAsync(long lambdaId, long? featureId, string table, int offset, int limit, string? order, bool descending,
+                                                      CancellationToken cancellation)
+    {
+        await using var connection = await vault.OpenForReadingAsync(lambdaId, featureId, cancellation)
+                                  ?? throw LambdaException.NotFound($"There is no table called '{table}': the database is empty.");
+
+        return await PageAsync(provider, connection, table, offset, limit, order, descending, cancellation);
+    }
+
+    public ValueTask<string?> ExportAsync(long lambdaId, CancellationToken cancellation = default) => vault.ExportAsync(lambdaId, cancellation);
 
     /// <summary>
     /// The tables and views, with their columns and how many rows each holds.
@@ -121,23 +132,25 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     /// What the database keeps for itself is left out by the integration:
     /// none of it is anything the app wrote.
     /// </remarks>
-    private static List<DatabaseTable> Describe(IDatabaseProvider provider, DbConnection connection)
+    private static async ValueTask<List<DatabaseTable>> DescribeAsync(IDatabaseProvider provider, DbConnection connection, CancellationToken cancellation)
     {
         var tables = new List<DatabaseTable>();
 
-        foreach (var found in provider.Tables(connection))
+        foreach (var found in await provider.TablesAsync(connection, cancellation))
         {
-            var columns = Columns(provider, connection, found.Name);
+            var columns = await ColumnsAsync(provider, connection, found.Name, cancellation);
 
-            tables.Add(new DatabaseTable(found.Name, found.View ? "view" : "table", Count(provider, connection, found.Name), columns, IsChangelog(found.Name, columns)));
+            tables.Add(new DatabaseTable(found.Name, found.View ? "view" : "table", await CountAsync(provider, connection, found.Name, cancellation), columns,
+                                         IsChangelog(found.Name, columns)));
         }
 
         return tables;
     }
 
-    private static DatabaseRows Read(IDatabaseProvider provider, DbConnection connection, string table, int offset, int limit, string? order, bool descending)
+    private static async ValueTask<DatabaseRows> PageAsync(IDatabaseProvider provider, DbConnection connection, string table, int offset, int limit, string? order,
+                                                          bool descending, CancellationToken cancellation)
     {
-        var columns = Columns(provider, connection, table);
+        var columns = await ColumnsAsync(provider, connection, table, cancellation);
 
         if (columns.Count == 0)
         {
@@ -153,22 +166,22 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         // the order rows were written in, where no column is named and the
         // database keeps one - else whatever order it hands them over in
-        var natural = sorted == null ? provider.NaturalOrder(connection, table) : null;
+        var natural = sorted == null ? await provider.NaturalOrderAsync(connection, table, cancellation) : null;
 
         var by = sorted != null ? $"ORDER BY {provider.Quote(sorted)} {direction}" : natural != null ? $"ORDER BY {natural} {direction}" : string.Empty;
 
         var rows = new List<IReadOnlyList<object?>>();
 
-        using (var command = connection.CreateCommand())
+        await using (var command = connection.CreateCommand())
         {
             command.CommandText = $"SELECT * FROM {provider.Quote(table)} {by} LIMIT @limit OFFSET @offset";
 
             Add(command, "@limit", limit);
             Add(command, "@offset", offset);
 
-            using var reader = command.ExecuteReader();
+            await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-            while (reader.Read())
+            while (await reader.ReadAsync(cancellation))
             {
                 var row = new object?[reader.FieldCount];
 
@@ -181,25 +194,25 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
             }
         }
 
-        return new DatabaseRows(table, columns, rows, Count(provider, connection, table) ?? rows.Count + offset, offset, limit, sorted, descending);
+        return new DatabaseRows(table, columns, rows, await CountAsync(provider, connection, table, cancellation) ?? rows.Count + offset, offset, limit, sorted, descending);
     }
 
-    private static List<DatabaseColumn> Columns(IDatabaseProvider provider, DbConnection connection, string table)
-        => [.. provider.Columns(connection, table).Select(c => new DatabaseColumn(c.Name, c.Type, c.NotNull, c.PrimaryKey, c.Default))];
+    private static async ValueTask<List<DatabaseColumn>> ColumnsAsync(IDatabaseProvider provider, DbConnection connection, string table, CancellationToken cancellation)
+        => [.. (await provider.ColumnsAsync(connection, table, cancellation)).Select(c => new DatabaseColumn(c.Name, c.Type, c.NotNull, c.PrimaryKey, c.Default))];
 
     /// <summary>
     /// How many rows a table holds, or nothing where counting took longer
     /// than reading a database is allowed to.
     /// </summary>
-    private static long? Count(IDatabaseProvider provider, DbConnection connection, string table)
+    private static async ValueTask<long?> CountAsync(IDatabaseProvider provider, DbConnection connection, string table, CancellationToken cancellation)
     {
         try
         {
-            using var command = connection.CreateCommand();
+            await using var command = connection.CreateCommand();
 
             command.CommandText = $"SELECT count(*) FROM {provider.Quote(table)}";
 
-            return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            return Convert.ToInt64(await command.ExecuteScalarAsync(cancellation), CultureInfo.InvariantCulture);
         }
         catch (DbException)
         {

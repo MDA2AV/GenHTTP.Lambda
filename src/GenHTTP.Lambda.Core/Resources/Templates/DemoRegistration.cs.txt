@@ -40,7 +40,7 @@ using GenHTTP.Modules.Reflection.Injectors;
 
 // every version reads the same database, so each brings it up to the schema
 // it expects first; Evolve applies what is new in resources/migrations/, once each
-using (var connection = Database.GetConnection())
+await using (var connection = await Database.GetConnectionAsync())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
@@ -51,8 +51,8 @@ using (var connection = Database.GetConnection())
     evolve.Migrate();
 }
 
-// Exists is false while secrets are off or the value is not set
-var accounts = new Accounts(() => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read("PASSWORD_PEPPER") : null);
+// ExistsAsync is false while secrets are off or the value is not set
+var accounts = new Accounts(async () => await Secret.ExistsAsync("PASSWORD_PEPPER") ? await Secret.ReadAsync("PASSWORD_PEPPER") : null);
 
 /*
  * At the root of the lambda rather than below a folder, and for a reason: a
@@ -62,11 +62,11 @@ var accounts = new Accounts(() => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read
  * only ever be sent back to auth/.
  */
 var account = Inline.Create()
-                    .Post("register", (Credentials body, IRequest request) => SignIn(accounts.Register(body), request))
-                    .Post("login", (Credentials body, IRequest request) => SignIn(accounts.Login(body), request))
-                    .Post("logout", (IRequest request) =>
+                    .Post("register", async (Credentials body, IRequest request) => SignIn(await accounts.RegisterAsync(body), request))
+                    .Post("login", async (Credentials body, IRequest request) => SignIn(await accounts.LoginAsync(body), request))
+                    .Post("logout", async (IRequest request) =>
                     {
-                        accounts.Logout(request.Header.Headers.GetCookie(Session.Cookie));
+                        await accounts.LogoutAsync(request.Header.Headers.GetCookie(Session.Cookie));
 
                         // an empty answer that tells the browser to forget the cookie
                         return request.Respond()
@@ -81,12 +81,12 @@ var account = Inline.Create()
  */
 var session = ApiKeyAuthentication.Create()
                                   .WithCookie(Session.Cookie)
-                                  .Authenticator((_, token) => ValueTask.FromResult<IUser>(accounts.Authenticate(token)));
+                                  .Authenticator(async (_, token) => await accounts.AuthenticateAsync(token));
 
 var api = Inline.Create()
                 .Injectors(Injection.Default().Add(new UserInjector<Member>()))
-                .Get("me", (Member member) => accounts.Describe(member))
-                .Get("members", () => accounts.Newest())
+                .Get("me", (Member member) => accounts.DescribeAsync(member))
+                .Get("members", () => accounts.NewestAsync())
                 .Authentication(session);
 
 return Layout.Create()

@@ -34,9 +34,9 @@ internal static class WorkspaceFiles
         return new FileResponse(file.Path, file.Content, (int)file.Length);
     }
 
-    public static IResponse Send(IWorkspaceService workspace, long lambdaId, long? featureId, string path, IRequest request)
+    public static async ValueTask<IResponse> SendAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path, IRequest request)
     {
-        var found = workspace.Find(lambdaId, path, featureId)
+        var found = await workspace.FindAsync(lambdaId, path, featureId)
                  ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
         // a name in the workspace may hold anything but a slash, a quote or a
@@ -66,11 +66,11 @@ internal static class WorkspaceFiles
         return await workspace.WriteAsync(lambdaId, path, body, expected, featureId);
     }
 
-    public static WorkspaceListing CreateFolder(IWorkspaceService workspace, long lambdaId, long? featureId, string path)
+    public static async ValueTask<WorkspaceListing> CreateFolderAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path)
     {
-        workspace.CreateFolder(lambdaId, path, featureId);
+        await workspace.CreateFolderAsync(lambdaId, path, featureId);
 
-        return workspace.List(lambdaId, featureId);
+        return await workspace.ListAsync(lambdaId, featureId);
     }
 
 }

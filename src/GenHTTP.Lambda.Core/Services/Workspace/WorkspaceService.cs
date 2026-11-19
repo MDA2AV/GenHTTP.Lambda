@@ -33,13 +33,13 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// - its bytes, the text they become, the characters of that text. The
     /// workspace does not limit how large one file may be, only the room they
     /// take together, so anything larger is sent as it is (see
-    /// <see cref="Find"/>), which streams the bytes.
+    /// <see cref="FindAsync"/>), which streams the bytes.
     /// </remarks>
     private const long EncodedLimit = 32 * 1024 * 1024;
 
     #region Functionality
 
-    public WorkspaceListing List(long lambdaId, long? featureId = null)
+    public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
     {
         var limits = Limits(lambdaId);
 
@@ -47,10 +47,10 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
         // anything it would have
         if (!limits.Enabled)
         {
-            return new WorkspaceListing([], [], 0, Room(limits, lambdaId, featureId), false);
+            return new WorkspaceListing([], [], 0, await RoomAsync(limits, lambdaId, featureId, cancellation), false);
         }
 
-        var entries = files.List(new DataScope(lambdaId, featureId));
+        var entries = await files.ListAsync(new DataScope(lambdaId, featureId), cancellation);
 
         var listed = entries.Where(e => !e.Folder)
                             .Select(e => new WorkspaceEntry(e.Path, e.Length, e.Modified))
@@ -62,44 +62,44 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
                              .Order(StringComparer.Ordinal)
                              .ToList();
 
-        return new WorkspaceListing(listed, folders, WorkspacePaths.Measure(entries), Room(limits, lambdaId, featureId));
+        return new WorkspaceListing(listed, folders, WorkspacePaths.Measure(entries), await RoomAsync(limits, lambdaId, featureId, cancellation));
     }
 
-    public WorkspaceFile? Find(long lambdaId, string path, long? featureId = null)
+    public async ValueTask<WorkspaceFile?> FindAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
         var resolved = Resolve(path);
 
-        return files.Resource(new DataScope(lambdaId, featureId), resolved) is { } content ? new WorkspaceFile(NameOf(resolved), content) : null;
+        return await files.ResourceAsync(new DataScope(lambdaId, featureId), resolved, cancellation) is { } content ? new WorkspaceFile(NameOf(resolved), content) : null;
     }
 
-    public ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
         var resolved = Resolve(path);
 
-        var content = files.Read(new DataScope(lambdaId, featureId), resolved);
+        var content = await files.ReadAsync(new DataScope(lambdaId, featureId), resolved, cancellation);
 
-        return ValueTask.FromResult(content == null ? null : new WorkspaceContent(resolved, content));
+        return content == null ? null : new WorkspaceContent(resolved, content);
     }
 
-    public ValueTask<WorkspaceEncoded?> ReadEncodedAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceEncoded?> ReadEncodedAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
         var scope = new DataScope(lambdaId, featureId);
 
         var resolved = Resolve(path);
 
-        if (files.Find(scope, resolved) is not { Folder: false } found)
+        if (await files.FindAsync(scope, resolved, cancellation) is not { Folder: false } found)
         {
-            return ValueTask.FromResult<WorkspaceEncoded?>(null);
+            return null;
         }
 
         if (found.Length > EncodedLimit)
         {
-            return ValueTask.FromResult<WorkspaceEncoded?>(new WorkspaceEncoded(resolved, found.Length, null));
+            return new WorkspaceEncoded(resolved, found.Length, null);
         }
 
-        var content = files.Read(scope, resolved);
+        var content = await files.ReadAsync(scope, resolved, cancellation);
 
-        return ValueTask.FromResult(content == null ? null : new WorkspaceEncoded(resolved, content.Length, Convert.ToBase64String(content)));
+        return content == null ? null : new WorkspaceEncoded(resolved, content.Length, Convert.ToBase64String(content));
     }
 
     public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
@@ -111,7 +111,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
 
         var resolved = Resolve(path);
 
-        var entries = files.List(scope);
+        var entries = await files.ListAsync(scope, cancellation);
 
         if (entries.Any(e => e.Folder && e.Path == resolved))
         {
@@ -128,7 +128,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
         // never less than what is being replaced: a workspace is over its
         // quota once its lambda leaves the tier that filled it, and should
         // still be able to rewrite what it holds, only not to grow
-        var room = Math.Max(Room(limits, lambdaId, featureId) - others, replaced);
+        var room = Math.Max(await RoomAsync(limits, lambdaId, featureId, cancellation) - others, replaced);
 
         // refused the moment it grows past what a lambda would be allowed to
         // write itself; the integration keeps what was there, and none of
@@ -153,7 +153,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
             logger.LogInformation("Wrote workspace file {Path} of lambda #{LambdaId}", path, lambdaId);
         }
 
-        var written = files.Find(scope, resolved);
+        var written = await files.FindAsync(scope, resolved, cancellation);
 
         return new WorkspaceEntry(resolved, written?.Length ?? guarded.Received, written?.Modified ?? DateTime.UtcNow);
     }
@@ -177,7 +177,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
         return await WriteAsync(lambdaId, path, stream, featureId: featureId, cancellation: cancellation);
     }
 
-    public void CreateFolder(long lambdaId, string path, long? featureId = null)
+    public async ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
         var limits = RequireEnabled(lambdaId);
 
@@ -185,7 +185,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
 
         var resolved = Resolve(path);
 
-        var entries = files.List(scope);
+        var entries = await files.ListAsync(scope, cancellation);
 
         if (entries.Any(e => !e.Folder && e.Path == resolved))
         {
@@ -199,12 +199,13 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
          * exists to stop.
          */
         if (!entries.Any(e => e.Folder && e.Path == resolved)
-         && WorkspacePaths.Measure(entries) + (WorkspacePaths.Missing(resolved, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > Room(limits, lambdaId, featureId))
+         && WorkspacePaths.Measure(entries) + (WorkspacePaths.Missing(resolved, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block
+          > await RoomAsync(limits, lambdaId, featureId, cancellation))
         {
             throw Full(limits, lambdaId);
         }
 
-        files.CreateFolder(scope, resolved);
+        await files.CreateFolderAsync(scope, resolved, cancellation);
 
         vault.Changed(lambdaId, featureId);
 
@@ -223,16 +224,16 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// and a folder that refuses to go while it holds something is a folder
     /// somebody has to empty by hand one file at a time.
     /// </remarks>
-    public void Delete(long lambdaId, string path, long? featureId = null)
+    public async ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
-        files.Delete(new DataScope(lambdaId, featureId), Resolve(path));
+        await files.DeleteAsync(new DataScope(lambdaId, featureId), Resolve(path), cancellation);
 
         vault.Changed(lambdaId, featureId);
     }
 
-    public void Clear(long lambdaId, long? featureId = null)
+    public async ValueTask ClearAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
     {
-        files.Clear(new DataScope(lambdaId, featureId));
+        await files.ClearAsync(new DataScope(lambdaId, featureId), cancellation);
 
         vault.Changed(lambdaId, featureId);
 
@@ -250,7 +251,8 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// The room the workspace may take: the room of the lambda's data, less
     /// what its database takes of it.
     /// </summary>
-    private long Room(WorkspaceLimits limits, long lambdaId, long? featureId) => Math.Max(0, limits.Quota - databases.SizeOf(lambdaId, featureId));
+    private async ValueTask<long> RoomAsync(WorkspaceLimits limits, long lambdaId, long? featureId, CancellationToken cancellation)
+        => Math.Max(0, limits.Quota - await databases.SizeOfAsync(lambdaId, featureId, cancellation));
 
     /// <summary>
     /// What a write past the room of the lambda's data is refused with: the

@@ -28,7 +28,7 @@
 
 // every version reads the same database, so each brings it up to the schema
 // it expects first; Evolve applies what is new in resources/migrations/, once each
-using (var connection = Database.GetConnection())
+await using (var connection = await Database.GetConnectionAsync())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
@@ -42,8 +42,8 @@ using (var connection = Database.GetConnection())
 var poll = new Poll();
 
 var api = Inline.Create()
-                .Get("poll", () => poll.Results())
-                .Post("votes", (Vote vote) => poll.Cast(vote));
+                .Get("poll", () => poll.ResultsAsync())
+                .Post("votes", (Vote vote) => poll.CastAsync(vote));
 
 /*
  * The generator runs once per browser, for as long as it stays connected:
@@ -57,7 +57,7 @@ var events = EventSource.Create()
 
                             // an object is sent as JSON; without an event type it arrives
                             // as an ordinary message, which is what onmessage listens to
-                            await connection.DataAsync(poll.Results());
+                            await connection.DataAsync(await poll.ResultsAsync());
 
                             while (connection.Connected)
                             {

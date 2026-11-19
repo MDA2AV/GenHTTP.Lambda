@@ -61,7 +61,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     /// <summary>
     /// Makes the report as of now.
     /// </summary>
-    public UsageReport Take()
+    public async ValueTask<UsageReport> TakeAsync(CancellationToken cancellation = default)
     {
         var now = DateTime.UtcNow;
 
@@ -132,7 +132,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
                 InTier(LambdaTier.Production),
                 InTier(LambdaTier.System)
             ),
-            Measure(withDatabase, withWorkspace),
+            await MeasureAsync(withDatabase, withWorkspace, cancellation),
             new UsageSwitches(
                 withDatabase.Count,
                 withWorkspace.Count,
@@ -308,16 +308,16 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             options.CrawlerLists,
             options.Development,
             branding.Current.Own,
-            Integration(IntegrationKinds.Database),
-            Integration(IntegrationKinds.Files),
-            Integration(IntegrationKinds.Secrets)
+            Integration(IntegrationKind.Database),
+            Integration(IntegrationKind.Files),
+            Integration(IntegrationKind.Secrets)
         );
     }
 
     /// <summary>
     /// Which integration keeps one kind of data, by its name alone.
     /// </summary>
-    private string Integration(string kind)
+    private string Integration(IntegrationKind kind)
         => integrations.List().FirstOrDefault(i => i.Info.Kind == kind)?.Info.Name.ToLowerInvariant() ?? "unknown";
 
     /// <summary>
@@ -328,14 +328,14 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     /// Only the lambdas that have a database or a workspace are asked about
     /// it - asking about the others would make their folders.
     /// </remarks>
-    private UsageData Measure(HashSet<long> withDatabase, HashSet<long> withWorkspace)
+    private async ValueTask<UsageData> MeasureAsync(HashSet<long> withDatabase, HashSet<long> withWorkspace, CancellationToken cancellation)
     {
         long databaseBytes = 0, workspaceBytes = 0, largest = 0;
 
         foreach (var lambda in withDatabase.Union(withWorkspace))
         {
-            var database = withDatabase.Contains(lambda) ? databaseVault.SizeOf(lambda, null) : 0;
-            var workspace = withWorkspace.Contains(lambda) ? workspaces.SizeOf(lambda, null) : 0;
+            var database = withDatabase.Contains(lambda) ? await databaseVault.SizeOfAsync(lambda, null, cancellation) : 0;
+            var workspace = withWorkspace.Contains(lambda) ? await workspaces.SizeOfAsync(lambda, null, cancellation) : 0;
 
             databaseBytes += database;
             workspaceBytes += workspace;

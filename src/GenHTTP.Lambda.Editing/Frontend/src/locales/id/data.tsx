@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'Database tersendiri tempat lambda menyimpan catatannya, diakses dengan Database.GetConnection().',
+      what: 'Database tersendiri tempat lambda menyimpan catatannya, diakses dengan Database.GetConnectionAsync().',
       count: (items) => `${items} tabel`,
       confirmOff: 'Nonaktifkan database?',
       switchedOn: 'Database aktif, dan masih kosong. Lambda dimulai ulang dengan database itu pada request berikutnya.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Di kode',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} membuka koneksi ke database – untuk {code('DbContext')} dari Entity Framework
+        {code('Database.GetConnectionAsync()')} membuka koneksi ke database – untuk {code('DbContext')} dari Entity Framework
         Core, atau untuk SQL – dan migrasi di {code('migrations/')} membuat tabelnya, diterapkan oleh Evolve. Di proyek
         yang diunduh, database ini adalah file SQLite biasa {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} sudah dihapus.`,
     deleteFailed: 'Rahasia tidak dapat dihapus.',
     used: 'dibaca oleh kode',
-    usedHint: 'Kode membacanya dengan Secret.Read atau Secret.Exists.',
+    usedHint: 'Kode membacanya dengan Secret.ReadAsync atau Secret.ExistsAsync.',
     unused: 'tidak dibaca oleh kode',
     unusedHint: 'Tidak ada kode yang membacanya dengan nama ini. Apakah ejaannya sama dengan di kode?',
     set: (when) => <>diatur {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Di kode',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} membaca nilai, {code('Secret.Exists("NAME")')} memberi tahu apakah nilai itu sudah
+        {code('Secret.ReadAsync("NAME")')} membaca nilai, {code('Secret.ExistsAsync("NAME")')} memberi tahu apakah nilai itu sudah
         diatur. Di proyek yang diunduh, keduanya membaca variabel lingkungan dengan nama yang sama.
       </>
     ),

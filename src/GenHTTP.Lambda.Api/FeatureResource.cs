@@ -138,9 +138,9 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Summary("Deletes a feature")]
     [Remarks("With its preview and its copy of the data. Its files are gone for good unless they were merged. The lambda is not touched.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
     {
-        var name = features.Delete(privateKey, feature);
+        var name = await features.DeleteAsync(privateKey, feature);
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
     }
@@ -315,8 +315,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
              `…/workspace` and `…/secrets`.
              """)]
     [return: Summary("Every kind of data, as the feature's copy of it is")]
-    public List<DataStoreResponse> Data([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
-        => [.. (data.List(privateKey, feature)).Select(DataResource.Describe)];
+    public async ValueTask<List<DataStoreResponse>> Data([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+        => [.. (await data.ListAsync(privateKey, feature)).Select(DataResource.Describe)];
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/data/refresh")]
     [Summary("Copies the lambda's data into a feature again")]

@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Integrations.Databases;
+
 namespace GenHTTP.Lambda.Integrations.PostgreSql;
 
 /// <summary>
@@ -22,6 +24,21 @@ internal static class PostgreSqlNames
     /// </summary>
     public static string Schema(DataScope scope)
         => scope.FeatureId is { } feature ? $"lambda_{scope.LambdaId}{FeatureMark}{feature}" : $"lambda_{scope.LambdaId}";
+
+    /// <summary>
+    /// The schema of one of the platform's stores.
+    /// </summary>
+    /// <remarks>
+    /// Spelled out rather than made of the name of the store: the schemas are
+    /// where the data of every installation is, whatever the store is called
+    /// in the code.
+    /// </remarks>
+    public static string Schema(DatabaseStore store) => store switch
+    {
+        DatabaseStore.Platform => "platform",
+        DatabaseStore.Analytics => "analytics",
+        _ => throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.")
+    };
 
     /// <summary>
     /// The role a lambda reaches its schemas as.

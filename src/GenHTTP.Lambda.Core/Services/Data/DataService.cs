@@ -23,7 +23,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
     #region Functionality
 
-    public IReadOnlyList<DataStoreInfo> List(string privateKey, string? feature = null)
+    public async ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
         var id = RequireId(privateKey);
 
@@ -35,22 +35,22 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         foreach (var kind in DataKinds.All)
         {
-            stores.Add(Describe(id, kind, switches[kind.Id], featureId));
+            stores.Add(await DescribeAsync(id, kind, switches[kind.Id], featureId, cancellation));
         }
 
         return stores;
     }
 
-    public DataStoreInfo Get(string privateKey, string kind)
+    public async ValueTask<DataStoreInfo> GetAsync(string privateKey, string kind, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
         var id = RequireId(privateKey);
 
-        return Describe(id, wanted, (Read(id))[wanted.Id], null);
+        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
     }
 
-    public DataStoreInfo Enable(string privateKey, string kind)
+    public async ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
@@ -61,7 +61,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             // there before it is switched on, so the first request finds it
             if (wanted.Id == DataKinds.DatabaseId)
             {
-                stores.Create(id);
+                await stores.CreateAsync(id, cancellation);
             }
 
             Switch(id, wanted, true);
@@ -69,10 +69,10 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             logger.LogInformation("Enabled {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
-        return Describe(id, wanted, (Read(id))[wanted.Id], null);
+        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
     }
 
-    public DataStoreInfo Disable(string privateKey, string kind)
+    public async ValueTask<DataStoreInfo> DisableAsync(string privateKey, string kind, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
@@ -83,12 +83,12 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             // switched off first, so nothing new arrives while the rest goes
             Switch(id, wanted, false);
 
-            Clear(id, wanted);
+            await ClearAsync(id, wanted, cancellation);
 
             logger.LogInformation("Disabled and deleted {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
-        return Describe(id, wanted, (Read(id))[wanted.Id], null);
+        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
     }
 
     #endregion
@@ -99,19 +99,19 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// What a kind of data holds, in the figures every kind can give.
     /// </summary>
     /// <param name="featureId">The feature whose copy is meant, or nothing for the lambda's own</param>
-    private DataStoreInfo Describe(long lambdaId, DataKind kind, DataSwitch state, long? featureId)
+    private async ValueTask<DataStoreInfo> DescribeAsync(long lambdaId, DataKind kind, DataSwitch state, long? featureId, CancellationToken cancellation)
     {
         switch (kind.Id)
         {
             case DataKinds.WorkspaceId:
                 {
-                    var listing = workspace.List(lambdaId, featureId);
+                    var listing = await workspace.ListAsync(lambdaId, featureId, cancellation);
 
                     return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, listing.Files.Count, listing.UsedBytes, listing.QuotaBytes);
                 }
             case DataKinds.SecretsId:
                 {
-                    var count = secrets.Count(lambdaId, featureId);
+                    var count = await secrets.CountAsync(lambdaId, featureId, cancellation);
 
                     return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, count, 0, 0, SecretVault.MaxSecrets);
                 }
@@ -119,16 +119,18 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
                 {
                     var tier = Tier(lambdaId);
 
+                    var room = await stores.RoomOfAsync(lambdaId, featureId, tier, cancellation);
+
                     if (!state.Enabled)
                     {
-                        return new DataStoreInfo(kind.Id, false, kind.Default, state.Changed, 0, 0, stores.RoomOf(lambdaId, featureId, tier));
+                        return new DataStoreInfo(kind.Id, false, kind.Default, state.Changed, 0, 0, room);
                     }
 
                     // what it holds is counted in tables, and its room as the
-                    // file takes it on the disk
-                    var tables = CountTables(lambdaId, featureId);
+                    // database takes it
+                    var tables = await CountTablesAsync(lambdaId, featureId, cancellation);
 
-                    return new DataStoreInfo(kind.Id, true, kind.Default, state.Changed, tables, stores.SizeOf(lambdaId, featureId), stores.RoomOf(lambdaId, featureId, tier));
+                    return new DataStoreInfo(kind.Id, true, kind.Default, state.Changed, tables, await stores.SizeOfAsync(lambdaId, featureId, cancellation), room);
                 }
             default:
                 return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, 0, 0, 0);
@@ -138,19 +140,19 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// <summary>
     /// Deletes everything a kind of data holds.
     /// </summary>
-    private void Clear(long lambdaId, DataKind kind)
+    private async ValueTask ClearAsync(long lambdaId, DataKind kind, CancellationToken cancellation)
     {
         if (kind.Id == DataKinds.SecretsId)
         {
             // the copies of the features with them, in one go
-            secrets.Clear(lambdaId);
+            await secrets.ClearAsync(lambdaId, cancellation);
             return;
         }
 
         if (kind.Id == DataKinds.DatabaseId)
         {
             // the copies of the features with it
-            stores.Clear(lambdaId);
+            await stores.ClearAsync(lambdaId, cancellation);
             return;
         }
 
@@ -159,20 +161,26 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             return;
         }
 
-        workspace.Clear(lambdaId, null);
+        await workspace.ClearAsync(lambdaId, null, cancellation);
 
         // a copy is still the data, and switching it off leaves none of it
+        foreach (var copy in Copies(lambdaId))
+        {
+            await workspace.ClearAsync(lambdaId, copy, cancellation);
+        }
+    }
+
+    /// <summary>
+    /// The features of a lambda, each of which has a copy of its data.
+    /// </summary>
+    private List<long> Copies(long lambdaId)
+    {
         using var database = databases.CreateDbContext();
 
-        var copies = database.Features.AsNoTracking()
-                             .Where(f => f.LambdaId == lambdaId)
-                             .Select(f => f.Id)
-                             .ToList();
-
-        foreach (var copy in copies)
-        {
-            workspace.Clear(lambdaId, copy);
-        }
+        return database.Features.AsNoTracking()
+                       .Where(f => f.LambdaId == lambdaId)
+                       .Select(f => f.Id)
+                       .ToList();
     }
 
     #endregion
@@ -231,16 +239,16 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// How many tables the app keeps in its database - Evolve's history of
     /// its migrations among them, since it is a table the app made.
     /// </summary>
-    private int CountTables(long lambdaId, long? featureId)
+    private async ValueTask<int> CountTablesAsync(long lambdaId, long? featureId, CancellationToken cancellation)
     {
-        using var connection = stores.OpenForReading(lambdaId, featureId);
+        await using var connection = await stores.OpenForReadingAsync(lambdaId, featureId, cancellation);
 
         if (connection == null)
         {
             return 0;
         }
 
-        return provider.Tables(connection).Count(t => !t.View);
+        return (await provider.TablesAsync(connection, cancellation)).Count(t => !t.View);
     }
 
     #endregion

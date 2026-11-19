@@ -65,14 +65,14 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.BadRequest, "The terms were not accepted where the installation has terms, or the key, the template or the view cannot be used. The message says which.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "Another lambda has the public key that was asked for.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public Result<LambdaResponse> Create(CreateLambdaRequest request)
+    public async ValueTask<Result<LambdaResponse>> Create(CreateLambdaRequest request)
     {
         if (options.Terms != null && !request.AcceptedTerms)
         {
             throw LambdaException.Invalid("The terms of service need to be accepted.");
         }
 
-        var lambda = meta.Create(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
+        var lambda = await meta.CreateAsync(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
 
         logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey, request.Template ?? "(none)", lambda.View);
 
@@ -144,11 +144,11 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.NoContent, "The lambda and everything kept for it are gone.")]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is one of the installation's own, which only the operator deletes.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var publicKey = meta.PublicKeyOf(privateKey);
 
-        meta.Delete(privateKey);
+        await meta.DeleteAsync(privateKey);
 
         logger.LogInformation("Deleted lambda {Lambda}", publicKey);
     }
@@ -188,7 +188,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
         var address = lambda.Address;
 
         // the names say which variables to set; the values stay here
-        var kept = secrets.List(privateKey);
+        var kept = await secrets.ListAsync(privateKey);
 
         var names = kept.Secrets.Select(s => s.Name).Union(kept.Used, StringComparer.Ordinal).ToList();
 
@@ -205,34 +205,39 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var id = meta.RequireId(privateKey);
 
-        var archive = await Offload.Run(() =>
+        // a copy of what the lambda keeps, packed along and then let go
+        var database = await databases.ExportAsync(id);
+
+        string archive;
+
+        try
         {
-            // a copy of what the lambda keeps, packed along and then let go
-            var database = databases.Export(id);
-
-            var target = Path.Combine(Path.GetTempPath(), $"genhttp-lambda-export-{Guid.NewGuid():N}.zip");
-
-            try
+            archive = await Offload.Run(() =>
             {
-                using var stream = File.Create(target);
+                var target = Path.Combine(Path.GetTempPath(), $"genhttp-lambda-export-{Guid.NewGuid():N}.zip");
 
-                ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code), stream, database);
-
-                return target;
-            }
-            catch
-            {
-                File.Delete(target);
-                throw;
-            }
-            finally
-            {
-                if (database != null)
+                try
                 {
-                    File.Delete(database);
+                    using var stream = File.Create(target);
+
+                    ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code), stream, database);
+
+                    return target;
                 }
+                catch
+                {
+                    File.Delete(target);
+                    throw;
+                }
+            });
+        }
+        finally
+        {
+            if (database != null)
+            {
+                File.Delete(database);
             }
-        });
+        }
 
         logger.LogInformation("Exported lambda {Lambda} version {Version}", lambda.PublicKey, content.Version);
 

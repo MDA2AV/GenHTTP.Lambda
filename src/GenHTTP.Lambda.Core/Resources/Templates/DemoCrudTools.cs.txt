@@ -12,7 +12,8 @@
 // a client what to ask its user before a call.
 //
 // The tools work on the store the API works on, and check what they are sent
-// the way the API does - two doors to the same records.
+// the way the API does - two doors to the same records. A tool may be async,
+// as a route may: it answers once the task is done.
 using System.ComponentModel.DataAnnotations;
 
 public class TaskTools(TaskStore store)
@@ -20,31 +21,31 @@ public class TaskTools(TaskStore store)
 
     [Tool(ReadOnly = true)]
     [Summary("Lists the tasks: open ones first, the newest first. With search, only those whose title or notes contain it.")]
-    public List<TaskItem> ListTasks([Summary("Text to look for, whatever its case")] string search = null) => store.List(search);
+    public ValueTask<List<TaskItem>> ListTasks([Summary("Text to look for, whatever its case")] string search = null) => store.ListAsync(search);
 
     [Tool]
     [Summary("Adds a task to the list everybody shares.")]
-    public TaskItem AddTask([Summary("What is to be done"), MaxLength(Tasks.MaxTitle)] string title,
-                            [Summary("More about it, where there is more to say"), MaxLength(Tasks.MaxNotes)] string notes = "")
+    public ValueTask<TaskItem> AddTask([Summary("What is to be done"), MaxLength(Tasks.MaxTitle)] string title,
+                                       [Summary("More about it, where there is more to say"), MaxLength(Tasks.MaxNotes)] string notes = "")
     {
         var (checkedTitle, checkedNotes) = Tasks.Validate(new TaskInput(title, notes, false));
 
-        return Tasks.Add(store, checkedTitle, checkedNotes, false);
+        return Tasks.AddAsync(store, checkedTitle, checkedNotes, false);
     }
 
     [Tool(Idempotent = true)]
     [Summary("Ticks a task off, or opens it again.")]
-    public TaskItem CompleteTask([Summary("The id of the task, as list_tasks names it")] string id,
-                                 [Summary("Whether it is done - true unless it is to be opened again")] bool done = true)
+    public async ValueTask<TaskItem> CompleteTask([Summary("The id of the task, as list_tasks names it")] string id,
+                                                  [Summary("Whether it is done - true unless it is to be opened again")] bool done = true)
     {
-        var task = store.Find(id) ?? throw Tasks.Missing(id);
+        var task = await store.FindAsync(id) ?? throw Tasks.Missing(id);
 
-        return store.Change(id, task.Title, task.Notes, done) ?? throw Tasks.Missing(id);
+        return await store.ChangeAsync(id, task.Title, task.Notes, done) ?? throw Tasks.Missing(id);
     }
 
     [Tool(Destructive = true, Idempotent = true)]
     [Summary("Removes a task from the list, for everybody.")]
-    public string RemoveTask([Summary("The id of the task, as list_tasks names it")] string id)
-        => store.Remove(id) ? $"Removed task '{id}'." : throw Tasks.Missing(id);
+    public async ValueTask<string> RemoveTask([Summary("The id of the task, as list_tasks names it")] string id)
+        => await store.RemoveAsync(id) ? $"Removed task '{id}'." : throw Tasks.Missing(id);
 
 }

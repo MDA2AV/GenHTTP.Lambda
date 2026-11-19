@@ -29,8 +29,8 @@ public sealed class SecretTests
 
     private const string Reader = """
         return Inline.Create()
-                     .Get("read", () => Secret.Read("GREETING"))
-                     .Get("exists", () => Secret.Exists("GREETING") ? "yes" : "no");
+                     .Get("read", async () => await Secret.ReadAsync("GREETING"))
+                     .Get("exists", async () => await Secret.ExistsAsync("GREETING") ? "yes" : "no");
         """;
 
     [TestMethod]
@@ -253,19 +253,22 @@ public sealed class SecretTests
         await fixture.DeployAsync(lambda.PrivateKey, """
             return Inline.Create()
                          .Get("pay", () => Secret.Read("STRIPE_KEY"))
-                         .Get("mail", () => Secret.Exists("SMTP_PASSWORD") ? "mail" : "no mail");
+                         .Get("mail", () => Secret.Exists("SMTP_PASSWORD") ? "mail" : "no mail")
+                         .Get("map", async () => await Secret.ReadAsync("MAPS_KEY", default))
+                         .Get("chat", async () => await Secret.ExistsAsync("CHAT_TOKEN") ? "chat" : "no chat");
             """);
 
         await SetAsync(fixture, lambda.PrivateKey, "UNUSED", "left over");
 
         var listing = await ListAsync(fixture, lambda.PrivateKey);
 
-        CollectionAssert.AreEqual(new[] { "SMTP_PASSWORD", "STRIPE_KEY" }, listing.Used);
-        CollectionAssert.AreEqual(new[] { "STRIPE_KEY" }, listing.Missing, "read without asking first, so reading fails");
-        CollectionAssert.AreEqual(new[] { "SMTP_PASSWORD" }, listing.Optional, "asked about first, so it does without");
+        CollectionAssert.AreEqual(new[] { "CHAT_TOKEN", "MAPS_KEY", "SMTP_PASSWORD", "STRIPE_KEY" }, listing.Used, "whichever form reads them");
+        CollectionAssert.AreEqual(new[] { "MAPS_KEY", "STRIPE_KEY" }, listing.Missing, "read without asking first, so reading fails");
+        CollectionAssert.AreEqual(new[] { "CHAT_TOKEN", "SMTP_PASSWORD" }, listing.Optional, "asked about first, so it does without");
         Assert.IsFalse(listing.Secrets.Single().Used, "and nothing reads what is left over");
 
         await SetAsync(fixture, lambda.PrivateKey, "STRIPE_KEY", Value);
+        await SetAsync(fixture, lambda.PrivateKey, "MAPS_KEY", Value);
 
         listing = await ListAsync(fixture, lambda.PrivateKey);
 

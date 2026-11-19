@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'Un database tutto suo in cui la lambda conserva i suoi record, raggiungibile con Database.GetConnection().',
+      what: 'Un database tutto suo in cui la lambda conserva i suoi record, raggiungibile con Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 tabella' : `${items} tabelle`),
       confirmOff: 'Disattivare il database?',
       switchedOn: 'Il database è attivo, ed è vuoto. Alla prossima richiesta la lambda riparte con il database.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Nel codice',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} apre una connessione al database (per un {code('DbContext')} di Entity
+        {code('Database.GetConnectionAsync()')} apre una connessione al database (per un {code('DbContext')} di Entity
         Framework Core o per l’SQL), e le migrazioni in {code('migrations/')} ne creano le tabelle, applicate da Evolve.
         In un progetto scaricato è il semplice file SQLite {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} è stato eliminato.`,
     deleteFailed: 'Non è stato possibile eliminare il secret.',
     used: 'letto dal codice',
-    usedHint: 'Il codice lo legge con Secret.Read o Secret.Exists.',
+    usedHint: 'Il codice lo legge con Secret.ReadAsync o Secret.ExistsAsync.',
     unused: 'non letto dal codice',
     unusedHint: 'Nessun codice lo legge con questo nome. È scritto come nel codice?',
     set: (when) => <>impostato {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Nel codice',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} legge un valore, {code('Secret.Exists("NAME")')} dice se è impostato. In un
+        {code('Secret.ReadAsync("NAME")')} legge un valore, {code('Secret.ExistsAsync("NAME")')} dice se è impostato. In un
         progetto scaricato, entrambi leggono la variabile d’ambiente con lo stesso nome.
       </>
     ),

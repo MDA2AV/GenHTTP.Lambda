@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Base de datos',
-      what: 'Una base de datos propia en la que la lambda guarda sus registros, accesible con Database.GetConnection().',
+      what: 'Una base de datos propia en la que la lambda guarda sus registros, accesible con Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 tabla' : `${items} tablas`),
       confirmOff: '¿Desactivar la base de datos?',
       switchedOn: 'La base de datos está activada y vacía. La lambda se reinicia con ella en su próxima petición.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'En el código',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} abre una conexión con ella (para un {code('DbContext')} de Entity Framework
+        {code('Database.GetConnectionAsync()')} abre una conexión con ella (para un {code('DbContext')} de Entity Framework
         Core o para SQL), y las migraciones de {code('migrations/')} crean sus tablas; las aplica Evolve. En un proyecto
         descargado es el archivo SQLite normal {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} se ha eliminado.`,
     deleteFailed: 'No se pudo eliminar el secreto.',
     used: 'lo lee el código',
-    usedHint: 'El código lo lee con Secret.Read o Secret.Exists.',
+    usedHint: 'El código lo lee con Secret.ReadAsync o Secret.ExistsAsync.',
     unused: 'no lo lee el código',
     unusedHint: 'Ningún código lo lee con este nombre. ¿Está escrito igual que en el código?',
     set: (when) => <>definido {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'En el código',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} lee un valor y {code('Secret.Exists("NAME")')} dice si está definido. En un
+        {code('Secret.ReadAsync("NAME")')} lee un valor y {code('Secret.ExistsAsync("NAME")')} dice si está definido. En un
         proyecto descargado, ambos leen la variable de entorno con el mismo nombre.
       </>
     ),

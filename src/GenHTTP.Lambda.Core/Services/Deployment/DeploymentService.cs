@@ -199,7 +199,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
                                              Provider.ConfigureContext,
-                                             Workspaces.Bind(lambdaId, featureId, Databases.DataRoomFor(lambdaId, featureId), () => Databases.SizeOf(lambdaId, featureId)));
+                                             Workspaces.Bind(lambdaId, featureId, Databases.DataRoomFor(lambdaId, featureId),
+                                                             cancellation => Databases.SizeOfAsync(lambdaId, featureId, cancellation)));
 
         var outcome = await CompileAsync(slot, stamp, request);
 

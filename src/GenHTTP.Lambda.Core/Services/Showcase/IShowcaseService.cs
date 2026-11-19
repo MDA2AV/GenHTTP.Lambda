@@ -19,17 +19,17 @@ public interface IShowcaseService
     /// <summary>
     /// Creates or replaces the entry of a lambda.
     /// </summary>
-    ShowcaseInfo Save(string privateKey, ShowcaseDraft draft);
+    ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the lambda out of the showcase. Nothing happens when it was not in it.
     /// </summary>
-    void Remove(string privateKey);
+    ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Forgets the entry of a lambda that is being deleted, and its picture.
     /// </summary>
-    void Forget(long lambdaId);
+    ValueTask ForgetAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// One page of the entries of lambdas that are online, the most active first.
@@ -39,6 +39,6 @@ public interface IShowcaseService
     /// <summary>
     /// The picture of the entry of the lambda at a public key.
     /// </summary>
-    ShowcaseImage? GetImage(string publicKey);
+    ValueTask<ShowcaseImage?> GetImageAsync(string publicKey, CancellationToken cancellation = default);
 
 }

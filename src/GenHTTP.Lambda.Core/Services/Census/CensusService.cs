@@ -72,7 +72,7 @@ public sealed class CensusService(LambdaTally tally, StorageSurvey survey) : ICe
 
     private async ValueTask<StorageCensus> TakeAsync(CancellationToken cancellation)
     {
-        var measured = await Offload.Run(() => survey.Measure(DateTime.UtcNow), cancellation);
+        var measured = await Offload.Run(() => survey.MeasureAsync(DateTime.UtcNow, cancellation), cancellation);
 
         Volatile.Write(ref _measured, measured);
 

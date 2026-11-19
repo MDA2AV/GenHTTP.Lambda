@@ -14,8 +14,8 @@ namespace GenHTTP.Lambda.Services.Branding;
 /// </summary>
 /// <remarks>
 /// Read for every page served - the bar, the title, the icon of the tab -
-/// so held in memory once it was read, the picture with it, and only written
-/// through: the name as a setting (<c>branding.name</c>), what the logo is as
+/// so read once as the platform starts (<see cref="LoadAsync"/>), held in
+/// memory with the picture, and only written through: the name as a setting (<c>branding.name</c>), what the logo is as
 /// a row of its own, and the logo itself as a file of the files integration
 /// (<c>branding/logo</c>) - no picture is kept in a database. What is checked
 /// about either is <see cref="BrandChecks"/>'s.
@@ -30,7 +30,11 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
     private const string LogoPurpose = "logo";
 
-    private readonly Lock _lock = new();
+    /// <summary>
+    /// Who is changing the brand: one at a time, across the writing of its
+    /// logo.
+    /// </summary>
+    private readonly SemaphoreSlim _turn = new(1, 1);
 
     private Brand? _current;
 
@@ -53,28 +57,37 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
                 return Brand.Platform;
             }
 
-            if (_current is { } current)
-            {
-                return current;
-            }
-
-            lock (_lock)
-            {
-                return _current ??= Read();
-            }
+            return _current ?? throw new InvalidOperationException("The brand of the installation is read as the platform starts, which it has not.");
         }
     }
 
-    private Brand Read()
+    /// <summary>
+    /// Reads how the installation presents itself, as the platform starts -
+    /// before the first page asks.
+    /// </summary>
+    public async ValueTask LoadAsync(CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        if (options.Branding)
+        {
+            _current = await ReadAsync(cancellation);
+        }
+    }
 
-        var name = database.Settings.AsNoTracking().Where(s => s.Key == NameKey).Select(s => s.Value).FirstOrDefault();
+    private async ValueTask<Brand> ReadAsync(CancellationToken cancellation)
+    {
+        string? name;
 
-        var logo = database.BrandingPictures.AsNoTracking().FirstOrDefault(p => p.Purpose == LogoPurpose);
+        BrandingPictureEntity? logo;
+
+        using (var database = databases.CreateDbContext())
+        {
+            name = database.Settings.AsNoTracking().Where(s => s.Key == NameKey).Select(s => s.Value).FirstOrDefault();
+
+            logo = database.BrandingPictures.AsNoTracking().FirstOrDefault(p => p.Purpose == LogoPurpose);
+        }
 
         // the row's own bytes where the logo was not moved out of it yet
-        var content = logo == null ? null : files.Read(FileStores.Branding, PictureNames.Branding(LogoPurpose)) ?? (logo.Content.Length > 0 ? logo.Content : null);
+        var content = logo == null ? null : await files.ReadAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), cancellation) ?? (logo.Content.Length > 0 ? logo.Content : null);
 
         return Brand.Of(name, logo == null || content == null ? null : new BrandPicture(content, logo.Type, logo.Updated));
     }
@@ -87,15 +100,17 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
     /// Names the installation, or gives it back the platform's name where the
     /// name is empty.
     /// </summary>
-    public (Brand Brand, string? Previous) Rename(string? name)
+    public async ValueTask<(Brand Brand, string? Previous)> RenameAsync(string? name, CancellationToken cancellation = default)
     {
         RequireChangeable();
 
         var given = BrandChecks.Name(name);
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            var current = _current ?? Read();
+            var current = Current;
 
             using var database = databases.CreateDbContext();
 
@@ -121,12 +136,16 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
             return (_current = Brand.Of(given, current.Logo), current.Given);
         }
+        finally
+        {
+            _turn.Release();
+        }
     }
 
     /// <summary>
     /// Gives the installation a logo, or another one.
     /// </summary>
-    public Brand ChangeLogo(byte[] content)
+    public async ValueTask<Brand> ChangeLogoAsync(byte[] content, CancellationToken cancellation = default)
     {
         RequireChangeable();
 
@@ -134,11 +153,13 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
         var logo = new BrandPicture(content, type, DateTime.UtcNow);
 
-        lock (_lock)
-        {
-            var current = _current ?? Read();
+        await _turn.WaitAsync(cancellation);
 
-            files.Write(FileStores.Branding, PictureNames.Branding(LogoPurpose), logo.Content);
+        try
+        {
+            var current = Current;
+
+            await files.WriteAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), logo.Content, cancellation);
 
             using var database = databases.CreateDbContext();
 
@@ -157,59 +178,77 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
             return _current = Brand.Of(current.Given, logo);
         }
+        finally
+        {
+            _turn.Release();
+        }
     }
 
     /// <summary>
     /// Takes the logo away.
     /// </summary>
-    public Brand RemoveLogo()
+    public async ValueTask<Brand> RemoveLogoAsync(CancellationToken cancellation = default)
     {
         RequireChangeable();
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            var current = _current ?? Read();
+            var current = Current;
 
-            using var database = databases.CreateDbContext();
-
-            if (database.BrandingPictures.Find(LogoPurpose) is { } existing)
+            using (var database = databases.CreateDbContext())
             {
-                database.BrandingPictures.Remove(existing);
-                database.SaveChanges();
+                if (database.BrandingPictures.Find(LogoPurpose) is { } existing)
+                {
+                    database.BrandingPictures.Remove(existing);
+                    database.SaveChanges();
+                }
             }
 
-            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
+            await files.DeleteAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), cancellation);
 
             return _current = Brand.Of(current.Given, null);
+        }
+        finally
+        {
+            _turn.Release();
         }
     }
 
     /// <summary>
     /// Gives the installation back the platform's name and mark.
     /// </summary>
-    public Brand Reset()
+    public async ValueTask<Brand> ResetAsync(CancellationToken cancellation = default)
     {
         RequireChangeable();
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            using var database = databases.CreateDbContext();
-
-            if (database.Settings.Find(NameKey) is { } name)
+            using (var database = databases.CreateDbContext())
             {
-                database.Settings.Remove(name);
+                if (database.Settings.Find(NameKey) is { } name)
+                {
+                    database.Settings.Remove(name);
+                }
+
+                if (database.BrandingPictures.Find(LogoPurpose) is { } logo)
+                {
+                    database.BrandingPictures.Remove(logo);
+                }
+
+                database.SaveChanges();
             }
 
-            if (database.BrandingPictures.Find(LogoPurpose) is { } logo)
-            {
-                database.BrandingPictures.Remove(logo);
-            }
-
-            database.SaveChanges();
-
-            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
+            await files.DeleteAsync(FileStore.Branding, PictureNames.Branding(LogoPurpose), cancellation);
 
             return _current = Brand.Platform;
+        }
+        finally
+        {
+            _turn.Release();
         }
     }
 

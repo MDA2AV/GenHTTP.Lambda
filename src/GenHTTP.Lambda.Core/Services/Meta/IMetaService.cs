@@ -22,7 +22,7 @@ public interface IMetaService
     /// seeding it with the given template (the default one if none was named).
     /// </summary>
     /// <param name="view">How its editor opens for somebody who has not chosen a view of their own</param>
-    LambdaInfo Create(string? publicKey, string? template = null, EditorView view = EditorView.Full);
+    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, CancellationToken cancellation = default);
 
     /// <summary>
     /// Reads a lambda by the private key of its editor.
@@ -135,7 +135,7 @@ public interface IMetaService
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
     /// <param name="origin">Who is asking: the operator may delete a lambda they blocked, its owner may not</param>
-    void Delete(string privateKey, string? origin = null);
+    ValueTask DeleteAsync(string privateKey, string? origin = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Blocks the lambda: takes it and the previews of its features offline,
@@ -165,7 +165,7 @@ public interface IMetaService
     /// <summary>
     /// Undeploys and removes lambdas that have outlived their tier.
     /// </summary>
-    MaintenanceReport RunMaintenance(DateTime now);
+    ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default);
 
     /// <summary>
     /// Counts the lambdas, the deployed ones and the versions kept for them.

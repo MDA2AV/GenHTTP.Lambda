@@ -28,6 +28,8 @@ using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Sources;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Databases;
+using GenHTTP.Lambda.Integrations.Files;
+using GenHTTP.Lambda.Integrations.Secrets;
 
 using GenHTTP.Modules.Layouting;
 
@@ -145,7 +147,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// </param>
     public static Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
                                                   bool compiled = false)
-        => CreateAsync(Edition.Cloud, configure, server, compiled, null);
+        => CreateAsync(Edition.Cloud, configure, server, compiled, null, null, null);
 
     /// <summary>
     /// Creates and starts the community edition: put together the way its
@@ -154,12 +156,17 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// itself - no terms, no contact, no legal pages.
     /// </summary>
     /// <param name="database">The database it keeps its data in, where a test chooses one: SQLite otherwise, as on an installation</param>
+    /// <param name="files">What it keeps its files in, where a test chooses that: local directories otherwise</param>
+    /// <param name="secrets">What it keeps its secrets in, where a test chooses that: sealed in its own records otherwise</param>
     public static Task<LambdaFixture> CreateCommunityAsync(Func<LambdaOptions, LambdaOptions>? configure = null,
-                                                           IIntegrationBuilder<IDatabaseProvider>? database = null)
-        => CreateAsync(Edition.Community, configure, null, false, database);
+                                                           IIntegrationBuilder<IDatabaseProvider>? database = null,
+                                                           IIntegrationBuilder<IFileProvider>? files = null,
+                                                           IIntegrationBuilder<ISecretProvider>? secrets = null)
+        => CreateAsync(Edition.Community, configure, null, false, database, files, secrets);
 
     private static async Task<LambdaFixture> CreateAsync(Edition edition, Func<LambdaOptions, LambdaOptions>? configure, ServerSettings? server,
-                                                         bool compiled, IIntegrationBuilder<IDatabaseProvider>? database)
+                                                         bool compiled, IIntegrationBuilder<IDatabaseProvider>? database,
+                                                         IIntegrationBuilder<IFileProvider>? files, IIntegrationBuilder<ISecretProvider>? secrets)
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
@@ -200,7 +207,17 @@ internal sealed class LambdaFixture : IAsyncDisposable
             building.Database(database);
         }
 
-        var platform = building.Build();
+        if (files != null)
+        {
+            building.Files(files);
+        }
+
+        if (secrets != null)
+        {
+            building.Secrets(secrets);
+        }
+
+        var platform = await building.BuildAsync();
 
         var site = Layout.Create()
                          .Add(PlatformRoutes.Api, RestApi.Create(platform).Compiled(compiled))

@@ -78,7 +78,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// Takes offline what has been quiet for too long, and removes what has
     /// been abandoned.
     /// </summary>
-    public MaintenanceReport Sweep(DateTime now)
+    public async ValueTask<MaintenanceReport> SweepAsync(DateTime now, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -110,7 +110,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         foreach (var lambda in expired)
         {
-            removal.Remove(database, lambda);
+            await removal.RemoveAsync(database, lambda, cancellation);
         }
 
         var quiet = now - limits.Get().OfflineAfter;

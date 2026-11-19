@@ -13,17 +13,16 @@ namespace GenHTTP.Lambda.Services.Integrations;
 /// services start - so the platform lets go of them itself.
 /// </remarks>
 /// <param name="Secrets">What the host chose for the secrets, or nothing where the platform keeps them itself</param>
-public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvider Files, ISecretProvider? Secrets)
-    : IAsyncDisposable, IDisposable
+public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvider Files, ISecretProvider? Secrets) : IAsyncDisposable
 {
 
     private IEnumerable<IIntegration> Built => Secrets is { } secrets ? [Database, Files, secrets] : [Database, Files];
 
-    public void Dispose() => Dispose(Built);
+    public ValueTask DisposeAsync() => DisposeAsync(Built);
 
-    public async ValueTask DisposeAsync()
+    internal static async ValueTask DisposeAsync(IEnumerable<IIntegration> integrations)
     {
-        foreach (var integration in Built)
+        foreach (var integration in integrations)
         {
             switch (integration)
             {
@@ -34,14 +33,6 @@ public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvi
                     disposable.Dispose();
                     break;
             }
-        }
-    }
-
-    internal static void Dispose(IEnumerable<IIntegration> integrations)
-    {
-        foreach (var integration in integrations)
-        {
-            (integration as IDisposable)?.Dispose();
         }
     }
 

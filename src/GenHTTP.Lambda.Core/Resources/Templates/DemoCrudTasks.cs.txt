@@ -8,6 +8,9 @@
 // Problems are thrown as ProviderException with the status to answer, which
 // the platform turns into a response with that status and the message.
 //
+// A route that reads or writes the database is async and awaits it: what it
+// returns is sent once the task is done.
+//
 // [Summary] and [Remarks] say what a route does in the API's description,
 // openapi.json - and so in scalar/, where it is tried. A parameter or a field
 // of a record can have one too.
@@ -26,37 +29,37 @@ public class Tasks(TaskStore store)
     [ResourceMethod]
     [Summary("Lists the tasks")]
     [Remarks("Open tasks first, the newest first. With search, only those whose title or notes contain it, whatever the case.")]
-    public List<TaskItem> List([Summary("Text to look for")] string search = null) => store.List(search);
+    public ValueTask<List<TaskItem>> List([Summary("Text to look for")] string search = null) => store.ListAsync(search);
 
     [ResourceMethod(":id")]
     [Summary("Reads a task")]
-    public TaskItem Get(string id) => store.Find(id) ?? throw Missing(id);
+    public async ValueTask<TaskItem> Get(string id) => await store.FindAsync(id) ?? throw Missing(id);
 
     [ResourceMethod(Method.Post)]
     [Summary("Adds a task")]
-    public Result<TaskItem> Create(TaskInput input)
+    public async ValueTask<Result<TaskItem>> Create(TaskInput input)
     {
         var (title, notes) = Validate(input);
 
         // 201 rather than 200: something new exists now
-        return new Result<TaskItem>(Add(store, title, notes, input.Done)).Status(ResponseStatus.Created);
+        return new Result<TaskItem>(await AddAsync(store, title, notes, input.Done)).Status(ResponseStatus.Created);
     }
 
     [ResourceMethod(Method.Put, ":id")]
     [Summary("Changes a task")]
-    public TaskItem Update(string id, TaskInput input)
+    public async ValueTask<TaskItem> Update(string id, TaskInput input)
     {
         var (title, notes) = Validate(input);
 
-        return store.Change(id, title, notes, input.Done) ?? throw Missing(id);
+        return await store.ChangeAsync(id, title, notes, input.Done) ?? throw Missing(id);
     }
 
     [ResourceMethod(Method.Delete, ":id")]
     [Summary("Removes a task")]
-    public void Delete(string id)
+    public async ValueTask Delete(string id)
     {
         // nothing returned is answered with 204 No Content
-        if (!store.Remove(id))
+        if (!await store.RemoveAsync(id))
         {
             throw Missing(id);
         }
@@ -65,13 +68,13 @@ public class Tasks(TaskStore store)
     /// <summary>
     /// Makes a task of what was checked, and keeps it.
     /// </summary>
-    internal static TaskItem Add(TaskStore store, string title, string notes, bool done)
+    internal static async ValueTask<TaskItem> AddAsync(TaskStore store, string title, string notes, bool done)
     {
         var now = DateTime.UtcNow;
 
         var task = new TaskItem { Id = Guid.NewGuid().ToString("n")[..10], Title = title, Notes = notes, Done = done, Created = now, Updated = now };
 
-        store.Add(task);
+        await store.AddAsync(task);
 
         return task;
     }
@@ -109,12 +112,12 @@ public class Tasks(TaskStore store)
     /// <summary>
     /// Something to look at on the very first start.
     /// </summary>
-    public static void Seed(TaskStore store)
+    public static async ValueTask SeedAsync(TaskStore store)
     {
         var now = DateTime.UtcNow;
 
-        store.Add(new TaskItem { Id = "welcome1", Title = "Read Tasks.cs to see the routes", Notes = "Every public method with [ResourceMethod] is one of them.", Created = now, Updated = now });
-        store.Add(new TaskItem { Id = "welcome2", Title = "Try the API in scalar/", Created = now.AddSeconds(1), Updated = now.AddSeconds(1) });
-        store.Add(new TaskItem { Id = "welcome3", Title = "Open the page", Done = true, Created = now.AddSeconds(2), Updated = now.AddSeconds(2) });
+        await store.AddAsync(new TaskItem { Id = "welcome1", Title = "Read Tasks.cs to see the routes", Notes = "Every public method with [ResourceMethod] is one of them.", Created = now, Updated = now });
+        await store.AddAsync(new TaskItem { Id = "welcome2", Title = "Try the API in scalar/", Created = now.AddSeconds(1), Updated = now.AddSeconds(1) });
+        await store.AddAsync(new TaskItem { Id = "welcome3", Title = "Open the page", Done = true, Created = now.AddSeconds(2), Updated = now.AddSeconds(2) });
     }
 }

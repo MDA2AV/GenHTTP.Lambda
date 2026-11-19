@@ -9,21 +9,50 @@ namespace GenHTTP.Lambda.Server;
 /// Settings only: what is built of them is the host's, which offers the
 /// databases it has an integration for (see <see cref="LambdaSettings.FromEnvironment"/>).
 /// </remarks>
-/// <param name="Provider">The database: <see cref="Sqlite"/> unless the environment names another (<c>LAMBDA_DATABASE</c>)</param>
+/// <param name="Provider">The database: SQLite unless the environment names another (<c>LAMBDA_DATABASE</c>)</param>
 /// <param name="Connection">How to reach a database server, as its client library reads it (<c>LAMBDA_POSTGRES_CONNECTION</c>)</param>
 /// <param name="RolePrefix">What the roles of the lambdas are called before their id, where the database has roles (<c>LAMBDA_POSTGRES_ROLE_PREFIX</c>)</param>
 /// <param name="PoolSize">How many connections one lambda keeps open at most, where it connects to a server (<c>LAMBDA_POSTGRES_POOL_SIZE</c>)</param>
-public sealed record DatabaseSettings(string Provider = DatabaseSettings.Sqlite, string? Connection = null, string? RolePrefix = null, int? PoolSize = null)
+public sealed record DatabaseSettings(DatabaseProvider Provider = DatabaseProvider.Sqlite, string? Connection = null, string? RolePrefix = null, int? PoolSize = null)
+{
+
+    /// <summary>
+    /// The database <c>LAMBDA_DATABASE</c> names, whatever case it is written
+    /// in - or nothing where it names none the platform knows.
+    /// </summary>
+    public static DatabaseProvider? Parse(string value) => value.Trim().ToLowerInvariant() switch
+    {
+        "sqlite" => DatabaseProvider.Sqlite,
+        "postgresql" => DatabaseProvider.PostgreSql,
+        _ => null
+    };
+
+    /// <summary>
+    /// What <c>LAMBDA_DATABASE</c> is set to for a database.
+    /// </summary>
+    public static string NameOf(DatabaseProvider provider) => provider switch
+    {
+        DatabaseProvider.Sqlite => "sqlite",
+        DatabaseProvider.PostgreSql => "postgresql",
+        _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, "There is no such database.")
+    };
+
+}
+
+/// <summary>
+/// The databases an installation can be told to keep its data in.
+/// </summary>
+public enum DatabaseProvider
 {
 
     /// <summary>
     /// SQLite files in the data directory, which every installation has.
     /// </summary>
-    public const string Sqlite = "sqlite";
+    Sqlite,
 
     /// <summary>
     /// One PostgreSQL database, which the community edition offers.
     /// </summary>
-    public const string PostgreSql = "postgresql";
+    PostgreSql
 
 }

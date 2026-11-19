@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Banco de dados',
-      what: 'Um banco de dados próprio onde a lambda guarda os registros dela, acessado com Database.GetConnection().',
+      what: 'Um banco de dados próprio onde a lambda guarda os registros dela, acessado com Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 tabela' : `${items} tabelas`),
       confirmOff: 'Desligar o banco de dados?',
       switchedOn: 'O banco de dados está ligado, e vazio. A lambda reinicia com ele na próxima requisição.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'No código',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} abre uma conexão com ele – para um {code('DbContext')} do Entity Framework
+        {code('Database.GetConnectionAsync()')} abre uma conexão com ele – para um {code('DbContext')} do Entity Framework
         Core ou para SQL – e as migrações em {code('migrations/')} criam as tabelas, aplicadas pelo Evolve. Num projeto
         baixado, ele é o arquivo SQLite comum {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} foi apagado.`,
     deleteFailed: 'Não foi possível apagar o segredo.',
     used: 'lido pelo código',
-    usedHint: 'O código lê com Secret.Read ou Secret.Exists.',
+    usedHint: 'O código lê com Secret.ReadAsync ou Secret.ExistsAsync.',
     unused: 'não lido pelo código',
     unusedHint: 'Nenhum código lê por esse nome. Está escrito como no código?',
     set: (when) => <>definido {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'No código',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} lê um valor, {code('Secret.Exists("NAME")')} diz se ele está definido. Num projeto
+        {code('Secret.ReadAsync("NAME")')} lê um valor, {code('Secret.ExistsAsync("NAME")')} diz se ele está definido. Num projeto
         baixado, os dois leem a variável de ambiente de mesmo nome.
       </>
     ),

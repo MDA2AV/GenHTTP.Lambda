@@ -27,21 +27,21 @@ public interface IBrandingService
     /// name is empty.
     /// </summary>
     /// <returns>The brand as it is now, and the name it went by before</returns>
-    (Brand Brand, string? Previous) Rename(string? name);
+    ValueTask<(Brand Brand, string? Previous)> RenameAsync(string? name, CancellationToken cancellation = default);
 
     /// <summary>
     /// Gives the installation a logo, or another one.
     /// </summary>
-    Brand ChangeLogo(byte[] content);
+    ValueTask<Brand> ChangeLogoAsync(byte[] content, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the logo away. Nothing happens where there is none.
     /// </summary>
-    Brand RemoveLogo();
+    ValueTask<Brand> RemoveLogoAsync(CancellationToken cancellation = default);
 
     /// <summary>
     /// Gives the installation back the platform's name and mark.
     /// </summary>
-    Brand Reset();
+    ValueTask<Brand> ResetAsync(CancellationToken cancellation = default);
 
 }

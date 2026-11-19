@@ -51,7 +51,7 @@ public sealed class UsageReportService(UsageSurvey survey, UsageReportSender sen
 
         try
         {
-            report = JsonSerializer.Serialize(survey.Take(), Json);
+            report = JsonSerializer.Serialize(await survey.TakeAsync(cancellation), Json);
         }
         catch (Exception e)
         {

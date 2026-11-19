@@ -43,8 +43,8 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [ResourceMethod("lambdas/:privateKey/files")]
     [Summary("Lists the files of the workspace")]
     [return: Summary("The files and folders of the workspace")]
-    public WorkspaceListing List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => workspace.List(meta.RequireId(privateKey));
+    public async ValueTask<WorkspaceListing> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => await workspace.ListAsync(meta.RequireId(privateKey));
 
     [ResourceMethod("lambdas/:privateKey/files/:path")]
     [Summary("Reads a file, base64 encoded")]
@@ -65,8 +65,8 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.Ok, "The bytes of the file", ContentType = "application/octet-stream")]
     [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, with the name of the file")]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such file.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public IResponse GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
-        => WorkspaceFiles.Send(workspace, meta.RequireId(privateKey), null, path, request);
+    public async ValueTask<IResponse> GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
+        => await WorkspaceFiles.SendAsync(workspace, meta.RequireId(privateKey), null, path, request);
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path/content")]
     [Summary("Uploads a file as it is")]
@@ -104,9 +104,9 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.BadRequest, "The path is empty or leads outside of the workspace.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
-        workspace.Delete(meta.RequireEditable(privateKey), path);
+        await workspace.DeleteAsync(meta.RequireEditable(privateKey), path);
 
         logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
     }
@@ -119,9 +119,10 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.Conflict, "The workspace is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The workspace afterwards")]
-    public WorkspaceListing PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
+    public async ValueTask<WorkspaceListing> PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                       [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
     {
-        var listing = WorkspaceFiles.CreateFolder(workspace, meta.RequireEditable(privateKey), null, path);
+        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, meta.RequireEditable(privateKey), null, path);
 
         logger.LogInformation("Created workspace folder {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
 

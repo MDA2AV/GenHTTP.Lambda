@@ -43,7 +43,7 @@ public sealed class DatabaseSettingsTests
     {
         var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, databases: CommunityDatabase.Offered);
 
-        Assert.AreEqual(DatabaseSettings.Sqlite, settings.Database.Provider);
+        Assert.AreEqual(DatabaseProvider.Sqlite, settings.Database.Provider);
         Assert.IsInstanceOfType<SqliteDatabaseBuilder>(CommunityDatabase.Of(settings.Database));
     }
 
@@ -57,7 +57,7 @@ public sealed class DatabaseSettingsTests
 
         var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, databases: CommunityDatabase.Offered);
 
-        Assert.AreEqual(DatabaseSettings.PostgreSql, settings.Database.Provider, "whatever case it was written in");
+        Assert.AreEqual(DatabaseProvider.PostgreSql, settings.Database.Provider, "whatever case it was written in");
         Assert.AreEqual("apps", settings.Database.RolePrefix);
         Assert.AreEqual(4, settings.Database.PoolSize);
 

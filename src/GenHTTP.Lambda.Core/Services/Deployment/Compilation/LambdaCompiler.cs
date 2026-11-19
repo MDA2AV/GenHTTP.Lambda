@@ -9,6 +9,8 @@ using System.Data.Common;
 using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
@@ -195,14 +197,16 @@ internal static class LambdaCompiler
     /// </remarks>
     private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
     {
-        if (request.Secrets != null)
+        if (request.Secrets is { } secrets)
         {
-            Connect(lambda, SourceBuilder.SecretType, request.Secrets);
+            Connect(lambda, SourceBuilder.SecretType, secrets.Read);
+            Connect(lambda, SourceBuilder.SecretType, secrets.ReadAsync, SourceBuilder.AsyncSource);
         }
 
-        if (request.Database != null)
+        if (request.Database is { } database)
         {
-            Connect(lambda, SourceBuilder.DatabaseType, request.Database);
+            Connect(lambda, SourceBuilder.DatabaseType, database.Connect);
+            Connect(lambda, SourceBuilder.DatabaseType, database.ConnectAsync, SourceBuilder.AsyncSource);
         }
 
         if (request.Context != null)
@@ -220,6 +224,13 @@ internal static class LambdaCompiler
             Connect(lambda, SourceBuilder.WorkspaceType, files.Folders, SourceBuilder.WorkspaceFields.Folders);
             Connect(lambda, SourceBuilder.WorkspaceType, files.CreateFolder, SourceBuilder.WorkspaceFields.CreateFolder);
             Connect(lambda, SourceBuilder.WorkspaceType, files.Tree, SourceBuilder.WorkspaceFields.Tree);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.ExistsAsync, SourceBuilder.WorkspaceFields.ExistsAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.ReadAsync, SourceBuilder.WorkspaceFields.ReadAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.WriteAsync, SourceBuilder.WorkspaceFields.WriteAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.DeleteAsync, SourceBuilder.WorkspaceFields.DeleteAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.ListAsync, SourceBuilder.WorkspaceFields.ListAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.FoldersAsync, SourceBuilder.WorkspaceFields.FoldersAsync);
+            Connect(lambda, SourceBuilder.WorkspaceType, files.CreateFolderAsync, SourceBuilder.WorkspaceFields.CreateFolderAsync);
         }
 
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
@@ -345,7 +356,7 @@ internal static class LambdaCompiler
         // the top level of lambda.cs is read as a script, where a using declaration
         // is read as a using directive - and the raw message says nothing about that
         "CS1002" when IsUsingDeclaration(diagnostic) => diagnostic.GetMessage()
-            + ". A using declaration (using var ...) cannot stand at the top level of lambda.cs: write using (var connection = Database.GetConnection()) { ... } there, or declare it inside the method or route that needs it.",
+            + ". A using declaration (using var ...) cannot stand at the top level of lambda.cs: write await using (var connection = await Database.GetConnectionAsync()) { ... } there, or declare it inside the method or route that needs it.",
         // outside the top-level code of lambda.cs, Assets is the type the Files
         // module declares under that name, and the raw message says nothing about why
         "CS0117" when MeantTheLambdaAssets(diagnostic) => diagnostic.GetMessage()
@@ -353,7 +364,7 @@ internal static class LambdaCompiler
         // inside a DbContext, Database is the context's own, and the raw
         // message says nothing about the lambda's of the same name
         "CS1061" or "CS0120" when MeantTheLambdaDatabase(diagnostic) => diagnostic.GetMessage()
-            + ". Inside a DbContext, Database is the context's own: open the connection where the context is made and hand it in - new Records(Database.GetConnection()) - or write LambdaEnvironment.Database.GetConnection().",
+            + ". Inside a DbContext, Database is the context's own: open the connection where the context is made and hand it in - new Records(await Database.GetConnectionAsync()) - or write LambdaEnvironment.Database.GetConnectionAsync().",
         _ => diagnostic.GetMessage()
     };
 
@@ -420,6 +431,6 @@ internal static class LambdaCompiler
 /// <param name="Context">What a context of Entity Framework is configured with on its connection, once it runs</param>
 /// <param name="Workspace">What it reads and writes its files through, once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Resources, string AssemblyDirectory, string Name, bool Run,
-                                          BuildSettings Settings, DatabaseBinding Binding, Func<string, bool, string?>? Secrets = null,
-                                          Func<DbConnection>? Database = null, Action<DbContextOptionsBuilder, DbConnection>? Context = null,
+                                          BuildSettings Settings, DatabaseBinding Binding, SecretReader? Secrets = null,
+                                          DatabaseConnector? Database = null, Action<DbContextOptionsBuilder, DbConnection>? Context = null,
                                           WorkspaceBinding? Workspace = null);

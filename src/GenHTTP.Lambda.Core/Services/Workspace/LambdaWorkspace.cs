@@ -1,5 +1,6 @@
 using GenHTTP.Api.Content.IO;
 
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Files;
 
@@ -27,36 +28,56 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// rewrite what it holds, only not grow. Reading never makes anything.
 /// </para>
 /// <para>
-/// What it throws is what code reading files expects - a file that is not
-/// there, a name outside, a workspace that is full - with what to do about
-/// it, which is what the log then says.
+/// Every function is awaited first; the plain calls code written before makes
+/// are the same functions through <see cref="Synchronous"/>, which waits for
+/// nothing where the integration answers at once. What it throws is what code
+/// reading files expects - a file that is not there, a name outside, a
+/// workspace that is full - with what to do about it, which is what the log
+/// then says.
 /// </para>
 /// </remarks>
 /// <param name="room">The room of the lambda's data, as its tier allows it now</param>
 /// <param name="beside">The room the rest of its data - its database - takes</param>
-internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault, DataScope scope, Func<long> room, Func<long> beside)
+internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault, DataScope scope, Func<long> room, Func<CancellationToken, ValueTask<long>> beside)
 {
 
     #region Functionality
 
-    public WorkspaceBinding Bind() => new(Exists, Read, Write, Delete, List, Folders, CreateFolder, Tree);
+    public WorkspaceBinding Bind() => new(
+        name => Synchronous.Run(() => ExistsAsync(name, CancellationToken.None)),
+        name => Synchronous.Run(() => ReadAsync(name, CancellationToken.None)),
+        (name, content) => Synchronous.Run(() => WriteAsync(name, content, CancellationToken.None)),
+        name => Synchronous.Run(() => DeleteAsync(name, CancellationToken.None)),
+        () => Synchronous.Run(() => ListAsync(CancellationToken.None)),
+        () => Synchronous.Run(() => FoldersAsync(CancellationToken.None)),
+        name => Synchronous.Run(() => CreateFolderAsync(name, CancellationToken.None)),
+        folder => Synchronous.Run(() => TreeAsync(folder, CancellationToken.None)),
+        ExistsAsync,
+        ReadAsync,
+        WriteAsync,
+        DeleteAsync,
+        ListAsync,
+        FoldersAsync,
+        CreateFolderAsync
+    );
 
-    private bool Exists(string name) => files.Find(scope, Resolve(name)) is { Folder: false };
+    private async ValueTask<bool> ExistsAsync(string name, CancellationToken cancellation)
+        => await files.FindAsync(scope, Resolve(name), cancellation) is { Folder: false };
 
-    private byte[] Read(string name)
-        => files.Read(scope, Resolve(name)) ?? throw new FileNotFoundException($"There is no file called '{name}' in the workspace.", name);
+    private async ValueTask<byte[]> ReadAsync(string name, CancellationToken cancellation)
+        => await files.ReadAsync(scope, Resolve(name), cancellation) ?? throw new FileNotFoundException($"There is no file called '{name}' in the workspace.", name);
 
-    private void Write(string name, byte[] content)
+    private async ValueTask WriteAsync(string name, byte[] content, CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(content);
 
         var path = Resolve(name);
 
-        Reserve(path, content.Length);
+        await ReserveAsync(path, content.Length, cancellation);
 
         try
         {
-            files.Write(scope, path, content);
+            await files.WriteAsync(scope, path, content, cancellation);
         }
         finally
         {
@@ -67,44 +88,50 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
     /// <remarks>
     /// A file only, as it always was: a folder stays.
     /// </remarks>
-    private void Delete(string name)
+    private async ValueTask DeleteAsync(string name, CancellationToken cancellation)
     {
         var path = Resolve(name);
 
-        if (files.Find(scope, path) is { Folder: false })
+        if (await files.FindAsync(scope, path, cancellation) is { Folder: false })
         {
-            files.Delete(scope, path);
+            await files.DeleteAsync(scope, path, cancellation);
 
             vault.Changed(scope.LambdaId, scope.FeatureId);
         }
     }
 
-    private string[] List() => [.. files.List(scope).Where(e => !e.Folder).Select(e => e.Path)];
+    private async ValueTask<string[]> ListAsync(CancellationToken cancellation)
+        => [.. (await files.ListAsync(scope, cancellation)).Where(e => !e.Folder).Select(e => e.Path)];
 
-    private string[] Folders() => [.. files.List(scope).Where(e => e.Folder).Select(e => e.Path)];
+    private async ValueTask<string[]> FoldersAsync(CancellationToken cancellation)
+        => [.. (await files.ListAsync(scope, cancellation)).Where(e => e.Folder).Select(e => e.Path)];
 
-    private void CreateFolder(string name)
+    private async ValueTask CreateFolderAsync(string name, CancellationToken cancellation)
     {
         var path = Resolve(name);
 
-        if (files.Find(scope, path) is { Folder: true })
+        if (await files.FindAsync(scope, path, cancellation) is { Folder: true })
         {
             return;
         }
 
-        var entries = files.List(scope);
+        var entries = await files.ListAsync(scope, cancellation);
 
-        if (WorkspacePaths.Measure(entries) + beside() + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > room())
+        if (WorkspacePaths.Measure(entries) + await beside(cancellation) + (WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) + 1) * WorkspaceLimits.Block > room())
         {
             throw Full();
         }
 
-        files.CreateFolder(scope, path);
+        await files.CreateFolderAsync(scope, path, cancellation);
 
         vault.Changed(scope.LambdaId, scope.FeatureId);
     }
 
-    private IResourceTree Tree(string? folder)
+    /// <remarks>
+    /// The folder is looked for first, so a name that is not there is said
+    /// as the lambda starts rather than as nothing served.
+    /// </remarks>
+    private async ValueTask<IResourceTree> TreeAsync(string? folder, CancellationToken cancellation)
     {
         if (folder == null)
         {
@@ -113,9 +140,9 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
 
         var path = Resolve(folder);
 
-        if (files.Find(scope, path) is not { Folder: true })
+        if (await files.FindAsync(scope, path, cancellation) is not { Folder: true })
         {
-            var had = Folders();
+            var had = await FoldersAsync(cancellation);
 
             var known = had.Length > 0
                       ? "The folders this workspace holds are: " + string.Join(", ", had) + "."
@@ -145,16 +172,16 @@ internal sealed class LambdaWorkspace(IFileProvider files, IWorkspaceVault vault
     /// Makes sure what is about to be written fits, the folders it goes into
     /// that are not there yet included.
     /// </summary>
-    private void Reserve(string path, long size)
+    private async ValueTask ReserveAsync(string path, long size, CancellationToken cancellation)
     {
-        var entries = files.List(scope);
+        var entries = await files.ListAsync(scope, cancellation);
 
         var added = WorkspaceLimits.Footprint(size) + WorkspacePaths.Missing(path, WorkspacePaths.Folders(entries)) * WorkspaceLimits.Block;
 
         // a file being replaced is not counted a second time
         var replaced = entries.FirstOrDefault(e => !e.Folder && e.Path == path) is { } existing ? WorkspaceLimits.Footprint(existing.Length) : 0;
 
-        if (added > replaced && WorkspacePaths.Measure(entries) + beside() - replaced + added > room())
+        if (added > replaced && WorkspacePaths.Measure(entries) + await beside(cancellation) - replaced + added > room())
         {
             throw Full();
         }

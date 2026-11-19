@@ -30,80 +30,80 @@ namespace GenHTTP.Lambda.Integrations.PostgreSql;
 internal static class SchemaCopy
 {
 
-    public static void Run(NpgsqlConnection connection, string source, string target)
+    public static async ValueTask RunAsync(NpgsqlConnection connection, string source, string target, CancellationToken cancellation)
     {
-        using var transaction = connection.BeginTransaction(IsolationLevel.RepeatableRead);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellation);
 
-        Path(connection, source);
+        await PathAsync(connection, source, cancellation);
 
-        var sequences = Sequences(connection, source);
-        var tables = Tables(connection, source);
-        var defaults = Defaults(connection, source);
-        var owned = Owned(connection, source);
-        var identities = Identities(connection, source);
-        var keys = Keys(connection, source);
-        var views = Views(connection, source);
+        var sequences = await SequencesAsync(connection, source, cancellation);
+        var tables = await TablesAsync(connection, source, cancellation);
+        var defaults = await DefaultsAsync(connection, source, cancellation);
+        var owned = await OwnedAsync(connection, source, cancellation);
+        var identities = await IdentitiesAsync(connection, source, cancellation);
+        var keys = await KeysAsync(connection, source, cancellation);
+        var views = await ViewsAsync(connection, source, cancellation);
 
-        Path(connection, target);
+        await PathAsync(connection, target, cancellation);
 
         var into = PostgreSqlNames.Quote(target);
         var from = PostgreSqlNames.Quote(source);
 
         foreach (var sequence in sequences)
         {
-            Execute(connection, $"""
+            await ExecuteAsync(connection, $"""
                 CREATE SEQUENCE {into}.{PostgreSqlNames.Quote(sequence.Name)} AS {sequence.Type}
                 INCREMENT BY {sequence.Increment} MINVALUE {sequence.Min} MAXVALUE {sequence.Max} START WITH {sequence.Start} CACHE {sequence.Cache}
                 {(sequence.Cycle ? "CYCLE" : "NO CYCLE")}
-                """);
+                """, cancellation);
         }
 
         foreach (var table in tables)
         {
-            Execute(connection, $"CREATE TABLE {into}.{PostgreSqlNames.Quote(table.Name)} (LIKE {from}.{PostgreSqlNames.Quote(table.Name)} INCLUDING ALL)");
+            await ExecuteAsync(connection, $"CREATE TABLE {into}.{PostgreSqlNames.Quote(table.Name)} (LIKE {from}.{PostgreSqlNames.Quote(table.Name)} INCLUDING ALL)", cancellation);
         }
 
         // a default that draws from a sequence would draw from the source's
         foreach (var (table, column, expression) in defaults)
         {
-            Execute(connection, $"ALTER TABLE {into}.{PostgreSqlNames.Quote(table)} ALTER COLUMN {PostgreSqlNames.Quote(column)} SET DEFAULT {expression}");
+            await ExecuteAsync(connection, $"ALTER TABLE {into}.{PostgreSqlNames.Quote(table)} ALTER COLUMN {PostgreSqlNames.Quote(column)} SET DEFAULT {expression}", cancellation);
         }
 
         foreach (var (sequence, table, column) in owned)
         {
-            Execute(connection, $"ALTER SEQUENCE {into}.{PostgreSqlNames.Quote(sequence)} OWNED BY {into}.{PostgreSqlNames.Quote(table)}.{PostgreSqlNames.Quote(column)}");
+            await ExecuteAsync(connection, $"ALTER SEQUENCE {into}.{PostgreSqlNames.Quote(sequence)} OWNED BY {into}.{PostgreSqlNames.Quote(table)}.{PostgreSqlNames.Quote(column)}", cancellation);
         }
 
         foreach (var table in tables.Where(t => t.Columns.Length > 0))
         {
             var name = PostgreSqlNames.Quote(table.Name);
 
-            Execute(connection, $"INSERT INTO {into}.{name} ({table.Columns}) OVERRIDING SYSTEM VALUE SELECT {table.Columns} FROM {from}.{name}");
+            await ExecuteAsync(connection, $"INSERT INTO {into}.{name} ({table.Columns}) OVERRIDING SYSTEM VALUE SELECT {table.Columns} FROM {from}.{name}", cancellation);
         }
 
         foreach (var sequence in sequences)
         {
-            Execute(connection, $"SELECT setval({PostgreSqlNames.Literal($"{into}.{PostgreSqlNames.Quote(sequence.Name)}")}, {sequence.Last}, {(sequence.Called ? "true" : "false")})");
+            await ExecuteAsync(connection, $"SELECT setval({PostgreSqlNames.Literal($"{into}.{PostgreSqlNames.Quote(sequence.Name)}")}, {sequence.Last}, {(sequence.Called ? "true" : "false")})", cancellation);
         }
 
         foreach (var identity in identities)
         {
             var table = PostgreSqlNames.Literal($"{into}.{PostgreSqlNames.Quote(identity.Table)}");
 
-            Execute(connection, $"SELECT setval(pg_get_serial_sequence({table}, {PostgreSqlNames.Literal(identity.Column)}), {identity.Last}, {(identity.Called ? "true" : "false")})");
+            await ExecuteAsync(connection, $"SELECT setval(pg_get_serial_sequence({table}, {PostgreSqlNames.Literal(identity.Column)}), {identity.Last}, {(identity.Called ? "true" : "false")})", cancellation);
         }
 
         foreach (var (table, name, definition) in keys)
         {
-            Execute(connection, $"ALTER TABLE {into}.{PostgreSqlNames.Quote(table)} ADD CONSTRAINT {PostgreSqlNames.Quote(name)} {definition}");
+            await ExecuteAsync(connection, $"ALTER TABLE {into}.{PostgreSqlNames.Quote(table)} ADD CONSTRAINT {PostgreSqlNames.Quote(name)} {definition}", cancellation);
         }
 
         foreach (var (name, materialized, definition) in views)
         {
-            Execute(connection, $"CREATE {(materialized ? "MATERIALIZED VIEW" : "VIEW")} {into}.{PostgreSqlNames.Quote(name)} AS {definition.TrimEnd().TrimEnd(';')}");
+            await ExecuteAsync(connection, $"CREATE {(materialized ? "MATERIALIZED VIEW" : "VIEW")} {into}.{PostgreSqlNames.Quote(name)} AS {definition.TrimEnd().TrimEnd(';')}", cancellation);
         }
 
-        transaction.Commit();
+        await transaction.CommitAsync(cancellation);
     }
 
     #region Reading the source
@@ -112,21 +112,21 @@ internal static class SchemaCopy
     /// The sequences of the schema but those an identity column keeps for
     /// itself, which come with their table.
     /// </summary>
-    private static List<Sequence> Sequences(NpgsqlConnection connection, string schema)
+    private static async ValueTask<List<Sequence>> SequencesAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
     {
         var found = new List<Sequence>();
 
-        foreach (var row in Rows(connection, """
+        foreach (var row in await RowsAsync(connection, """
                      SELECT c.relname, format_type(s.seqtypid, NULL), s.seqstart, s.seqincrement, s.seqmin, s.seqmax, s.seqcache, s.seqcycle
                      FROM pg_sequence s JOIN pg_class c ON c.oid = s.seqrelid JOIN pg_namespace n ON n.oid = c.relnamespace
                      WHERE n.nspname = @schema
                        AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'i')
                      ORDER BY c.oid
-                     """, schema))
+                     """, schema, cancellation))
         {
             var name = (string)row[0];
 
-            var (last, called) = Position(connection, $"{PostgreSqlNames.Quote(schema)}.{PostgreSqlNames.Quote(name)}");
+            var (last, called) = await PositionAsync(connection, $"{PostgreSqlNames.Quote(schema)}.{PostgreSqlNames.Quote(name)}", cancellation);
 
             found.Add(new Sequence(name, (string)row[1], (long)row[2], (long)row[3], (long)row[4], (long)row[5], (long)row[6], (bool)row[7], last, called));
         }
@@ -138,8 +138,8 @@ internal static class SchemaCopy
     /// The tables of the schema, in the order they were made, each with the
     /// columns a row is copied by - all but those it computes itself.
     /// </summary>
-    private static List<Table> Tables(NpgsqlConnection connection, string schema)
-        => [.. Rows(connection, """
+    private static async ValueTask<List<Table>> TablesAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => [.. (await RowsAsync(connection, """
                SELECT t.relname, COALESCE(string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum) FILTER (WHERE a.attgenerated = ''), '')
                FROM pg_class t
                JOIN pg_namespace n ON n.oid = t.relnamespace
@@ -147,13 +147,13 @@ internal static class SchemaCopy
                WHERE n.nspname = @schema AND t.relkind IN ('r', 'p') AND NOT t.relispartition
                GROUP BY t.oid, t.relname
                ORDER BY t.oid
-               """, schema).Select(r => new Table((string)r[0], (string)r[1]))];
+               """, schema, cancellation)).Select(r => new Table((string)r[0], (string)r[1]))];
 
     /// <summary>
     /// The defaults that draw from a sequence, as the catalog prints them.
     /// </summary>
-    private static List<(string Table, string Column, string Expression)> Defaults(NpgsqlConnection connection, string schema)
-        => [.. Rows(connection, """
+    private static async ValueTask<List<(string Table, string Column, string Expression)>> DefaultsAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => [.. (await RowsAsync(connection, """
                SELECT t.relname, a.attname, pg_get_expr(ad.adbin, ad.adrelid)
                FROM pg_attrdef ad
                JOIN pg_class t ON t.oid = ad.adrelid
@@ -162,13 +162,13 @@ internal static class SchemaCopy
                WHERE n.nspname = @schema AND t.relkind IN ('r', 'p') AND NOT t.relispartition
                  AND EXISTS (SELECT 1 FROM pg_depend d JOIN pg_class s ON s.oid = d.refobjid AND s.relkind = 'S'
                              WHERE d.classid = 'pg_attrdef'::regclass AND d.objid = ad.oid)
-               """, schema).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
+               """, schema, cancellation)).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
 
     /// <summary>
     /// The sequences a column owns, such as those of a <c>serial</c>.
     /// </summary>
-    private static List<(string Sequence, string Table, string Column)> Owned(NpgsqlConnection connection, string schema)
-        => [.. Rows(connection, """
+    private static async ValueTask<List<(string Sequence, string Table, string Column)>> OwnedAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => [.. (await RowsAsync(connection, """
                SELECT s.relname, t.relname, a.attname
                FROM pg_depend d
                JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
@@ -176,29 +176,29 @@ internal static class SchemaCopy
                JOIN pg_class t ON t.oid = d.refobjid
                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
                WHERE n.nspname = @schema AND d.deptype = 'a' AND d.classid = 'pg_class'::regclass AND d.refclassid = 'pg_class'::regclass
-               """, schema).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
+               """, schema, cancellation)).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
 
     /// <summary>
     /// The identity columns, with where their sequence is.
     /// </summary>
-    private static List<Identity> Identities(NpgsqlConnection connection, string schema)
+    private static async ValueTask<List<Identity>> IdentitiesAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
     {
         var found = new List<Identity>();
 
-        foreach (var row in Rows(connection, """
+        foreach (var row in await RowsAsync(connection, """
                      SELECT t.relname, a.attname, pg_get_serial_sequence(quote_ident(n.nspname) || '.' || quote_ident(t.relname), a.attname)
                      FROM pg_attribute a
                      JOIN pg_class t ON t.oid = a.attrelid
                      JOIN pg_namespace n ON n.oid = t.relnamespace
                      WHERE n.nspname = @schema AND t.relkind IN ('r', 'p') AND NOT t.relispartition AND a.attidentity <> '' AND a.attnum > 0 AND NOT a.attisdropped
-                     """, schema))
+                     """, schema, cancellation))
         {
             if (row[2] is not string sequence)
             {
                 continue;
             }
 
-            var (last, called) = Position(connection, sequence);
+            var (last, called) = await PositionAsync(connection, sequence, cancellation);
 
             found.Add(new Identity((string)row[0], (string)row[1], last, called));
         }
@@ -206,36 +206,36 @@ internal static class SchemaCopy
         return found;
     }
 
-    private static List<(string Table, string Name, string Definition)> Keys(NpgsqlConnection connection, string schema)
-        => [.. Rows(connection, """
+    private static async ValueTask<List<(string Table, string Name, string Definition)>> KeysAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => [.. (await RowsAsync(connection, """
                SELECT t.relname, c.conname, pg_get_constraintdef(c.oid)
                FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace
                WHERE n.nspname = @schema AND c.contype = 'f' AND NOT t.relispartition
                ORDER BY c.oid
-               """, schema).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
+               """, schema, cancellation)).Select(r => ((string)r[0], (string)r[1], (string)r[2]))];
 
     /// <summary>
     /// The views, in the order they were made - which a view made of another
     /// one comes after.
     /// </summary>
-    private static List<(string Name, bool Materialized, string Definition)> Views(NpgsqlConnection connection, string schema)
-        => [.. Rows(connection, """
+    private static async ValueTask<List<(string Name, bool Materialized, string Definition)>> ViewsAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => [.. (await RowsAsync(connection, """
                SELECT c.relname, c.relkind = 'm', pg_get_viewdef(c.oid)
                FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                WHERE n.nspname = @schema AND c.relkind IN ('v', 'm')
                ORDER BY c.oid
-               """, schema).Select(r => ((string)r[0], (bool)r[1], (string)r[2]))];
+               """, schema, cancellation)).Select(r => ((string)r[0], (bool)r[1], (string)r[2]))];
 
     /// <summary>
     /// Where a sequence is: its last value, and whether that was handed out.
     /// </summary>
-    private static (long Last, bool Called) Position(NpgsqlConnection connection, string sequence)
+    private static async ValueTask<(long Last, bool Called)> PositionAsync(NpgsqlConnection connection, string sequence, CancellationToken cancellation)
     {
-        using var command = new NpgsqlCommand($"SELECT last_value, is_called FROM {sequence}", connection);
+        await using var command = new NpgsqlCommand($"SELECT last_value, is_called FROM {sequence}", connection);
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-        reader.Read();
+        await reader.ReadAsync(cancellation);
 
         return (reader.GetInt64(0), reader.GetBoolean(1));
     }
@@ -244,27 +244,27 @@ internal static class SchemaCopy
 
     #region Helpers
 
-    private static void Path(NpgsqlConnection connection, string schema)
-        => Execute(connection, $"SET LOCAL search_path TO {PostgreSqlNames.Quote(schema)}");
+    private static ValueTask PathAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+        => ExecuteAsync(connection, $"SET LOCAL search_path TO {PostgreSqlNames.Quote(schema)}", cancellation);
 
-    private static void Execute(NpgsqlConnection connection, string sql)
+    private static async ValueTask ExecuteAsync(NpgsqlConnection connection, string sql, CancellationToken cancellation)
     {
-        using var command = new NpgsqlCommand(sql, connection);
+        await using var command = new NpgsqlCommand(sql, connection);
 
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellation);
     }
 
-    private static List<object[]> Rows(NpgsqlConnection connection, string sql, string schema)
+    private static async ValueTask<List<object[]>> RowsAsync(NpgsqlConnection connection, string sql, string schema, CancellationToken cancellation)
     {
-        using var command = new NpgsqlCommand(sql, connection);
+        await using var command = new NpgsqlCommand(sql, connection);
 
         command.Parameters.AddWithValue("schema", schema);
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
         var rows = new List<object[]>();
 
-        while (reader.Read())
+        while (await reader.ReadAsync(cancellation))
         {
             var row = new object[reader.FieldCount];
 

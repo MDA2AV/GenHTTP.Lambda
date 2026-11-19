@@ -9,14 +9,14 @@
 // The files go into the workspace, through the few things this class is handed
 // to do with it; the list of them - names, types, who may remove which - is a
 // table in the database, read and written through Entity Framework Core. Every
-// call makes a context on a connection of its own, uses it synchronously and
-// lets it go.
+// call makes a context on a connection of its own, awaits what it asks of it
+// and lets it go.
 
 using System.Globalization;
 using System.Security.Cryptography;
 
 /// <summary>What the gallery may do with the workspace.</summary>
-public record Storage(Action<string, byte[]> WriteBytes, Action<string> Delete);
+public record Storage(Func<string, byte[], ValueTask> WriteBytes, Func<string, ValueTask> Delete);
 
 /// <summary>One upload as everybody sees it.</summary>
 /// <param name="Url">Where it is served, relative to the lambda</param>
@@ -87,17 +87,17 @@ public sealed class Gallery(Storage storage)
         [".txt"] = "text/plain"
     };
 
-    public List<Upload> List()
+    public async ValueTask<List<Upload>> ListAsync()
     {
-        using var db = new GalleryContext(Database.GetConnection());
+        await using var db = new GalleryContext(await Database.GetConnectionAsync());
 
         // a projection reads the columns it names - the hash stays in the table
-        return db.Uploads.OrderByDescending(u => u.Uploaded)
-                         .Select(u => new Upload(u.Id, u.Name, u.Size, u.Type, u.Uploaded, u.Url))
-                         .ToList();
+        return await db.Uploads.OrderByDescending(u => u.Uploaded)
+                               .Select(u => new Upload(u.Id, u.Name, u.Size, u.Type, u.Uploaded, u.Url))
+                               .ToListAsync();
     }
 
-    public async Task<Uploaded> UploadAsync(string name, Stream body)
+    public async ValueTask<Uploaded> UploadAsync(string name, Stream body)
     {
         // what the browser calls the file, without any folders in front of it
         name = (name ?? "").Trim().Split('/', '\\')[^1];
@@ -112,7 +112,7 @@ public sealed class Gallery(Storage storage)
                 $"Only {string.Join(", ", Types.Keys)} files can be uploaded here.");
         }
 
-        // the body is awaited: it comes over the network, which the database does not
+        // no further than the limit, as it comes over the network
         var content = await ReadAsync(body);
 
         if (content.Length == 0)
@@ -139,29 +139,29 @@ public sealed class Gallery(Storage storage)
         };
 
         // the file first: an entry without its file would be a broken picture
-        storage.WriteBytes($"uploads/{stored}", content);
+        await storage.WriteBytes($"uploads/{stored}", content);
 
-        using var db = new GalleryContext(Database.GetConnection());
+        await using var db = new GalleryContext(await Database.GetConnectionAsync());
 
         db.Uploads.Add(entry);
 
         // the oldest go, file and entry, once there are too many
-        foreach (var old in db.Uploads.OrderByDescending(u => u.Uploaded).Skip(MaxUploads - 1).ToList())
+        foreach (var old in await db.Uploads.OrderByDescending(u => u.Uploaded).Skip(MaxUploads - 1).ToListAsync())
         {
-            Drop(db, old);
+            await DropAsync(db, old);
         }
 
-        // the new entry and the old ones going are one SaveChanges, and so one transaction
-        db.SaveChanges();
+        // the new entry and the old ones going are one SaveChangesAsync, and so one transaction
+        await db.SaveChangesAsync();
 
         return new Uploaded(entry.Public(), key);
     }
 
-    public void Remove(string id, string key)
+    public async ValueTask RemoveAsync(string id, string key)
     {
-        using var db = new GalleryContext(Database.GetConnection());
+        await using var db = new GalleryContext(await Database.GetConnectionAsync());
 
-        var entry = db.Uploads.Find(id ?? "")
+        var entry = await db.Uploads.FindAsync(id ?? "")
                  ?? throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
 
         if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entry.KeyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
@@ -169,16 +169,16 @@ public sealed class Gallery(Storage storage)
             throw new ProviderException(ResponseStatus.Forbidden, "Only whoever uploaded this can remove it.");
         }
 
-        Drop(db, entry);
+        await DropAsync(db, entry);
 
-        db.SaveChanges();
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
     /// Reads the body, but never more than the limit - a request announcing a
     /// small file and sending a large one is cut off all the same.
     /// </summary>
-    private static async Task<byte[]> ReadAsync(Stream body)
+    private static async ValueTask<byte[]> ReadAsync(Stream body)
     {
         using var buffer = new MemoryStream();
 
@@ -201,13 +201,13 @@ public sealed class Gallery(Storage storage)
     }
 
     /// <summary>
-    /// Removes an entry with the next SaveChanges, and its file straight away.
+    /// Removes an entry with the next SaveChangesAsync, and its file straight away.
     /// </summary>
-    private void Drop(GalleryContext db, UploadEntry entry)
+    private async ValueTask DropAsync(GalleryContext db, UploadEntry entry)
     {
         db.Uploads.Remove(entry);
 
-        storage.Delete(entry.Url.Replace("files/", "uploads/"));
+        await storage.Delete(entry.Url.Replace("files/", "uploads/"));
     }
 
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));

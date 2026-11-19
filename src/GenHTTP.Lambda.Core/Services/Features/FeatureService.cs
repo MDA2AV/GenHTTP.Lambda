@@ -255,7 +255,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         }
         catch
         {
-            RemoveData(lambdaId, entity.Id);
+            await RemoveDataAsync(lambdaId, entity.Id);
 
             storage.DeleteFeature(lambdaId, entity.Id);
 
@@ -525,13 +525,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// workspace - wherever the integrations keep them, letting go of the
     /// connections to its database before its folder goes.
     /// </summary>
-    private void RemoveData(long lambdaId, long featureId)
+    private async ValueTask RemoveDataAsync(long lambdaId, long featureId)
     {
-        secrets.RemoveCopy(lambdaId, featureId);
+        await secrets.RemoveCopyAsync(lambdaId, featureId);
 
-        stores.RemoveCopy(lambdaId, featureId);
+        await stores.RemoveCopyAsync(lambdaId, featureId);
 
-        workspaces.RemoveCopy(lambdaId, featureId);
+        await workspaces.RemoveCopyAsync(lambdaId, featureId);
     }
 
     /// <remarks>
@@ -553,7 +553,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             }
 
             // and the secrets, so the preview can call what the lambda calls
-            secrets.Copy(lambdaId, featureId);
+            await secrets.CopyAsync(lambdaId, featureId, cancellation);
 
             // and the database, so the preview can change its records - and
             // its schema - without the lambda's visitors noticing
@@ -620,7 +620,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             return new FeatureMerge(name, false, null, check.Diagnostics, null);
         }
 
-        var (version, lambdaId, origin) = Merged(privateKey, feature, note, code, revision);
+        var (version, lambdaId, featureId, origin) = Merged(privateKey, feature, note, code, revision);
+
+        // the version is there from here on: what follows is seen through
+        // however the caller fares, or a feature would stay behind that was merged
+        await RemoveAsync(lambdaId, featureId);
 
         DeploymentResult? deployment = null;
 
@@ -643,9 +647,10 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     }
 
     /// <summary>
-    /// Makes the feature the next version, in its turn.
+    /// Makes the feature the next version, in its turn - its data is
+    /// removed once the turn is over.
     /// </summary>
-    private (LambdaVersionInfo Version, long LambdaId, string Origin) Merged(string privateKey, string feature, VersionNote? note, string code, int revision)
+    private (LambdaVersionInfo Version, long LambdaId, long FeatureId, string Origin) Merged(string privateKey, string feature, VersionNote? note, string code, int revision)
     {
         var (database, lambda, entity, turn) = Locked(privateKey, feature);
 
@@ -668,16 +673,30 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // newest, by the same turn every save of the lambda takes
         var version = meta.Save(privateKey, code, merged, after: entity.BaseVersion);
 
-        // the version is there from here on: what follows is seen through
-        // however the caller fares, or a feature would stay behind that was merged
-        Remove(database, lambda.Id, entity);
+        Forget(database, lambda.Id, entity);
 
         logger.LogInformation("Merged feature #{FeatureId} of lambda #{LambdaId} as version {Version}", entity.Id, lambda.Id, version.Version);
 
-        return (version, lambda.Id, origin);
+        return (version, lambda.Id, entity.Id, origin);
     }
 
-    public string Delete(string privateKey, string feature)
+    public async ValueTask<string> DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default)
+    {
+        var (lambdaId, featureId, name) = Deleted(privateKey, feature);
+
+        // seen through however the caller fares, once the feature is gone
+        await RemoveAsync(lambdaId, featureId);
+
+        logger.LogInformation("Deleted feature #{FeatureId} of lambda #{LambdaId}", featureId, lambdaId);
+
+        return name;
+    }
+
+    /// <summary>
+    /// Deletes the feature, in its turn - its data is removed once the turn
+    /// is over.
+    /// </summary>
+    private (long LambdaId, long FeatureId, string Name) Deleted(string privateKey, string feature)
     {
         var (database, lambda, entity, turn) = Locked(privateKey, feature);
 
@@ -685,11 +704,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         using var held = turn;
 
-        Remove(database, lambda.Id, entity);
+        Forget(database, lambda.Id, entity);
 
-        logger.LogInformation("Deleted feature #{FeatureId} of lambda #{LambdaId}", entity.Id, lambda.Id);
-
-        return entity.Name;
+        return (lambda.Id, entity.Id, entity.Name);
     }
 
     public int RunMaintenance(DateTime now)
@@ -737,14 +754,17 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return taken;
     }
 
-    public int Sweep()
+    public async ValueTask<int> SweepAsync(CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        HashSet<long> known;
 
         // a row is written before its folder and removed before it, so a
         // folder without a row is one left behind - by a request that was
         // still writing to the copy of the data when its feature went
-        var known = (database.Features.AsNoTracking().Select(f => f.Id).ToList()).ToHashSet();
+        using (var database = databases.CreateDbContext())
+        {
+            known = [.. database.Features.AsNoTracking().Select(f => f.Id)];
+        }
 
         var swept = 0;
 
@@ -754,7 +774,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             {
                 deployments.EvictPreview(lambdaId, featureId);
 
-                RemoveData(lambdaId, featureId);
+                await RemoveDataAsync(lambdaId, featureId);
 
                 storage.DeleteFeature(lambdaId, featureId);
 
@@ -844,30 +864,38 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return trimmed;
     }
 
-    /// <remarks>
-    /// The row goes first, so no request finds the preview from then on; the
-    /// handler is let go twice, because a request that found it a moment
-    /// before may still be building it, and would otherwise leave a handler
-    /// behind for a feature that no longer exists.
-    /// </remarks>
-    private void Remove(LambdaDbContext database, long lambdaId, FeatureEntity feature)
+    /// <summary>
+    /// Removes the row of a feature, in its turn, so no request finds its
+    /// preview from then on.
+    /// </summary>
+    private void Forget(LambdaDbContext database, long lambdaId, FeatureEntity feature)
     {
-        // the copy of the secrets cascades in the schema, but only where the
-        // connection has foreign keys switched on
-        // its copy of the data, wherever it is kept, before its notes go
-        secrets.RemoveCopy(lambdaId, feature.Id);
-
         database.Features.Remove(feature);
 
         database.SaveChanges();
 
         deployments.EvictPreview(lambdaId, feature.Id);
+    }
 
-        RemoveData(lambdaId, feature.Id);
+    /// <summary>
+    /// Removes what a feature whose row is gone kept: its copy of the data,
+    /// wherever the integrations keep it, and its files.
+    /// </summary>
+    /// <remarks>
+    /// After its turn, which is a lock and is not held across what an
+    /// integration awaits. A copy of its data that its turn left behind -
+    /// one being written by a request that found the preview a moment
+    /// before - is what the sweep removes. The handler is let go twice,
+    /// because such a request may still be building it, and would otherwise
+    /// leave a handler behind for a feature that no longer exists.
+    /// </remarks>
+    private async ValueTask RemoveAsync(long lambdaId, long featureId)
+    {
+        await RemoveDataAsync(lambdaId, featureId);
 
-        storage.DeleteFeature(lambdaId, feature.Id);
+        storage.DeleteFeature(lambdaId, featureId);
 
-        deployments.EvictPreview(lambdaId, feature.Id);
+        deployments.EvictPreview(lambdaId, featureId);
     }
 
     /// <summary>

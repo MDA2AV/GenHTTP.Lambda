@@ -62,7 +62,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             logger.LogInformation("Prepared {Count} demo(s)", seeded);
         }
 
-        Retire();
+        await RetireAsync(cancellation);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// something nobody maintains. The examples this tier replaced leave the
     /// same way. Only the tier is gone by: nothing else is ever put into it.
     /// </remarks>
-    private void Retire()
+    private async ValueTask RetireAsync(CancellationToken cancellation)
     {
         var wanted = DemoCatalog.All.Select(e => e.Key).ToHashSet(StringComparer.Ordinal);
 
@@ -94,7 +94,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
                 database.SaveChanges();
 
-                meta.Delete(lambda.PrivateKey);
+                await meta.DeleteAsync(lambda.PrivateKey, cancellation: cancellation);
 
                 logger.LogInformation("Retired demo {Lambda}", lambda.PublicKey);
             }
@@ -115,9 +115,9 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             return false;
         }
 
-        ProvideSecrets(demo);
+        await ProvideSecretsAsync(demo, cancellation);
 
-        ProvideDatabase(demo);
+        await ProvideDatabaseAsync(demo, cancellation);
 
         PublishSource(demo);
 
@@ -215,7 +215,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// else may change a demo. A secret that is there already is kept, so
     /// what the demo sealed with it stays readable across restarts.
     /// </remarks>
-    private void ProvideSecrets(LambdaDemo demo)
+    private async ValueTask ProvideSecretsAsync(LambdaDemo demo, CancellationToken cancellation)
     {
         if (demo.Secrets is not { Count: > 0 } wanted)
         {
@@ -242,11 +242,11 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         secrets.Invalidate(id);
 
-        var present = (secrets.List(id, null)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
+        var present = (await secrets.ListAsync(id, null, cancellation)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
 
         foreach (var name in wanted.Where(n => !present.Contains(n)))
         {
-            secrets.Store(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            await secrets.StoreAsync(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), cancellation);
 
             logger.LogInformation("Set secret {Name} of demo {Demo}", name, demo.Id);
         }
@@ -260,7 +260,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// Past the tier like the secrets. What a demo's visitors wrote into its
     /// database stays across restarts and new versions; its code migrates it.
     /// </remarks>
-    private void ProvideDatabase(LambdaDemo demo)
+    private async ValueTask ProvideDatabaseAsync(LambdaDemo demo, CancellationToken cancellation)
     {
         if (!demo.Database)
         {
@@ -273,12 +273,12 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         var store = database.DataStores.FirstOrDefault(s => s.LambdaId == id && s.Kind == DataKinds.DatabaseId);
 
-        if (store is { Enabled: true } && stores.Exists(id))
+        if (store is { Enabled: true } && await stores.ExistsAsync(id, cancellation))
         {
             return;
         }
 
-        stores.Create(id);
+        await stores.CreateAsync(id, cancellation);
 
         if (store == null)
         {

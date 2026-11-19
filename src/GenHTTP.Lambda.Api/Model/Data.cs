@@ -31,7 +31,7 @@ public sealed record DataStoreResponse(
 
 [Summary("A secret, as anybody but the lambda gets to see it: never its value.")]
 public sealed record SecretResponse(
-    [Summary("What the code reads it by: `Secret.Read(\"STRIPE_KEY\")`")]
+    [Summary("What the code reads it by: `Secret.ReadAsync(\"STRIPE_KEY\")`")]
     string Name,
     [Summary("When it was first stored")]
     DateTime Created,
@@ -47,11 +47,11 @@ public sealed record SecretListingResponse(
     bool Enabled,
     [Summary("What is stored, by name")]
     List<SecretResponse> Secrets,
-    [Summary("Every name the code reads with `Secret.Read(\"…\")` or `Secret.Exists(\"…\")` as a literal - in the version online and the newest one, or in the feature's files")]
+    [Summary("Every name the code reads with `Secret.ReadAsync(\"…\")` or `Secret.ExistsAsync(\"…\")` - or their plain forms - as a literal - in the version online and the newest one, or in the feature's files")]
     List<string> Used,
-    [Summary("The names the code reads that have no value, and that it does not ask about with `Secret.Exists` first: what somebody still has to enter, or the code that reads them fails")]
+    [Summary("The names the code reads that have no value, and that it does not ask about with `Secret.ExistsAsync` first: what somebody still has to enter, or the code that reads them fails")]
     List<string> Missing,
-    [Summary("The names the code asks about with `Secret.Exists` that have no value: it does without them")]
+    [Summary("The names the code asks about with `Secret.ExistsAsync` that have no value: it does without them")]
     List<string> Optional,
     [Summary("How many secrets a lambda may keep")]
     int Limit
@@ -73,7 +73,7 @@ public sealed record DatabaseResponse(
     long QuotaBytes,
     [Summary("Every table and view, tables first")]
     List<DatabaseTableResponse> Tables,
-    [Summary("Whether the code connects to it with `Database.GetConnection()` - in the version online and the newest one, or in the feature's files")]
+    [Summary("Whether the code connects to it with `Database.GetConnectionAsync()` - in the version online and the newest one, or in the feature's files")]
     bool Used
 );
 
