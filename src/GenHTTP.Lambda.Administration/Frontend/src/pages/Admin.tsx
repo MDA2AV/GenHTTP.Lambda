@@ -279,7 +279,7 @@ function mark(id: SectionId, overview: AdminOverview | null): Pick<NavEntry, 'ma
     case 'blocks':
       return attention.youAreBlocked
         ? { calls: 'problem', marker: <Dot tone="problem" title="Your own address is blocked" /> }
-        : attention.addressBlocks > 0 ? { marker: <Count title={`${attention.addressBlocks} blocked`}>{attention.addressBlocks}</Count> } : {};
+        : {};
     case 'storage': {
       const state = diskState(overview.disk);
 
