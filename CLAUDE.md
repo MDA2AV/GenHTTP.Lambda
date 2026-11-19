@@ -237,7 +237,10 @@ the environment:
   pages every installation shares read the rest from `/system` (`operator`),
   and leave out what is not there.
 - **Docker**: each host has its Dockerfile (`src/<host>/Dockerfile`, built
-  from the root). The cloud's operations are in `deploy/cloud` - one compose
+  from the root). **The community image runs on GenHTTP's internal engine -
+  decided by the owner** (`LAMBDA_ENGINE=internal`, Kestrel before): io_uring
+  is blocked by the default seccomp profile of container runtimes, and an
+  operator may still choose `ioxide` or `kestrel`. The cloud's operations are in `deploy/cloud` - one compose
   file with the build agent, its `.env`, `deploy.sh` and `set-token.sh` - so
   the root holds nothing only genhttp.dev needs; its compose file names the
   project (`genhttplambda`), since the containers and the data volume are

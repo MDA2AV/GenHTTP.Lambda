@@ -9,6 +9,7 @@
 
         <PackageVersion Include="GenHTTP.Full.Ioxide" Version="11.3.0" />
         <PackageVersion Include="GenHTTP.Engine.Kestrel" Version="11.3.0" />
+        <PackageVersion Include="GenHTTP.Engine.Internal" Version="11.3.0" />
 
         <!-- what the contracts of the integrations serve files as, without the rest of the framework -->
         <PackageVersion Include="GenHTTP.Api" Version="11.3.0" />

@@ -80,10 +80,11 @@ RUN dotnet publish src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj 
 # compiled with Roslyn at runtime and reference the assemblies found here.
 FROM mcr.microsoft.com/dotnet/aspnet:11.0
 
-# Kestrel rather than the (faster) io_uring engine: container runtimes block
-# io_uring in their default seccomp profile, and a platform that runs code
-# written by strangers is the last place to hand out a weaker one. Set
-# LAMBDA_ENGINE=ioxide where io_uring is available and allowed.
+# GenHTTP's internal engine rather than the (faster) io_uring one: container
+# runtimes block io_uring in their default seccomp profile, and a platform that
+# runs code written by strangers is the last place to hand out a weaker one.
+# Set LAMBDA_ENGINE=ioxide where io_uring is available and allowed, or kestrel
+# for ASP.NET Core's.
 #
 # No LAMBDA_PUBLIC_URL: an installation that names its address answers at that
 # name only, so one reached by its IP address before it was set would answer
@@ -92,7 +93,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0
 ENV HOME=/home/lambda \
     LAMBDA_PORT=8080 \
     LAMBDA_DATA_DIRECTORY=/data \
-    LAMBDA_ENGINE=kestrel \
+    LAMBDA_ENGINE=internal \
     DOTNET_gcServer=1
 
 WORKDIR /app
