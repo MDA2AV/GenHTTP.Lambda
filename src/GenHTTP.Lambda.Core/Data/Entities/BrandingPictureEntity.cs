@@ -20,7 +20,12 @@ public sealed class BrandingPictureEntity
     /// </summary>
     public required string Type { get; set; }
 
-    public required byte[] Content { get; set; }
+    /// <summary>
+    /// What the picture held while pictures were rows - empty since they are
+    /// files of the files integration (<c>branding/{purpose}</c>), and left
+    /// for the platform to move out as it starts.
+    /// </summary>
+    public byte[] Content { get; set; } = [];
 
     /// <summary>
     /// When it was uploaded, which names the version of its address.

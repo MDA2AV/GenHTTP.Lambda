@@ -102,14 +102,14 @@ public sealed class StoredSession
 }
 
 /// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
-public sealed class MemberContext(SqliteConnection connection) : DbContext
+public sealed class MemberContext(DbConnection connection) : DbContext
 {
     public DbSet<Account> Accounts => Set<Account>();
 
     public DbSet<StoredSession> Sessions => Set<StoredSession>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite(connection, contextOwnsConnection: true);
+        => options.UseDatabase(connection);
 
     // every time as ISO 8601 text in UTC, which sorts and compares as it should
     protected override void ConfigureConventions(ModelConfigurationBuilder configuration)
@@ -118,7 +118,12 @@ public sealed class MemberContext(SqliteConnection connection) : DbContext
     // the tables and their columns are the migration's; this only maps them
     protected override void OnModelCreating(ModelBuilder model)
     {
-        model.Entity<Account>().ToTable("accounts").HasKey(a => a.Folded);
+        var account = model.Entity<Account>().ToTable("accounts");
+
+        account.HasKey(a => a.Folded);
+
+        // peppered or not as 0 or 1, which is how the table keeps it
+        account.Property(a => a.Peppered).HasConversion<int>();
 
         var session = model.Entity<StoredSession>().ToTable("sessions");
 
@@ -142,9 +147,6 @@ public sealed class Accounts(Func<string> readPepper)
     // your own lambda would rather refuse than forget somebody
     private const int MaxAccounts = 300;
 
-    // what SQLite answers when a key is taken
-    private const int ConstraintFailed = 19;
-
     #region Routes
 
     public (SignedIn Member, string Token) Register(Credentials credentials)
@@ -166,11 +168,13 @@ public sealed class Accounts(Func<string> readPepper)
 
         var pepper = readPepper();
 
+        var folded = Fold(name);
+
         using var db = new MemberContext(Database.GetConnection());
 
         db.Accounts.Add(new Account
         {
-            Folded = Fold(name),
+            Folded = folded,
             Name = name,
             Salt = Convert.ToBase64String(salt),
             Hash = Hash(password, salt, pepper),
@@ -182,10 +186,17 @@ public sealed class Accounts(Func<string> readPepper)
         {
             db.SaveChanges();
         }
-        catch (DbUpdateException e) when (e.InnerException is SqliteException { SqliteErrorCode: ConstraintFailed })
+        catch (DbUpdateException)
         {
             // the account is the name in capitals, the key of the table - so
             // two people registering the same name at once cannot both win.
+            // Every database says so in words of its own, so whether that is
+            // what failed is asked of the table: is the account there now?
+            if (!Taken(folded))
+            {
+                throw;
+            }
+
             // 409: the request was fine, it just clashes with what is there
             throw new ProviderException(ResponseStatus.Conflict, "That name is taken.");
         }
@@ -331,5 +342,13 @@ public sealed class Accounts(Func<string> readPepper)
     // what makes an account of a name: the same for "Jürgen" and "JÜRGEN", as
     // string.Equals with OrdinalIgnoreCase would say
     private static string Fold(string name) => name.ToUpperInvariant();
+
+    /// <summary>Whether an account of the name is there, asked on a connection of its own.</summary>
+    private static bool Taken(string folded)
+    {
+        using var db = new MemberContext(Database.GetConnection());
+
+        return db.Accounts.Any(a => a.Folded == folded);
+    }
 
 }

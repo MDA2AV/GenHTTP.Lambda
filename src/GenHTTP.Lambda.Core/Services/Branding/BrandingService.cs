@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Services.Meta;
 
 using Microsoft.EntityFrameworkCore;
@@ -14,15 +15,16 @@ namespace GenHTTP.Lambda.Services.Branding;
 /// <remarks>
 /// Read for every page served - the bar, the title, the icon of the tab -
 /// so held in memory once it was read, the picture with it, and only written
-/// through to the database: the name as a setting (<c>branding.name</c>), the
-/// logo as a row of its own. What is checked about either is
-/// <see cref="BrandChecks"/>'s.
+/// through: the name as a setting (<c>branding.name</c>), what the logo is as
+/// a row of its own, and the logo itself as a file of the files integration
+/// (<c>branding/logo</c>) - no picture is kept in a database. What is checked
+/// about either is <see cref="BrandChecks"/>'s.
 ///
 /// Where the host does not let the operator brand the installation, it is the
 /// platform's own whatever the database holds - a copy of the data of another
 /// installation brings nothing of its looks along - and changes are refused.
 /// </remarks>
-public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options) : IBrandingService
+public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases, IFileProvider files, LambdaOptions options) : IBrandingService
 {
     private const string NameKey = "branding.name";
 
@@ -71,7 +73,10 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
 
         var logo = database.BrandingPictures.AsNoTracking().FirstOrDefault(p => p.Purpose == LogoPurpose);
 
-        return Brand.Of(name, logo == null ? null : new BrandPicture(logo.Content, logo.Type, logo.Updated));
+        // the row's own bytes where the logo was not moved out of it yet
+        var content = logo == null ? null : files.Read(FileStores.Branding, PictureNames.Branding(LogoPurpose)) ?? (logo.Content.Length > 0 ? logo.Content : null);
+
+        return Brand.Of(name, logo == null || content == null ? null : new BrandPicture(content, logo.Type, logo.Updated));
     }
 
     #endregion
@@ -133,17 +138,19 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
         {
             var current = _current ?? Read();
 
+            files.Write(FileStores.Branding, PictureNames.Branding(LogoPurpose), logo.Content);
+
             using var database = databases.CreateDbContext();
 
             if (database.BrandingPictures.Find(LogoPurpose) is { } existing)
             {
                 existing.Type = logo.Type;
-                existing.Content = logo.Content;
+                existing.Content = [];
                 existing.Updated = logo.Updated;
             }
             else
             {
-                database.BrandingPictures.Add(new BrandingPictureEntity { Purpose = LogoPurpose, Type = logo.Type, Content = logo.Content, Updated = logo.Updated });
+                database.BrandingPictures.Add(new BrandingPictureEntity { Purpose = LogoPurpose, Type = logo.Type, Updated = logo.Updated });
             }
 
             database.SaveChanges();
@@ -171,6 +178,8 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
                 database.SaveChanges();
             }
 
+            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
+
             return _current = Brand.Of(current.Given, null);
         }
     }
@@ -197,6 +206,8 @@ public sealed class BrandingService(IDbContextFactory<LambdaDbContext> databases
             }
 
             database.SaveChanges();
+
+            files.Delete(FileStores.Branding, PictureNames.Branding(LogoPurpose));
 
             return _current = Brand.Platform;
         }

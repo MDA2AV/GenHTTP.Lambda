@@ -2,6 +2,10 @@ using System.Net;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Databases;
+using GenHTTP.Lambda.Integrations.Files;
+using GenHTTP.Lambda.Integrations.Secrets;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
@@ -37,10 +41,14 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// <para>
 /// What differs per installation is filled in: its addresses, what it is
 /// called, the tiers' labels and limits, whether lambdas answer by path, its
-/// terms and its operator's section.
+/// terms and its operator's section - and what its integrations add to the
+/// sections of what they keep (database, workspace, secrets), at the end of
+/// each. The code they teach is the same everywhere: a lambda names none of
+/// them.
 /// </para>
 /// </remarks>
-internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses)
+internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IDatabaseProvider database, IFileProvider files,
+                                    ISecretProvider secrets)
 {
     private IReadOnlySet<string>? _headings;
 
@@ -84,6 +92,12 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
         var terms = options.Terms is { } text
             ? $"\n## terms\n\nThe user accepts them with create_lambda's acceptTerms:\n\n{text.Trim()}\n"
             : "";
+
+        var context = new GuideContext(entry);
+
+        var stored = Added(database, context);
+        var kept = Added(files, context);
+        var sealedAway = Added(secrets, context);
 
         return $$"""
             # Platform guide
@@ -185,7 +199,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## database
 
-            SQLite, the lambda's own, for its records. enable_data 'database' makes it empty; switching it on or off restarts the lambda on its next request; while off, Database.GetConnection() throws. demo-crud shows it all: {{entry}} migrates, Store.cs maps and queries, resources/migrations/ holds the schema.
+            The lambda's own, for its records. enable_data 'database' makes it empty; switching it on or off restarts the lambda on its next request; while off, Database.GetConnection() throws. demo-crud shows it all: {{entry}} migrates, Store.cs maps and queries, resources/migrations/ holds the schema. Name no database: the code runs on any.
 
             The schema is Evolve migrations in resources/migrations/ (V1__Create_tasks.sql, V2__Add_due_date.sql), applied at the top of {{entry}} before anything is served:
 
@@ -199,20 +213,20 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - At the top level, a using declaration (using var) does not compile.
             - Never change an applied migration - Evolve refuses to start; a schema change is the next file. A preview migrates its feature's copy first.
             - A rollback runs older code on a newer schema: prefer additive changes - new tables, columns with a default - over dropping or renaming what an older version reads.
+            - Plain SQL: TEXT, INTEGER, BIGINT, BOOLEAN, DOUBLE PRECISION; keys you make (Guid text), no AUTOINCREMENT or SERIAL; unquoted names.
 
-            Records go through Entity Framework Core: a DbContext of yours mapping those tables on the connection handed in - class Records(SqliteConnection connection) : DbContext with options.UseSqlite(connection, contextOwnsConnection: true), used as using var db = new Records(Database.GetConnection()) per request or call, never kept in a shared field.
+            Records go through Entity Framework Core: a DbContext of yours mapping those tables on the connection handed in - class Records(DbConnection connection) : DbContext, options.UseDatabase(connection) in OnConfiguring, using var db = new Records(Database.GetConnection()) per request, never in a shared field.
 
             - Synchronous only: ToList, Find, SaveChanges, ExecuteUpdate - never ToListAsync, SaveChangesAsync or any other Async form.
             - Inside a DbContext, Database is the context's own: hand the connection in.
             - EnsureCreated, Migrate and EF's migrations are refused: a new property needs a migration first.
             - ExecuteUpdate(s => s.SetProperty(v => v.Votes, v => v.Votes + 1)) counts every request without a lock; add a row that may not exist inside db.Database.BeginTransaction().
-            - A taken unique value fails SaveChanges with a DbUpdateException over a SqliteException with SqliteErrorCode 19: answer 409. Keep times as ISO 8601 UTC text, as demo-crud does.
-            - Of EF's namespaces only the root, Metadata.Builders, ChangeTracking and Storage.ValueConversion; refused too: new SqliteConnection, UseSqlite with a connection string, ATTACH, VACUUM INTO.
-            - Past the data's room (see limits), writes fail with "database or disk is full".
+            - A taken unique value fails SaveChanges with a DbUpdateException: if the row is there now, answer 409 (demo-registration). Times as ISO 8601 UTC text through a converter (demo-crud).
+            - Of EF's namespaces only the root, Metadata.Builders, ChangeTracking and Storage.ValueConversion; a connection of your own is refused.{{stored}}
 
             ## workspace
 
-            The lambda's private files, as data: shared by every version, copied for a feature; switched off by the owner, every member throws. Workspace.ReadText / WriteText, ReadBytes / WriteBytes, Exists, Delete, List(), Folders(), CreateFolder(); Files(folder) serves it - Workspace.Files("uploads") for what users uploaded - and Workspace.Root is its path. No Append; nothing else on disk is reachable. From outside: upload_file, list_files, delete_file, or for a large file PUT {{home}}api/v1/lambdas/{privateKey}/files/{path}/content with the file as the body (curl -T), the path's slashes as %2F.
+            The lambda's private files, as data: shared by every version, copied for a feature; switched off by the owner, every member throws. Workspace.ReadText / WriteText, ReadBytes / WriteBytes, Exists, Delete, List(), Folders(), CreateFolder(); Files(folder) serves it - Workspace.Files("uploads") for what users uploaded. No Append, no path: nothing else on disk is reachable. From outside: upload_file, list_files, delete_file, or for a large file PUT {{home}}api/v1/lambdas/{privateKey}/files/{path}/content with the file as the body (curl -T), the path's slashes as %2F.{{kept}}
 
             ## secrets
 
@@ -221,7 +235,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - Off until enable_data 'secrets'. Secret.Read("STRIPE_KEY") returns the value or throws saying how to set it; Secret.Exists("STRIPE_KEY") checks. Read it where it is used, not into a static, so a change applies without a deploy.
             - Write Secret.Read("NAME"), switch secrets on, and tell the user which names to enter in the editor (Secrets; Keys and passwords in the simple view) and where to get the values: no value passes through you. list_secrets names the missing ones. A value the user hands you goes to set_secret.
             - Never put a value in code, resources, the workspace, a log line, a specification or a change, nor return, print or repeat it. Nothing shows one again.
-            - Names: letters, digits and underscores, no leading digit, case sensitive. Up to {{SecretVault.MaxSecrets}}, {{SecretVault.MaxValue / 1024}} KB each. An export reads Secret.Read("X") from the environment variable X.
+            - Names: letters, digits and underscores, no leading digit, case sensitive. Up to {{SecretVault.MaxSecrets}}, {{SecretVault.MaxValue / 1024}} KB each. An export reads Secret.Read("X") from the environment variable X.{{sealedAway}}
 
             ## connectivity
 
@@ -313,6 +327,13 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// What an integration adds to the end of its section, as lines of it -
+    /// or nothing, which leaves the section as the platform wrote it.
+    /// </summary>
+    private static string Added(IIntegration integration, GuideContext context)
+        => integration.Guide(context) is { Length: > 0 } added ? $"\n{added.Trim()}" : "";
 
     /// <summary>
     /// The headings of a document, by their words, whatever their case.

@@ -1,5 +1,7 @@
 using System.Reflection;
 
+using GenHTTP.Lambda.Integrations.Databases;
+
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
@@ -58,17 +60,18 @@ public static class ModuleCatalog
     ];
 
     /// <summary>
-    /// What a lambda talks to its database with - the connection
-    /// <c>Database.GetConnection()</c> hands out, Entity Framework Core to
-    /// keep its records with on that connection, and Evolve to migrate it.
+    /// What a lambda keeps its records with on the connection
+    /// <c>Database.GetConnection()</c> hands out - Entity Framework Core - and
+    /// migrates its database with - Evolve - whatever keeps it.
     /// </summary>
     /// <remarks>
     /// An exported project references their packages only where its code uses
-    /// them, and imports them only then - see <see cref="IsData"/>.
+    /// them, and imports them only then - see <see cref="IsData"/>. What the
+    /// connection is, is <c>System.Data.Common</c>, which every lambda imports;
+    /// the client library of its database is imported where its integration
+    /// says (<see cref="ImportsFor"/>).
     /// </remarks>
-    public static IReadOnlyList<string> Data { get; } = [SqliteImport, EntityFrameworkImport, EvolveImport];
-
-    internal const string SqliteImport = "Microsoft.Data.Sqlite";
+    public static IReadOnlyList<string> Data { get; } = [EntityFrameworkImport, EvolveImport];
 
     internal const string EntityFrameworkImport = "Microsoft.EntityFrameworkCore";
 
@@ -80,9 +83,16 @@ public static class ModuleCatalog
     public static bool IsData(string import) => Data.Contains(import);
 
     /// <summary>
-    /// The namespaces every lambda gets for free.
+    /// The namespaces every lambda gets for free, whatever keeps its database.
     /// </summary>
     public static IReadOnlyList<string> Imports { get; } = BuildImports();
+
+    /// <summary>
+    /// The namespaces a lambda bound to its database this way gets for free:
+    /// <see cref="Imports"/>, and what the integration of its database has it
+    /// import of its client library.
+    /// </summary>
+    public static IReadOnlyList<string> ImportsFor(DatabaseBinding binding) => binding.Namespaces.Count == 0 ? Imports : [.. Imports, .. binding.Namespaces];
 
     /// <summary>
     /// Loads every module assembly so it can be referenced by the compiler,
@@ -111,6 +121,9 @@ public static class ModuleCatalog
             "System.Collections",
             "System.Collections.Concurrent",
             "System.Collections.Generic",
+            // DbConnection, which Database.GetConnection() hands out, and the
+            // rest of what every database has
+            "System.Data.Common",
             "System.Globalization",
             "System.IO",
             "System.Linq",

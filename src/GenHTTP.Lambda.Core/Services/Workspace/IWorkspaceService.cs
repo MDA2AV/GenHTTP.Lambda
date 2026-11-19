@@ -1,12 +1,12 @@
 namespace GenHTTP.Lambda.Services.Workspace;
 
 /// <summary>
-/// The private directory of a lambda, as seen from outside it.
+/// The private files of a lambda, as seen from outside it.
 /// </summary>
 /// <remarks>
-/// The same directory the generated workspace class writes to from within a
-/// lambda, and bound by the same rules - so a file put here by hand behaves
-/// exactly like one the lambda wrote itself.
+/// The same files the lambda reads and writes from within, kept by the same
+/// integration and bound by the same rules - so a file put here by hand
+/// behaves exactly like one the lambda wrote itself.
 ///
 /// Every call can name a feature instead, and then works on that feature's
 /// copy of the workspace - the one its preview reads and writes - under the
@@ -40,7 +40,7 @@ public interface IWorkspaceService
     /// Finds a single file to stream as it is, or null if there is none by
     /// that name.
     /// </summary>
-    FileInfo? Find(long lambdaId, string path, long? featureId = null);
+    WorkspaceFile? Find(long lambdaId, string path, long? featureId = null);
 
     /// <summary>
     /// Writes a file, replacing it if it exists.

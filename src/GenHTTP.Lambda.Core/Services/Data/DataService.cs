@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Features;
@@ -16,7 +17,7 @@ namespace GenHTTP.Lambda.Services.Data;
 /// Keeps which kinds of data each lambda has, and measures what they hold.
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
-                                IFeatureService features, ISecretVault secrets, IDatabaseVault stores, IDeploymentService deployments,
+                                IFeatureService features, ISecretVault secrets, IDatabaseVault stores, IDatabaseProvider provider, IDeploymentService deployments,
                                 ILogger<DataService> logger) : IDataService
 {
 
@@ -239,11 +240,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             return 0;
         }
 
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT count(*) FROM pragma_table_list WHERE schema = 'main' AND type IN ('table', 'virtual') AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'";
-
-        return Convert.ToInt32(command.ExecuteScalar());
+        return provider.Tables(connection).Count(t => !t.View);
     }
 
     #endregion

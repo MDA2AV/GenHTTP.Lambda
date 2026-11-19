@@ -8,9 +8,11 @@
 //     disposes of the connection too. Connections are pooled, so that costs
 //     nothing, and a context is never shared between two requests at once.
 //   - Every call is synchronous - ToList, Find, SaveChanges, not their Async
-//     forms. The database is a file on the same machine, and the server this
-//     runs on has an asynchronous model of its own that a blocking call does
-//     not disturb.
+//     forms. The server this runs on has an asynchronous model of its own
+//     that a blocking call does not disturb.
+//   - Nothing here names the database: the context is on the connection it
+//     is handed (options.UseDatabase), and the migration is SQL any database
+//     accepts, so the same code runs whichever one the platform keeps.
 //   - Queries are LINQ, so what somebody types goes in as a parameter and
 //     cannot change what the statement does.
 //   - At most `limit` tasks are kept, the oldest going first. Anybody can
@@ -36,7 +38,7 @@ public sealed class TaskItem
 }
 
 /// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
-public sealed class TaskContext(SqliteConnection connection) : DbContext
+public sealed class TaskContext(DbConnection connection) : DbContext
 {
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
@@ -44,13 +46,16 @@ public sealed class TaskContext(SqliteConnection connection) : DbContext
     // inside a DbContext, Database is the context's own, which is why the
     // connection comes in from outside
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite(connection, contextOwnsConnection: true);
+        => options.UseDatabase(connection);
 
     protected override void OnModelCreating(ModelBuilder model)
     {
-        // SQLite does not mind the case of a name, so Title is the column
+        // names are matched whatever their case, so Title is the column
         // title without saying so - only the table needs naming
         var task = model.Entity<TaskItem>().ToTable("tasks");
+
+        // done or not as 0 or 1, which is how the table keeps it
+        task.Property(t => t.Done).HasConversion<int>();
 
         // times as ISO 8601 text in UTC: they sort as they should, read well
         // in the editor's view of the database, and come back as the time
@@ -84,10 +89,11 @@ public sealed class TaskStore(int limit)
         if (!string.IsNullOrWhiteSpace(search))
         {
             // a search for "50%" looks for "50%", not for anything starting with 50
-            var term = "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            var term = "%" + search.Trim().ToLowerInvariant().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
 
-            // LIKE rather than Contains, which SQLite would compare case by case
-            tasks = tasks.Where(t => EF.Functions.Like(t.Title, term, "\\") || EF.Functions.Like(t.Notes, term, "\\"));
+            // in lower case on both sides, so "milk" finds "Milk" whichever
+            // database compares the letters
+            tasks = tasks.Where(t => EF.Functions.Like(t.Title.ToLower(), term, "\\") || EF.Functions.Like(t.Notes.ToLower(), term, "\\"));
         }
 
         return tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToList();

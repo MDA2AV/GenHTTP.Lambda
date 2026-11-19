@@ -239,6 +239,8 @@ public sealed class DatabaseTests
             "var c = new Evil();\nreturn Inline.Create();\n\nclass Evil : SqliteConnection { public Evil() : base(\"Data Source=other.db\") { } }",
             "var c = Database.GetConnection();\nc.Close();\nc.ConnectionString = \"Data Source=other.db\";\nreturn Inline.Create();",
             "var c = Database.GetConnection();\nc.LoadExtension(\"evil\");\nreturn Inline.Create();",
+            // another database on the same server, as the lambda's own role
+            "System.Data.Common.DbConnection c = Database.GetConnection();\nc.ChangeDatabase(\"postgres\");\nreturn Inline.Create();",
             "var f = System.Data.Common.DbProviderFactories.GetFactory(Database.GetConnection());\nreturn Inline.Create();",
             "var e = System.Linq.Expressions.Expression.Constant(1);\nreturn Inline.Create();",
             // Entity Framework, on anything but the connection it is handed

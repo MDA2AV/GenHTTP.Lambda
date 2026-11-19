@@ -18,7 +18,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: '데이터베이스',
-      what: '람다가 레코드를 보관하는 SQLite 데이터베이스예요. Database.GetConnection()으로 연결해요.',
+      what: '람다가 레코드를 보관하는 전용 데이터베이스예요. Database.GetConnection()으로 연결해요.',
       count: (items) => `테이블 ${items}개`,
       confirmOff: '데이터베이스를 끌까요?',
       switchedOn: '데이터베이스를 켰어요. 아직 비어 있어요. 람다는 다음 요청 때 데이터베이스를 쓸 수 있는 상태로 다시 시작해요.',

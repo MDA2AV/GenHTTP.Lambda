@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Veritabanı',
-      what: 'Lambdanın kayıtlarını tuttuğu, Database.GetConnection() ile erişilen bir SQLite veritabanı.',
+      what: 'Lambdanın kayıtlarını tuttuğu, Database.GetConnection() ile erişilen kendine ait bir veritabanı.',
       count: (items) => `${items} tablo`,
       confirmOff: 'Veritabanı kapatılsın mı?',
       switchedOn: 'Veritabanı açık ve boş. Lambda bir sonraki istekte veritabanıyla birlikte yeniden başlar.',

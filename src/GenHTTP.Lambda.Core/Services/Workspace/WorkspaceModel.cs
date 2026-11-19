@@ -50,3 +50,9 @@ public sealed record WorkspaceContent(string Path, byte[] Content);
 /// <param name="Length">How many bytes the file holds</param>
 /// <param name="Content">Its bytes as base64, or nothing for a file larger than travels that way - which has to be sent as it is</param>
 public sealed record WorkspaceEncoded(string Path, long Length, string? Content);
+
+/// <summary>
+/// A file of a workspace as it is sent: its name, and its content to stream.
+/// </summary>
+/// <param name="Name">The name of the file, without the folders it is in</param>
+public sealed record WorkspaceFile(string Name, GenHTTP.Api.Content.IO.IResource Content);

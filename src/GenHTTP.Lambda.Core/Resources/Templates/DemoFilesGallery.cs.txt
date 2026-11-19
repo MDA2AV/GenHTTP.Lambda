@@ -47,12 +47,12 @@ public sealed class UploadEntry
 }
 
 /// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
-public sealed class GalleryContext(SqliteConnection connection) : DbContext
+public sealed class GalleryContext(DbConnection connection) : DbContext
 {
     public DbSet<UploadEntry> Uploads => Set<UploadEntry>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite(connection, contextOwnsConnection: true);
+        => options.UseDatabase(connection);
 
     protected override void OnModelCreating(ModelBuilder model)
     {

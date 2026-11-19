@@ -6,6 +6,7 @@ using System.Text;
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Services.Branding;
+using GenHTTP.Lambda.Integrations.Sqlite;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -229,6 +230,11 @@ public static class ProjectPacker
                 Write(archive, $"{name}/Platform/Database.cs", Resource("Database.cs"));
             }
 
+            if (entities)
+            {
+                Write(archive, $"{name}/Platform/EntityFramework.cs", Resource("EntityFramework.cs"));
+            }
+
             if (database != null)
             {
                 WriteFile(archive, $"{name}/{DatabaseFile}", database);
@@ -299,6 +305,7 @@ public static class ProjectPacker
         result.Add(Text($"{ProjectPaths.Platform}Secrets.cs", Resource("Secrets.cs")));
         result.Add(Text($"{ProjectPaths.Platform}Handlers.cs", Resource("Handlers.cs")));
         result.Add(Text($"{ProjectPaths.Platform}Database.cs", Resource("Database.cs")));
+        result.Add(Text($"{ProjectPaths.Platform}EntityFramework.cs", Resource("EntityFramework.cs")));
 
         if (project.License is { } license)
         {
@@ -554,7 +561,9 @@ public static class ProjectPacker
     /// <remarks>
     /// SQLite, Entity Framework Core and Evolve only where the project
     /// references them, which is where the code uses them - an import of a
-    /// package that is not there does not compile.
+    /// package that is not there does not compile. SQLite as the platform
+    /// imported it where SQLite kept the lambda's database, since an exported
+    /// project keeps its records in a SQLite file whatever kept them there.
     /// </remarks>
     private static string Usings(bool data, bool entities, bool evolve)
     {
@@ -563,7 +572,7 @@ public static class ProjectPacker
         builder.Append("// What the platform imported into every file of the lambda.").Append('\n');
         builder.Append('\n');
 
-        foreach (var import in ModuleCatalog.Imports)
+        foreach (var import in ModuleCatalog.ImportsFor(SqliteDatabase.Binding))
         {
             var referenced = import switch
             {
@@ -572,7 +581,7 @@ public static class ProjectPacker
                 _ => data
             };
 
-            if (ModuleCatalog.IsData(import) && !referenced)
+            if ((ModuleCatalog.IsData(import) || SqliteDatabase.Binding.Namespaces.Contains(import)) && !referenced)
             {
                 continue;
             }

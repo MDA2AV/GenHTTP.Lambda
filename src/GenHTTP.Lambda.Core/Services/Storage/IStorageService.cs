@@ -23,27 +23,11 @@ public interface IStorageService
     void DeleteVersion(long lambdaId, int version);
 
     /// <summary>
-    /// Removes everything stored for the given lambda, including its workspace,
-    /// its database, its features and the commits it was read as with git.
+    /// Removes everything stored for the given lambda: its versions, its
+    /// features, what it serves and the commits it was read as with git. Its
+    /// data is its integrations' to remove.
     /// </summary>
     void Delete(long lambdaId);
-
-    /// <summary>
-    /// The directory a deployed lambda - or the preview of one of its features -
-    /// may read and write files in. Created on demand.
-    /// </summary>
-    /// <param name="featureId">The feature whose copy of the workspace is meant, or nothing for the lambda's own</param>
-    string GetWorkspace(long lambdaId, long? featureId = null);
-
-    /// <summary>
-    /// Where the database of a lambda - or a feature's copy of it - is kept.
-    /// </summary>
-    /// <remarks>
-    /// A file, with SQLite's journal written beside it. Its folder is made on
-    /// demand; the file itself only once the database is switched on.
-    /// </remarks>
-    /// <param name="featureId">The feature whose copy is meant, or nothing for the lambda's own</param>
-    string GetDatabase(long lambdaId, long? featureId = null);
 
     /// <summary>
     /// The directory the assemblies generated for a lambda are written to.
@@ -92,14 +76,8 @@ public interface IStorageService
     string? ReadPreview(long lambdaId, long featureId);
 
     /// <summary>
-    /// Replaces the feature's copy of the workspace with a fresh copy of the
-    /// lambda's own.
-    /// </summary>
-    ValueTask CopyWorkspaceAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
-
-    /// <summary>
-    /// Removes everything stored for a feature: its files, what its preview
-    /// serves and its copy of the data.
+    /// Removes everything stored for a feature: its files and what its
+    /// preview serves. Its copy of the data is its integrations' to remove.
     /// </summary>
     void DeleteFeature(long lambdaId, long featureId);
 

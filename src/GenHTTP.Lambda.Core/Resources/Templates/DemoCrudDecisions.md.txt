@@ -18,7 +18,8 @@
 - **Queries are LINQ**, so what somebody types goes in as a parameter and cannot change what a statement does. A search is `EF.Functions.Like` rather than `Contains`, so it ignores case as before, and escapes `%` and `_`, so looking for "50%" finds "50%".
 - **Reads do not track** (`AsNoTracking`); a change loads the task tracked, sets what changed and saves; removing is one `ExecuteDelete`, without reading the task first.
 - **At most 200 tasks**, the oldest going first, because anybody can write to the list. Adding a task and making room are one transaction: the task is not added if making room fails.
-- **Times are ISO 8601 text in UTC**, through a converter on the two time properties. They sort as they should, read well in the editor's view of the database, and come back as UTC - Entity Framework's own format for SQLite would drop the zone.
+- **Times are ISO 8601 text in UTC**, through a converter on the two time properties. They sort as they should, read well in the editor's view of the database, and come back as UTC - Entity Framework's own format would drop the zone on some databases.
+- **Nothing names the database.** The context is on the connection it is handed (`options.UseDatabase(connection)`), the migration is SQL any database accepts, and `Done` is kept as 0 or 1 (`HasConversion<int>()`), as the table has it - so the same code runs whichever database the platform keeps.
 
 ## The table is made by a migration, applied by Evolve
 

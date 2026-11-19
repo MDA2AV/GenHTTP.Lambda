@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Banco de dados',
-      what: 'Um banco de dados SQLite onde a lambda guarda os registros dela, acessado com Database.GetConnection().',
+      what: 'Um banco de dados próprio onde a lambda guarda os registros dela, acessado com Database.GetConnection().',
       count: (items) => (items === 1 ? '1 tabela' : `${items} tabelas`),
       confirmOff: 'Desligar o banco de dados?',
       switchedOn: 'O banco de dados está ligado, e vazio. A lambda reinicia com ele na próxima requisição.',

@@ -27,6 +27,11 @@ public interface IShowcaseService
     void Remove(string privateKey);
 
     /// <summary>
+    /// Forgets the entry of a lambda that is being deleted, and its picture.
+    /// </summary>
+    void Forget(long lambdaId);
+
+    /// <summary>
     /// One page of the entries of lambdas that are online, the most active first.
     /// </summary>
     ShowcasePage List(int skip, int take);

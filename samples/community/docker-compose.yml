@@ -20,8 +20,9 @@ services:
       # apps are made from it: https://lambda.example.com/lambda/{key}/; until
       # it is set, they read http://localhost:8080
       LAMBDA_PUBLIC_URL: ${LAMBDA_PUBLIC_URL:-}
-      # the password of the panel at /admin; without one the panel is off
-      LAMBDA_ADMIN_TOKEN: ${LAMBDA_ADMIN_TOKEN:-}
+      # the password of the panel at /admin - change it in .env before anybody
+      # else can reach the server
+      LAMBDA_ADMIN_TOKEN: ${LAMBDA_ADMIN_TOKEN:-secure-password}
       # the build agent reaches the server by this name, which is then one of
       # the platform's own - an installation with a public address answers at
       # its names only

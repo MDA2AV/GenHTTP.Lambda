@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -23,10 +24,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// own containers, this is the service that would start and track them.
 ///
 /// A preview is built exactly like the lambda, from the feature's files, into
-/// a place of its own: its own resources, the feature's copy of the workspace
-/// compiled in as the workspace, and its copies of the secrets and the
-/// database to read and write - so trying a feature can do anything to the
-/// data without the lambda noticing.
+/// a place of its own: its own resources, and the feature's copies of the
+/// workspace, the secrets and the database to read and write - so trying a
+/// feature can do anything to the data without the lambda noticing.
 /// </remarks>
 public sealed class DeploymentService : IDeploymentService, IDisposable
 {
@@ -53,6 +53,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     private IWorkspaceVault Workspaces { get; }
 
+    private IDatabaseProvider Provider { get; }
+
     private ILogger Logger { get; }
 
     #endregion
@@ -60,13 +62,14 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     #region Initialization
 
     public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, IDatabaseVault databases, IWorkspaceVault workspaces,
-                             ILogger<DeploymentService> logger)
+                             IDatabaseProvider provider, ILogger<DeploymentService> logger)
     {
         Storage = storage;
         Servers = servers;
         Secrets = secrets;
         Databases = databases;
         Workspaces = workspaces;
+        Provider = provider;
         Logger = logger;
 
         ModuleCatalog.LoadModules();
@@ -80,8 +83,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetResourceDirectory(id),
-                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, settings ?? BuildSettings.Standard);
+        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetResourceDirectory(id),
+                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, settings ?? BuildSettings.Standard, Provider.Binding);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -191,14 +194,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         var (lambdaId, featureId) = (slot.LambdaId, slot.FeatureId);
 
-        var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId, featureId),
-                                             Storage.GetResourceDirectory(lambdaId, featureId),
-                                             Storage.GetAssemblyDirectory(lambdaId), name, true, settings,
+        var request = new CompilationRequest(files, Storage.GetResourceDirectory(lambdaId, featureId),
+                                             Storage.GetAssemblyDirectory(lambdaId), name, true, settings, Provider.Binding,
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
-                                             () => Databases.SizeOf(lambdaId, featureId),
-                                             () => Workspaces.Changed(lambdaId, featureId),
-                                             Databases.DataRoomFor(lambdaId, featureId));
+                                             Provider.ConfigureContext,
+                                             Workspaces.Bind(lambdaId, featureId, Databases.DataRoomFor(lambdaId, featureId), () => Databases.SizeOf(lambdaId, featureId)));
 
         var outcome = await CompileAsync(slot, stamp, request);
 

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The database every installation has unless it chooses another: SQLite
+        files in the data directory, one for the platform's records, one for
+        its analytics and one for each lambda and each copy a feature works on.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Integrations.Sqlite</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Integrations.Sqlite</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+    </ItemGroup>
+
+</Project>

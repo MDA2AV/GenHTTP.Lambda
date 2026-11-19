@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Services.Census;
+using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 
@@ -230,6 +231,32 @@ public sealed record UsageReportResponse(
     string? Failure,
     [Summary("The last report made, as the JSON that was sent; absent before the first")]
     string? Report
+);
+
+[Summary("What the installation keeps some of its data in: its database, its files or its secrets.")]
+public sealed record IntegrationResponse(
+    [Summary("What it keeps: `database` - the platform's records, its analytics and the lambdas' databases; `files` - the lambdas' workspaces; `secrets` - their API keys and passwords")]
+    string Kind,
+    [Summary("What it is called: `SQLite`, `PostgreSQL`, `Local`, `Database`")]
+    string Name,
+    [Summary("The assembly it is in, which names it: what a host references to use it, such as `GenHTTP.Lambda.Integrations.Sqlite`")]
+    string Assembly,
+    [Summary("Where it keeps what it keeps, as label and value - never a password, a key or a connection string")]
+    IReadOnlyList<IntegrationDetailResponse> Details
+)
+{
+
+    public static IntegrationResponse Of(IntegrationState state)
+        => new(state.Info.Kind, state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
+
+}
+
+[Summary("One fact about an integration, such as the server it talks to.")]
+public sealed record IntegrationDetailResponse(
+    [Summary("What it says, such as `Server`")]
+    string Label,
+    [Summary("What it is here")]
+    string Value
 );
 
 [Summary("What a lambda may have and do, as the operator set it.")]

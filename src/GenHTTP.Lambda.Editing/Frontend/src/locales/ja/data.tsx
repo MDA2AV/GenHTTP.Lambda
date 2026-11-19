@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'データベース',
-      what: 'lambdaがレコードを保存するSQLiteデータベースです。Database.GetConnection()で接続します。',
+      what: 'lambdaがレコードを保存する専用のデータベースです。Database.GetConnection()で接続します。',
       count: (items) => `${items}個のテーブル`,
       confirmOff: 'データベースをオフにしますか？',
       switchedOn: 'データベースをオンにしました。中身は空です。lambdaは次のリクエストで、データベースを使える状態で起動し直します。',

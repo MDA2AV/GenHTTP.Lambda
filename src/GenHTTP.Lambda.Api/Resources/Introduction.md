@@ -71,7 +71,7 @@ of the installation lets its operator give it a name and a logo of its own.
   and nothing is online until a version is deployed. Only so many versions are
   kept (see the limits); the oldest go first, but never the version that is
   online or one a feature is based on.
-- The **data** is what the program keeps: its **database** (SQLite), its
+- The **data** is what the program keeps: its **database** (records), its
   **workspace** (files it reads and writes) and its **secrets** (API keys,
   passwords). Data belongs to the lambda and is shared by every version.
   Deploying, rolling back and merging never touch it. Each kind of data is

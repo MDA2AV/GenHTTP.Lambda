@@ -1,21 +1,19 @@
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Infrastructure;
 
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Storage;
 
 /// <summary>
-/// Stores the code of a lambda as <c>{data}/code/{id}/v{version}.cs</c> and gives
-/// every lambda a private directory below <c>{data}/workspaces/{id}</c>.
+/// Stores the code of a lambda as <c>{data}/code/{id}/v{version}.cs</c>.
 /// </summary>
 /// <remarks>
 /// A feature keeps everything of its own below <c>{data}/features/{id}/{feature}</c>:
 /// <c>files.json</c> as it is being worked on, <c>preview.json</c> as its
-/// preview was deployed, its copy of the workspace in <c>workspace</c> and
-/// the resources its preview serves in <c>resources</c> - so deleting a
-/// feature is deleting a folder, and deleting a lambda takes its features
-/// along.
+/// preview was deployed and the resources its preview serves in
+/// <c>resources</c> - so deleting a feature is deleting a folder, and deleting
+/// a lambda takes its features along. Its copy of the data is kept by the
+/// integrations, which may put it there as well.
 /// </remarks>
 public sealed class FileSystemStorageService : IStorageService
 {
@@ -36,7 +34,6 @@ public sealed class FileSystemStorageService : IStorageService
         Logger = logger;
 
         Directory.CreateDirectory(options.CodeDirectory);
-        Directory.CreateDirectory(options.WorkspaceDirectory);
 
         // nothing is loaded yet, so this is the one moment where the artifacts
         // of previous runs can safely be thrown away
@@ -121,8 +118,6 @@ public sealed class FileSystemStorageService : IStorageService
     public void Delete(long lambdaId)
     {
         Remove(GetCodeDirectory(lambdaId));
-        Remove(GetWorkspaceDirectory(lambdaId));
-        Remove(Path.Combine(Options.DatabaseDirectory, lambdaId.ToString()));
         Remove(GetResourceDirectory(lambdaId));
         Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
         // what its published source was packed into, if it was published
@@ -136,28 +131,6 @@ public sealed class FileSystemStorageService : IStorageService
         // follows. The next start of the server wipes the directory instead.
 
         Logger.LogInformation("Removed storage of lambda #{LambdaId}", lambdaId);
-    }
-
-    public string GetWorkspace(long lambdaId, long? featureId = null)
-    {
-        var directory = featureId is { } feature
-            ? Path.Combine(GetFeatureDirectory(lambdaId, feature), "workspace")
-            : GetWorkspaceDirectory(lambdaId);
-
-        Directory.CreateDirectory(directory);
-
-        return directory;
-    }
-
-    public string GetDatabase(long lambdaId, long? featureId = null)
-    {
-        var directory = featureId is { } feature
-            ? GetFeatureDirectory(lambdaId, feature)
-            : Path.Combine(Options.DatabaseDirectory, lambdaId.ToString());
-
-        Directory.CreateDirectory(directory);
-
-        return Path.Combine(directory, "database.db");
     }
 
     public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
@@ -182,46 +155,6 @@ public sealed class FileSystemStorageService : IStorageService
 
     public string? ReadPreview(long lambdaId, long featureId)
         => ReadIfThere(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"));
-
-    /// <remarks>
-    /// Copied beside the copy it replaces and swapped in once complete, so a
-    /// copy that fails halfway leaves the one there was. On a thread of its
-    /// own, since a workspace can be large and this is asked for by a request.
-    /// </remarks>
-    public async ValueTask CopyWorkspaceAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
-    {
-        var target = Path.Combine(GetFeatureDirectory(lambdaId, featureId), "workspace");
-
-        var staging = $"{target}.copying";
-
-        var source = GetWorkspaceDirectory(lambdaId);
-
-        // a whole workspace, gigabytes in production: copied away from the
-        // reactor (see Offload)
-        await Offload.Run(() =>
-        {
-            Remove(staging);
-
-            Directory.CreateDirectory(staging);
-
-            try
-            {
-                if (Directory.Exists(source))
-                {
-                    Copy(new DirectoryInfo(source), staging, cancellation);
-                }
-            }
-            catch
-            {
-                Remove(staging);
-                throw;
-            }
-
-            Remove(target);
-
-            Directory.Move(staging, target);
-        }, cancellation);
-    }
 
     public void DeleteFeature(long lambdaId, long featureId)
     {
@@ -249,35 +182,6 @@ public sealed class FileSystemStorageService : IStorageService
                     yield return (lambdaId, featureId);
                 }
             }
-        }
-    }
-
-    /// <summary>
-    /// Copies a folder with everything in it, empty folders included - an
-    /// empty folder is a real thing in a workspace, which code may rely on.
-    /// </summary>
-    private static void Copy(DirectoryInfo source, string target, CancellationToken cancellation)
-    {
-        foreach (var file in source.EnumerateFiles())
-        {
-            cancellation.ThrowIfCancellationRequested();
-
-            // an upload still arriving is not part of what is there yet
-            if (file.Name.EndsWith(".uploading", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            file.CopyTo(Path.Combine(target, file.Name), true);
-        }
-
-        foreach (var folder in source.EnumerateDirectories())
-        {
-            var inner = Path.Combine(target, folder.Name);
-
-            Directory.CreateDirectory(inner);
-
-            Copy(folder, inner, cancellation);
         }
     }
 
@@ -315,8 +219,6 @@ public sealed class FileSystemStorageService : IStorageService
     #region Helpers
 
     private string GetCodeDirectory(long lambdaId) => Path.Combine(Options.CodeDirectory, lambdaId.ToString());
-
-    private string GetWorkspaceDirectory(long lambdaId) => Path.Combine(Options.WorkspaceDirectory, lambdaId.ToString());
 
     private string GetFeatureDirectory(long lambdaId, long featureId)
         => Path.Combine(Options.FeatureDirectory, lambdaId.ToString(), featureId.ToString());

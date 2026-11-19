@@ -85,12 +85,12 @@ public sealed class Outcome
 }
 
 /// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
-public sealed class GameContext(SqliteConnection connection) : DbContext
+public sealed class GameContext(DbConnection connection) : DbContext
 {
     public DbSet<Outcome> Outcomes => Set<Outcome>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite(connection, contextOwnsConnection: true);
+        => options.UseDatabase(connection);
 
     // the table is the migration's; this says how to read it
     protected override void OnModelCreating(ModelBuilder model)

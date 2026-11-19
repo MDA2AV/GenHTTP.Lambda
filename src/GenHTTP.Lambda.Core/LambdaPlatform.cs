@@ -1,6 +1,13 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Databases;
+using GenHTTP.Lambda.Integrations.Files;
+using GenHTTP.Lambda.Integrations.Sealed;
+using GenHTTP.Lambda.Integrations.Local;
+using GenHTTP.Lambda.Integrations.Secrets;
+using GenHTTP.Lambda.Integrations.Sqlite;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Blocking;
@@ -16,6 +23,7 @@ using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Hosting;
+using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Secrets;
@@ -44,8 +52,8 @@ namespace GenHTTP.Lambda;
 /// its own: the API, the MCP endpoint, the pages and the runner do, and a host
 /// decides which of them it has and where.
 ///
-/// Disposing of it stops the background jobs and the services, and gives the
-/// console back.
+/// Disposing of it stops the background jobs and the services, gives the
+/// console back and lets go of its integrations.
 /// </remarks>
 public sealed class LambdaPlatform : IAsyncDisposable
 {
@@ -79,17 +87,20 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
     private Task? Warming { get; set; }
 
+    private PlatformIntegrations Integrations { get; }
+
     #endregion
 
     #region Initialization
 
-    internal LambdaPlatform(LambdaOptions options, ILoggerFactory loggers, bool ownsLoggers, LogBook book, RunLog runs)
+    internal LambdaPlatform(LambdaOptions options, ILoggerFactory loggers, bool ownsLoggers, LogBook book, RunLog runs, PlatformIntegrations integrations)
     {
         Options = options;
         Loggers = loggers;
         OwnsLoggers = ownsLoggers;
+        Integrations = integrations;
 
-        Services = BuildServices(options, loggers, book, runs);
+        Services = BuildServices(options, loggers, book, runs, integrations);
 
         // what is printed to the console goes into this platform's book from
         // here on, until it is disposed of with the services
@@ -100,6 +111,17 @@ public sealed class LambdaPlatform : IAsyncDisposable
         // before the first request, which is asked about against them
         Services.GetRequiredService<DomainRegistry>().Reload();
         Services.GetRequiredService<AddressBlocks>().Reload();
+
+        // and the pictures out of the records they were kept in before - read
+        // from there meanwhile where that fails, and tried again next time
+        try
+        {
+            PictureMove.Run(Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>(), integrations.Files, loggers.CreateLogger<LambdaPlatform>());
+        }
+        catch (Exception e)
+        {
+            loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "Failed to move the pictures from the platform's records into its files");
+        }
     }
 
     /// <summary>
@@ -107,11 +129,33 @@ public sealed class LambdaPlatform : IAsyncDisposable
     /// </summary>
     public static LambdaPlatformBuilder Create() => new();
 
-    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog runs)
+    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog runs, PlatformIntegrations integrations)
     {
         var services = new ServiceCollection();
 
         services.AddSingleton(options);
+
+        /*
+         * What the data is kept in, built before the container from what the
+         * host chose - the database already migrated through it. The
+         * secrets are kept by the platform itself unless the host chose
+         * otherwise, which takes the platform's own database to do.
+         */
+        services.AddSingleton(integrations);
+        services.AddSingleton(integrations.Database);
+        services.AddSingleton(integrations.Files);
+
+        if (integrations.Secrets is { } secrets)
+        {
+            services.AddSingleton(secrets);
+        }
+        else
+        {
+            services.AddSingleton<SecretCipher>();
+            services.AddSingleton<ISecretProvider, DatabaseSecrets>();
+        }
+
+        services.AddSingleton<IIntegrationService, IntegrationService>();
 
         /*
          * A shared class that its own folder takes as itself is registered
@@ -135,8 +179,12 @@ public sealed class LambdaPlatform : IAsyncDisposable
         // the interceptor tells the caches that something was written
         services.AddSingleton<DatabaseChanges>();
 
-        services.AddPooledDbContextFactory<LambdaDbContext>((provider, builder) => builder.UseSqlite(options.ConnectionString)
-                                                                                          .AddInterceptors(provider.GetRequiredService<DatabaseChanges>()));
+        services.AddPooledDbContextFactory<LambdaDbContext>((provider, builder) =>
+        {
+            integrations.Database.ConfigureStore(builder, DatabaseStores.Platform);
+
+            builder.AddInterceptors(provider.GetRequiredService<DatabaseChanges>());
+        });
 
         services.AddSingleton<ServerRegistry>();
 
@@ -149,7 +197,6 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<AddressBlocks>();
         services.AddSingleton<IAddressBlocks>(provider => provider.GetRequiredService<AddressBlocks>());
 
-        services.AddSingleton<SecretCipher>();
         services.AddSingleton<SecretVault>();
         services.AddSingleton<ISecretVault>(provider => provider.GetRequiredService<SecretVault>());
         services.AddSingleton<DatabaseVault>();
@@ -336,6 +383,9 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         await Services.DisposeAsync();
 
+        // built before the container, so not the container's to dispose of
+        await Integrations.DisposeAsync();
+
         // a factory handed in is its owner's to dispose of
         if (OwnsLoggers)
         {
@@ -359,6 +409,12 @@ public sealed class LambdaPlatformBuilder
     private LogBook? _book;
 
     private RunLog? _runs;
+
+    private IIntegrationBuilder<IDatabaseProvider>? _database;
+
+    private IIntegrationBuilder<IFileProvider>? _files;
+
+    private IIntegrationBuilder<ISecretProvider>? _secrets;
 
     #region Functionality
 
@@ -398,7 +454,38 @@ public sealed class LambdaPlatformBuilder
     }
 
     /// <summary>
-    /// Migrates the database and builds the platform.
+    /// What the platform keeps its own records, its analytics and the
+    /// databases of the lambdas in - SQLite files in the data directory
+    /// unless chosen otherwise.
+    /// </summary>
+    public LambdaPlatformBuilder Database(IIntegrationBuilder<IDatabaseProvider> database)
+    {
+        _database = database;
+        return this;
+    }
+
+    /// <summary>
+    /// What the workspaces of the lambdas are kept in - directories in the
+    /// data directory unless chosen otherwise.
+    /// </summary>
+    public LambdaPlatformBuilder Files(IIntegrationBuilder<IFileProvider> files)
+    {
+        _files = files;
+        return this;
+    }
+
+    /// <summary>
+    /// What the secrets of the lambdas are kept in - sealed in the platform's
+    /// own database unless chosen otherwise.
+    /// </summary>
+    public LambdaPlatformBuilder Secrets(IIntegrationBuilder<ISecretProvider> secrets)
+    {
+        _secrets = secrets;
+        return this;
+    }
+
+    /// <summary>
+    /// Builds the integrations, migrates the database and builds the platform.
     /// </summary>
     /// <remarks>
     /// The note about this run is begun first, so that a start which never
@@ -425,14 +512,20 @@ public sealed class LambdaPlatformBuilder
             runs.Report(logger);
         }
 
+        PlatformIntegrations? integrations = null;
+
         try
         {
-            Migrator.Migrate(_options, loggers.CreateLogger<LambdaPlatform>());
+            integrations = BuildIntegrations(new IntegrationContext(_options.DataDirectory, loggers));
 
-            return new LambdaPlatform(_options, loggers, _loggers == null, book, runs);
+            Migrator.Migrate(integrations.Database, loggers.CreateLogger<LambdaPlatform>());
+
+            return new LambdaPlatform(_options, loggers, _loggers == null, book, runs, integrations);
         }
         catch (Exception e)
         {
+            integrations?.Dispose();
+
             // nothing watches the process for what ends it yet - the server
             // does that once there is a platform to serve
             runs.Faulted(e);
@@ -446,6 +539,41 @@ public sealed class LambdaPlatformBuilder
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Builds what the host chose, and the platform's own where it chose nothing.
+    /// </summary>
+    /// <remarks>
+    /// Each built as soon as the one before it is, so whatever was built
+    /// before one that fails is let go of again.
+    /// </remarks>
+    private PlatformIntegrations BuildIntegrations(IntegrationContext context)
+    {
+        var built = new List<IIntegration>();
+
+        try
+        {
+            var database = Keep(built, (_database ?? SqliteDatabase.Create()).Build(context));
+
+            var files = Keep(built, (_files ?? LocalFiles.Create()).Build(context));
+
+            var secrets = _secrets is { } chosen ? Keep(built, chosen.Build(context)) : null;
+
+            // a host naming the platform's own has not chosen another
+            return new PlatformIntegrations(database, files, secrets);
+        }
+        catch
+        {
+            PlatformIntegrations.Dispose(built);
+            throw;
+        }
+    }
+
+    private static T Keep<T>(List<IIntegration> built, T integration) where T : IIntegration
+    {
+        built.Add(integration);
+        return integration;
     }
 
     #endregion

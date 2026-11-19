@@ -22,7 +22,8 @@ namespace GenHTTP.Lambda.Server;
 /// </remarks>
 /// <param name="Platform">What the platform and its components are built with</param>
 /// <param name="Server">How the host serves it</param>
-public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Server)
+/// <param name="Database">Which database the platform keeps its data in, which the host builds the integration of</param>
+public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Server, DatabaseSettings Database)
 {
 
     #region Functionality
@@ -42,7 +43,14 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
     /// environment says not to - <c>LAMBDA_USAGE_REPORTS=false</c>, or
     /// <c>DO_NOT_TRACK</c>. Without, it sends none.
     /// </param>
-    public static LambdaSettings FromEnvironment(LambdaAddressing addressing = LambdaAddressing.Subdomains, bool usageReports = false)
+    /// <param name="databases">
+    /// The databases the host has an integration for, which <c>LAMBDA_DATABASE</c>
+    /// may choose from - SQLite alone unless the host says otherwise. Another
+    /// one asked for is refused as the installation starts, rather than
+    /// quietly left for SQLite.
+    /// </param>
+    public static LambdaSettings FromEnvironment(LambdaAddressing addressing = LambdaAddressing.Subdomains, bool usageReports = false,
+                                                 IReadOnlyCollection<string>? databases = null)
     {
         var defaults = new LambdaOptions();
         var server = new ServerSettings();
@@ -105,7 +113,32 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             AcmeDirectory = ReadOptional("LAMBDA_ACME_DIRECTORY")
         };
 
-        return new LambdaSettings(platform, serving);
+        return new LambdaSettings(platform, serving, ReadDatabase(databases ?? [DatabaseSettings.Sqlite]));
+    }
+
+    /// <summary>
+    /// Which database the environment asks for, and how to reach it.
+    /// </summary>
+    private static DatabaseSettings ReadDatabase(IReadOnlyCollection<string> offered)
+    {
+        var provider = ReadOptional("LAMBDA_DATABASE")?.ToLowerInvariant() ?? DatabaseSettings.Sqlite;
+
+        if (!offered.Contains(provider))
+        {
+            throw new InvalidOperationException($"LAMBDA_DATABASE: '{provider}' is not a database this installation can keep its data in. It offers: {string.Join(", ", offered)}.");
+        }
+
+        if (provider != DatabaseSettings.PostgreSql)
+        {
+            return new DatabaseSettings(provider);
+        }
+
+        var connection = ReadOptional("LAMBDA_POSTGRES_CONNECTION")
+                      ?? throw new InvalidOperationException("LAMBDA_DATABASE=postgresql needs LAMBDA_POSTGRES_CONNECTION: how to reach the database, such as Host=db;Database=lambda;Username=lambda;Password=...");
+
+        var pool = ReadOptional("LAMBDA_POSTGRES_POOL_SIZE");
+
+        return new DatabaseSettings(provider, connection, ReadOptional("LAMBDA_POSTGRES_ROLE_PREFIX"), int.TryParse(pool, out var size) ? size : null);
     }
 
     /// <summary>
@@ -133,6 +166,11 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
         if (Platform.Addressing == LambdaAddressing.Paths && Platform.PublicUrl == null)
         {
             logger.LogInformation("LAMBDA_PUBLIC_URL is not set, so the addresses of the lambdas read http://localhost:{Port}/lambda/: set it to where the installation is reached, such as https://lambda.example.com", Platform.Port);
+        }
+
+        if (Database.Provider != DatabaseSettings.Sqlite)
+        {
+            logger.LogInformation("The records of the platform and the databases of the lambdas are kept in {Database}, as LAMBDA_DATABASE says", Database.Provider);
         }
 
         // said once, where the operator reads what the installation does on its own

@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
 using System.Reflection.PortableExecutable;
+
+using GenHTTP.Lambda.Integrations.Databases;
 
 using Microsoft.CodeAnalysis;
 
@@ -11,14 +14,16 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// call them.
 /// </summary>
 /// <remarks>
-/// Microsoft.Data.Sqlite, Entity Framework Core and Evolve are in: a lambda
-/// talks to its database through the first, keeps its records with the second
-/// if it likes, and migrates the schema with the third. What is under them -
-/// the native SQLite and its bindings, and the dependency injection Entity
-/// Framework builds its services with - stays out, so the handle of a
-/// connection and the services behind a context are types the code cannot
-/// name. The code guard keeps a context on the connection the lambda is
-/// handed, see <see cref="CodeGuard.InspectEntityFramework" />.
+/// Entity Framework Core and Evolve are in: a lambda keeps its records with
+/// the first if it likes, and migrates the schema with the second, on the
+/// connection it is handed. The client library of a database is in only where
+/// the database integration names it (<see cref="DatabaseBinding.Assemblies"/>):
+/// one a lambda could name would let it open connections of its own, to any
+/// file or server. What is under them - the native SQLite and its bindings,
+/// and the dependency injection Entity Framework builds its services with -
+/// stays out, so the handle of a connection and the services behind a context
+/// are types the code cannot name. The code guard keeps a context on the
+/// connection the lambda is handed, see <see cref="CodeGuard.InspectEntityFramework" />.
 /// </remarks>
 public static class ReferenceProvider
 {
@@ -33,6 +38,24 @@ public static class ReferenceProvider
         "Microsoft.Extensions.DependencyInjection",
         "SQLitePCLRaw",
         "ioxide"
+    ];
+
+    /// <summary>
+    /// The client libraries of databases the platform knows of, by the names
+    /// of their assemblies: handed to a lambda only where the integration of
+    /// its database names them.
+    /// </summary>
+    private static readonly string[] DatabaseClients =
+    [
+        "Microsoft.Data.Sqlite",
+        "Microsoft.EntityFrameworkCore.Sqlite",
+        "Npgsql",
+        "MySqlConnector",
+        "MySql.",
+        "Pomelo.",
+        "Microsoft.Data.SqlClient",
+        "Microsoft.EntityFrameworkCore.SqlServer",
+        "Oracle."
     ];
 
     /// <summary>
@@ -55,24 +78,34 @@ public static class ReferenceProvider
 
     private static readonly Lazy<MetadataReference[]> References = new(Collect, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static readonly Lazy<MetadataReference[]> Offline = new(() => [.. References.Value.Where(r => !IsNetwork(r))],
-                                                                     LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly ConcurrentDictionary<(string Clients, bool Connectivity), MetadataReference[]> Filtered = [];
+
+    /// <summary>
+    /// Every metadata reference that may be handed to a lambda, whatever
+    /// keeps its database - for what asks which namespaces there are.
+    /// </summary>
+    public static MetadataReference[] Resolve() => References.Value;
 
     /// <summary>
     /// The metadata references a lambda may be compiled against, at most:
     /// those of one that may connect to other servers.
     /// </summary>
-    public static MetadataReference[] Resolve() => References.Value;
+    public static MetadataReference[] Resolve(DatabaseBinding binding) => Resolve(true, binding);
 
     /// <summary>
     /// The metadata references a lambda is compiled against, which leave out
-    /// what connects to other servers unless it may.
+    /// what connects to other servers unless it may, and every client library
+    /// of a database but the one its integration names.
     /// </summary>
     /// <remarks>
-    /// The same references either way, filtered - nothing is read twice.
+    /// The same references whatever is asked, filtered once per combination -
+    /// nothing is read twice.
     /// </remarks>
     /// <param name="connectivity">Whether the lambda may connect to other servers</param>
-    public static MetadataReference[] Resolve(bool connectivity) => connectivity ? References.Value : Offline.Value;
+    /// <param name="binding">How the lambda is bound to its database</param>
+    public static MetadataReference[] Resolve(bool connectivity, DatabaseBinding binding)
+        => Filtered.GetOrAdd((string.Join(',', binding.Assemblies), connectivity),
+                             key => [.. References.Value.Where(r => (key.Connectivity || !IsNetwork(r)) && IsHanded(r, binding))]);
 
     private static MetadataReference[] Collect()
     {
@@ -142,6 +175,22 @@ public static class ReferenceProvider
 
     private static bool IsNetwork(MetadataReference reference)
         => reference is PortableExecutableReference { FilePath: { } path } && Starts(Path.GetFileNameWithoutExtension(path), Network);
+
+    /// <summary>
+    /// Whether a reference is no client library of a database, or the one the
+    /// integration of the lambda's database names.
+    /// </summary>
+    private static bool IsHanded(MetadataReference reference, DatabaseBinding binding)
+    {
+        if (reference is not PortableExecutableReference { FilePath: { } path })
+        {
+            return true;
+        }
+
+        var name = Path.GetFileNameWithoutExtension(path);
+
+        return !Starts(name, DatabaseClients) || Starts(name, [.. binding.Assemblies]);
+    }
 
     private static bool Starts(string name, string[] prefixes)
     {

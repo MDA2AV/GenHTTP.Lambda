@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'Database SQLite tempat lambda menyimpan catatannya, diakses dengan Database.GetConnection().',
+      what: 'Database tersendiri tempat lambda menyimpan catatannya, diakses dengan Database.GetConnection().',
       count: (items) => `${items} tabel`,
       confirmOff: 'Nonaktifkan database?',
       switchedOn: 'Database aktif, dan masih kosong. Lambda dimulai ulang dengan database itu pada request berikutnya.',

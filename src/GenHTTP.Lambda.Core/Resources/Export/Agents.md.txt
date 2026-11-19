@@ -196,10 +196,10 @@ It belongs to the lambda, is shared by every version, and no deploy, rollback
 or merge touches it. A feature works on a copy. It is never in the
 repository.
 
-- Records - entries, accounts, orders, votes - go in the database: a SQLite
-  file of the lambda's own, switched on once (see "Beyond git"). Its schema
-  is SQL migrations in `resources/migrations/` (`V1__Create_items.sql`),
-  applied by Evolve as the lambda starts:
+- Records - entries, accounts, orders, votes - go in the database: the
+  lambda's own, switched on once (see "Beyond git"). Its schema is SQL
+  migrations in `resources/migrations/` (`V1__Create_items.sql`), plain SQL
+  any database accepts, applied by Evolve as the lambda starts:
 
       using (var connection = Database.GetConnection())
       {
@@ -210,8 +210,10 @@ repository.
   `EnsureCreated`, `Migrate` or Entity Framework's migrations, which are
   refused. Keep the records with a `DbContext` of Entity Framework Core on the
   connection it is handed - `new Records(Database.GetConnection())`, configured
-  with `options.UseSqlite(connection, contextOwnsConnection: true)` - one per
-  request, synchronously: `ToList`, `SaveChanges`, never their `Async` forms.
+  with `options.UseDatabase(connection)` - one per request, synchronously:
+  `ToList`, `SaveChanges`, never their `Async` forms. The code names no
+  database: here a SQLite file in `database/`, on the platform whichever it
+  keeps.
   Every version reads the same database, and a rollback runs an older version
   against a newer schema: change it additively where that costs little.
 - Files users upload, and large data that is no program, go in the workspace

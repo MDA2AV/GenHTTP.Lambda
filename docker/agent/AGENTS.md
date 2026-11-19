@@ -147,8 +147,8 @@ ship the tables as SQL migrations in `resources/migrations/`
 migrations, `EnsureCreated` or `Migrate`. Read and write them with Entity
 Framework Core: a `DbContext` of your own that maps those tables, on the
 connection `Database.GetConnection()` opens (`new Records(Database.GetConnection())`,
-configured with `options.UseSqlite(connection, contextOwnsConnection: true)`),
-one per request. Use it synchronously - `ToList`, `FirstOrDefault`, `Find`,
+configured with `options.UseDatabase(connection)`), one per request - the code
+names no database, and its SQL is plain SQL any database accepts. Use it synchronously - `ToList`, `FirstOrDefault`, `Find`,
 `SaveChanges`, `ExecuteUpdate`, never their `Async` forms. `demo-crud` shows
 all of it. Uploaded files go in the workspace. A migration
 that ran is never changed: a change to a table is the next file, and it only

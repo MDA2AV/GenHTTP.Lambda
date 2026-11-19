@@ -26,6 +26,8 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Sources;
+using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Databases;
 
 using GenHTTP.Modules.Layouting;
 
@@ -143,7 +145,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// </param>
     public static Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
                                                   bool compiled = false)
-        => CreateAsync(Edition.Cloud, configure, server, compiled);
+        => CreateAsync(Edition.Cloud, configure, server, compiled, null);
 
     /// <summary>
     /// Creates and starts the community edition: put together the way its
@@ -151,11 +153,13 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// operator may give it, and none of what only the cloud says about
     /// itself - no terms, no contact, no legal pages.
     /// </summary>
-    public static Task<LambdaFixture> CreateCommunityAsync(Func<LambdaOptions, LambdaOptions>? configure = null)
-        => CreateAsync(Edition.Community, configure, null, false);
+    /// <param name="database">The database it keeps its data in, where a test chooses one: SQLite otherwise, as on an installation</param>
+    public static Task<LambdaFixture> CreateCommunityAsync(Func<LambdaOptions, LambdaOptions>? configure = null,
+                                                           IIntegrationBuilder<IDatabaseProvider>? database = null)
+        => CreateAsync(Edition.Community, configure, null, false, database);
 
     private static async Task<LambdaFixture> CreateAsync(Edition edition, Func<LambdaOptions, LambdaOptions>? configure, ServerSettings? server,
-                                                         bool compiled)
+                                                         bool compiled, IIntegrationBuilder<IDatabaseProvider>? database)
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
@@ -187,10 +191,16 @@ internal sealed class LambdaFixture : IAsyncDisposable
         // and a console provider here would print every line of every fixture
         var loggers = LoggerFactory.Create(builder => builder.AddProvider(new LogBookProvider(book)));
 
-        var platform = LambdaPlatform.Create()
+        var building = LambdaPlatform.Create()
                                      .Options(options)
-                                     .Logging(loggers, book)
-                                     .Build();
+                                     .Logging(loggers, book);
+
+        if (database != null)
+        {
+            building.Database(database);
+        }
+
+        var platform = building.Build();
 
         var site = Layout.Create()
                          .Add(PlatformRoutes.Api, RestApi.Create(platform).Compiled(compiled))

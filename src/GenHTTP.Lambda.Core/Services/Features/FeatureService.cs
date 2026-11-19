@@ -28,7 +28,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, ISecretVault secrets, IDatabaseVault stores, LambdaOptions options, ILimitsService limits, ILogBook book,
+                                   IDeploymentService deployments, ISecretVault secrets, IDatabaseVault stores, IWorkspaceVault workspaces, LambdaOptions options, ILimitsService limits, ILogBook book,
                                    DatabaseChanges changes, ILogger<FeatureService> logger)
     : IFeatureService
 {
@@ -255,9 +255,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         }
         catch
         {
-            database.Secrets.Where(s => s.FeatureId == entity.Id).ExecuteDelete();
-
-            stores.RemoveCopy(lambdaId, entity.Id);
+            RemoveData(lambdaId, entity.Id);
 
             storage.DeleteFeature(lambdaId, entity.Id);
 
@@ -522,6 +520,20 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Copies the data of the lambda into the feature as it is now, so trying
     /// the feature cannot touch what the lambda's visitors keep.
     /// </summary>
+    /// <summary>
+    /// Removes a feature's copy of the data - its secrets, its database, its
+    /// workspace - wherever the integrations keep them, letting go of the
+    /// connections to its database before its folder goes.
+    /// </summary>
+    private void RemoveData(long lambdaId, long featureId)
+    {
+        secrets.RemoveCopy(lambdaId, featureId);
+
+        stores.RemoveCopy(lambdaId, featureId);
+
+        workspaces.RemoveCopy(lambdaId, featureId);
+    }
+
     /// <remarks>
     /// The workspace and the database can be gigabytes, so they are copied
     /// away from the reactor and in the feature's turn to be copied (see
@@ -537,7 +549,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         {
             if (workspace)
             {
-                await storage.CopyWorkspaceAsync(lambdaId, featureId, cancellation);
+                await workspaces.CopyAsync(lambdaId, featureId, cancellation);
             }
 
             // and the secrets, so the preview can call what the lambda calls
@@ -742,7 +754,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             {
                 deployments.EvictPreview(lambdaId, featureId);
 
-                stores.RemoveCopy(lambdaId, featureId);
+                RemoveData(lambdaId, featureId);
 
                 storage.DeleteFeature(lambdaId, featureId);
 
@@ -842,18 +854,16 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     {
         // the copy of the secrets cascades in the schema, but only where the
         // connection has foreign keys switched on
-        database.Secrets.Where(s => s.FeatureId == feature.Id).ExecuteDelete();
+        // its copy of the data, wherever it is kept, before its notes go
+        secrets.RemoveCopy(lambdaId, feature.Id);
 
         database.Features.Remove(feature);
 
         database.SaveChanges();
 
-        secrets.Invalidate(lambdaId);
-
         deployments.EvictPreview(lambdaId, feature.Id);
 
-        // its copy of the database is let go of before its folder goes
-        stores.RemoveCopy(lambdaId, feature.Id);
+        RemoveData(lambdaId, feature.Id);
 
         storage.DeleteFeature(lambdaId, feature.Id);
 

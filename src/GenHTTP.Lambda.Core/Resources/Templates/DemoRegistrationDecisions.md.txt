@@ -51,14 +51,14 @@ Left out: hashing such an account again, with the pepper, when it next signs in 
 `accounts` and `sessions`, made by `resources/migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` through Entity Framework Core. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a context on a connection per call, used synchronously - as in `demo-crud`.
 
 - **The context maps, the migration makes.** `MemberContext` maps the two tables onto `Account` and `StoredSession`, with the session's account as a navigation (`Owner`), so finding who a token signs in is a query that follows it rather than a join written by hand. Every `DateTime` is kept as ISO 8601 text in UTC, by one converter for all of them (`ConfigureConventions`).
-- **The table decides who gets a name.** The account is the key, and a registration that finds it taken fails to save - SQLite's constraint, which `Register` answers with 409: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.
+- **The table decides who gets a name.** The account is the key, and a registration that finds it taken fails to save - the table's own constraint. Every database says so in words of its own, so `Register` asks the table whether the account is there now and answers 409 if it is: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.
 - **A session belongs to its account** (`REFERENCES accounts ON DELETE CASCADE`), so an account that is forgotten takes its sessions along, and a session is only good while its account is there.
 - **At most 300 accounts**, the oldest forgotten first, because anybody can register on a demo. A lambda of your own would rather refuse than forget somebody.
 - **Only `lambda.cs` touches `Secret`.** `Accounts` is handed a function that reads the pepper, so it does not care where the pepper comes from.
 
 ## Names are one account whatever their case
 
-An account is its name in capitals (`folded`, the key of the table), so "Ann" and "ann" are one, and so are "Jürgen" and "JÜRGEN" - SQLite's own `COLLATE NOCASE` knows the English letters only. The name is kept as first registered, which is the name a sign-in answers with. A name is trimmed and has 2 to 24 letters (of any alphabet), digits, dashes, dots or underscores - no spaces, and no other punctuation. A password has 8 to 200 characters; the upper bound keeps what is hashed within reason.
+An account is its name in capitals (`folded`, the key of the table), so "Ann" and "ann" are one, and so are "Jürgen" and "JÜRGEN" - a database's own case-insensitive comparison often knows the English letters only. The name is kept as first registered, which is the name a sign-in answers with. A name is trimmed and has 2 to 24 letters (of any alphabet), digits, dashes, dots or underscores - no spaces, and no other punctuation. A password has 8 to 200 characters; the upper bound keeps what is hashed within reason.
 
 ## One answer for an unknown name and a wrong password
 

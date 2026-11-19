@@ -3,6 +3,7 @@ using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
+using GenHTTP.Lambda.Integrations.Sqlite;
 
 namespace GenHTTP.Lambda.Tests.Compilation;
 
@@ -22,7 +23,7 @@ public sealed class SemanticsTests
             return Inline.Create().Get((int id) => greeting);
             """;
 
-        var tokens = SemanticClassifier.Classify(Code);
+        var tokens = SemanticClassifier.Classify(Code, SqliteDatabase.Binding);
 
         Assert.AreEqual("local", Find(Code, tokens, 0, "greeting"), "a declared variable");
         Assert.AreEqual("type", Find(Code, tokens, 2, "Inline"), "a type from the module catalogue");
@@ -39,7 +40,7 @@ public sealed class SemanticsTests
             // one
             // two
             var here = 1;
-            """);
+            """, SqliteDatabase.Binding);
 
         var local = tokens.Single(t => t.Kind == "local");
 
@@ -57,7 +58,7 @@ public sealed class SemanticsTests
             record Note(string Text);
             """;
 
-        var tokens = SemanticClassifier.Classify(Code);
+        var tokens = SemanticClassifier.Classify(Code, SqliteDatabase.Binding);
 
         Assert.AreEqual("type", Find(Code, tokens, 0, "Note"), "used before it is declared");
         Assert.AreEqual("type", Find(Code, tokens, 2, "Note"), "and where it is declared");
@@ -69,7 +70,7 @@ public sealed class SemanticsTests
         // the editor colours while you type, which is mostly while it is broken
         const string Code = "var x = Inline.Create(";
 
-        var tokens = SemanticClassifier.Classify(Code);
+        var tokens = SemanticClassifier.Classify(Code, SqliteDatabase.Binding);
 
         Assert.IsNotEmpty(tokens);
         Assert.AreEqual("type", Find(Code, tokens, 0, "Inline"));
@@ -107,7 +108,7 @@ public sealed class SemanticsTests
     {
         const string Code = "var greeting = \"hello\";";
 
-        var tokens = SemanticClassifier.Classify(Code);
+        var tokens = SemanticClassifier.Classify(Code, SqliteDatabase.Binding);
 
         // it resolves to string, and saying so would paint a keyword as a type
         Assert.IsNull(Find(Code, tokens, 0, "var"));

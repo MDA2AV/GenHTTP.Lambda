@@ -190,8 +190,10 @@ public static class CodeGuard
     /// or making a token is something every lambda with accounts has to do,
     /// while System.Security.Cryptography.X509Certificates reads the stores of
     /// the host. The types in here that reach the host are banned by name.
-    /// Microsoft.Data.Sqlite is what a lambda talks to its database with; what
-    /// in it would open another database is banned by name as well.
+    /// Microsoft.Data.Sqlite is what lambdas on SQLite were written against
+    /// before they were handed a DbConnection, and is there for them where
+    /// SQLite keeps the database; what in it would open another database is
+    /// banned by name as well.
     ///
     /// Entity Framework Core is the namespace a context, its sets and its
     /// queries are written in, and the three below it that describing a
@@ -541,19 +543,22 @@ public static class CodeGuard
 
     /// <summary>
     /// Refuses code that makes a database connection of its own: with
-    /// <c>new SqliteConnection(...)</c>, with a target-typed <c>new(...)</c>,
-    /// or through a class of its own derived from one.
+    /// <c>new SqliteConnection(...)</c> or any other connection, with a
+    /// target-typed <c>new(...)</c>, or through a class of its own derived
+    /// from one.
     /// </summary>
     /// <remarks>
     /// Asked of the compilation rather than of the text, because
     /// <c>SqliteConnection connection = new("Data Source=/data/lambda.db");</c>
     /// names no type where the connection is made, and an alias or a derived
-    /// class names another one. Only the object creations are bound, and only
-    /// in files that have any - the rest is what the compiler binds anyway.
+    /// class names another one. Every connection derives from
+    /// <c>DbConnection</c>, whichever client library the lambda was handed.
+    /// Only the object creations are bound, and only in files that have any -
+    /// the rest is what the compiler binds anyway.
     /// </remarks>
     public static IReadOnlyList<CompilationDiagnostic> InspectConstruction(Microsoft.CodeAnalysis.Compilation compilation)
     {
-        var connection = compilation.GetTypeByMetadataName("Microsoft.Data.Sqlite.SqliteConnection");
+        var connection = compilation.GetTypeByMetadataName("System.Data.Common.DbConnection");
 
         if (connection == null)
         {
@@ -598,7 +603,7 @@ public static class CodeGuard
     /// What a lambda is told that configures a context with anything but a connection.
     /// </summary>
     internal const string ContextMessage =
-        "A lambda's DbContext works on the connection Database.GetConnection() opens: options.UseSqlite(connection, contextOwnsConnection: true), " +
+        "A lambda's DbContext works on the connection Database.GetConnection() opens: options.UseDatabase(connection), " +
         "with the connection handed to the context from outside it - new Records(Database.GetConnection()). A connection string would open a database of its own.";
 
     /// <summary>
@@ -984,10 +989,12 @@ public static class CodeGuard
             "CreateInstance", "CreateDelegate", "DynamicInvoke", "TypeDescriptor");
 
         // the connection Database.GetConnection() hands out is the only one: these
-        // would make another, point one at another file, or load native code into it
+        // would make another, point one at another file or database - which
+        // ChangeDatabase does on a server, as the lambda's own role - or load
+        // native code into it
         Add("use Database.GetConnection() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
             "SqliteFactory", "DbProviderFactories", "DbProviderFactory", "DbDataSource", "CreateDataSource", "LoadExtension",
-            "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString");
+            "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString", "ChangeDatabase");
 
         // dynamic binds members at runtime, by the type an object turns out to
         // have - which is everything this guard reads the code for, skipped

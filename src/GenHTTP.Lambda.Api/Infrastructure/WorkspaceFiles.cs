@@ -46,7 +46,7 @@ internal static class WorkspaceFiles
         return request.Respond()
                       // bytes to download whatever the name says: the API shares its
                       // origin with the editor, and a page somebody uploaded must not run there
-                      .Content(Resource.FromFile(found).Type(ContentType.ApplicationOctetStream).Build())
+                      .Content(found.Content, ContentType.ApplicationOctetStream)
                       .Header("Content-Disposition", $"attachment; filename=\"{plain}\"; filename*=UTF-8''{Uri.EscapeDataString(found.Name)}")
                       .Header("X-Content-Type-Options", "nosniff")
                       .Build();

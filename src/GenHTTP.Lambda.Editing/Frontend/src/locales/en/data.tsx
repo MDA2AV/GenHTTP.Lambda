@@ -22,7 +22,7 @@ export const data = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'A SQLite database the lambda keeps its records in, reached with Database.GetConnection().',
+      what: 'A database of its own the lambda keeps its records in, reached with Database.GetConnection().',
       count: (items: number) => (items === 1 ? '1 table' : `${items} tables`),
       confirmOff: 'Switch the database off?',
       switchedOn: 'The database is on, and empty. The lambda starts again with it on its next request.',

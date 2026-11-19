@@ -4,11 +4,14 @@ The community edition on <http://localhost:8080>, with everything it keeps in
 the volume `lambda-data`.
 
 ```bash
-cp .env.example .env     # and set LAMBDA_ADMIN_TOKEN, at least
+cp .env.example .env
 docker compose up -d
 ```
 
-Open <http://localhost:8080>, and connect your agent - for Claude Code:
+Open <http://localhost:8080>, and the panel at <http://localhost:8080/admin>
+with the password `secure-password`. Change it (`LAMBDA_ADMIN_TOKEN` in `.env`)
+before anybody else can reach the server. Then connect your agent - for Claude
+Code:
 
 ```bash
 claude mcp add --transport http genhttp http://localhost:8080/mcp
@@ -33,6 +36,20 @@ docker compose --profile agent up -d
 
 Every build runs in a container of its own, which reaches this server and
 Anthropic and nothing else, and is thrown away when it ends.
+
+## With PostgreSQL
+
+The databases - the platform's records, its analytics and every app's - in a
+PostgreSQL server beside it rather than in SQLite files. Choose it before you
+create apps; nothing is moved from one to the other.
+
+```bash
+POSTGRES_PASSWORD=a-long-random-password \
+  docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+```
+
+[docs/postgresql.md](../../docs/postgresql.md) has a server of your own, and
+what differs from SQLite.
 
 ## Elsewhere than localhost
 

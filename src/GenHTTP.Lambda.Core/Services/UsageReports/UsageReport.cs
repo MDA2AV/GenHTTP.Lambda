@@ -89,9 +89,13 @@ public sealed record UsageServer(string? Engine, [property: JsonPropertyName("ge
 /// <param name="CrawlerLists">Whether the lists of crawlers are fetched for the analytics</param>
 /// <param name="Development">Whether the server runs in development mode</param>
 /// <param name="Branded">Whether its operator gave it a name or a logo of its own - never the name or the logo</param>
+/// <param name="Database">What keeps the databases: <c>sqlite</c> or <c>postgresql</c> - never where it is</param>
+/// <param name="Files">What keeps the lambdas' files: <c>local</c></param>
+/// <param name="Secrets">What keeps their secrets: <c>database</c>, sealed in the platform's own</param>
 public sealed record UsageConfiguration(string Addressing, bool HostingDomain, bool BuildAgent, bool BuildBox, bool ChangeBox, bool AdminPanel,
                                         bool Terms, bool Contact, bool AbuseContact, bool LegalPages, int McpOrigins, bool ClientAddresses,
-                                        bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development, bool Branded);
+                                        bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development, bool Branded,
+                                        string Database, string Files, string Secrets);
 
 /// <remarks>
 /// None of the counts includes the demos, which every installation has.

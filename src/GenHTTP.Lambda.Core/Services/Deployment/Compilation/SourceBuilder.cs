@@ -5,8 +5,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Data;
-using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
@@ -42,25 +42,34 @@ internal static class SourceBuilder
     internal const string DatabaseType = "__LambdaDatabase";
 
     /// <summary>
-    /// The field of the generated secrets, database and workspace classes
-    /// the platform puts the function they read with into, once the lambda
-    /// is loaded - for the workspace, the room the database takes.
+    /// The field of the generated secrets and database classes the platform
+    /// puts the function they read with into, once the lambda is loaded.
     /// </summary>
     internal const string SecretSource = "_source";
 
     /// <summary>
-    /// The field of the generated workspace class the platform puts what it
-    /// calls after every write into, once the lambda is loaded - so the room
-    /// the database may grow into is measured again.
+    /// The field of the generated scope the platform puts what configures a
+    /// context of Entity Framework on the lambda's connection into, once the
+    /// lambda is loaded - what <c>UseDatabase</c> calls.
     /// </summary>
-    internal const string ChangedHook = "_changed";
+    internal const string ContextSource = "_context";
 
     /// <summary>
-    /// The field of the generated workspace class the platform puts the
-    /// function it reads the room of the lambda's data with into, once the
-    /// lambda is loaded - what its tier allows it now.
+    /// The fields of the generated workspace class the platform puts the
+    /// functions it works through into, once the lambda is loaded - one per
+    /// thing its code can do with its files, as <see cref="Services.Workspace.WorkspaceBinding"/> has them.
     /// </summary>
-    internal const string RoomSource = "_room";
+    internal static class WorkspaceFields
+    {
+        internal const string Exists = "_exists";
+        internal const string Read = "_read";
+        internal const string Write = "_write";
+        internal const string Delete = "_delete";
+        internal const string List = "_list";
+        internal const string Folders = "_folders";
+        internal const string CreateFolder = "_createFolder";
+        internal const string Tree = "_tree";
+    }
 
     /// <summary>
     /// Holds what every file of a lambda may name without qualifying it.
@@ -110,7 +119,7 @@ internal static class SourceBuilder
     /// compilation unit so there is no single place that is. Line directives
     /// carry the file's own name, which is what a diagnostic then reports.
     /// </remarks>
-    internal static SyntaxTree WrapFile(SyntaxTree file, string scope, string name)
+    internal static SyntaxTree WrapFile(SyntaxTree file, string scope, string name, DatabaseBinding binding)
     {
         var root = (CompilationUnitSyntax)file.GetRoot();
 
@@ -118,7 +127,7 @@ internal static class SourceBuilder
 
         var builder = new StringBuilder();
 
-        foreach (var import in ModuleCatalog.Imports)
+        foreach (var import in ModuleCatalog.ImportsFor(binding))
         {
             builder.AppendLine($"using {import};");
         }
@@ -148,14 +157,14 @@ internal static class SourceBuilder
     /// Wraps the parsed snippet into the file that is handed to the compiler.
     /// </summary>
     /// <param name="snippet">The parsed snippet of the user</param>
-    /// <param name="workspace">The directory this lambda may read and write</param>
     /// <param name="resources">The directory this lambda's resources were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
+    /// <param name="binding">How the lambda is bound to its database, which its database integration decides</param>
     /// <param name="enabled">
     /// Whether the lambda has a workspace, which its owner decides. Left out
     /// where nothing is going to run, such as for the editor's questions.
     /// </param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string resources, string scope, bool enabled = true)
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string resources, string scope, DatabaseBinding binding, bool enabled = true)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -173,7 +182,7 @@ internal static class SourceBuilder
 
         var builder = new StringBuilder();
 
-        foreach (var import in ModuleCatalog.Imports)
+        foreach (var import in ModuleCatalog.ImportsFor(binding))
         {
             builder.AppendLine($"using {import};");
         }
@@ -192,7 +201,7 @@ internal static class SourceBuilder
         builder.AppendLine();
         builder.AppendLine("internal static class LambdaEnvironment");
         builder.AppendLine("{");
-        builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
+        builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}();");
         builder.AppendLine($"    internal static readonly {ResourceType} Resources = new {ResourceType}({Literal(resources)});");
         // what they were called before, which code written then still says
         builder.AppendLine($"    internal static {ResourceType} Assets => Resources;");
@@ -210,6 +219,8 @@ internal static class SourceBuilder
         // other file - and the same as it did before the platform had either
         builder.AppendLine($"    internal static {DatabaseType} Database => LambdaEnvironment.Database;");
         builder.AppendLine($"    internal static {ResourceType} Resources => LambdaEnvironment.Resources;");
+        builder.AppendLine();
+        builder.AppendLine(ContextSourceCode);
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
@@ -240,7 +251,7 @@ internal static class SourceBuilder
         builder.AppendLine(WorkspaceSource(enabled));
         builder.AppendLine(ResourceSource);
         builder.AppendLine(SecretSourceCode);
-        builder.AppendLine(DatabaseSourceCode);
+        builder.AppendLine(DatabaseSourceCode(binding));
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
     }
@@ -515,49 +526,89 @@ internal static class SourceBuilder
     /// Each call opens a connection of its own, taken from a pool, which the
     /// caller disposes of - one per request, not one shared between requests.
     ///
+    /// Declared to return what the database integration says (<see cref="DatabaseBinding.Connection"/>):
+    /// a <c>DbConnection</c>, which every database has, or the connection of
+    /// the integration's own library where code written before names it.
+    ///
     /// Throws while the database is switched off, with what to do about it,
     /// which is what the log then says.
     /// </remarks>
-    private static readonly string DatabaseSourceCode = $$"""
+    private static string DatabaseSourceCode(DatabaseBinding binding) => $$"""
         internal sealed class {{DatabaseType}}
         {
-            private static global::System.Func<global::Microsoft.Data.Sqlite.SqliteConnection> {{SecretSource}} = null;
+            private static global::System.Func<global::System.Data.Common.DbConnection> {{SecretSource}} = null;
 
             /// <summary>
             /// An open connection to the database of this lambda, for plain SQL
-            /// or for a DbContext of Entity Framework Core (UseSqlite(connection,
-            /// contextOwnsConnection: true)). Dispose of it when done - it goes
-            /// back to a pool, so one per request costs nothing. Use it
-            /// synchronously: ToList and SaveChanges, not their Async forms.
+            /// or for a DbContext of Entity Framework Core (options.UseDatabase(connection)).
+            /// Dispose of it when done - it goes back to a pool, so one per request
+            /// costs nothing. Use it synchronously: ToList and SaveChanges, not
+            /// their Async forms.
             /// </summary>
-            public global::Microsoft.Data.Sqlite.SqliteConnection GetConnection() => Source()();
+            public global::{{binding.Connection.FullName}} GetConnection() => (global::{{binding.Connection.FullName}})Source()();
 
-            private static global::System.Func<global::Microsoft.Data.Sqlite.SqliteConnection> Source()
+            private static global::System.Func<global::System.Data.Common.DbConnection> Source()
                 => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The database of this lambda is not available here.");
         }
         """;
 
     /// <summary>
-    /// The only door a lambda has to the file system: a private directory,
-    /// handed to the snippet as <c>Workspace</c>. Generated into the lambda
-    /// rather than referenced, so the assembly of this application stays
-    /// invisible to the code being compiled.
+    /// What a context of Entity Framework Core is configured with in a lambda:
+    /// <c>options.UseDatabase(connection)</c> in its <c>OnConfiguring</c>.
     /// </summary>
     /// <remarks>
-    /// Only the room is limited, counted in blocks as <see cref="WorkspaceLimits"/>
-    /// explains; reading never creates anything, and a folder is only made once
-    /// there is room for it.
-    ///
-    /// The quota is the room of the lambda's data, which its database takes
-    /// some of. Both are read through functions the platform hands the class
-    /// once the lambda is loaded, like the secrets: the quota as the lambda's
-    /// tier allows it now, so moving the lambda to another tier changes what it
-    /// may write without compiling it again or running its startup again, and
-    /// what the database takes, so the lambda never learns where its database
-    /// is. The class tells the platform it wrote, through another, so a
-    /// connection to the database opened next may grow only into what the
-    /// workspace left. Without the platform's function - nothing is running -
-    /// there is no room at all.
+    /// An extension of the generated scope, which every file imports, so it is
+    /// found inside a context - where <c>Database</c> is the context's own. It
+    /// calls what the database integration configures a context with, handed
+    /// over once the lambda is loaded, so the code names no database and runs
+    /// on whichever keeps it. The context owns the connection, and disposes of
+    /// it with itself.
+    /// </remarks>
+    private const string ContextSourceCode = $$"""
+            private static global::System.Action<global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder, global::System.Data.Common.DbConnection> {{ContextSource}} = null;
+
+            /// <summary>
+            /// Configures a DbContext of Entity Framework Core on the connection
+            /// Database.GetConnection() opened, which the context then owns.
+            /// </summary>
+            internal static global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder UseDatabase(this global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder options,
+                                                                                                    global::System.Data.Common.DbConnection connection)
+            {
+                Context()(options, connection);
+                return options;
+            }
+
+            /// <summary>
+            /// Configures a DbContext of Entity Framework Core on the connection
+            /// Database.GetConnection() opened, which the context then owns.
+            /// </summary>
+            internal static global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> UseDatabase<TContext>(this global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TContext> options,
+                                                                                                                       global::System.Data.Common.DbConnection connection)
+                where TContext : global::Microsoft.EntityFrameworkCore.DbContext
+            {
+                Context()(options, connection);
+                return options;
+            }
+
+            private static global::System.Action<global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder, global::System.Data.Common.DbConnection> Context()
+                => {{ContextSource}} ?? throw new global::System.InvalidOperationException("The database of this lambda is not available here.");
+        """;
+
+    /// <summary>
+    /// The only door a lambda has to files it keeps: its workspace, handed to
+    /// the snippet as <c>Workspace</c>. Generated into the lambda rather than
+    /// referenced, so the assembly of this application stays invisible to the
+    /// code being compiled.
+    /// </summary>
+    /// <remarks>
+    /// Like the secrets, the class holds functions the platform hands it once
+    /// the lambda is loaded - one for each thing it does - and does nothing
+    /// with files itself: the platform resolves the names, holds a write to
+    /// the room of the lambda's data and asks the files integration, the same
+    /// way for what the lambda writes and what its owner puts there (see
+    /// <c>LambdaWorkspace</c>). So the code is the same whatever keeps its
+    /// files, and never learns where they are. Without the platform's
+    /// functions - nothing is running - there is nothing to read or write.
     ///
     /// A workspace its owner switched off is still the same class, so code
     /// that names it compiles, but every member refuses with the reason and
@@ -568,113 +619,94 @@ internal static class SourceBuilder
     private static string WorkspaceSource(bool enabled) => $$"""
         internal sealed class {{WorkspaceType}}
         {
-            private static global::System.Func<long> {{RoomSource}} = null;
+            private static global::System.Func<string, bool> {{WorkspaceFields.Exists}} = null;
 
-            private static long Quota => {{RoomSource}} == null ? 0 : {{RoomSource}}();
+            private static global::System.Func<string, byte[]> {{WorkspaceFields.Read}} = null;
 
-            private const long Block = {{WorkspaceLimits.Block}};
+            private static global::System.Action<string, byte[]> {{WorkspaceFields.Write}} = null;
 
-            private static global::System.Func<long> {{SecretSource}} = null;
+            private static global::System.Action<string> {{WorkspaceFields.Delete}} = null;
 
-            private static global::System.Action {{ChangedHook}} = null;
+            private static global::System.Func<string[]> {{WorkspaceFields.List}} = null;
 
-            private readonly string _root;
+            private static global::System.Func<string[]> {{WorkspaceFields.Folders}} = null;
 
-            internal {{WorkspaceType}}(string root)
-            {
-                _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
-                      + global::System.IO.Path.DirectorySeparatorChar;
+            private static global::System.Action<string> {{WorkspaceFields.CreateFolder}} = null;
 
-                {{(enabled ? "global::System.IO.Directory.CreateDirectory(_root);" : "// switched off, so there is nothing to make")}}
-            }
+            private static global::System.Func<string, global::GenHTTP.Api.Content.IO.IResourceTree> {{WorkspaceFields.Tree}} = null;
 
             {{(enabled
                 ? "private static void Guard() { }"
                 : $"private static void Guard() => throw new global::System.InvalidOperationException({Literal(DataKinds.WorkspaceOff)});")}}
 
-            /// <summary>The absolute path of this workspace.</summary>
-            public string Root
+            /// <summary>Checks whether the given file exists.</summary>
+            public bool Exists(string name)
             {
-                get
-                {
-                    Guard();
-                    return _root;
-                }
+                Guard();
+                return Port({{WorkspaceFields.Exists}})(name);
             }
 
-            /// <summary>Checks whether the given file exists.</summary>
-            public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
-
             /// <summary>Reads a file as UTF-8 text.</summary>
-            public string ReadText(string name) => global::System.IO.File.ReadAllText(Existing(name));
+            public string ReadText(string name)
+            {
+                var bytes = ReadBytes(name);
+
+                using var reader = new global::System.IO.StreamReader(new global::System.IO.MemoryStream(bytes), global::System.Text.Encoding.UTF8, true);
+
+                return reader.ReadToEnd();
+            }
 
             /// <summary>Reads a file as bytes.</summary>
-            public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Existing(name));
+            public byte[] ReadBytes(string name)
+            {
+                Guard();
+                return Port({{WorkspaceFields.Read}})(name);
+            }
 
             /// <summary>Writes UTF-8 text into a file, replacing it if it exists.</summary>
             public void WriteText(string name, string content)
-            {
-                var path = Resolve(name);
-                Reserve(path, content == null ? 0 : global::System.Text.Encoding.UTF8.GetByteCount(content));
-                global::System.IO.File.WriteAllText(path, content);
-                Changed();
-            }
+                => WriteBytes(name, content == null ? new byte[0] : global::System.Text.Encoding.UTF8.GetBytes(content));
 
             /// <summary>Writes bytes into a file, replacing it if it exists.</summary>
             public void WriteBytes(string name, byte[] content)
             {
-                var path = Resolve(name);
-                Reserve(path, content == null ? 0 : content.Length);
-                global::System.IO.File.WriteAllBytes(path, content);
-                Changed();
+                Guard();
+                Port({{WorkspaceFields.Write}})(name, content);
             }
 
             /// <summary>Removes a file, if it exists.</summary>
             public void Delete(string name)
             {
-                var path = Resolve(name);
-
-                if (global::System.IO.File.Exists(path))
-                {
-                    global::System.IO.File.Delete(path);
-                    Changed();
-                }
+                Guard();
+                Port({{WorkspaceFields.Delete}})(name);
             }
 
             /// <summary>Lists the files in this workspace, relative to its root.</summary>
             public string[] List()
             {
                 Guard();
-
-                var files = global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories);
-
-                var result = new string[files.Length];
-
-                for (var i = 0; i < files.Length; i++)
-                {
-                    result[i] = files[i].Substring(_root.Length).Replace('\\', '/');
-                }
-
-                return result;
+                return Port({{WorkspaceFields.List}})();
             }
 
             /// <summary>Provides this workspace as a resource tree.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
             {
                 Guard();
-
-                return global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
+                return Port({{WorkspaceFields.Tree}})(null);
             }
 
             /// <summary>One folder of this workspace as a resource tree.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree(string folder)
-                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(Folder(folder)).Build();
+            {
+                Guard();
+                return Port({{WorkspaceFields.Tree}})(folder ?? throw new global::System.ArgumentException("The name of a workspace file must not be empty.", "name"));
+            }
 
             /// <summary>
             /// A single page application over this workspace.
             /// </summary>
             /// <remarks>
-            /// The same thing Resources.App does, over the other directory. Which
+            /// The same thing Resources.App does, over the other files. Which
             /// one a front end belongs in is a real choice rather than a
             /// detail: shipped with the code it is versioned, travels with a
             /// clone and is replaced wholesale on every deploy; here it is
@@ -697,185 +729,23 @@ internal static class SourceBuilder
             /// <summary>Makes a folder, so files can be written into it.</summary>
             public void CreateFolder(string name)
             {
-                var path = Resolve(name);
-
-                if (global::System.IO.Directory.Exists(path))
-                {
-                    return;
-                }
-
-                if (Used() + Beside() + (Missing(path) + 1) * Block > Quota)
-                {
-                    throw Full();
-                }
-
-                global::System.IO.Directory.CreateDirectory(path);
-                Changed();
+                Guard();
+                Port({{WorkspaceFields.CreateFolder}})(name);
             }
 
             /// <summary>The folders of this workspace, relative to its root.</summary>
             public string[] Folders()
             {
                 Guard();
-
-                if (!global::System.IO.Directory.Exists(_root))
-                {
-                    return new string[0];
-                }
-
-                var found = global::System.IO.Directory.GetDirectories(_root, "*", global::System.IO.SearchOption.AllDirectories);
-
-                var result = new string[found.Length];
-
-                for (var i = 0; i < found.Length; i++)
-                {
-                    result[i] = found[i].Substring(_root.Length).Replace('\\', '/');
-                }
-
-                return result;
-            }
-
-            private string Folder(string name)
-            {
-                var resolved = Resolve(name);
-
-                if (!global::System.IO.Directory.Exists(resolved))
-                {
-                    var had = Folders();
-
-                    var known = had.Length > 0
-                              ? "The folders this workspace holds are: " + string.Join(", ", had) + "."
-                              : "This workspace holds no folders yet.";
-
-                    throw new global::System.InvalidOperationException(
-                        "There is no folder called '" + name + "' in the workspace. " + known);
-                }
-
-                return resolved;
+                return Port({{WorkspaceFields.Folders}})();
             }
 
             /// <summary>Creates a handler that serves the files of this workspace.</summary>
             public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
                 => global::GenHTTP.Modules.Files.Assets.From(Tree());
 
-            private string Resolve(string name)
-            {
-                Guard();
-
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    throw new global::System.ArgumentException("The name of a workspace file must not be empty.", "name");
-                }
-
-                var resolved = global::System.IO.Path.GetFullPath(global::System.IO.Path.Combine(_root, name));
-
-                if (!resolved.StartsWith(_root, global::System.StringComparison.Ordinal))
-                {
-                    throw new global::System.UnauthorizedAccessException("'" + name + "' is outside of the workspace of this lambda.");
-                }
-
-                return resolved;
-            }
-
-            private string Existing(string name)
-            {
-                var path = Resolve(name);
-
-                if (!global::System.IO.File.Exists(path))
-                {
-                    throw new global::System.IO.FileNotFoundException("There is no file called '" + name + "' in the workspace.", name);
-                }
-
-                return path;
-            }
-
-            /// <summary>
-            /// Makes sure what is about to be written fits, and then makes the
-            /// folders it goes into.
-            /// </summary>
-            private void Reserve(string path, long size)
-            {
-                // the room this write takes: the file in whole blocks, and a
-                // block for each folder it goes into that is not there yet
-                var added = Footprint(size) + Missing(path) * Block;
-
-                // a file being replaced is not counted a second time
-                var replaced = global::System.IO.File.Exists(path) ? Footprint(Size(path)) : 0;
-
-                // a write taking no more room than what it replaces goes
-                // through even past the quota, which is where a workspace is
-                // once its lambda leaves the tier that filled it: it can still
-                // rewrite what it holds, only not grow
-                if (added > replaced && Used() + Beside() - replaced + added > Quota)
-                {
-                    throw Full();
-                }
-
-                var directory = global::System.IO.Path.GetDirectoryName(path);
-
-                if (directory != null)
-                {
-                    global::System.IO.Directory.CreateDirectory(directory);
-                }
-            }
-
-            /// <summary>The room everything in the workspace takes.</summary>
-            private long Used()
-            {
-                var used = 0L;
-
-                foreach (var file in global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories))
-                {
-                    used += Footprint(Size(file));
-                }
-
-                return used + global::System.IO.Directory.GetDirectories(_root, "*", global::System.IO.SearchOption.AllDirectories).LongLength * Block;
-            }
-
-            /// <summary>How many folders between the root and a path are not there yet.</summary>
-            private long Missing(string path)
-            {
-                var missing = 0L;
-
-                var directory = global::System.IO.Path.GetDirectoryName(path);
-
-                while (directory != null && directory.Length >= _root.Length && !global::System.IO.Directory.Exists(directory))
-                {
-                    missing++;
-
-                    directory = global::System.IO.Path.GetDirectoryName(directory);
-                }
-
-                return missing;
-            }
-
-            /// <summary>The room the rest of the lambda's data takes - its database.</summary>
-            private static long Beside()
-            {
-                var source = {{SecretSource}};
-
-                return source == null ? 0 : source();
-            }
-
-            private static void Changed() => {{ChangedHook}}?.Invoke();
-
-            private static global::System.InvalidOperationException Full()
-                => new global::System.InvalidOperationException("The data of this lambda - its workspace and its database together - must not take more than " + Quota + " bytes.");
-
-            private static long Footprint(long size) => global::System.Math.Max(1, (size + Block - 1) / Block) * Block;
-
-            private static long Size(string file)
-            {
-                try
-                {
-                    return new global::System.IO.FileInfo(file).Length;
-                }
-                catch (global::System.IO.IOException)
-                {
-                    // removed since the directory was read
-                    return 0;
-                }
-            }
+            private static T Port<T>(T function) where T : class
+                => function ?? throw new global::System.InvalidOperationException("The workspace of this lambda is not available here.");
         }
         """;
 

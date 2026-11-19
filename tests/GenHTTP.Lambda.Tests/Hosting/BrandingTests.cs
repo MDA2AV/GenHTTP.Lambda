@@ -475,6 +475,71 @@ public sealed class BrandingTests
     }
 
     [TestMethod]
+    public async Task TheLogoIsAFileAndOneKeptInTheDatabaseBeforeIsMovedOut()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
+
+        var logoFile = Path.Combine(directory, "branding", "logo");
+
+        await using (var first = await CommunityAsync(directory: directory))
+        {
+            using var uploaded = await SendAsync(first, HttpMethod.Put, "/api/v1/admin/branding/logo", Picture(Png, "image/png"));
+
+            Assert.AreEqual(HttpStatusCode.OK, uploaded.StatusCode);
+
+            CollectionAssert.AreEqual(Png, File.ReadAllBytes(logoFile));
+            Assert.AreEqual(0L, LogoKept(first.Options), "no picture is kept in the database");
+        }
+
+        // as an installation from before kept it: in its row, no file
+        File.Delete(logoFile);
+
+        using (var connection = new SqliteConnection($"Data Source={new LambdaOptions { DataDirectory = directory }.DatabaseFile};Pooling=false"))
+        {
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+
+            command.CommandText = "UPDATE branding_pictures SET content = $content";
+            command.Parameters.AddWithValue("$content", Png);
+
+            command.ExecuteNonQuery();
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        await using (var second = await CommunityAsync(directory: directory))
+        {
+            Assert.AreEqual(0L, LogoKept(second.Options));
+            CollectionAssert.AreEqual(Png, File.ReadAllBytes(logoFile));
+
+            using (var logo = await second.GetAsync((await BrandAsync(second)).Logo!))
+            {
+                CollectionAssert.AreEqual(Png, await logo.Content.ReadAsByteArrayAsync());
+            }
+
+            using var removed = await SendAsync(second, HttpMethod.Delete, "/api/v1/admin/branding/logo");
+
+            Assert.IsTrue(removed.IsSuccessStatusCode);
+        }
+
+        Assert.IsFalse(File.Exists(logoFile), "taken away with the logo");
+    }
+
+    private static long LogoKept(LambdaOptions options)
+    {
+        using var connection = new SqliteConnection($"Data Source={options.DatabaseFile};Pooling=false");
+
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = "SELECT COALESCE(SUM(length(content)), 0) FROM branding_pictures";
+
+        return (long)command.ExecuteScalar()!;
+    }
+
+    [TestMethod]
     public async Task ACopyOfABrandedInstallationsDataBringsNothingOfItToTheCloud()
     {
         var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
