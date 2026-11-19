@@ -18,7 +18,8 @@ export const platform = {
   build: 'Build something',
   ownAgent: 'Use your own agent',
   free: 'Free. No sign-up, no credit card.',
-  heroAlt: 'The editor of a court booking app: online at the club’s own domain, how many people used it today, and its latest change',
+  /** The first picture: a new app being asked for on the page that builds websites, and the agent's answer. */
+  heroAlt: 'A tennis club asks for a court booking website, and the agent answers that it is online - with a button to open it and the editor link to keep',
   /** Under the first picture: every picture on the page shows the same app, an example made up for it. */
   example: 'Every picture on this page shows the same example app: the court booking of a tennis club.',
 

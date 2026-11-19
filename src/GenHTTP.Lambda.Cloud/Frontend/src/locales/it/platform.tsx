@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Crea qualcosa',
   ownAgent: 'Usa il tuo agente',
   free: 'Gratis. Senza registrazione, senza carta di credito.',
-  heroAlt: 'L’editor di un’app per prenotare i campi: online sul dominio del circolo, quante persone l’hanno usata oggi e la sua ultima modifica',
+  heroAlt: 'Un circolo di tennis chiede un sito per prenotare i campi e l’agente risponde che è online, con un pulsante per aprirlo e il link di modifica da conservare',
   example: 'Tutte le immagini di questa pagina mostrano la stessa app di esempio: la prenotazione dei campi di un circolo di tennis.',
 
   contents: 'In questa pagina',

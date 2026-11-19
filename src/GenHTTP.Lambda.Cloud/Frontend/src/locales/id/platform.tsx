@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Buat sesuatu',
   ownAgent: 'Pakai agen Anda sendiri',
   free: 'Gratis. Tanpa daftar, tanpa kartu kredit.',
-  heroAlt: 'Editor aplikasi pemesanan lapangan: online di domain milik klub, berapa orang yang memakainya hari ini, dan perubahan terbarunya',
+  heroAlt: 'Sebuah klub tenis meminta website pemesanan lapangan, dan agen menjawab bahwa website itu sudah online - lengkap dengan tombol untuk membukanya dan link editor untuk disimpan',
   example: 'Semua gambar di halaman ini menampilkan aplikasi contoh yang sama: pemesanan lapangan sebuah klub tenis.',
 
   contents: 'Di halaman ini',

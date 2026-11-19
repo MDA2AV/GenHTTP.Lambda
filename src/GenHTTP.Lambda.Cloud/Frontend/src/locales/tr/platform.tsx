@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Bir şey yapın',
   ownAgent: 'Kendi ajanınızı kullanın',
   free: 'Ücretsiz. Üyelik yok, kredi kartı yok.',
-  heroAlt: 'Bir kort rezervasyon uygulamasının editörü: kulübün kendi alan adında yayında, bugün kaç kişi kullandı ve son değişikliği',
+  heroAlt: 'Bir tenis kulübü kort rezervasyon web sitesi istiyor, ajan da sitenin yayında olduğunu söylüyor - açmak için bir düğme ve saklanacak editör linki ile birlikte',
   example: 'Bu sayfadaki her görsel aynı örnek uygulamayı gösterir: bir tenis kulübünün kort rezervasyonu.',
 
   contents: 'Bu sayfada',

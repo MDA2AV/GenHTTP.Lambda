@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Zbuduj coś',
   ownAgent: 'Użyj własnego agenta',
   free: 'Za darmo. Bez rejestracji, bez karty kredytowej.',
-  heroAlt: 'Edytor aplikacji do rezerwacji kortów: działa pod własną domeną klubu, pokazuje, ile osób korzystało dziś, i ostatnią zmianę',
+  heroAlt: 'Klub tenisowy prosi o stronę do rezerwacji kortów, a agent odpowiada, że jest już online - z przyciskiem do jej otwarcia i linkiem do edytora, który warto zachować',
   example: 'Każdy obrazek na tej stronie pokazuje tę samą przykładową aplikację: rezerwację kortów w klubie tenisowym.',
 
   contents: 'Na tej stronie',

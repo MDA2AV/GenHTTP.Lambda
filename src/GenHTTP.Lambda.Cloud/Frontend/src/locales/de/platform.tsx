@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Etwas bauen',
   ownAgent: 'Eigenen Agenten nutzen',
   free: 'Kostenlos. Ohne Anmeldung, ohne Kreditkarte.',
-  heroAlt: 'Der Editor einer App zur Platzbuchung: online unter der eigenen Domain des Vereins, wie viele Personen sie heute genutzt haben und ihre letzte Änderung',
+  heroAlt: 'Ein Tennisverein bittet um eine Website für die Platzbuchung, und der Agent antwortet, dass sie online ist – mit einer Schaltfläche zum Öffnen und dem Editor-Link zum Aufbewahren',
   example: 'Jedes Bild auf dieser Seite zeigt dieselbe Beispiel-App: die Platzbuchung eines Tennisvereins.',
 
   contents: 'Auf dieser Seite',
