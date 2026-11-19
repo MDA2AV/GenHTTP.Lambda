@@ -18,7 +18,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Baza danych',
-      what: 'Własna baza danych, w której lambda przechowuje swoje rekordy, dostępna przez Database.GetConnection().',
+      what: 'Własna baza danych, w której lambda przechowuje swoje rekordy, dostępna przez Database.GetConnectionAsync().',
       count: (items) => counted(items, 'tabela', 'tabele', 'tabel'),
       confirmOff: 'Wyłączyć bazę danych?',
       switchedOn: 'Baza danych jest włączona i pusta. Przy następnym żądaniu lambda uruchomi się ponownie już z nią.',
@@ -73,7 +73,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'W kodzie',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} otwiera połączenie z bazą – dla {code('DbContext')} z Entity Framework Core
+        {code('Database.GetConnectionAsync()')} otwiera połączenie z bazą – dla {code('DbContext')} z Entity Framework Core
         albo dla SQL – a migracje w {code('migrations/')}, stosowane przez Evolve, tworzą jej tabele. W pobranym
         projekcie to zwykły plik SQLite {code('database/database.db')}.
       </>
@@ -137,7 +137,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} został usunięty.`,
     deleteFailed: 'Nie udało się usunąć sekretu.',
     used: 'odczytywany przez kod',
-    usedHint: 'Kod odczytuje go przez Secret.Read lub Secret.Exists.',
+    usedHint: 'Kod odczytuje go przez Secret.ReadAsync lub Secret.ExistsAsync.',
     unused: 'nieodczytywany przez kod',
     unusedHint: 'Żaden kod nie odczytuje go pod tą nazwą. Czy jest zapisany tak jak w kodzie?',
     set: (when) => <>ustawiono {when}</>,
@@ -154,7 +154,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'W kodzie',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} odczytuje wartość, {code('Secret.Exists("NAME")')} mówi, czy jest ustawiona. W
+        {code('Secret.ReadAsync("NAME")')} odczytuje wartość, {code('Secret.ExistsAsync("NAME")')} mówi, czy jest ustawiona. W
         pobranym projekcie oba odczytują zmienną środowiskową o tej samej nazwie.
       </>
     ),

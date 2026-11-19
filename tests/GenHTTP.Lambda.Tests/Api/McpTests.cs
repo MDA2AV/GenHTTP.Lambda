@@ -1520,10 +1520,10 @@ public sealed class McpTests
 
         var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
 
-        Assert.Contains("Database.GetConnection()", instructions);
+        Assert.Contains("await Database.GetConnectionAsync()", instructions);
         Assert.Contains("Evolve", instructions);
         Assert.Contains("Entity Framework Core", instructions, "records are read and written through it");
-        Assert.Contains("never their Async forms", instructions, "and synchronously");
+        Assert.Contains("ToListAsync, SaveChangesAsync", instructions, "and awaited");
 
         var guide = await Guide.ReadAsync(fixture);
 
@@ -1532,11 +1532,12 @@ public sealed class McpTests
         var database = Guide.Section(guide, "database");
 
         Assert.Contains("new Evolve(connection", database);
-        Assert.Contains("Synchronous only", database);
+        Assert.Contains("await Database.GetConnectionAsync()", database);
         Assert.Contains("options.UseDatabase(connection)", database, "the code names no database, so it runs on whichever keeps it");
         Assert.DoesNotContain("UseSqlite", database);
         Assert.DoesNotContain("SqliteConnection", database);
-        Assert.Contains("never ToListAsync, SaveChangesAsync", database, "named, as what not to call");
+        Assert.Contains("Awaited: ToListAsync, FindAsync, SaveChangesAsync", database, "named, as what to call");
+        Assert.Contains("plain forms are for older code", Guide.Section(guide, "compiling"));
         Assert.Contains("EnsureCreated", database, "the schema is Evolve's");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;

@@ -19,11 +19,6 @@ public sealed class AnalyticsJob(IAnalyticsService analytics, LambdaOptions opti
 
     public TimeSpan Interval => options.AnalyticsInterval;
 
-    public ValueTask ExecuteAsync(CancellationToken cancellation)
-    {
-        analytics.Flush();
-
-        return ValueTask.CompletedTask;
-    }
+    public async ValueTask ExecuteAsync(CancellationToken cancellation) => await analytics.FlushAsync(cancellation: cancellation);
 
 }

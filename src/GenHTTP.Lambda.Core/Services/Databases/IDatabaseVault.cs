@@ -21,12 +21,12 @@ public interface IDatabaseVault
     /// <summary>
     /// What a compiled lambda is handed to connect to its database with.
     /// </summary>
-    Func<DbConnection> ConnectorFor(long lambdaId, long? featureId);
+    DatabaseConnector ConnectorFor(long lambdaId, long? featureId);
 
     /// <summary>
     /// Makes the database of a lambda, empty, where there is none.
     /// </summary>
-    void Create(long lambdaId);
+    ValueTask CreateAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Replaces a feature's copy of the database with a copy of the lambda's,
@@ -37,12 +37,12 @@ public interface IDatabaseVault
     /// <summary>
     /// Removes a feature's copy of the database.
     /// </summary>
-    void RemoveCopy(long lambdaId, long featureId);
+    ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Deletes the database of a lambda, the copies of its features included.
     /// </summary>
-    void Clear(long lambdaId);
+    ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Forgets what is held in memory for a lambda, so the next connection
@@ -54,23 +54,23 @@ public interface IDatabaseVault
     /// A connection that only reads, to the database of a lambda or a
     /// feature's copy of it - or nothing where there is none.
     /// </summary>
-    DbConnection? OpenForReading(long lambdaId, long? featureId);
+    ValueTask<DbConnection?> OpenForReadingAsync(long lambdaId, long? featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Whether the lambda's database is there.
     /// </summary>
-    bool Exists(long lambdaId);
+    ValueTask<bool> ExistsAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
-    /// The room the database takes on disk, its journal included.
+    /// The room the database takes, which counts against the data of its lambda.
     /// </summary>
-    long SizeOf(long lambdaId, long? featureId);
+    ValueTask<long> SizeOfAsync(long lambdaId, long? featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// How large the database of a lambda - or a feature's copy - may grow:
     /// the room of its data in its tier, less what its workspace takes of it.
     /// </summary>
-    long RoomOf(long lambdaId, long? featureId, LambdaTier tier);
+    ValueTask<long> RoomOfAsync(long lambdaId, long? featureId, LambdaTier tier, CancellationToken cancellation = default);
 
     /// <summary>
     /// What a compiled lambda reads the room of its data with - its database
@@ -83,6 +83,20 @@ public interface IDatabaseVault
     /// for an exported project.
     /// </summary>
     /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database or it cannot be</returns>
-    string? Export(long lambdaId);
+    ValueTask<string?> ExportAsync(long lambdaId, CancellationToken cancellation = default);
 
 }
+
+/// <summary>
+/// What the database class generated into a lambda calls, once the lambda is
+/// loaded: one function that opens a connection to its database.
+/// </summary>
+/// <remarks>
+/// Both forms, since the lambda keeps both: <c>Database.GetConnectionAsync()</c>,
+/// which is what agents are taught, and <c>Database.GetConnection()</c>, which
+/// code written before calls - and which waits where the database does not
+/// answer at once.
+/// </remarks>
+/// <param name="Connect">The plain call: <c>Database.GetConnection()</c></param>
+/// <param name="ConnectAsync">The awaited one: <c>Database.GetConnectionAsync()</c></param>
+public sealed record DatabaseConnector(Func<DbConnection> Connect, Func<CancellationToken, ValueTask<DbConnection>> ConnectAsync);

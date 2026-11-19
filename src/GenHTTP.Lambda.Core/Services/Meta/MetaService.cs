@@ -170,7 +170,7 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public LambdaInfo Create(string? publicKey, string? template = null, EditorView view = EditorView.Full)
+    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, CancellationToken cancellation = default)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
 
@@ -239,7 +239,8 @@ public sealed class MetaService : IMetaService
             // with one, or the first thing it does is fail for want of it
             if (DemoCatalog.Find(template)?.Database == true)
             {
-                DatabaseVault.Create(entity.Id);
+                // the lambda is there from here on, so its database is made whoever cancels
+                await DatabaseVault.CreateAsync(entity.Id, CancellationToken.None);
             }
 
             Logger.LogInformation("Created lambda {Lambda} #{LambdaId}", entity.PublicKey, entity.Id);
@@ -265,7 +266,7 @@ public sealed class MetaService : IMetaService
         }
     }
 
-    public void Delete(string privateKey, string? origin = null)
+    public async ValueTask DeleteAsync(string privateKey, string? origin = null)
     {
         using var database = Databases.CreateDbContext();
 
@@ -278,7 +279,7 @@ public sealed class MetaService : IMetaService
         // a demo stays the installation's either way
         if (origin == VersionOrigins.Admin && !policy.ReadOnly)
         {
-            Removal.Remove(database, lambda);
+            await Removal.RemoveAsync(database, lambda);
 
             Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
@@ -293,7 +294,7 @@ public sealed class MetaService : IMetaService
                                           + "it is not deleted with its editor key. Only the operator of the installation can delete it.");
         }
 
-        Removal.Remove(database, lambda);
+        await Removal.RemoveAsync(database, lambda);
 
         Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
     }
@@ -711,9 +712,9 @@ public sealed class MetaService : IMetaService
 
     #region Maintenance
 
-    public MaintenanceReport RunMaintenance(DateTime now)
+    public async ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default)
     {
-        var report = Lifetime.Sweep(now);
+        var report = await Lifetime.SweepAsync(now, cancellation);
 
         using var database = Databases.CreateDbContext();
 

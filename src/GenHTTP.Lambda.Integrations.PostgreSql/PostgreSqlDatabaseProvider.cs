@@ -43,8 +43,16 @@ namespace GenHTTP.Lambda.Integrations.PostgreSql;
 /// tables, their indexes and what they keep apart, and remembered for a few
 /// seconds: a lambda connects for nearly every request.
 /// </para>
+/// <para>
+/// Everything it sends to the server is awaited, which Kestrel and GenHTTP's
+/// internal engine make use of: no thread waits for the network. On the Ioxide
+/// engine what it awaits resumes on the reactor of the request, through
+/// Npgsql's own sockets - it works there, but does not complete on the reactor
+/// as SQLite does. What the platform keeps in its own records it still asks
+/// Entity Framework for synchronously.
+/// </para>
 /// </remarks>
-internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposable
+internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisposable
 {
     private static readonly long Patience = Stopwatch.Frequency * 5;
 
@@ -52,7 +60,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
     private readonly NpgsqlDataSource _platform;
 
-    private readonly ConcurrentDictionary<string, NpgsqlDataSource> _stores = new(StringComparer.Ordinal);
+    private readonly Dictionary<DatabaseStore, NpgsqlDataSource> _stores = [];
 
     private readonly ConcurrentDictionary<(DataScope Scope, bool Writing), NpgsqlDataSource> _lambdas = [];
 
@@ -63,7 +71,11 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
     private readonly ConcurrentDictionary<DataScope, (long Size, long At)> _measured = [];
 
-    private readonly ConcurrentDictionary<long, Lock> _turns = [];
+    /// <summary>
+    /// Who is making the role of a lambda: one at a time, across the
+    /// statements it takes.
+    /// </summary>
+    private readonly ConcurrentDictionary<long, SemaphoreSlim> _turns = [];
 
     #region Get-/Setters
 
@@ -77,7 +89,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
     #region Initialization
 
-    public PostgreSqlDatabaseProvider(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize, ILogger<PostgreSqlDatabaseProvider> logger)
+    private PostgreSqlDatabaseProvider(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize, ILogger<PostgreSqlDatabaseProvider> logger)
     {
         _connection = connection;
 
@@ -86,8 +98,33 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
         Logger = logger;
 
         _platform = NpgsqlDataSource.Create(connection.ConnectionString);
+    }
 
-        Secure();
+    /// <summary>
+    /// Connects to the server and prepares what the platform keeps there:
+    /// the schemas of its stores, and the schema <c>public</c> closed.
+    /// </summary>
+    public static async ValueTask<PostgreSqlDatabaseProvider> StartAsync(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize,
+                                                                         ILogger<PostgreSqlDatabaseProvider> logger, CancellationToken cancellation)
+    {
+        var provider = new PostgreSqlDatabaseProvider(connection, rolePrefix, poolSize, logger);
+
+        try
+        {
+            await provider.SecureAsync(cancellation);
+
+            foreach (var store in Enum.GetValues<DatabaseStore>())
+            {
+                await provider.PrepareStoreAsync(store, cancellation);
+            }
+
+            return provider;
+        }
+        catch
+        {
+            await provider.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -99,11 +136,11 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// The schema is not the platform's, so where the user the installation
     /// connects as may not change it, this is said once and left as it is.
     /// </remarks>
-    private void Secure()
+    private async ValueTask SecureAsync(CancellationToken cancellation)
     {
         try
         {
-            Execute(_platform, "REVOKE CREATE ON SCHEMA public FROM PUBLIC");
+            await ExecuteAsync(_platform, "REVOKE CREATE ON SCHEMA public FROM PUBLIC", cancellation);
         }
         catch (PostgresException e)
         {
@@ -112,28 +149,38 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
         }
     }
 
+    /// <summary>
+    /// Makes the schema of a store where it is not there, and what it is
+    /// reached through: that schema, and nothing else on the search path.
+    /// </summary>
+    /// <remarks>
+    /// Every store, as the platform starts: the platform's records are
+    /// configured with it synchronously, before anything is asked of them.
+    /// </remarks>
+    private async ValueTask PrepareStoreAsync(DatabaseStore store, CancellationToken cancellation)
+    {
+        var schema = PostgreSqlNames.Schema(store);
+
+        await ExecuteAsync(_platform, $"CREATE SCHEMA IF NOT EXISTS {PostgreSqlNames.Quote(schema)}", cancellation);
+
+        var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { SearchPath = schema };
+
+        _stores[store] = NpgsqlDataSource.Create(connection.ConnectionString);
+    }
+
     #endregion
 
     #region The platform's own
 
-    public string Dialect => "postgresql";
+    public DatabaseDialect Dialect => DatabaseDialect.PostgreSql;
 
-    public void ConfigureStore(DbContextOptionsBuilder options, string store) => options.UseNpgsql(Store(store));
+    public void ConfigureStore(DbContextOptionsBuilder options, DatabaseStore store) => options.UseNpgsql(Store(store));
 
-    public DbConnection Open(string store) => Store(store).OpenConnection();
+    public async ValueTask<DbConnection> OpenAsync(DatabaseStore store, CancellationToken cancellation = default)
+        => await Store(store).OpenConnectionAsync(cancellation);
 
-    /// <summary>
-    /// What a store is reached through: its schema, made where it is not
-    /// there, and nothing else on the search path.
-    /// </summary>
-    private NpgsqlDataSource Store(string store) => _stores.GetOrAdd(store, name =>
-    {
-        Execute(_platform, $"CREATE SCHEMA IF NOT EXISTS {PostgreSqlNames.Quote(name)}");
-
-        var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString) { SearchPath = name };
-
-        return NpgsqlDataSource.Create(connection.ConnectionString);
-    });
+    private NpgsqlDataSource Store(DatabaseStore store)
+        => _stores.TryGetValue(store, out var source) ? source : throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.");
 
     #endregion
 
@@ -157,34 +204,34 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// <summary>
     /// Makes the schema of a lambda, empty, and the role it is reached as.
     /// </summary>
-    public void Create(DataScope scope)
+    public async ValueTask CreateAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        var role = Prepare(scope.LambdaId);
+        var role = await PrepareAsync(scope.LambdaId, cancellation);
 
-        MakeSchema(PostgreSqlNames.Schema(scope), role);
+        await MakeSchemaAsync(PostgreSqlNames.Schema(scope), role, cancellation);
 
         Logger.LogInformation("Created database of {Scope}", scope);
     }
 
-    public bool Exists(DataScope scope) => SchemaExists(PostgreSqlNames.Schema(scope));
+    public ValueTask<bool> ExistsAsync(DataScope scope, CancellationToken cancellation = default) => SchemaExistsAsync(PostgreSqlNames.Schema(scope), cancellation);
 
-    public DbConnection Connect(DataScope scope, long room)
+    public async ValueTask<DbConnection> ConnectAsync(DataScope scope, long room, CancellationToken cancellation = default)
     {
-        Prepare(scope.LambdaId);
+        await PrepareAsync(scope.LambdaId, cancellation);
 
-        var writing = Measure(scope) < room;
+        var writing = await MeasureAsync(scope, cancellation) < room;
 
-        return Lambda(scope, writing).OpenConnection();
+        return await Lambda(scope, writing).OpenConnectionAsync(cancellation);
     }
 
-    public DbConnection? Read(DataScope scope, TimeSpan patience)
+    public async ValueTask<DbConnection?> ReadAsync(DataScope scope, TimeSpan patience, CancellationToken cancellation = default)
     {
-        if (!Exists(scope))
+        if (!await ExistsAsync(scope, cancellation))
         {
             return null;
         }
 
-        var role = Prepare(scope.LambdaId);
+        var role = await PrepareAsync(scope.LambdaId, cancellation);
 
         var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString)
         {
@@ -199,19 +246,19 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
         try
         {
-            opened.Open();
+            await opened.OpenAsync(cancellation);
             return opened;
         }
         catch
         {
-            opened.Dispose();
+            await opened.DisposeAsync();
             throw;
         }
     }
 
-    public long SizeOf(DataScope scope)
+    public async ValueTask<long> SizeOfAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        var size = Size(PostgreSqlNames.Schema(scope));
+        var size = await SizeAsync(PostgreSqlNames.Schema(scope), cancellation);
 
         _measured[scope] = (size, Stopwatch.GetTimestamp());
 
@@ -223,54 +270,54 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// it was at its start, while the lambda goes on writing to it - see
     /// <see cref="SchemaCopy"/>.
     /// </remarks>
-    public void Copy(DataScope source, DataScope target)
+    public async ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
     {
-        Delete(target);
+        await DeleteAsync(target, cancellation);
 
         var from = PostgreSqlNames.Schema(source);
 
-        if (!SchemaExists(from))
+        if (!await SchemaExistsAsync(from, cancellation))
         {
             return;
         }
 
-        var role = Prepare(source.LambdaId);
+        var role = await PrepareAsync(source.LambdaId, cancellation);
 
         var into = PostgreSqlNames.Schema(target);
 
-        MakeSchema(into, role);
+        await MakeSchemaAsync(into, role, cancellation);
 
-        using var connection = Lambda(source, true).OpenConnection();
+        await using var connection = await Lambda(source, true).OpenConnectionAsync(cancellation);
 
-        SchemaCopy.Run(connection, from, into);
+        await SchemaCopy.RunAsync(connection, from, into, cancellation);
     }
 
-    public void Delete(DataScope scope)
+    public async ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        Release(scope);
+        await ReleaseAsync(scope);
 
-        Execute(_platform, $"DROP SCHEMA IF EXISTS {PostgreSqlNames.Quote(PostgreSqlNames.Schema(scope))} CASCADE");
+        await ExecuteAsync(_platform, $"DROP SCHEMA IF EXISTS {PostgreSqlNames.Quote(PostgreSqlNames.Schema(scope))} CASCADE", cancellation);
     }
 
     /// <remarks>
     /// The schemas of its features are found by their names, which begin with
     /// the lambda's; its role goes with them.
     /// </remarks>
-    public void DeleteAll(long lambdaId)
+    public async ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
         foreach (var scope in _lambdas.Keys.Select(k => k.Scope).Where(s => s.LambdaId == lambdaId).Distinct().ToList())
         {
-            Release(scope);
+            await ReleaseAsync(scope);
         }
 
         var own = PostgreSqlNames.Schema(new DataScope(lambdaId));
 
-        foreach (var schema in Schemas(own).Append(own).Distinct())
+        foreach (var schema in (await SchemasAsync(own, cancellation)).Append(own).Distinct())
         {
-            Execute(_platform, $"DROP SCHEMA IF EXISTS {PostgreSqlNames.Quote(schema)} CASCADE");
+            await ExecuteAsync(_platform, $"DROP SCHEMA IF EXISTS {PostgreSqlNames.Quote(schema)} CASCADE", cancellation);
         }
 
-        Execute(_platform, $"DROP ROLE IF EXISTS {PostgreSqlNames.Quote(PostgreSqlNames.Role(RolePrefix, lambdaId))}");
+        await ExecuteAsync(_platform, $"DROP ROLE IF EXISTS {PostgreSqlNames.Quote(PostgreSqlNames.Role(RolePrefix, lambdaId))}", cancellation);
 
         _passwords.TryRemove(lambdaId, out _);
     }
@@ -280,17 +327,17 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// what PostgreSQL holds is taken with its own tools - <c>pg_dump</c> of
     /// the lambda's schema.
     /// </summary>
-    public string? Export(DataScope scope) => null;
+    public ValueTask<string?> ExportAsync(DataScope scope, CancellationToken cancellation = default) => ValueTask.FromResult<string?>(null);
 
     #endregion
 
     #region Looking into one
 
-    public IReadOnlyList<DatabaseTableInfo> Tables(DbConnection connection)
+    public async ValueTask<IReadOnlyList<DatabaseTableInfo>> TablesAsync(DbConnection connection, CancellationToken cancellation = default)
     {
         var found = new List<DatabaseTableInfo>();
 
-        using var command = connection.CreateCommand();
+        await using var command = connection.CreateCommand();
 
         command.CommandText = """
             SELECT c.relname, c.relkind IN ('v', 'm') FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -298,9 +345,9 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
             ORDER BY c.relkind IN ('v', 'm'), c.relname
             """;
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-        while (reader.Read())
+        while (await reader.ReadAsync(cancellation))
         {
             found.Add(new DatabaseTableInfo(reader.GetString(0), reader.GetBoolean(1)));
         }
@@ -308,11 +355,11 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
         return found;
     }
 
-    public IReadOnlyList<DatabaseColumnInfo> Columns(DbConnection connection, string table)
+    public async ValueTask<IReadOnlyList<DatabaseColumnInfo>> ColumnsAsync(DbConnection connection, string table, CancellationToken cancellation = default)
     {
         var columns = new List<DatabaseColumnInfo>();
 
-        using var command = connection.CreateCommand();
+        await using var command = connection.CreateCommand();
 
         command.CommandText = """
             SELECT a.attname, format_type(a.atttypid, a.atttypmod), a.attnotnull,
@@ -328,9 +375,9 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
         Parameter(command, "@table", table);
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-        while (reader.Read())
+        while (await reader.ReadAsync(cancellation))
         {
             columns.Add(new DatabaseColumnInfo(reader.GetString(0), reader.GetString(1), reader.GetBoolean(2), reader.GetBoolean(3),
                                                reader.IsDBNull(4) ? null : reader.GetString(4)));
@@ -343,9 +390,9 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// PostgreSQL keeps no order of its own; where a row is kept is close to
     /// when it was written for a table that is mostly added to.
     /// </remarks>
-    public string? NaturalOrder(DbConnection connection, string table)
+    public async ValueTask<string?> NaturalOrderAsync(DbConnection connection, string table, CancellationToken cancellation = default)
     {
-        using var command = connection.CreateCommand();
+        await using var command = connection.CreateCommand();
 
         command.CommandText = """
             SELECT c.relkind = 'r' FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -354,7 +401,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
         Parameter(command, "@table", table);
 
-        return command.ExecuteScalar() is true ? "ctid" : null;
+        return await command.ExecuteScalarAsync(cancellation) is true ? "ctid" : null;
     }
 
     public string Quote(string name) => PostgreSqlNames.Quote(name);
@@ -363,12 +410,12 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
     #region Describing it
 
-    public IntegrationInfo Describe() => new(IntegrationKinds.Database, "PostgreSQL",
+    public IntegrationInfo Describe() => new(IntegrationKind.Database, "PostgreSQL",
                                              [
                                                  new IntegrationDetail("Server", _connection.Port is 5432 or 0 ? _connection.Host ?? "localhost" : $"{_connection.Host}:{_connection.Port}"),
                                                  new IntegrationDetail("Database", _connection.Database ?? ""),
                                                  new IntegrationDetail("User", _connection.Username ?? ""),
-                                                 new IntegrationDetail("Schemas", "platform, analytics, lambda_{lambda}, lambda_{lambda}_feature_{draft}"),
+                                                 new IntegrationDetail("Schemas", $"{PostgreSqlNames.Schema(DatabaseStore.Platform)}, {PostgreSqlNames.Schema(DatabaseStore.Analytics)}, lambda_{{lambda}}, lambda_{{lambda}}_feature_{{draft}}"),
                                                  new IntegrationDetail("Roles", $"{RolePrefix}_{{lambda}}"),
                                                  new IntegrationDetail("Connections", $"{PoolSize} at most per lambda and draft")
                                              ]);
@@ -389,8 +436,13 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// Makes the role of a lambda where it is not there, and gives it the
     /// password of this run the first time it is used in it.
     /// </summary>
+    /// <remarks>
+    /// One at a time per lambda, so two requests that both find no password
+    /// do not give the role two - the second waits for the first, without
+    /// holding a thread while it does.
+    /// </remarks>
     /// <returns>The name of the role</returns>
-    private string Prepare(long lambdaId)
+    private async ValueTask<string> PrepareAsync(long lambdaId, CancellationToken cancellation)
     {
         var role = PostgreSqlNames.Role(RolePrefix, lambdaId);
 
@@ -399,7 +451,11 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
             return role;
         }
 
-        lock (_turns.GetOrAdd(lambdaId, _ => new Lock()))
+        var turn = _turns.GetOrAdd(lambdaId, _ => new SemaphoreSlim(1, 1));
+
+        await turn.WaitAsync(cancellation);
+
+        try
         {
             if (_passwords.ContainsKey(lambdaId))
             {
@@ -412,7 +468,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
 
             // a role may not be made twice, and nothing makes one only where
             // it is missing - so this asks first, in one statement
-            Execute(_platform, $"""
+            await ExecuteAsync(_platform, $"""
                 DO $$
                 BEGIN
                     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = {PostgreSqlNames.Literal(role)}) THEN
@@ -420,13 +476,17 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
                     END IF;
                 END
                 $$
-                """);
+                """, cancellation);
 
-            Execute(_platform, $"ALTER ROLE {quoted} WITH LOGIN PASSWORD {PostgreSqlNames.Literal(password)}");
+            await ExecuteAsync(_platform, $"ALTER ROLE {quoted} WITH LOGIN PASSWORD {PostgreSqlNames.Literal(password)}", cancellation);
 
             _passwords[lambdaId] = password;
 
             return role;
+        }
+        finally
+        {
+            turn.Release();
         }
     }
 
@@ -434,43 +494,37 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// Makes a schema, owned by the platform, the role of the lambda using
     /// and creating in it.
     /// </summary>
-    private void MakeSchema(string schema, string role)
+    private async ValueTask MakeSchemaAsync(string schema, string role, CancellationToken cancellation)
     {
         var quoted = PostgreSqlNames.Quote(schema);
 
-        Execute(_platform, $"CREATE SCHEMA IF NOT EXISTS {quoted}");
-        Execute(_platform, $"GRANT USAGE, CREATE ON SCHEMA {quoted} TO {PostgreSqlNames.Quote(role)}");
+        await ExecuteAsync(_platform, $"CREATE SCHEMA IF NOT EXISTS {quoted}", cancellation);
+        await ExecuteAsync(_platform, $"GRANT USAGE, CREATE ON SCHEMA {quoted} TO {PostgreSqlNames.Quote(role)}", cancellation);
     }
 
-    private bool SchemaExists(string schema)
+    private async ValueTask<bool> SchemaExistsAsync(string schema, CancellationToken cancellation)
     {
-        using var connection = _platform.OpenConnection();
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = @schema)";
+        await using var command = _platform.CreateCommand("SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = @schema)");
 
         Parameter(command, "@schema", schema);
 
-        return command.ExecuteScalar() is true;
+        return await command.ExecuteScalarAsync(cancellation) is true;
     }
 
     /// <summary>
     /// The schemas whose names begin with the given one and a feature's mark.
     /// </summary>
-    private List<string> Schemas(string own)
+    private async ValueTask<List<string>> SchemasAsync(string own, CancellationToken cancellation)
     {
         var found = new List<string>();
 
-        using var connection = _platform.OpenConnection();
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT nspname FROM pg_namespace WHERE starts_with(nspname, @prefix)";
+        await using var command = _platform.CreateCommand("SELECT nspname FROM pg_namespace WHERE starts_with(nspname, @prefix)");
 
         Parameter(command, "@prefix", own + PostgreSqlNames.FeatureMark);
 
-        using var reader = command.ExecuteReader();
+        await using var reader = await command.ExecuteReaderAsync(cancellation);
 
-        while (reader.Read())
+        while (await reader.ReadAsync(cancellation))
         {
             found.Add(reader.GetString(0));
         }
@@ -485,33 +539,30 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// <summary>
     /// What the database of a scope takes, remembered for a few seconds.
     /// </summary>
-    private long Measure(DataScope scope)
+    private ValueTask<long> MeasureAsync(DataScope scope, CancellationToken cancellation)
     {
         if (_measured.TryGetValue(scope, out var known) && Stopwatch.GetTimestamp() - known.At < Patience)
         {
-            return known.Size;
+            return ValueTask.FromResult(known.Size);
         }
 
-        return SizeOf(scope);
+        return SizeOfAsync(scope, cancellation);
     }
 
     /// <summary>
     /// The room the tables of a schema take on the disk, their indexes and
     /// what they keep apart included.
     /// </summary>
-    private long Size(string schema)
+    private async ValueTask<long> SizeAsync(string schema, CancellationToken cancellation)
     {
-        using var connection = _platform.OpenConnection();
-        using var command = connection.CreateCommand();
-
-        command.CommandText = """
+        await using var command = _platform.CreateCommand("""
             SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0)::bigint FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
             WHERE n.nspname = @schema AND c.relkind IN ('r', 'm', 'p')
-            """;
+            """);
 
         Parameter(command, "@schema", schema);
 
-        return command.ExecuteScalar() is long size ? size : 0;
+        return await command.ExecuteScalarAsync(cancellation) is long size ? size : 0;
     }
 
     #endregion
@@ -546,24 +597,24 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
     /// <summary>
     /// Closes what is pooled for a scope, so no connection outlives its schema.
     /// </summary>
-    private void Release(DataScope scope)
+    private async ValueTask ReleaseAsync(DataScope scope)
     {
         foreach (var writing in new[] { true, false })
         {
             if (_lambdas.TryRemove((scope, writing), out var source))
             {
-                source.Dispose();
+                await source.DisposeAsync();
             }
         }
 
         _measured.TryRemove(scope, out _);
     }
 
-    private static void Execute(NpgsqlDataSource source, string sql)
+    private static async ValueTask ExecuteAsync(NpgsqlDataSource source, string sql, CancellationToken cancellation)
     {
-        using var command = source.CreateCommand(sql);
+        await using var command = source.CreateCommand(sql);
 
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellation);
     }
 
     private static void Parameter(DbCommand command, string name, object value)
@@ -576,19 +627,24 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IDisposabl
         command.Parameters.Add(parameter);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         foreach (var source in _lambdas.Values)
         {
-            source.Dispose();
+            await source.DisposeAsync();
         }
 
         foreach (var source in _stores.Values)
         {
-            source.Dispose();
+            await source.DisposeAsync();
         }
 
-        _platform.Dispose();
+        await _platform.DisposeAsync();
+
+        foreach (var turn in _turns.Values)
+        {
+            turn.Dispose();
+        }
     }
 
     #endregion

@@ -61,17 +61,24 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Each call opens a connection of its own, which the lambda disposes of
     /// once it is done: connections are pooled, so that is what a connection
     /// per request costs, and a connection is not safe to share between the
-    /// requests a lambda serves at once.
+    /// requests a lambda serves at once. The plain call goes through
+    /// <see cref="Synchronous"/>, which waits for nothing where the database
+    /// answers at once.
     /// </remarks>
-    public Func<DbConnection> ConnectorFor(long lambdaId, long? featureId)
-        => () => Connect(new DataScope(lambdaId, featureId));
+    public DatabaseConnector ConnectorFor(long lambdaId, long? featureId)
+    {
+        var scope = new DataScope(lambdaId, featureId);
+
+        return new DatabaseConnector(() => Synchronous.Run(() => ConnectAsync(scope, CancellationToken.None)),
+                                     cancellation => ConnectAsync(scope, cancellation));
+    }
 
     /// <remarks>
     /// The room is asked for on every connection rather than kept in the
     /// snapshot, so a limit the operator lowers holds from the next connection
     /// on - and the room the workspace takes of the allowance both share.
     /// </remarks>
-    private DbConnection Connect(DataScope scope)
+    private async ValueTask<DbConnection> ConnectAsync(DataScope scope, CancellationToken cancellation)
     {
         var snapshot = Current(scope);
 
@@ -80,7 +87,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
             throw new InvalidOperationException(DataKinds.DatabaseOff);
         }
 
-        return provider.Connect(scope, RoomOf(scope.LambdaId, scope.FeatureId, snapshot.Tier));
+        return await provider.ConnectAsync(scope, await RoomOfAsync(scope.LambdaId, scope.FeatureId, snapshot.Tier, cancellation), cancellation);
     }
 
     private Snapshot Current(DataScope scope)
@@ -102,9 +109,8 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     /// <summary>
-    /// Reads whether the lambda has a database and how large it may grow,
-    /// synchronously: a lambda connects with a plain call, from wherever it
-    /// happens to be.
+    /// Reads whether the lambda has a database and how large it may grow, from
+    /// the platform's own records.
     /// </summary>
     private Snapshot Load(long lambdaId, long generation)
     {
@@ -136,9 +142,9 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Made ahead of the first request rather than by it, so what the owner
     /// switched on is there to be looked at before anything used it.
     /// </remarks>
-    public void Create(long lambdaId)
+    public async ValueTask CreateAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        provider.Create(new DataScope(lambdaId));
+        await provider.CreateAsync(new DataScope(lambdaId), cancellation);
 
         Invalidate(lambdaId);
     }
@@ -156,12 +162,14 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         if (Load(lambdaId, 0).Enabled)
         {
-            // a whole database, a gigabyte in production (see Offload)
-            await Offload.Run(() => provider.Copy(source, target), cancellation);
+            // a whole database, a gigabyte in production, which a provider
+            // that answers at once copies on the thread it is asked on (see
+            // Offload)
+            await Offload.Run(async () => await provider.CopyAsync(source, target, cancellation), cancellation);
         }
         else
         {
-            provider.Delete(target);
+            await provider.DeleteAsync(target, cancellation);
         }
 
         Invalidate(lambdaId);
@@ -170,13 +178,13 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// Removes a feature's copy of the database.
     /// </summary>
-    public void RemoveCopy(long lambdaId, long featureId)
+    public async ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
     {
         var scope = new DataScope(lambdaId, featureId);
 
         _snapshots.TryRemove(scope, out _);
 
-        provider.Delete(scope);
+        await provider.DeleteAsync(scope, cancellation);
     }
 
     /// <summary>
@@ -184,7 +192,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// - a database switched on again later is a new one - and lets go of
     /// what is remembered of them.
     /// </summary>
-    public void Clear(long lambdaId)
+    public async ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default)
     {
         Invalidate(lambdaId);
 
@@ -193,7 +201,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
             _snapshots.TryRemove(scope, out _);
         }
 
-        provider.DeleteAll(lambdaId);
+        await provider.DeleteAllAsync(lambdaId, cancellation);
     }
 
     /// <summary>
@@ -210,18 +218,19 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// A connection that only reads, to the database of a lambda or a
     /// feature's copy of it - or nothing where there is none.
     /// </summary>
-    public DbConnection? OpenForReading(long lambdaId, long? featureId)
-        => Load(lambdaId, 0).Enabled ? provider.Read(new DataScope(lambdaId, featureId), Patience) : null;
+    public ValueTask<DbConnection?> OpenForReadingAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+        => Load(lambdaId, 0).Enabled ? provider.ReadAsync(new DataScope(lambdaId, featureId), Patience, cancellation) : ValueTask.FromResult<DbConnection?>(null);
 
     /// <summary>
     /// Whether the lambda's database is there.
     /// </summary>
-    public bool Exists(long lambdaId) => provider.Exists(new DataScope(lambdaId));
+    public ValueTask<bool> ExistsAsync(long lambdaId, CancellationToken cancellation = default) => provider.ExistsAsync(new DataScope(lambdaId), cancellation);
 
     /// <summary>
     /// The room the database takes.
     /// </summary>
-    public long SizeOf(long lambdaId, long? featureId) => provider.SizeOf(new DataScope(lambdaId, featureId));
+    public ValueTask<long> SizeOfAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+        => provider.SizeOfAsync(new DataScope(lambdaId, featureId), cancellation);
 
     /// <summary>
     /// How large the database of a lambda - or a feature's copy - may grow:
@@ -231,7 +240,8 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Never below nothing. A database already larger than this stays as it
     /// is and is read as before; only what would make it grow is refused.
     /// </remarks>
-    public long RoomOf(long lambdaId, long? featureId, LambdaTier tier) => Math.Max(0, limits.PolicyOf(tier).MaxDataBytes - workspaces.SizeOf(lambdaId, featureId));
+    public async ValueTask<long> RoomOfAsync(long lambdaId, long? featureId, LambdaTier tier, CancellationToken cancellation = default)
+        => Math.Max(0, limits.PolicyOf(tier).MaxDataBytes - await workspaces.SizeOfAsync(lambdaId, featureId, cancellation));
 
     /// <summary>
     /// What the room of the data of a lambda is read with, its database and
@@ -251,7 +261,13 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Writes the database of a lambda into a SQLite file of its own, whole -
     /// what an export carries.
     /// </summary>
-    public string? Export(long lambdaId) => Load(lambdaId, 0).Enabled ? provider.Export(new DataScope(lambdaId)) : null;
+    /// <remarks>
+    /// A whole database, which a provider that answers at once writes on the
+    /// thread it is asked on - so asked away from the request's (see
+    /// <see cref="Offload"/>).
+    /// </remarks>
+    public async ValueTask<string?> ExportAsync(long lambdaId, CancellationToken cancellation = default)
+        => Load(lambdaId, 0).Enabled ? await Offload.Run(() => provider.ExportAsync(new DataScope(lambdaId), cancellation), cancellation) : null;
 
     #endregion
 

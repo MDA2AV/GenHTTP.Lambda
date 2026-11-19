@@ -360,7 +360,7 @@ public sealed class DomainTests
 
         var lambda = await ServeAsync(fixture, "shop");
 
-        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow + fixture.Options.Retention + TimeSpan.FromDays(1));
+        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow + fixture.Options.Retention + TimeSpan.FromDays(1));
 
         Assert.AreEqual(0, report.Undeployed);
         Assert.AreEqual(0, report.Deleted);

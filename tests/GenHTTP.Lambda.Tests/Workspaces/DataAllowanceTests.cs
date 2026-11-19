@@ -51,6 +51,18 @@ public sealed class DataAllowanceTests
                          {
                              return e.Message;
                          }
+                     })
+                     .Get("awaited", async (int size) =>
+                     {
+                         try
+                         {
+                             await Workspace.WriteBytesAsync("awaited.bin", new byte[size]);
+                             return "written";
+                         }
+                         catch (InvalidOperationException e)
+                         {
+                             return e.Message;
+                         }
                      });
         """;
 
@@ -86,6 +98,9 @@ public sealed class DataAllowanceTests
 
         StringAssert.Contains(await ServedAsync(fixture, $"http://keeper.localhost/write?size={800 * 1024}"), "its workspace and its database together",
                               "the lambda is told what its data may come to");
+
+        StringAssert.Contains(await ServedAsync(fixture, $"http://keeper.localhost/awaited?size={800 * 1024}"), "its workspace and its database together",
+                              "awaited or not");
 
         Assert.AreEqual("written", await ServedAsync(fixture, $"http://keeper.localhost/write?size={300 * 1024}"), "and what fits beside the database is written");
 

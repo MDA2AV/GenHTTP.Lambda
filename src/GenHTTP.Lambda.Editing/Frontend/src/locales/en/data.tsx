@@ -22,7 +22,7 @@ export const data = {
   kinds: {
     database: {
       name: 'Database',
-      what: 'A database of its own the lambda keeps its records in, reached with Database.GetConnection().',
+      what: 'A database of its own the lambda keeps its records in, reached with Database.GetConnectionAsync().',
       count: (items: number) => (items === 1 ? '1 table' : `${items} tables`),
       confirmOff: 'Switch the database off?',
       switchedOn: 'The database is on, and empty. The lambda starts again with it on its next request.',
@@ -85,7 +85,7 @@ export const data = {
     howTo: 'In the code',
     howToText: (code: (text: string) => Node) => (
       <>
-        {code('Database.GetConnection()')} opens a connection to it - for a {code('DbContext')} of Entity Framework Core, or for
+        {code('Database.GetConnectionAsync()')} opens a connection to it - for a {code('DbContext')} of Entity Framework Core, or for
         SQL - and the migrations in {code('migrations/')} make its tables, applied by Evolve. In a downloaded project it is the
         plain SQLite file {code('database/database.db')}.
       </>
@@ -150,7 +150,7 @@ export const data = {
     deleted: (name: string) => `${name} is deleted.`,
     deleteFailed: 'The secret could not be deleted.',
     used: 'read by the code',
-    usedHint: 'The code reads it with Secret.Read or Secret.Exists.',
+    usedHint: 'The code reads it with Secret.ReadAsync or Secret.ExistsAsync.',
     unused: 'not read by the code',
     unusedHint: 'No code reads it by this name. Is it spelled the way the code spells it?',
     set: (when: Node) => <>set {when}</>,
@@ -167,7 +167,7 @@ export const data = {
     howTo: 'In the code',
     howToText: (code: (text: string) => Node) => (
       <>
-        {code('Secret.Read("NAME")')} reads a value, {code('Secret.Exists("NAME")')} says whether it is set. In a
+        {code('Secret.ReadAsync("NAME")')} reads a value, {code('Secret.ExistsAsync("NAME")')} says whether it is set. In a
         downloaded project, both read the environment variable of the same name.
       </>
     ),

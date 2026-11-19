@@ -19,7 +19,17 @@ public sealed class SqliteFile
         _connection = new SqliteConnectionStringBuilder { DataSource = path, ForeignKeys = true, DefaultTimeout = 10 }.ToString();
     }
 
-    /// <summary>An open connection to the database, for plain SQL or a DbContext. Dispose of it when done - connections are pooled.</summary>
+    /// <summary>Opens a connection to the database, for plain SQL or a DbContext. Dispose of it when done - connections are pooled.</summary>
+    public async ValueTask<SqliteConnection> GetConnectionAsync(CancellationToken cancellation = default)
+    {
+        var connection = new SqliteConnection(_connection);
+
+        await connection.OpenAsync(cancellation);
+
+        return connection;
+    }
+
+    /// <summary>An open connection to the database, opened with a plain call. Dispose of it when done.</summary>
     public SqliteConnection GetConnection()
     {
         var connection = new SqliteConnection(_connection);

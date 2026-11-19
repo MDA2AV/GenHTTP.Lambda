@@ -1,5 +1,6 @@
 using GenHTTP.Api.Content.Documentation;
 
+using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Meta.Model;
@@ -247,7 +248,18 @@ public sealed record IntegrationResponse(
 {
 
     public static IntegrationResponse Of(IntegrationState state)
-        => new(state.Info.Kind, state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
+        => new(KindOf(state.Info.Kind), state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
+
+    /// <summary>
+    /// What a kind of integration is called on the wire, which the panel reads.
+    /// </summary>
+    private static string KindOf(IntegrationKind kind) => kind switch
+    {
+        IntegrationKind.Database => "database",
+        IntegrationKind.Files => "files",
+        IntegrationKind.Secrets => "secrets",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "There is no such kind of integration.")
+    };
 
 }
 

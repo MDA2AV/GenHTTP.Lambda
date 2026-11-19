@@ -50,7 +50,7 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
     /// quietly left for SQLite.
     /// </param>
     public static LambdaSettings FromEnvironment(LambdaAddressing addressing = LambdaAddressing.Subdomains, bool usageReports = false,
-                                                 IReadOnlyCollection<string>? databases = null)
+                                                 IReadOnlyCollection<DatabaseProvider>? databases = null)
     {
         var defaults = new LambdaOptions();
         var server = new ServerSettings();
@@ -113,24 +113,27 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             AcmeDirectory = ReadOptional("LAMBDA_ACME_DIRECTORY")
         };
 
-        return new LambdaSettings(platform, serving, ReadDatabase(databases ?? [DatabaseSettings.Sqlite]));
+        return new LambdaSettings(platform, serving, ReadDatabase(databases ?? [DatabaseProvider.Sqlite]));
     }
 
     /// <summary>
     /// Which database the environment asks for, and how to reach it.
     /// </summary>
-    private static DatabaseSettings ReadDatabase(IReadOnlyCollection<string> offered)
+    private static DatabaseSettings ReadDatabase(IReadOnlyCollection<DatabaseProvider> offered)
     {
-        var provider = ReadOptional("LAMBDA_DATABASE")?.ToLowerInvariant() ?? DatabaseSettings.Sqlite;
+        var named = ReadOptional("LAMBDA_DATABASE");
 
-        if (!offered.Contains(provider))
+        var provider = named == null ? DatabaseProvider.Sqlite : DatabaseSettings.Parse(named);
+
+        if (provider is not { } chosen || !offered.Contains(chosen))
         {
-            throw new InvalidOperationException($"LAMBDA_DATABASE: '{provider}' is not a database this installation can keep its data in. It offers: {string.Join(", ", offered)}.");
+            throw new InvalidOperationException($"LAMBDA_DATABASE: '{named}' is not a database this installation can keep its data in. "
+                                              + $"It offers: {string.Join(", ", offered.Select(DatabaseSettings.NameOf))}.");
         }
 
-        if (provider != DatabaseSettings.PostgreSql)
+        if (chosen != DatabaseProvider.PostgreSql)
         {
-            return new DatabaseSettings(provider);
+            return new DatabaseSettings(chosen);
         }
 
         var connection = ReadOptional("LAMBDA_POSTGRES_CONNECTION")
@@ -138,7 +141,7 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
 
         var pool = ReadOptional("LAMBDA_POSTGRES_POOL_SIZE");
 
-        return new DatabaseSettings(provider, connection, ReadOptional("LAMBDA_POSTGRES_ROLE_PREFIX"), int.TryParse(pool, out var size) ? size : null);
+        return new DatabaseSettings(chosen, connection, ReadOptional("LAMBDA_POSTGRES_ROLE_PREFIX"), int.TryParse(pool, out var size) ? size : null);
     }
 
     /// <summary>
@@ -168,9 +171,9 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             logger.LogInformation("LAMBDA_PUBLIC_URL is not set, so the addresses of the lambdas read http://localhost:{Port}/lambda/: set it to where the installation is reached, such as https://lambda.example.com", Platform.Port);
         }
 
-        if (Database.Provider != DatabaseSettings.Sqlite)
+        if (Database.Provider != DatabaseProvider.Sqlite)
         {
-            logger.LogInformation("The records of the platform and the databases of the lambdas are kept in {Database}, as LAMBDA_DATABASE says", Database.Provider);
+            logger.LogInformation("The records of the platform and the databases of the lambdas are kept in {Database}, as LAMBDA_DATABASE says", DatabaseSettings.NameOf(Database.Provider));
         }
 
         // said once, where the operator reads what the installation does on its own

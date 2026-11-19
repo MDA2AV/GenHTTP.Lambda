@@ -19,42 +19,42 @@ public interface ISecretVault
     /// <summary>
     /// What a compiled lambda is handed to read its secrets with.
     /// </summary>
-    Func<string, bool, string?> ReaderFor(long lambdaId, long? featureId);
+    SecretReader ReaderFor(long lambdaId, long? featureId);
 
     /// <summary>
     /// What is stored for the lambda, or for a feature's copy, by name.
     /// </summary>
-    IReadOnlyList<SecretEntry> List(long lambdaId, long? featureId);
+    ValueTask<IReadOnlyList<SecretEntry>> ListAsync(long lambdaId, long? featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// How many secrets the lambda has, or a feature's copy of them.
     /// </summary>
-    int Count(long lambdaId, long? featureId);
+    ValueTask<int> CountAsync(long lambdaId, long? featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Stores a value under a name, replacing the one there.
     /// </summary>
-    SecretEntry Store(long lambdaId, long? featureId, string name, string value);
+    ValueTask<SecretEntry> StoreAsync(long lambdaId, long? featureId, string name, string value, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a secret, and says whether there was one.
     /// </summary>
-    bool Remove(long lambdaId, long? featureId, string name);
+    ValueTask<bool> RemoveAsync(long lambdaId, long? featureId, string name, CancellationToken cancellation = default);
 
     /// <summary>
     /// Replaces a feature's copy of the secrets with the lambda's own.
     /// </summary>
-    void Copy(long lambdaId, long featureId);
+    ValueTask CopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a feature's copy of the secrets.
     /// </summary>
-    void RemoveCopy(long lambdaId, long featureId);
+    ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Deletes every secret of a lambda, its features' copies included.
     /// </summary>
-    void Clear(long lambdaId);
+    ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Forgets what is held in memory for a lambda, so the next read loads
@@ -63,3 +63,16 @@ public interface ISecretVault
     void Invalidate(long lambdaId);
 
 }
+
+/// <summary>
+/// What the secrets class generated into a lambda calls, once the lambda is
+/// loaded: a secret by its name, and whether the caller insists on it.
+/// </summary>
+/// <remarks>
+/// Both forms, since the lambda keeps both: <c>Secret.ReadAsync</c>, which is
+/// what agents are taught, and <c>Secret.Read</c>, which code written before
+/// calls - and which waits where the integration does not answer at once.
+/// </remarks>
+/// <param name="Read">The plain call: <c>Secret.Read</c>, <c>Secret.Exists</c></param>
+/// <param name="ReadAsync">The awaited one: <c>Secret.ReadAsync</c>, <c>Secret.ExistsAsync</c></param>
+public sealed record SecretReader(Func<string, bool, string?> Read, Func<string, bool, CancellationToken, ValueTask<string?>> ReadAsync);

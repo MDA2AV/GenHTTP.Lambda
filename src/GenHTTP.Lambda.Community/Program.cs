@@ -19,10 +19,10 @@ using GenHTTP.Modules.Layouting;
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
 // whoever runs it may give it a name and a logo of their own, in the panel
-await using var platform = LambdaPlatform.Create()
-                                         .Options(settings.Platform with { Branding = true })
-                                         .Database(CommunityDatabase.Of(settings.Database))
-                                         .Build();
+await using var platform = await LambdaPlatform.Create()
+                                               .Options(settings.Platform with { Branding = true })
+                                               .Database(CommunityDatabase.Of(settings.Database))
+                                               .BuildAsync();
 
 var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))

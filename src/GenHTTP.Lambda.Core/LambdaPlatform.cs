@@ -111,17 +111,29 @@ public sealed class LambdaPlatform : IAsyncDisposable
         // before the first request, which is asked about against them
         Services.GetRequiredService<DomainRegistry>().Reload();
         Services.GetRequiredService<AddressBlocks>().Reload();
+    }
 
-        // and the pictures out of the records they were kept in before - read
+    /// <summary>
+    /// What the platform reads through its integrations before it serves
+    /// anything, once its services are there.
+    /// </summary>
+    internal async ValueTask PrepareAsync(CancellationToken cancellation)
+    {
+        var logger = Loggers.CreateLogger<LambdaPlatform>();
+
+        // the pictures out of the records they were kept in before - read
         // from there meanwhile where that fails, and tried again next time
         try
         {
-            PictureMove.Run(Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>(), integrations.Files, loggers.CreateLogger<LambdaPlatform>());
+            await PictureMove.RunAsync(Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>(), Integrations.Files, logger, cancellation);
         }
         catch (Exception e)
         {
-            loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "Failed to move the pictures from the platform's records into its files");
+            logger.LogWarning(e, "Failed to move the pictures from the platform's records into its files");
         }
+
+        // what every page is branded with, its logo among the files
+        await Services.GetRequiredService<BrandingService>().LoadAsync(cancellation);
     }
 
     /// <summary>
@@ -181,7 +193,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         services.AddPooledDbContextFactory<LambdaDbContext>((provider, builder) =>
         {
-            integrations.Database.ConfigureStore(builder, DatabaseStores.Platform);
+            integrations.Database.ConfigureStore(builder, DatabaseStore.Platform);
 
             builder.AddInterceptors(provider.GetRequiredService<DatabaseChanges>());
         });
@@ -229,7 +241,8 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ILimitsService, LimitsService>();
-        services.AddSingleton<IBrandingService, BrandingService>();
+        services.AddSingleton<BrandingService>();
+        services.AddSingleton<IBrandingService>(provider => provider.GetRequiredService<BrandingService>());
         services.AddSingleton<IGuideService, GuideService>();
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
@@ -357,7 +370,10 @@ public sealed class LambdaPlatform : IAsyncDisposable
 #pragma warning restore RS0030
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => DisposeAsync(OwnsLoggers);
+
+    /// <param name="loggers">Whether to let go of the loggers as well, which a build that fails does itself once it said so</param>
+    internal async ValueTask DisposeAsync(bool loggers)
     {
         // the lambda being compiled is finished, the rest are not started:
         // the services it compiles with are disposed of next. For a while
@@ -387,7 +403,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         await Integrations.DisposeAsync();
 
         // a factory handed in is its owner's to dispose of
-        if (OwnsLoggers)
+        if (loggers)
         {
             Loggers.Dispose();
         }
@@ -491,9 +507,11 @@ public sealed class LambdaPlatformBuilder
     /// The note about this run is begun first, so that a start which never
     /// finishes - a migration that fails, an option that cannot be read - is
     /// written down as this run's fault, and the next one says so rather
-    /// than report the run before it.
+    /// than report the run before it. Awaited, since it reaches what the
+    /// integrations keep: a database server is asked before the platform
+    /// answers anything.
     /// </remarks>
-    public LambdaPlatform Build()
+    public async ValueTask<LambdaPlatform> BuildAsync(CancellationToken cancellation = default)
     {
         var book = _book ?? PlatformLogging.CreateBook(_options);
 
@@ -514,17 +532,32 @@ public sealed class LambdaPlatformBuilder
 
         PlatformIntegrations? integrations = null;
 
+        LambdaPlatform? platform = null;
+
         try
         {
-            integrations = BuildIntegrations(new IntegrationContext(_options.DataDirectory, loggers));
+            integrations = await BuildIntegrationsAsync(new IntegrationContext(_options.DataDirectory, loggers), cancellation);
 
-            Migrator.Migrate(integrations.Database, loggers.CreateLogger<LambdaPlatform>());
+            await Migrator.MigrateAsync(integrations.Database, loggers.CreateLogger<LambdaPlatform>(), cancellation);
 
-            return new LambdaPlatform(_options, loggers, _loggers == null, book, runs, integrations);
+            platform = new LambdaPlatform(_options, loggers, _loggers == null, book, runs, integrations);
+
+            await platform.PrepareAsync(cancellation);
+
+            return platform;
         }
         catch (Exception e)
         {
-            integrations?.Dispose();
+            if (platform != null)
+            {
+                // its services and its integrations with them, but the
+                // loggers it was handed, which are let go of below
+                await platform.DisposeAsync(false);
+            }
+            else if (integrations != null)
+            {
+                await integrations.DisposeAsync();
+            }
 
             // nothing watches the process for what ends it yet - the server
             // does that once there is a platform to serve
@@ -548,24 +581,24 @@ public sealed class LambdaPlatformBuilder
     /// Each built as soon as the one before it is, so whatever was built
     /// before one that fails is let go of again.
     /// </remarks>
-    private PlatformIntegrations BuildIntegrations(IntegrationContext context)
+    private async ValueTask<PlatformIntegrations> BuildIntegrationsAsync(IntegrationContext context, CancellationToken cancellation)
     {
         var built = new List<IIntegration>();
 
         try
         {
-            var database = Keep(built, (_database ?? SqliteDatabase.Create()).Build(context));
+            var database = Keep(built, await (_database ?? SqliteDatabase.Create()).BuildAsync(context, cancellation));
 
-            var files = Keep(built, (_files ?? LocalFiles.Create()).Build(context));
+            var files = Keep(built, await (_files ?? LocalFiles.Create()).BuildAsync(context, cancellation));
 
-            var secrets = _secrets is { } chosen ? Keep(built, chosen.Build(context)) : null;
+            var secrets = _secrets is { } chosen ? Keep(built, await chosen.BuildAsync(context, cancellation)) : null;
 
             // a host naming the platform's own has not chosen another
             return new PlatformIntegrations(database, files, secrets);
         }
         catch
         {
-            PlatformIntegrations.Dispose(built);
+            await PlatformIntegrations.DisposeAsync(built);
             throw;
         }
     }

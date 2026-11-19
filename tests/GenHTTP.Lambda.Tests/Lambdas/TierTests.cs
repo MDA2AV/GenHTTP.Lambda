@@ -126,7 +126,7 @@ public sealed class TierTests
             await TouchAsync(fixture, key, modified: long_ago, lastSeen: long_ago, tierChanged: long_ago);
         }
 
-        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
+        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
         Assert.AreEqual(1, report.Deleted, "the sandbox lambda nobody used for four months");
         Assert.AreEqual(0, report.Undeployed);
@@ -164,7 +164,7 @@ public sealed class TierTests
 
         await TouchAsync(fixture, "demoted", modified: quiet, lastSeen: quiet, deployed: quiet);
 
-        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
+        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
         Assert.AreEqual(0, report.Undeployed, "never counted back from the last visit");
         Assert.AreEqual(0, report.Deleted);
@@ -173,7 +173,7 @@ public sealed class TierTests
 
         Assert.IsTrue(info.DeployedUntil >= before + fixture.Options.DeploymentLifetime, "the clock starts at the move");
 
-        Assert.AreEqual(1, fixture.Meta.RunMaintenance(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1)).Undeployed,
+        Assert.AreEqual(1, (await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1))).Undeployed,
                         "and runs from there like any sandbox lambda's");
     }
 
@@ -424,7 +424,7 @@ public sealed class TierTests
 
         await TouchAsync(fixture, "collector", modified: long_ago, lastSeen: long_ago, deployed: long_ago, tierChanged: long_ago);
 
-        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
+        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
         Assert.AreEqual(0, report.Undeployed);
         Assert.AreEqual(0, report.Deleted);

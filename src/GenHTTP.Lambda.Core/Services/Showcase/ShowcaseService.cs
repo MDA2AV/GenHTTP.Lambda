@@ -37,7 +37,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                      .FirstOrDefault();
     }
 
-    public ShowcaseInfo Save(string privateKey, ShowcaseDraft draft)
+    public async ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default)
     {
         var title = Tidy(draft.Title);
         var description = Tidy(draft.Description);
@@ -103,7 +103,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         // the picture first: a row is never there without the file it names
         if (draft.Image != null)
         {
-            files.Write(FileStores.Showcase, PictureNames.Showcase(lambda.Id), draft.Image);
+            await files.WriteAsync(FileStore.Showcase, PictureNames.Showcase(lambda.Id), draft.Image, cancellation);
         }
 
         if (entry == null)
@@ -142,7 +142,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                      .First();
     }
 
-    public void Remove(string privateKey)
+    public async ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -153,16 +153,17 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
             logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
         }
 
-        files.Delete(FileStores.Showcase, PictureNames.Showcase(lambda.Id));
+        await files.DeleteAsync(FileStore.Showcase, PictureNames.Showcase(lambda.Id), cancellation);
     }
 
-    public void Forget(long lambdaId)
+    public async ValueTask ForgetAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        using (var database = databases.CreateDbContext())
+        {
+            database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
+        }
 
-        database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
-
-        files.Delete(FileStores.Showcase, PictureNames.Showcase(lambdaId));
+        await files.DeleteAsync(FileStore.Showcase, PictureNames.Showcase(lambdaId), cancellation);
     }
 
     #endregion
@@ -193,7 +194,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         return new ShowcasePage([.. ranked.Skip(Math.Max(0, skip)).Take(Math.Clamp(take, 1, 48))], ranked.Count);
     }
 
-    public ShowcaseImage? GetImage(string publicKey)
+    public async ValueTask<ShowcaseImage?> GetImageAsync(string publicKey, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -208,7 +209,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         }
 
         // the row's own bytes where the picture was not moved out of it yet
-        var content = files.Read(FileStores.Showcase, PictureNames.Showcase(entry.LambdaId))
+        var content = await files.ReadAsync(FileStore.Showcase, PictureNames.Showcase(entry.LambdaId), cancellation)
                    ?? database.Showcases.AsNoTracking().Where(s => s.LambdaId == entry.LambdaId).Select(s => s.Image).FirstOrDefault();
 
         return content is { Length: > 0 } ? new ShowcaseImage(content, entry.ImageType, entry.Updated) : null;

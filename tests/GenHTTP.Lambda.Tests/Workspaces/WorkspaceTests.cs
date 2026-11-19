@@ -175,7 +175,7 @@ public sealed class WorkspaceTests
         await Assert.ThrowsExactlyAsync<LambdaException>(async () =>
             await workspace.WriteAsync(id, "models/model.bin", new MemoryStream(new byte[1000]), expected: 5000));
 
-        var listing = workspace.List(id);
+        var listing = await workspace.ListAsync(id);
 
         Assert.IsEmpty(listing.Files, "the part that arrived is not taken for the whole");
         Assert.IsEmpty(listing.Folders);

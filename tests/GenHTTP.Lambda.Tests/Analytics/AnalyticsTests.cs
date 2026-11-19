@@ -46,7 +46,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://quiet.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var before = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -58,7 +58,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://quiet.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var after = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -77,7 +77,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://forgetful.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         using (var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/analytics"))
         {
@@ -87,7 +87,7 @@ public sealed class AnalyticsTests
         // queued while it was on, written after it was switched off
         await VisitAsync(fixture, "http://forgetful.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
@@ -130,7 +130,7 @@ public sealed class AnalyticsTests
         await VisitAsync(fixture, "http://shop.localhost/menu", IPhone, referrer: "https://news.example.org/today?id=4", destination: "document");
         await VisitAsync(fixture, "http://shop.localhost/menu", Googlebot);
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -179,7 +179,7 @@ public sealed class AnalyticsTests
         await VisitAsync(fixture, "/lambda/shop/menu", Chrome, referrer: "http://localhost/lambda/shop/", destination: "document");
         await VisitAsync(fixture, "/lambda/shop/", Chrome, referrer: "http://localhost/en/showcase", destination: "document");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -202,7 +202,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://indexed.localhost/", Googlebot);
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -226,7 +226,7 @@ public sealed class AnalyticsTests
         await VisitAsync(fixture, "http://loader.localhost/app.js", Chrome, referrer: "http://loader.localhost/", destination: "script");
         await VisitAsync(fixture, "http://loader.localhost/api/items", Chrome, referrer: "http://loader.localhost/", destination: "empty");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -256,7 +256,7 @@ public sealed class AnalyticsTests
         // while a dot alone does not make a file
         await VisitAsync(fixture, "http://iconless.localhost/release/1.2", Googlebot);
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -284,7 +284,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://visited.localhost/", IPhone, destination: "document");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -311,7 +311,7 @@ public sealed class AnalyticsTests
         await VisitAsync(fixture, "http://crawled.localhost/menu", Googlebot);
         await VisitAsync(fixture, "http://crawled.localhost/menu", "curl/8.9.1");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var shown = await ReadAsync(fixture, lambda.PrivateKey);
 
@@ -350,11 +350,11 @@ public sealed class AnalyticsTests
             // over more than one writing, as a day is
             if (i == most / 2)
             {
-                Flush(fixture);
+                await FlushAsync(fixture);
             }
         }
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/analytics");
 
@@ -364,7 +364,7 @@ public sealed class AnalyticsTests
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var pages = store.Read(id, today, today, int.MaxValue).Breakdowns[AnalyticsDimension.Pages];
+        var pages = (await store.ReadAsync(id, today, today, int.MaxValue)).Breakdowns[AnalyticsDimension.Pages];
 
         Assert.HasCount(most + 1, pages, "as many paths as a day has room for, and the rest together");
         Assert.AreEqual(10, pages.Single(p => p.Value == AnalyticsDimensions.Other).Hits);
@@ -390,7 +390,7 @@ public sealed class AnalyticsTests
             Assert.AreEqual(HttpStatusCode.OK, preview.StatusCode);
         }
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         Assert.AreEqual(0, (await ReadAsync(fixture, lambda.PrivateKey)).Totals!.Hits, "somebody trying a change is not a visitor");
     }
@@ -410,13 +410,13 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://growing.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var analytics = fixture.Platform.Services.GetRequiredService<IAnalyticsService>();
 
         var later = DateTime.UtcNow.AddDays(30);
 
-        var free = analytics.Get(lambda.PrivateKey, 365, later);
+        var free = await analytics.GetAsync(lambda.PrivateKey, 365, later);
 
         Assert.AreEqual(7, free.Shown, "asked for a year, a free lambda shows a week");
         Assert.AreEqual(0, free.Report!.Totals.Hits, "and the visit is older than that");
@@ -425,7 +425,7 @@ public sealed class AnalyticsTests
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
 
-        var premium = analytics.Get(lambda.PrivateKey, 60, later);
+        var premium = await analytics.GetAsync(lambda.PrivateKey, 60, later);
 
         Assert.AreEqual(60, premium.Shown);
         Assert.AreEqual(1, premium.Report!.Totals.Hits, "premium shows what was counted before it was premium");
@@ -447,13 +447,13 @@ public sealed class AnalyticsTests
 
         var analytics = fixture.Platform.Services.GetRequiredService<IAnalyticsService>();
 
-        analytics.Flush();
+        await analytics.FlushAsync();
 
-        Assert.IsNotNull(analytics.Get(lambda.PrivateKey, now: DateTime.UtcNow.AddDays(AnalyticsStore.Kept - 1)).Earliest, "a year later it is still there");
+        Assert.IsNotNull((await analytics.GetAsync(lambda.PrivateKey, now: DateTime.UtcNow.AddDays(AnalyticsStore.Kept - 1))).Earliest, "a year later it is still there");
 
-        analytics.Flush(DateTime.UtcNow.AddDays(AnalyticsStore.Kept + 1));
+        await analytics.FlushAsync(DateTime.UtcNow.AddDays(AnalyticsStore.Kept + 1));
 
-        Assert.IsNull(analytics.Get(lambda.PrivateKey).Earliest, "a day past the year it is gone");
+        Assert.IsNull((await analytics.GetAsync(lambda.PrivateKey)).Earliest, "a day past the year it is gone");
     }
 
     [TestMethod]
@@ -467,17 +467,17 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://leaving.localhost/");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var id = fixture.Meta.GetId(lambda.PrivateKey)!.Value;
 
         var store = fixture.Platform.Services.GetRequiredService<AnalyticsStore>();
 
-        Assert.IsNotNull(store.Earliest(id));
+        Assert.IsNotNull(await store.EarliestAsync(id));
 
-        fixture.Meta.Delete(lambda.PrivateKey);
+        await fixture.Meta.DeleteAsync(lambda.PrivateKey);
 
-        Assert.IsNull(store.Earliest(id));
+        Assert.IsNull(await store.EarliestAsync(id));
     }
 
     #endregion
@@ -501,7 +501,7 @@ public sealed class AnalyticsTests
 
         await VisitAsync(fixture, "http://asked.localhost/", Chrome, destination: "document");
 
-        Flush(fixture);
+        await FlushAsync(fixture);
 
         var read = await CallAsync(fixture, new JsonObject { ["privateKey"] = lambda.PrivateKey, ["days"] = 3 });
 
@@ -565,7 +565,7 @@ public sealed class AnalyticsTests
     /// <summary>
     /// What the job does every few minutes.
     /// </summary>
-    private static void Flush(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IAnalyticsService>().Flush();
+    private static async Task FlushAsync(LambdaFixture fixture) => await fixture.Platform.Services.GetRequiredService<IAnalyticsService>().FlushAsync();
 
     /// <summary>
     /// Has every address of the test host - loopback, both families -

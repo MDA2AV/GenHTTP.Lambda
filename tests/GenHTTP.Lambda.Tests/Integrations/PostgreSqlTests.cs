@@ -53,7 +53,7 @@ public sealed class PostgreSqlTests
             Assert.AreEqual(HttpStatusCode.OK, visit.StatusCode);
         }
 
-        fixture.Platform.Services.GetRequiredService<IAnalyticsService>().Flush();
+        await fixture.Platform.Services.GetRequiredService<IAnalyticsService>().FlushAsync();
 
         Assert.AreEqual(1L, await database.QueryAsync("SELECT CAST(SUM(hits) AS bigint) FROM analytics.days"));
 

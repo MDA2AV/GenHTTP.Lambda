@@ -97,6 +97,22 @@ public sealed class IntegrationTests
     }
 
     [TestMethod]
+    public async Task CodeWrittenBeforeKeepsItsRecordsAsItDid()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        await NeutralNotes.SaveAsync(fixture, lambda.PrivateKey, NeutralNotes.Before);
+
+        var address = $"http://{lambda.PublicKey}.localhost";
+
+        Assert.AreEqual("1", await NeutralNotes.ServedAsync(fixture, $"{address}/add?text=milk"));
+        Assert.AreEqual("milk", await NeutralNotes.ServedAsync(fixture, $"{address}/notes"), "GetConnection(), ToList and SaveChanges work as they did");
+        Assert.AreEqual("1", await NeutralNotes.ServedAsync(fixture, $"{address}/count"));
+    }
+
+    [TestMethod]
     public async Task ALambdaCannotNameTheClientOfADatabaseItIsNotOn()
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync();

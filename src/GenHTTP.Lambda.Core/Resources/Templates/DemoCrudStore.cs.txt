@@ -4,12 +4,13 @@
 //   - TaskContext maps the table onto TaskItem. It makes no schema: the table
 //     is the migration's, and the context only says how to read it.
 //   - Every call makes a context on a connection of its own -
-//     new TaskContext(Database.GetConnection()) - and disposes of it, which
-//     disposes of the connection too. Connections are pooled, so that costs
-//     nothing, and a context is never shared between two requests at once.
-//   - Every call is synchronous - ToList, Find, SaveChanges, not their Async
-//     forms. The server this runs on has an asynchronous model of its own
-//     that a blocking call does not disturb.
+//     new TaskContext(await Database.GetConnectionAsync()) - and disposes of
+//     it, which disposes of the connection too. Connections are pooled, so
+//     that costs nothing, and a context is never shared between two requests
+//     at once.
+//   - Every call is awaited - ToListAsync, FindAsync, SaveChangesAsync. A
+//     database on another machine is waited for without holding a thread,
+//     and one on this machine answers at once.
 //   - Nothing here names the database: the context is on the connection it
 //     is handed (options.UseDatabase), and the migration is SQL any database
 //     accepts, so the same code runs whichever one the platform keeps.
@@ -71,17 +72,17 @@ public sealed class TaskContext(DbConnection connection) : DbContext
 
 public sealed class TaskStore(int limit)
 {
-    public int Count()
+    public async ValueTask<int> CountAsync()
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
-        return db.Tasks.Count();
+        return await db.Tasks.CountAsync();
     }
 
     /// <summary>Every task, open ones first and the newest of each first - or those matching a search.</summary>
-    public List<TaskItem> List(string search)
+    public async ValueTask<List<TaskItem>> ListAsync(string search)
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
         // read only, so the context need not keep track of what it handed out
         var tasks = db.Tasks.AsNoTracking();
@@ -96,39 +97,39 @@ public sealed class TaskStore(int limit)
             tasks = tasks.Where(t => EF.Functions.Like(t.Title.ToLower(), term, "\\") || EF.Functions.Like(t.Notes.ToLower(), term, "\\"));
         }
 
-        return tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToList();
+        return await tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToListAsync();
     }
 
-    public TaskItem Find(string id)
+    public async ValueTask<TaskItem> FindAsync(string id)
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
-        return db.Tasks.AsNoTracking().FirstOrDefault(t => t.Id == id);
+        return await db.Tasks.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
     }
 
-    public void Add(TaskItem task)
+    public async ValueTask AddAsync(TaskItem task)
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
         // both or neither: the task is not added if making room fails
-        using var transaction = db.Database.BeginTransaction();
+        await using var transaction = await db.Database.BeginTransactionAsync();
 
         db.Tasks.Add(task);
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         // everything past the newest `limit` goes, in one statement
-        db.Tasks.OrderByDescending(t => t.Created).Skip(limit).ExecuteDelete();
+        await db.Tasks.OrderByDescending(t => t.Created).Skip(limit).ExecuteDeleteAsync();
 
-        transaction.Commit();
+        await transaction.CommitAsync();
     }
 
     /// <summary>Changes a task, and hands it back - or nothing, where there is none.</summary>
-    public TaskItem Change(string id, string title, string notes, bool done)
+    public async ValueTask<TaskItem> ChangeAsync(string id, string title, string notes, bool done)
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
-        // tracked, so SaveChanges writes what changed on it and nothing else
-        var task = db.Tasks.Find(id);
+        // tracked, so SaveChangesAsync writes what changed on it and nothing else
+        var task = await db.Tasks.FindAsync(id);
 
         if (task == null)
         {
@@ -140,17 +141,17 @@ public sealed class TaskStore(int limit)
         task.Done = done;
         task.Updated = DateTime.UtcNow;
 
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         return task;
     }
 
     /// <summary>Removes a task, and says whether there was one.</summary>
-    public bool Remove(string id)
+    public async ValueTask<bool> RemoveAsync(string id)
     {
-        using var db = new TaskContext(Database.GetConnection());
+        await using var db = new TaskContext(await Database.GetConnectionAsync());
 
         // a DELETE straight away, without reading the task first
-        return db.Tasks.Where(t => t.Id == id).ExecuteDelete() > 0;
+        return await db.Tasks.Where(t => t.Id == id).ExecuteDeleteAsync() > 0;
     }
 }

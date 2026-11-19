@@ -32,7 +32,8 @@ public static class LocalFiles
 public sealed class LocalFilesBuilder : IIntegrationBuilder<IFileProvider>
 {
 
-    public IFileProvider Build(IntegrationContext context) => new LocalFileProvider(context.DataDirectory);
+    public ValueTask<IFileProvider> BuildAsync(IntegrationContext context, CancellationToken cancellation = default)
+        => ValueTask.FromResult<IFileProvider>(new LocalFileProvider(context.DataDirectory));
 
 }
 
@@ -43,10 +44,19 @@ public sealed class LocalFilesBuilder : IIntegrationBuilder<IFileProvider>
 /// directory of its name: <c>branding/logo</c>, <c>showcase/{id}</c>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// What is written goes through a file beside the one it replaces, which a
 /// copy made meanwhile leaves out, and replaces it in one move - so a reader
 /// sees the file before or after, and a write that fails leaves the one that
 /// was there.
+/// </para>
+/// <para>
+/// Synchronous inside, whatever the contract says: a file of this machine is
+/// read and written on the thread that asks - on the Ioxide engine the
+/// reactor of the request, which it never leaves for that. Every task it
+/// returns has completed already, but for an upload, which is awaited as it
+/// arrives.
+/// </para>
 /// </remarks>
 internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 {
@@ -62,21 +72,21 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 
     #region The platform's own
 
-    public byte[]? Read(string store, string name)
+    public ValueTask<byte[]?> ReadAsync(FileStore store, string name, CancellationToken cancellation = default)
     {
         var file = Stored(store, name);
 
         try
         {
-            return File.Exists(file) ? File.ReadAllBytes(file) : null;
+            return ValueTask.FromResult(File.Exists(file) ? File.ReadAllBytes(file) : null);
         }
         catch (FileNotFoundException)
         {
-            return null;
+            return ValueTask.FromResult<byte[]?>(null);
         }
     }
 
-    public void Write(string store, string name, ReadOnlySpan<byte> content)
+    public ValueTask WriteAsync(FileStore store, string name, ReadOnlyMemory<byte> content, CancellationToken cancellation = default)
     {
         var file = Stored(store, name);
 
@@ -88,7 +98,7 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         {
             using (var target = File.Create(staging))
             {
-                target.Write(content);
+                target.Write(content.Span);
             }
 
             File.Move(staging, file, true);
@@ -98,23 +108,41 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
             Remove(staging);
             throw;
         }
+
+        return ValueTask.CompletedTask;
     }
 
-    public void Delete(string store, string name) => Remove(Stored(store, name));
+    public ValueTask DeleteAsync(FileStore store, string name, CancellationToken cancellation = default)
+    {
+        Remove(Stored(store, name));
+
+        return ValueTask.CompletedTask;
+    }
 
     /// <summary>
     /// Where a file of a store is - one level below the store, the names
     /// being the platform's own.
     /// </summary>
-    private string Stored(string store, string name)
+    private string Stored(FileStore store, string name)
     {
-        if (!Plain(store) || !Plain(name))
+        if (!Plain(name))
         {
-            throw new ArgumentException($"'{store}/{name}' is no file of a store: a name of letters, digits, dashes and dots each.");
+            throw new ArgumentException($"'{name}' is no file of a store: a name of letters, digits, dashes and dots.");
         }
 
-        return Path.Combine(dataDirectory, store, name);
+        return Path.Combine(StoreDirectory(store), name);
     }
+
+    /// <summary>
+    /// The directory of a store, spelled out rather than made of its name:
+    /// the pictures of every installation are where it says.
+    /// </summary>
+    private string StoreDirectory(FileStore store) => Path.Combine(dataDirectory, store switch
+    {
+        FileStore.Branding => "branding",
+        FileStore.Showcase => "showcase",
+        _ => throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.")
+    });
 
     private static bool Plain(string name)
         => name.Length > 0 && name[0] != '.' && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
@@ -123,13 +151,13 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 
     #region Reading
 
-    public IReadOnlyList<FileEntry> List(DataScope scope)
+    public ValueTask<IReadOnlyList<FileEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default)
     {
         var root = Root(scope);
 
         if (!Directory.Exists(root))
         {
-            return [];
+            return ValueTask.FromResult<IReadOnlyList<FileEntry>>([]);
         }
 
         var entries = new List<FileEntry>();
@@ -146,10 +174,10 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
             entries.Add(new FileEntry(Relative(root, path), true, 0, DateTime.MinValue));
         }
 
-        return entries;
+        return ValueTask.FromResult<IReadOnlyList<FileEntry>>(entries);
     }
 
-    public FileEntry? Find(DataScope scope, string path)
+    public ValueTask<FileEntry?> FindAsync(DataScope scope, string path, CancellationToken cancellation = default)
     {
         var resolved = Resolve(scope, path);
 
@@ -157,32 +185,32 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         {
             var info = new FileInfo(resolved);
 
-            return new FileEntry(path, false, Length(info), Modified(info));
+            return ValueTask.FromResult<FileEntry?>(new FileEntry(path, false, Length(info), Modified(info)));
         }
 
-        return Directory.Exists(resolved) ? new FileEntry(path, true, 0, DateTime.MinValue) : null;
+        return ValueTask.FromResult(Directory.Exists(resolved) ? new FileEntry(path, true, 0, DateTime.MinValue) : null);
     }
 
-    public byte[]? Read(DataScope scope, string path)
+    public ValueTask<byte[]?> ReadAsync(DataScope scope, string path, CancellationToken cancellation = default)
     {
         var resolved = Resolve(scope, path);
 
         try
         {
-            return File.Exists(resolved) ? File.ReadAllBytes(resolved) : null;
+            return ValueTask.FromResult(File.Exists(resolved) ? File.ReadAllBytes(resolved) : null);
         }
         catch (FileNotFoundException)
         {
             // removed between looking and reading
-            return null;
+            return ValueTask.FromResult<byte[]?>(null);
         }
     }
 
-    public IResource? Resource(DataScope scope, string path)
+    public ValueTask<IResource?> ResourceAsync(DataScope scope, string path, CancellationToken cancellation = default)
     {
         var resolved = Resolve(scope, path);
 
-        return File.Exists(resolved) ? GenHTTP.Modules.IO.Resource.FromFile(new FileInfo(resolved)).Build() : null;
+        return ValueTask.FromResult(File.Exists(resolved) ? GenHTTP.Modules.IO.Resource.FromFile(new FileInfo(resolved)).Build() : null);
     }
 
     /// <remarks>
@@ -202,7 +230,7 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 
     #region Writing
 
-    public void Write(DataScope scope, string path, ReadOnlySpan<byte> content)
+    public ValueTask WriteAsync(DataScope scope, string path, ReadOnlyMemory<byte> content, CancellationToken cancellation = default)
     {
         var resolved = Resolve(scope, path);
 
@@ -217,7 +245,7 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         {
             using (var target = File.Create(staging))
             {
-                target.Write(content);
+                target.Write(content.Span);
             }
 
             File.Move(staging, resolved, true);
@@ -227,6 +255,8 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
             Undo(staging, created);
             throw;
         }
+
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask WriteAsync(DataScope scope, string path, Stream content, CancellationToken cancellation = default)
@@ -256,23 +286,33 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         }
     }
 
-    public void CreateFolder(DataScope scope, string path) => Directory.CreateDirectory(Resolve(scope, path));
+    public ValueTask CreateFolderAsync(DataScope scope, string path, CancellationToken cancellation = default)
+    {
+        Directory.CreateDirectory(Resolve(scope, path));
 
-    public void Delete(DataScope scope, string path) => Remove(Resolve(scope, path));
+        return ValueTask.CompletedTask;
+    }
 
-    public void Clear(DataScope scope)
+    public ValueTask DeleteAsync(DataScope scope, string path, CancellationToken cancellation = default)
+    {
+        Remove(Resolve(scope, path));
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask ClearAsync(DataScope scope, CancellationToken cancellation = default)
     {
         var root = Root(scope);
 
-        if (!Directory.Exists(root))
+        if (Directory.Exists(root))
         {
-            return;
+            foreach (var entry in Directory.GetFileSystemEntries(root))
+            {
+                Remove(entry);
+            }
         }
 
-        foreach (var entry in Directory.GetFileSystemEntries(root))
-        {
-            Remove(entry);
-        }
+        return ValueTask.CompletedTask;
     }
 
     #endregion
@@ -281,9 +321,10 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 
     /// <remarks>
     /// Copied beside the copy it replaces and swapped in once complete, so a
-    /// copy that fails halfway leaves the one there was.
+    /// copy that fails halfway leaves the one there was. On the thread it is
+    /// asked on, which the platform chose to be away from a request's.
     /// </remarks>
-    public void Copy(DataScope source, DataScope target, CancellationToken cancellation = default)
+    public ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
     {
         var into = Folder(target);
 
@@ -313,11 +354,18 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         Directory.CreateDirectory(Path.GetDirectoryName(into)!);
 
         Directory.Move(staging, into);
+
+        return ValueTask.CompletedTask;
     }
 
-    public void Delete(DataScope scope) => RemoveDirectory(Folder(scope));
+    public ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
+    {
+        RemoveDirectory(Folder(scope));
 
-    public void DeleteAll(long lambdaId)
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
         RemoveDirectory(Folder(new DataScope(lambdaId)));
 
@@ -330,18 +378,20 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
                 RemoveDirectory(Path.Combine(feature, "workspace"));
             }
         }
+
+        return ValueTask.CompletedTask;
     }
 
     #endregion
 
     #region Describing it
 
-    public IntegrationInfo Describe() => new(IntegrationKinds.Files, "Local",
+    public IntegrationInfo Describe() => new(IntegrationKind.Files, "Local",
                                              [
                                                  new IntegrationDetail("Lambdas", Path.Combine(dataDirectory, "workspaces", "{lambda}")),
                                                  new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace")),
-                                                 new IntegrationDetail("Logo", Path.Combine(dataDirectory, FileStores.Branding)),
-                                                 new IntegrationDetail("Showcase", Path.Combine(dataDirectory, FileStores.Showcase))
+                                                 new IntegrationDetail("Logo", StoreDirectory(FileStore.Branding)),
+                                                 new IntegrationDetail("Showcase", StoreDirectory(FileStore.Showcase))
                                              ]);
 
     public string? Guide(GuideContext context) => null;

@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Base de dados',
-      what: 'Uma base de dados própria onde a lambda guarda os seus registos, acessível com Database.GetConnection().',
+      what: 'Uma base de dados própria onde a lambda guarda os seus registos, acessível com Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 tabela' : `${items} tabelas`),
       confirmOff: 'Desligar a base de dados?',
       switchedOn: 'A base de dados está ligada, e vazia. No próximo pedido, a lambda volta a arrancar já com ela.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'No código',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} abre uma ligação à base de dados – para um {code('DbContext')} do Entity
+        {code('Database.GetConnectionAsync()')} abre uma ligação à base de dados – para um {code('DbContext')} do Entity
         Framework Core, ou para SQL – e as migrações em {code('migrations/')}, aplicadas pelo Evolve, criam as tabelas
         dela. Num projeto transferido, é um simples ficheiro SQLite: {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} foi apagado.`,
     deleteFailed: 'Não foi possível apagar o segredo.',
     used: 'lido pelo código',
-    usedHint: 'O código lê-o com Secret.Read ou Secret.Exists.',
+    usedHint: 'O código lê-o com Secret.ReadAsync ou Secret.ExistsAsync.',
     unused: 'não lido pelo código',
     unusedHint: 'Nenhum código o lê por este nome. Está escrito como no código?',
     set: (when) => <>definido {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'No código',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} lê um valor, {code('Secret.Exists("NAME")')} diz se está definido. Num projeto
+        {code('Secret.ReadAsync("NAME")')} lê um valor, {code('Secret.ExistsAsync("NAME")')} diz se está definido. Num projeto
         transferido, ambos leem a variável de ambiente com o mesmo nome.
       </>
     ),

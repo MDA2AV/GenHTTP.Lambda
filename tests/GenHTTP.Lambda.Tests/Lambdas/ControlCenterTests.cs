@@ -195,7 +195,7 @@ public sealed class ControlCenterTests
             await database.SaveChangesAsync();
         }
 
-        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
+        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
         Assert.AreEqual(1, report.Undeployed);
 

@@ -40,7 +40,7 @@ public static class SqliteDatabase
 public sealed class SqliteDatabaseBuilder : IIntegrationBuilder<IDatabaseProvider>
 {
 
-    public IDatabaseProvider Build(IntegrationContext context)
-        => new SqliteDatabaseProvider(context.DataDirectory, context.Loggers.CreateLogger<SqliteDatabaseProvider>());
+    public ValueTask<IDatabaseProvider> BuildAsync(IntegrationContext context, CancellationToken cancellation = default)
+        => ValueTask.FromResult<IDatabaseProvider>(new SqliteDatabaseProvider(context.DataDirectory, context.Loggers.CreateLogger<SqliteDatabaseProvider>()));
 
 }

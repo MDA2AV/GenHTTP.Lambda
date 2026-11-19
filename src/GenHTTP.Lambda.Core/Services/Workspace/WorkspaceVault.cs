@@ -28,21 +28,26 @@ public sealed class WorkspaceVault(IFileProvider files) : IWorkspaceVault
 
     #region Functionality
 
-    public WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<long> beside)
+    public WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<CancellationToken, ValueTask<long>> beside)
         => new LambdaWorkspace(files, this, new DataScope(lambdaId, featureId), room, beside).Bind();
 
-    public long SizeOf(long lambdaId, long? featureId)
+    public ValueTask<long> SizeOfAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
     {
         var scope = new DataScope(lambdaId, featureId);
 
-        var now = Stopwatch.GetTimestamp();
-
-        if (_measured.TryGetValue(scope, out var known) && now - known.At < Patience)
+        if (_measured.TryGetValue(scope, out var known) && Stopwatch.GetTimestamp() - known.At < Patience)
         {
-            return known.Size;
+            return ValueTask.FromResult(known.Size);
         }
 
-        var size = WorkspacePaths.Measure(files.List(scope));
+        return MeasureAsync(scope, cancellation);
+    }
+
+    private async ValueTask<long> MeasureAsync(DataScope scope, CancellationToken cancellation)
+    {
+        var now = Stopwatch.GetTimestamp();
+
+        var size = WorkspacePaths.Measure(await files.ListAsync(scope, cancellation));
 
         _measured[scope] = (size, now);
 
@@ -52,26 +57,27 @@ public sealed class WorkspaceVault(IFileProvider files) : IWorkspaceVault
     public void Changed(long lambdaId, long? featureId) => _measured.TryRemove(new DataScope(lambdaId, featureId), out _);
 
     /// <remarks>
-    /// A whole workspace, gigabytes in production: copied away from the
-    /// reactor (see <see cref="Offload"/>).
+    /// A whole workspace, gigabytes in production, which a provider that
+    /// answers at once copies on the thread it is asked on: asked away from
+    /// the reactor (see <see cref="Offload"/>).
     /// </remarks>
     public async ValueTask CopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
     {
-        await Offload.Run(() => files.Copy(new DataScope(lambdaId), new DataScope(lambdaId, featureId), cancellation), cancellation);
+        await Offload.Run(async () => await files.CopyAsync(new DataScope(lambdaId), new DataScope(lambdaId, featureId), cancellation), cancellation);
 
         Changed(lambdaId, featureId);
     }
 
-    public void RemoveCopy(long lambdaId, long featureId)
+    public async ValueTask RemoveCopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
     {
-        files.Delete(new DataScope(lambdaId, featureId));
+        await files.DeleteAsync(new DataScope(lambdaId, featureId), cancellation);
 
         Changed(lambdaId, featureId);
     }
 
-    public void DeleteAll(long lambdaId)
+    public async ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        files.DeleteAll(lambdaId);
+        await files.DeleteAllAsync(lambdaId, cancellation);
 
         foreach (var scope in _measured.Keys.Where(s => s.LambdaId == lambdaId).ToList())
         {

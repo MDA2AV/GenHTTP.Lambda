@@ -28,6 +28,13 @@ namespace GenHTTP.Lambda.Integrations.Sqlite;
 /// the SQL sent over it inside that one file, and its size to the room it is
 /// given.
 /// </para>
+/// <para>
+/// Synchronous inside, whatever the contract says: SQLite reads and writes a
+/// file of this machine, and answers on the thread that asks - which on the
+/// Ioxide engine is the reactor of the request, and stays it. Every task it
+/// returns has completed already, and its connections answer the async
+/// methods of ADO.NET and Entity Framework synchronously as well.
+/// </para>
 /// </remarks>
 internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<SqliteDatabaseProvider> logger) : IDatabaseProvider
 {
@@ -40,20 +47,22 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// <summary>
     /// The stores whose journal was switched to write-ahead logging by this process.
     /// </summary>
-    private readonly ConcurrentDictionary<string, bool> _prepared = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<DatabaseStore, bool> _prepared = [];
 
     #region The platform's own
 
-    public string Dialect => "sqlite";
+    public DatabaseDialect Dialect => DatabaseDialect.Sqlite;
 
-    public void ConfigureStore(DbContextOptionsBuilder options, string store) => options.UseSqlite(StoreConnection(store));
+    public void ConfigureStore(DbContextOptionsBuilder options, DatabaseStore store) => options.UseSqlite(StoreConnection(store));
 
     /// <remarks>
     /// Write-ahead logging is chosen the first time a store is opened and stays
     /// with the file: readers do not wait for the occasional writer. Foreign
     /// keys are on, which is what the migrations expect.
     /// </remarks>
-    public DbConnection Open(string store)
+    public ValueTask<DbConnection> OpenAsync(DatabaseStore store, CancellationToken cancellation = default) => ValueTask.FromResult(Open(store));
+
+    private DbConnection Open(DatabaseStore store)
     {
         Directory.CreateDirectory(dataDirectory);
 
@@ -83,10 +92,19 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// The file of a store: the platform's kept the name it had before there
     /// were others.
     /// </summary>
-    private string StoreFile(string store)
-        => Path.Combine(dataDirectory, store == DatabaseStores.Platform ? "lambda.db" : $"{store}.db");
+    /// <remarks>
+    /// Spelled out rather than made of the name of the store: the files are
+    /// where the data of every installation is, whatever the store is called
+    /// in the code.
+    /// </remarks>
+    private string StoreFile(DatabaseStore store) => Path.Combine(dataDirectory, store switch
+    {
+        DatabaseStore.Platform => "lambda.db",
+        DatabaseStore.Analytics => "analytics.db",
+        _ => throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.")
+    });
 
-    private string StoreConnection(string store) => $"Data Source={StoreFile(store)};Default Timeout=30;Pooling=True";
+    private string StoreConnection(DatabaseStore store) => $"Data Source={StoreFile(store)};Default Timeout=30;Pooling=True";
 
     #endregion
 
@@ -103,7 +121,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// Readers do not wait for a writer, which is what a lambda serving
     /// requests at once needs; the choice stays with the file.
     /// </remarks>
-    public void Create(DataScope scope)
+    public ValueTask CreateAsync(DataScope scope, CancellationToken cancellation = default)
     {
         using (var connection = new SqliteConnection(ConnectionString(FileOf(scope), false, pooled: false)))
         {
@@ -113,9 +131,11 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
         }
 
         logger.LogInformation("Created database of {Scope}", scope);
+
+        return ValueTask.CompletedTask;
     }
 
-    public bool Exists(DataScope scope) => File.Exists(FileOf(scope));
+    public ValueTask<bool> ExistsAsync(DataScope scope, CancellationToken cancellation = default) => ValueTask.FromResult(File.Exists(FileOf(scope)));
 
     /// <remarks>
     /// Pooled, so a connection per request costs nothing, and watched from
@@ -124,7 +144,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// is asked for, so a limit the operator lowers holds from the next
     /// connection on.
     /// </remarks>
-    public DbConnection Connect(DataScope scope, long room)
+    public ValueTask<DbConnection> ConnectAsync(DataScope scope, long room, CancellationToken cancellation = default)
     {
         var connection = new SqliteConnection(ConnectionString(FileOf(scope), false));
 
@@ -140,20 +160,20 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
             throw;
         }
 
-        return connection;
+        return ValueTask.FromResult<DbConnection>(connection);
     }
 
     /// <remarks>
     /// Not pooled: it is opened rarely, and a stopwatch runs on it that a
     /// pooled one would carry over into its next use.
     /// </remarks>
-    public DbConnection? Read(DataScope scope, TimeSpan patience)
+    public ValueTask<DbConnection?> ReadAsync(DataScope scope, TimeSpan patience, CancellationToken cancellation = default)
     {
         var file = FileOf(scope);
 
         if (!File.Exists(file))
         {
-            return null;
+            return ValueTask.FromResult<DbConnection?>(null);
         }
 
         var connection = new SqliteConnection(ConnectionString(file, true, pooled: false));
@@ -164,7 +184,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
 
             ConnectionGuard.ApplyReading(connection, patience);
 
-            return connection;
+            return ValueTask.FromResult<DbConnection?>(connection);
         }
         catch
         {
@@ -176,21 +196,25 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// <summary>
     /// The room the file takes on the disk, its journal included.
     /// </summary>
-    public long SizeOf(DataScope scope)
+    public ValueTask<long> SizeOfAsync(DataScope scope, CancellationToken cancellation = default)
     {
         var file = FileOf(scope);
 
-        return Length(file) + Length(file + "-wal");
+        return ValueTask.FromResult(Length(file) + Length(file + "-wal"));
     }
 
     /// <remarks>
     /// Copied with SQLite's backup, which reads the whole database in one
     /// transaction while the lambda goes on writing to it: what the copy holds
-    /// is the database as it was at one moment, not half of two.
+    /// is the database as it was at one moment, not half of two. On the
+    /// thread it is asked on, which the platform chose to be away from a
+    /// request's.
     /// </remarks>
-    public void Copy(DataScope source, DataScope target)
+    public ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default)
     {
-        Delete(target);
+        cancellation.ThrowIfCancellationRequested();
+
+        Remove(FileOf(target));
 
         var file = FileOf(source);
 
@@ -198,15 +222,22 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
         {
             Backup(file, FileOf(target));
         }
+
+        return ValueTask.CompletedTask;
     }
 
-    public void Delete(DataScope scope) => Remove(FileOf(scope));
+    public ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default)
+    {
+        Remove(FileOf(scope));
+
+        return ValueTask.CompletedTask;
+    }
 
     /// <remarks>
     /// The copies of its features are found where they are kept, by the id of
     /// the lambda alone.
     /// </remarks>
-    public void DeleteAll(long lambdaId)
+    public ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default)
     {
         Remove(FileOf(new DataScope(lambdaId)));
 
@@ -221,6 +252,8 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
         }
 
         RemoveDirectory(Path.Combine(dataDirectory, "databases", lambdaId.ToString()));
+
+        return ValueTask.CompletedTask;
     }
 
     /// <remarks>
@@ -228,13 +261,15 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// be writing to it meanwhile, and then out of write-ahead logging, so it
     /// is one file with nothing beside it.
     /// </remarks>
-    public string? Export(DataScope scope)
+    public ValueTask<string?> ExportAsync(DataScope scope, CancellationToken cancellation = default)
     {
+        cancellation.ThrowIfCancellationRequested();
+
         var file = FileOf(scope);
 
         if (!File.Exists(file))
         {
-            return null;
+            return ValueTask.FromResult<string?>(null);
         }
 
         var target = Path.Combine(Path.GetTempPath(), $"genhttp-lambda-export-{Guid.NewGuid():N}.db");
@@ -249,7 +284,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
 
             Execute(copy, "PRAGMA journal_mode = DELETE");
 
-            return target;
+            return ValueTask.FromResult<string?>(target);
         }
         catch
         {
@@ -267,7 +302,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// tables behind a full text index - is left out: none of it is anything
     /// the app wrote.
     /// </remarks>
-    public IReadOnlyList<DatabaseTableInfo> Tables(DbConnection connection)
+    public ValueTask<IReadOnlyList<DatabaseTableInfo>> TablesAsync(DbConnection connection, CancellationToken cancellation = default)
     {
         var found = new List<DatabaseTableInfo>();
 
@@ -282,10 +317,10 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
             found.Add(new DatabaseTableInfo(reader.GetString(0), reader.GetString(1) == "view"));
         }
 
-        return found;
+        return ValueTask.FromResult<IReadOnlyList<DatabaseTableInfo>>(found);
     }
 
-    public IReadOnlyList<DatabaseColumnInfo> Columns(DbConnection connection, string table)
+    public ValueTask<IReadOnlyList<DatabaseColumnInfo>> ColumnsAsync(DbConnection connection, string table, CancellationToken cancellation = default)
     {
         var columns = new List<DatabaseColumnInfo>();
 
@@ -303,7 +338,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
                                                reader.GetInt64(3) > 0, reader.IsDBNull(4) ? null : reader.GetString(4)));
         }
 
-        return columns;
+        return ValueTask.FromResult<IReadOnlyList<DatabaseColumnInfo>>(columns);
     }
 
     /// <remarks>
@@ -311,7 +346,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// view or a table without one is left in whatever order SQLite hands it
     /// over.
     /// </remarks>
-    public string? NaturalOrder(DbConnection connection, string table)
+    public ValueTask<string?> NaturalOrderAsync(DbConnection connection, string table, CancellationToken cancellation = default)
     {
         using var command = connection.CreateCommand();
 
@@ -319,7 +354,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
 
         Parameter(command, "@table", table);
 
-        return command.ExecuteScalar() is long yes && yes != 0 ? "rowid" : null;
+        return ValueTask.FromResult(command.ExecuteScalar() is long yes && yes != 0 ? "rowid" : null);
     }
 
     public string Quote(string name) => $"\"{name.Replace("\"", "\"\"")}\"";
@@ -328,10 +363,10 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
 
     #region Describing it
 
-    public IntegrationInfo Describe() => new(IntegrationKinds.Database, "SQLite",
+    public IntegrationInfo Describe() => new(IntegrationKind.Database, "SQLite",
                                              [
-                                                 new IntegrationDetail("Platform", StoreFile(DatabaseStores.Platform)),
-                                                 new IntegrationDetail("Analytics", StoreFile(DatabaseStores.Analytics)),
+                                                 new IntegrationDetail("Platform", StoreFile(DatabaseStore.Platform)),
+                                                 new IntegrationDetail("Analytics", StoreFile(DatabaseStore.Analytics)),
                                                  new IntegrationDetail("Lambdas", Path.Combine(dataDirectory, "databases", "{lambda}", DatabaseName)),
                                                  new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", DatabaseName))
                                              ]);

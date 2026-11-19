@@ -666,16 +666,16 @@ community edition is told so - and the same code runs on either.
 ```csharp
 // resources/migrations/V1__Create_notes.sql:
 // CREATE TABLE notes (id TEXT NOT NULL PRIMARY KEY, text TEXT NOT NULL, done BOOLEAN NOT NULL DEFAULT FALSE);
-using (var connection = Database.GetConnection())
+await using (var connection = await Database.GetConnectionAsync())
 {
     new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
 }
 
-return Inline.Create().Get("count", () =>
+return Inline.Create().Get("count", async () =>
 {
-    using var db = new Notes(Database.GetConnection());
+    await using var db = new Notes(await Database.GetConnectionAsync());
 
-    return db.Entries.Count();
+    return await db.Entries.CountAsync();
 });
 
 public class Note
@@ -698,20 +698,26 @@ public class Notes(DbConnection connection) : DbContext
 }
 ```
 
-`Database.GetConnection()` hands out an open `DbConnection`, taken from a
-pool, which the caller disposes of - or a context it is handed, which owns it
-- one per request, never one shared between requests. `UseDatabase` is
-generated into every lambda and configures the context the way the database
+`Database.GetConnectionAsync()` opens a `DbConnection`, taken from a pool,
+which the caller disposes of - or a context it is handed, which owns it - one
+per request, never one shared between requests. `UseDatabase` is generated
+into every lambda and configures the context the way the database
 integration says (`UseSqlite` or `UseNpgsql` underneath). The connection
 comes into the context from outside, because inside a `DbContext`, `Database`
 is the context's own (the compiler's message says so, and names
 `LambdaEnvironment.Database`). `System.Data.Common`,
 `Microsoft.EntityFrameworkCore` and `EvolveDb` are imported in every file,
-like the GenHTTP modules. Agents are told to use it synchronously - `ToList`
-and `SaveChanges`, never `ToListAsync` or `SaveChangesAsync` - because the
-platform's model is synchronous and the engine has an asynchronous model of its
-own that a blocking call here does not disturb; this is said, not enforced.
-The demos all keep their records like this, `demo-crud` the plainest of them.
+like the GenHTTP modules. Agents are told to await what goes to the database
+- `ToListAsync`, `SaveChangesAsync` - in routes that are async: a database on
+another machine is then waited for without holding a thread, and SQLite
+answers at once either way. This is said, not enforced. The demos all keep
+their records like this, `demo-crud` the plainest of them.
+
+`Database.GetConnection()`, the plain call lambdas had before, opens the same
+connection and keeps code written then working. It waits for nothing where
+the database answers at once - SQLite always does - and holds the thread
+until it is open where it is on another machine; Entity Framework's
+synchronous methods hold it for every statement.
 
 What a lambda writes for any database: migrations of plain SQL every database
 accepts - `TEXT`, `INTEGER`, `BIGINT`, `BOOLEAN`, `DOUBLE PRECISION`, keys the
@@ -724,8 +730,8 @@ names Entity Framework asks for are folded to lower case, as PostgreSQL folds
 an unquoted name.
 
 Code written before lambdas were handed a `DbConnection` keeps working where
-SQLite keeps the database: there `Database.GetConnection()` is declared to
-return a `SqliteConnection`, and `Microsoft.Data.Sqlite` is imported and
+SQLite keeps the database: there `Database.GetConnectionAsync()` and
+`GetConnection()` are declared to return a `SqliteConnection`, and `Microsoft.Data.Sqlite` is imported and
 referenced, so `UseSqlite(connection, contextOwnsConnection: true)` and
 `SqliteException` compile as they did. Where PostgreSQL keeps it, no client
 library is handed to a lambda at all.
@@ -820,16 +826,19 @@ there can never be taken back. A lambda reads a secret by name:
 
 ```csharp
 var stripe = new System.Net.Http.HttpClient();
-stripe.DefaultRequestHeaders.Authorization = new("Bearer", Secret.Read("STRIPE_KEY"));
+stripe.DefaultRequestHeaders.Authorization = new("Bearer", await Secret.ReadAsync("STRIPE_KEY"));
 ```
 
 (Calling Stripe from the server is connecting to another one, which a lambda
 may only do where it has connectivity - see [Connectivity](#connectivity).)
 
-`Secret.Read` throws, saying how to set it, when there is no such secret;
-`Secret.Exists` answers whether there is one, and false while secrets are
+`Secret.ReadAsync` throws, saying how to set it, when there is no such secret;
+`Secret.ExistsAsync` answers whether there is one, and false while secrets are
 switched off, for code that works without. `Secret` is there in every file,
-like `Workspace`.
+like `Workspace`. A value is read from memory unless it changed since; what
+the secrets integration is asked then is awaited. `Secret.Read` and
+`Secret.Exists`, the plain calls of code written before, read the same and
+wait for the integration where it does not answer at once.
 
 The rules are the usual ones for secrets:
 
@@ -844,20 +853,21 @@ The rules are the usual ones for secrets:
   Switching them off deletes every value, the copies of the features included.
 - **Names are environment variables.** Letters, digits and underscores, not
   starting with a digit, case sensitive: an exported project reads
-  `Secret.Read("STRIPE_KEY")` from `$STRIPE_KEY`. Up to 100 per lambda, 32 KB
+  `Secret.ReadAsync("STRIPE_KEY")` from `$STRIPE_KEY`. Up to 100 per lambda, 32 KB
   each - a private key fits, a file belongs in the workspace.
 - **What the code waits for is said.** The names the code reads with
-  `Secret.Read("…")` or `Secret.Exists("…")` as a literal - in the version
+  `Secret.ReadAsync("…")` or `Secret.ExistsAsync("…")` - or their plain
+  forms - as a literal - in the version
   online and in the newest one, or in a feature's files - are listed beside
   what is stored: a name read and not stored is *missing* (reading it fails),
   one only asked about with `Exists` is *optional*. The editor offers to set
   what is missing, the overview asks for it, and `read_lambda` and
   `list_secrets` tell an agent. That is how the two sides meet: an agent
-  writes `Secret.Read("WEATHER_API_KEY")` and switches secrets on, and the
+  writes `Secret.ReadAsync("WEATHER_API_KEY")` and switches secrets on, and the
   owner enters the value without ever reading the code - and without the
   value passing through the agent.
-- **Read at runtime, not compiled in.** The generated class is handed a
-  function to read with once the lambda is loaded (a private field the code
+- **Read at runtime, not compiled in.** The generated class is handed
+  functions to read with once the lambda is loaded (a private field the code
   of the lambda cannot name, and reflection is refused), so a value changed in
   the editor is what the next call reads, without a deploy, and no value is
   ever written into an assembly on disk. What a lambda reads is held in memory
@@ -894,7 +904,7 @@ the guard makes expensive, and no more than that.
 
 The demo `demo-registration` peppers its password hashes with a
 `PASSWORD_PEPPER` that the seeder gives it as a random secret nobody knows,
-and a copy of it works without one (`Secret.Exists`). Its accounts remember
+and a copy of it works without one (`Secret.ExistsAsync`). Its accounts remember
 whether they were peppered, so accounts made before still sign in.
 
 ### Connectivity
@@ -1485,10 +1495,10 @@ A host's `Program.cs` is the whole composition. The community edition's:
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
 // whoever runs it may give it a name and a logo of their own, in the panel
-await using var platform = LambdaPlatform.Create()
-                                         .Options(settings.Platform with { Branding = true })
-                                         .Database(CommunityDatabase.Of(settings.Database))
-                                         .Build();
+await using var platform = await LambdaPlatform.Create()
+                                               .Options(settings.Platform with { Branding = true })
+                                               .Database(CommunityDatabase.Of(settings.Database))
+                                               .BuildAsync();
 
 var site = Layout.Create()
                  .Add("api", RestApi.Create(platform))
@@ -1511,9 +1521,12 @@ report and SQLite alone (`LambdaSettings.FromEnvironment()`, which refuses
 genhttp.dev being GenHTTP Lambda - and has `Website` where this has
 `LandingPage`.
 
-`LambdaPlatform.Create().Options(...).Build()` builds the integrations,
-migrates the database through the database integration and builds the
-services into one container, once per process; every component's
+`LambdaPlatform.Create().Options(...).BuildAsync()` builds the integrations,
+migrates the platform's records and its analytics through the database
+integration, builds the services into one container and reads what every
+page needs before the first request - the brand, the pictures moved out of
+the records they were kept in before - once per process. It is awaited: on
+PostgreSQL that is where the server is first reached; every component's
 builder is handed the platform and takes what it needs from it, and makes its
 own singletons - the MCP tools, the pages of a bundle - from those services,
 so the container registers nothing of the components. `LambdaServer` starts
@@ -1762,21 +1775,34 @@ It also refuses code that waits for a task: `.Result`, `.Wait()`,
 `SemaphoreSlim.Wait()`, asked of the compiler so a `Result` of the code's own
 is not mistaken for one. Requests run on one thread per core, and a task
 finishes on the thread that would be waiting for it - so it never would, and
-that core would serve nothing again. Agents are told to await instead, or to
-call the synchronous method where there is one, as with the database.
+that core would serve nothing again. Agents are told to await instead - and
+the database, the workspace and the secrets have asynchronous members for it
+(`Database.GetConnectionAsync()`, `Workspace.ReadTextAsync`,
+`Secret.ReadAsync`), which are what they are taught.
 
-On the ioxide engine requests run on its reactors, one thread per core. The
-platform's database answers synchronously - SQLite does whatever the method is
-called, and PostgreSQL is asked the same way, its wait on the network accepted
-by whoever chooses it - so the services, resources and MCP tools are
-synchronous: plain methods, synchronous EF calls, plain locks. What takes long - compiling and binding with Roslyn, packing,
-copying a workspace or a database - is handed to the thread pool in one hop
+On the ioxide engine requests run on its reactors, one thread per core, and
+what a request awaits is resumed on its reactor; on Kestrel and the internal
+engine they run on the thread pool. What the platform asks of an integration
+is awaited - the contracts return `ValueTask`s - so an integration that waits
+on the network does so without holding a thread, and one that answers at
+once (SQLite, local directories, the platform's own secrets) completes on the
+thread that asked, which on ioxide never leaves its reactor. The platform's
+own records are still asked of Entity Framework synchronously, on PostgreSQL
+too, its wait on the network accepted by whoever chooses it. What takes long -
+compiling and binding with Roslyn, packing, copying or exporting a workspace
+or a database - is handed to the thread pool in one hop
 (`Infrastructure/Offload.cs`) and the request resumes on its reactor
-afterwards. `src/BannedSymbols.txt` refuses the asynchronous EF
+afterwards. The plain calls a lambda kept from before its members were
+awaited - `Database.GetConnection()`, `Workspace.ReadText`, `Secret.Read` - go
+through `Infrastructure/Synchronous.cs`, which takes the synchronization
+context off the thread before the work starts, so what it awaits is never
+posted to the reactor it blocks, and waits for nothing where the integration
+answered at once. `src/BannedSymbols.txt` refuses the asynchronous EF
 calls, waiting for a task and `Task.Run` when any project below `src/` is
 compiled - every component runs on the same reactors - so every
-hop to the pool goes through `Offload`; the two pieces of work started in the
-background rather than awaited - the scheduler's jobs and seeding the demos -
+hop to the pool goes through `Offload` and the one wait through
+`Synchronous`; the pieces of work started in the background rather than
+awaited - the scheduler's jobs, seeding the demos, warming up the lambdas -
 say so where they start. CLAUDE.md has the rules.
 
 Compiled lambdas run in the server process. The guard raises the cost of
@@ -1792,15 +1818,16 @@ its own:
 
 | Kind | Contract | Keeps | The platform's own | Others |
 |---|---|---|---|---|
-| database | `IDatabaseProvider` | the platform's records and analytics (the stores `platform` and `analytics`), and the database of every lambda and draft | SQLite files in the data directory (`SqliteDatabase`) | PostgreSQL (`PostgreSqlDatabase`), community edition only |
-| files | `IFileProvider` | the workspace of every lambda and draft, and the platform's pictures (the stores `branding` and `showcase`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
+| database | `IDatabaseProvider` | the platform's records and analytics (`DatabaseStore.Platform` and `Analytics`), and the database of every lambda and draft | SQLite files in the data directory (`SqliteDatabase`) | PostgreSQL (`PostgreSqlDatabase`), community edition only |
+| files | `IFileProvider` | the workspace of every lambda and draft, and the platform's pictures (`FileStore.Branding` and `Showcase`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
 | secrets | `ISecretProvider` | the secrets of every lambda and draft | sealed in the platform's own records (`DatabaseSecrets`), wherever the database integration keeps them | - |
 
 A host chooses them on the platform's builder - `LambdaPlatform.Create()
 .Database(...).Files(...).Secrets(...)` - and the platform uses its own for a
 kind it is given nothing for. Each is built with what the platform hands it
 (`IntegrationContext`: the data directory, the loggers) before anything is
-migrated, and disposed of with the platform. One of each per installation:
+migrated - awaited, `IIntegrationBuilder<T>.BuildAsync`, so one may reach its
+server as it starts - and disposed of with the platform. One of each per installation:
 moving what one holds into another is not something the platform does.
 
 **An integration keeps; the platform decides.** Whether a lambda has a
@@ -1809,13 +1836,33 @@ many there are, which names a workspace refuses, who may read what - all of it
 is decided in the services (`DatabaseVault`, `SecretVault`, `WorkspaceService`
 and `LambdaWorkspace`) before an integration is asked, so exchanging one
 changes none of the rules. Addressed by the ids of a lambda and a feature
-(`DataScope`), never by keys. Synchronous but for an upload, which arrives as
-it is sent, and for copying a whole database or workspace, which the platform
-does away from the reactor (`Offload`).
+(`DataScope`), never by keys.
+
+**Asynchronous, as the infrastructure needs it.** Every member that reaches
+the infrastructure returns a `ValueTask` and takes a `CancellationToken`;
+what an integration says of itself (`Describe`, `Guide`) and what only
+configures (`ConfigureStore`, `ConfigureContext`, `Binding`, `Quote`, `Tree`)
+is synchronous. How it answers is the integration's own. One that waits on the
+network - a database server, object storage, a vault - awaits it, and Kestrel
+and the internal engine lose no thread to it. One that answers at once returns
+tasks that have completed: SQLite, the local directories and the platform's
+own secrets are synchronous inside, which is what the Ioxide engine wants,
+since a request runs on the reactor of its core and what it awaits is
+resumed there. PostgreSQL awaits Npgsql, which works on Ioxide but does not
+complete on the reactor. A whole database or workspace - a draft's copy, an
+export - is asked for away from the reactor (`Offload`), so an integration
+that answers at once may take its time there.
+
+**Kinds, dialects and stores are enums** - `IntegrationKind`,
+`DatabaseDialect`, `DatabaseStore`, `FileStore` - and what one is called where
+data is kept - a file, a schema, a directory - is the integration's to spell
+out, and stays what it was: SQLite keeps the stores in `lambda.db` and
+`analytics.db`, PostgreSQL in the schemas `platform` and `analytics`, the
+local files in `branding/` and `showcase/`.
 
 **No picture is kept in a database.** The pictures the platform keeps for
-itself are files of the files integration, in stores named as the database's
-are (`FileStores`): the logo at `branding/logo`, the picture of a showcase
+itself are files of the files integration, in stores as the database's are
+(`FileStore`): the logo at `branding/logo`, the picture of a showcase
 entry at `showcase/{lambda}`. Their rows say what a picture is and how large
 (`image_bytes`, V27). An installation from before kept them in their rows: the
 platform moves them out once as it starts (`PictureMove`), reading a picture
@@ -1823,11 +1870,13 @@ from its row until it is moved, and the emptied columns are dropped in a later
 release. A picture goes with its entry, and with its lambda.
 
 **A lambda names none of them.** It reaches its database through
-`Database.GetConnection()` - a `DbConnection` - and `options.UseDatabase(connection)`,
+`Database.GetConnectionAsync()` - a `DbConnection` - and `options.UseDatabase(connection)`,
 both generated into it and filled in by the platform once it is loaded; its
 files through `Workspace`, whose functions the platform hands it
-(`WorkspaceBinding`); its secrets through `Secret.Read`. So its code runs the
-same whatever keeps its data. The SQL of its migrations is the one thing the
+(`WorkspaceBinding`); its secrets through `Secret.ReadAsync`. So its code runs
+the same whatever keeps its data, and the plain calls of code written before
+(`GetConnection()`, `ReadText`, `Secret.Read`) wait only where the integration
+does not answer at once. The SQL of its migrations is the one thing the
 database decides, which is why agents are taught plain SQL every database
 accepts. What a database integration adds for code written before
 (`DatabaseBinding`: SQLite's `SqliteConnection` and its library) is handed to
@@ -1856,8 +1905,10 @@ written once, in SQL both accept.
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder
 (`IIntegrationBuilder<T>`), and have a host hand it to the platform's builder.
-A database speaking a new dialect also needs the platform's schema written in
-it (see above). A files integration that keeps nothing on the local disk -
+Await what the infrastructure is asked; where it answers at once, return
+completed tasks rather than hop - an installation on Ioxide keeps its
+reactors that way. A database speaking a new dialect also needs the
+platform's schema written in it, and a value of `DatabaseDialect` (see above). A files integration that keeps nothing on the local disk -
 object storage, say - is what the contract is shaped for: a lambda reaches its
 files only through the platform, and nothing hands it a path.
 
@@ -2361,7 +2412,7 @@ and uploaded files in the workspace, never the other way round - and an API key
 in the secrets, never in the code. Agents are steered to the database for
 anything they would otherwise keep in a JSON file: switched on with
 `enable_data`, its schema as Evolve migrations in `resources/migrations/`, a `DbContext`
-of Entity Framework Core on a connection per request, synchronously - and `read_database`
+of Entity Framework Core on a connection per request, awaited - and `read_database`
 to see that it worked. `read_lambda` also lists the open features, says which
 data the lambda has switched on, and names the secrets it keeps and the ones
 its code reads that are missing. An agent is steered to leave the value to the owner,

@@ -24,25 +24,25 @@ public interface IAnalyticsService
     /// </summary>
     /// <param name="days">How many days, today included - at most what its tier shows, which is also what is shown without one</param>
     /// <param name="now">What time it is, which tests move</param>
-    LambdaAnalytics Get(string privateKey, int? days = null, DateTime? now = null);
+    ValueTask<LambdaAnalytics> GetAsync(string privateKey, int? days = null, DateTime? now = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Starts counting the visits of a lambda. Nothing happens where they are
     /// counted already.
     /// </summary>
-    LambdaAnalytics Enable(string privateKey);
+    ValueTask<LambdaAnalytics> EnableAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Stops counting the visits of a lambda and deletes what was counted.
     /// </summary>
     /// <returns>The public key of the lambda</returns>
-    string Disable(string privateKey);
+    ValueTask<string> DisableAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes down the visits that are waiting, and removes the days that are
     /// no longer kept. Done by a job every few minutes.
     /// </summary>
     /// <param name="now">What time it is, which tests move</param>
-    AnalyticsFlush Flush(DateTime? now = null);
+    ValueTask<AnalyticsFlush> FlushAsync(DateTime? now = null, CancellationToken cancellation = default);
 
 }

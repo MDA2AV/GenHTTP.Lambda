@@ -21,7 +21,7 @@ namespace GenHTTP.Lambda.Data;
 internal static class PictureMove
 {
 
-    public static void Run(IDbContextFactory<LambdaDbContext> databases, IFileProvider files, ILogger logger)
+    public static async ValueTask RunAsync(IDbContextFactory<LambdaDbContext> databases, IFileProvider files, ILogger logger, CancellationToken cancellation = default)
     {
         var moved = 0;
 
@@ -33,7 +33,7 @@ internal static class PictureMove
             {
                 var picture = database.BrandingPictures.First(p => p.Purpose == purpose);
 
-                files.Write(FileStores.Branding, PictureNames.Branding(purpose), picture.Content);
+                await files.WriteAsync(FileStore.Branding, PictureNames.Branding(purpose), picture.Content, cancellation);
 
                 picture.Content = [];
 
@@ -51,7 +51,7 @@ internal static class PictureMove
             {
                 var entry = database.Showcases.First(s => s.LambdaId == lambda);
 
-                files.Write(FileStores.Showcase, PictureNames.Showcase(lambda), entry.Image);
+                await files.WriteAsync(FileStore.Showcase, PictureNames.Showcase(lambda), entry.Image, cancellation);
 
                 entry.ImageBytes = entry.Image.Length;
                 entry.Image = [];

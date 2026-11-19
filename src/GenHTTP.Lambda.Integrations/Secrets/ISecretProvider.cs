@@ -9,12 +9,14 @@ namespace GenHTTP.Lambda.Integrations.Secrets;
 /// The platform hands out a value only to the running lambda it belongs to,
 /// and checks the name, the size and how many a lambda may have before it
 /// asks here; a provider keeps values and nothing else. What it is asked for
-/// to show anybody else is <see cref="List"/>, which holds no value.
+/// to show anybody else is <see cref="ListAsync"/>, which holds no value.
 /// </para>
 /// <para>
 /// A lambda reads its secrets while it serves requests, so the platform holds
-/// what <see cref="Load"/> answered until something changes it. A provider
-/// keeping them on another machine is asked again only then.
+/// what <see cref="LoadAsync"/> answered until something changes it, and a
+/// secret is then read from memory (<see cref="ISecretSet"/>). A provider
+/// keeping them on another machine is asked again only then - and awaited,
+/// as everything that reaches where the values are (see <see cref="IIntegration"/>).
 /// </para>
 /// </remarks>
 public interface ISecretProvider : IIntegration
@@ -24,43 +26,43 @@ public interface ISecretProvider : IIntegration
     /// The secrets of a lambda, or a feature's copy, as they are now - to be
     /// read by the lambda they belong to and nobody else.
     /// </summary>
-    ISecretSet Load(DataScope scope);
+    ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// The names of the secrets kept, without their values.
     /// </summary>
-    IReadOnlyList<SecretEntry> List(DataScope scope);
+    ValueTask<IReadOnlyList<SecretEntry>> ListAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Keeps a value under a name, replacing the one there.
     /// </summary>
-    SecretEntry Store(DataScope scope, string name, string value);
+    ValueTask<SecretEntry> StoreAsync(DataScope scope, string name, string value, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a secret, and says whether there was one.
     /// </summary>
-    bool Delete(DataScope scope, string name);
+    ValueTask<bool> DeleteAsync(DataScope scope, string name, CancellationToken cancellation = default);
 
     /// <summary>
     /// Replaces the secrets of one scope with those of another.
     /// </summary>
-    void Copy(DataScope source, DataScope target);
+    ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes every secret of one scope, such as a feature's copy.
     /// </summary>
-    void Delete(DataScope scope);
+    ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes every secret of a lambda, its features' copies included - a
     /// secret stored later starts afresh.
     /// </summary>
-    void DeleteAll(long lambdaId);
+    ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default);
 
 }
 
 /// <summary>
-/// What a lambda reads its secrets from.
+/// What a lambda reads its secrets from, held in memory once loaded.
 /// </summary>
 public interface ISecretSet
 {

@@ -21,14 +21,14 @@ public static class CommunityDatabase
     /// <summary>
     /// What <c>LAMBDA_DATABASE</c> may choose from here.
     /// </summary>
-    public static IReadOnlyCollection<string> Offered { get; } = [DatabaseSettings.Sqlite, DatabaseSettings.PostgreSql];
+    public static IReadOnlyCollection<DatabaseProvider> Offered { get; } = [DatabaseProvider.Sqlite, DatabaseProvider.PostgreSql];
 
     /// <summary>
     /// The integration of the database the settings name.
     /// </summary>
     public static IIntegrationBuilder<IDatabaseProvider> Of(DatabaseSettings settings)
     {
-        if (settings.Provider != DatabaseSettings.PostgreSql)
+        if (settings.Provider != DatabaseProvider.PostgreSql)
         {
             return SqliteDatabase.Create();
         }

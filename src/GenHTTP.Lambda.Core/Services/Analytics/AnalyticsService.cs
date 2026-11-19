@@ -39,7 +39,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// deleted, so a writing that started before analytics were switched off
     /// cannot put back what switching them off removed.
     /// </summary>
-    private readonly Lock _turn = new();
+    private readonly SemaphoreSlim _turn = new(1, 1);
 
     private DateTime? _updated;
 
@@ -47,17 +47,20 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
     #region Owner
 
-    public LambdaAnalytics Get(string privateKey, int? days = null, DateTime? now = null)
+    public async ValueTask<LambdaAnalytics> GetAsync(string privateKey, int? days = null, DateTime? now = null, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        LambdaEntity lambda;
 
-        var lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+        using (var database = databases.CreateDbContext())
+        {
+            lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
                   ?? throw LambdaException.NotFound(Missing);
+        }
 
-        return Describe(lambda, days, now ?? DateTime.UtcNow);
+        return await DescribeAsync(lambda, days, now ?? DateTime.UtcNow, cancellation);
     }
 
-    public LambdaAnalytics Enable(string privateKey)
+    public async ValueTask<LambdaAnalytics> EnableAsync(string privateKey, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
@@ -67,9 +70,15 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
         {
             // whatever a writing left behind while they were off - or of a
             // lambda that had this id before - is not this lambda's
-            lock (_turn)
+            await _turn.WaitAsync(cancellation);
+
+            try
             {
-                store.Forget(lambda.Id);
+                await store.ForgetAsync(lambda.Id, cancellation);
+            }
+            finally
+            {
+                _turn.Release();
             }
 
             lambda.AnalyticsSince = DateTime.UtcNow;
@@ -77,16 +86,18 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
             database.SaveChanges();
         }
 
-        return Describe(lambda, null, DateTime.UtcNow);
+        return await DescribeAsync(lambda, null, DateTime.UtcNow, cancellation);
     }
 
-    public string Disable(string privateKey)
+    public async ValueTask<string> DisableAsync(string privateKey, CancellationToken cancellation = default)
     {
         using var database = databases.CreateDbContext();
 
         var lambda = RequireEditable(database, privateKey);
 
-        lock (_turn)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
             if (lambda.AnalyticsSince != null)
             {
@@ -97,7 +108,11 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
             // also where they were off already: what is deleted is never
             // shown, and nothing is left that could be
-            store.Forget(lambda.Id);
+            await store.ForgetAsync(lambda.Id, cancellation);
+        }
+        finally
+        {
+            _turn.Release();
         }
 
         return lambda.PublicKey;
@@ -107,13 +122,15 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
     #region Writing
 
-    public AnalyticsFlush Flush(DateTime? now = null)
+    public async ValueTask<AnalyticsFlush> FlushAsync(DateTime? now = null, CancellationToken cancellation = default)
     {
         var at = now ?? DateTime.UtcNow;
 
         var today = DateOnly.FromDateTime(at);
 
-        lock (_turn)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
             var (visits, dropped) = queue.Take();
 
@@ -136,14 +153,14 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
                     }
                 }
 
-                store.Write(tally, at);
+                await store.WriteAsync(tally, at, cancellation);
             }
 
             visitors.Prune(today);
 
             if (_expired != today)
             {
-                var removed = store.Expire(today.AddDays(-(AnalyticsStore.Kept - 1)));
+                var removed = await store.ExpireAsync(today.AddDays(-(AnalyticsStore.Kept - 1)), cancellation);
 
                 _expired = today;
 
@@ -161,6 +178,10 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
             _updated = at;
 
             return new AnalyticsFlush(visits.Count, counted, dropped);
+        }
+        finally
+        {
+            _turn.Release();
         }
     }
 
@@ -190,7 +211,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// those as well - a sandbox lambda's week is not compared with the week
     /// before, which it does not show.
     /// </remarks>
-    private LambdaAnalytics Describe(LambdaEntity lambda, int? days, DateTime now)
+    private async ValueTask<LambdaAnalytics> DescribeAsync(LambdaEntity lambda, int? days, DateTime now, CancellationToken cancellation)
     {
         var window = Math.Clamp(limits.PolicyOf(lambda.Tier).AnalyticsDays, 1, AnalyticsStore.Kept);
 
@@ -208,12 +229,12 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
                                        options.AnalyticsInterval, ranges.Confirmed);
         }
 
-        var report = store.Read(lambda.Id, from, to, Listed);
+        var report = await store.ReadAsync(lambda.Id, from, to, Listed, cancellation);
 
-        var previous = shown * 2 <= window ? store.Sum(lambda.Id, from.AddDays(-shown), from.AddDays(-1)) : null;
+        var previous = shown * 2 <= window ? await store.SumAsync(lambda.Id, from.AddDays(-shown), from.AddDays(-1), cancellation) : null;
 
         return new LambdaAnalytics(lambda.PublicKey, tier, lambda.AnalyticsSince, shown, window, AnalyticsStore.Kept, from, to,
-                                   store.Earliest(lambda.Id), report, previous, _updated, options.AnalyticsInterval, ranges.Confirmed);
+                                   await store.EarliestAsync(lambda.Id, cancellation), report, previous, _updated, options.AnalyticsInterval, ranges.Confirmed);
     }
 
     /// <summary>

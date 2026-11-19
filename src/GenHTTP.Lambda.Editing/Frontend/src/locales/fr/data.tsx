@@ -18,7 +18,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Base de données',
-      what: 'Une base de données à elle où la lambda garde ses entrées, accessible via Database.GetConnection().',
+      what: 'Une base de données à elle où la lambda garde ses entrées, accessible via Database.GetConnectionAsync().',
       count: (items) => count(items, 'table', 'tables'),
       confirmOff: 'Désactiver la base de données ?',
       switchedOn: 'La base de données est activée, et vide. La lambda redémarre avec elle à sa prochaine requête.',
@@ -73,7 +73,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Dans le code',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} ouvre une connexion – pour un {code('DbContext')} d’Entity Framework Core,
+        {code('Database.GetConnectionAsync()')} ouvre une connexion – pour un {code('DbContext')} d’Entity Framework Core,
         ou pour du SQL – et les migrations de {code('migrations/')} créent ses tables, appliquées par Evolve. Dans un
         projet téléchargé, c’est un simple fichier SQLite : {code('database/database.db')}.
       </>
@@ -137,7 +137,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} est supprimé.`,
     deleteFailed: 'Le secret n’a pas pu être supprimé.',
     used: 'lu par le code',
-    usedHint: 'Le code le lit avec Secret.Read ou Secret.Exists.',
+    usedHint: 'Le code le lit avec Secret.ReadAsync ou Secret.ExistsAsync.',
     unused: 'non lu par le code',
     unusedHint: 'Aucun code ne le lit sous ce nom. Est-il écrit comme dans le code ?',
     set: (when) => <>défini {when}</>,
@@ -154,7 +154,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Dans le code',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} lit une valeur, {code('Secret.Exists("NAME")')} indique si elle est définie.
+        {code('Secret.ReadAsync("NAME")')} lit une valeur, {code('Secret.ExistsAsync("NAME")')} indique si elle est définie.
         Dans un projet téléchargé, les deux lisent la variable d’environnement du même nom.
       </>
     ),

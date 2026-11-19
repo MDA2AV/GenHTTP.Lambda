@@ -57,6 +57,50 @@ public sealed class Folder
 
     public void CreateFolder(string name) => Directory.CreateDirectory(Resolve(name));
 
+    public ValueTask<bool> ExistsAsync(string name, CancellationToken cancellation = default) => ValueTask.FromResult(Exists(name));
+
+    public async ValueTask<string> ReadTextAsync(string name, CancellationToken cancellation = default) => await File.ReadAllTextAsync(Resolve(name), cancellation);
+
+    public async ValueTask<byte[]> ReadBytesAsync(string name, CancellationToken cancellation = default) => await File.ReadAllBytesAsync(Resolve(name), cancellation);
+
+    public async ValueTask WriteTextAsync(string name, string content, CancellationToken cancellation = default)
+    {
+        var path = Resolve(name);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        await File.WriteAllTextAsync(path, content, cancellation);
+    }
+
+    public async ValueTask WriteBytesAsync(string name, byte[] content, CancellationToken cancellation = default)
+    {
+        var path = Resolve(name);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        await File.WriteAllBytesAsync(path, content, cancellation);
+    }
+
+    public ValueTask DeleteAsync(string name, CancellationToken cancellation = default)
+    {
+        Delete(name);
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask CreateFolderAsync(string name, CancellationToken cancellation = default)
+    {
+        CreateFolder(name);
+
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>Every file in this folder, relative to it.</summary>
+    public ValueTask<string[]> ListAsync(CancellationToken cancellation = default) => ValueTask.FromResult(List());
+
+    /// <summary>Every folder in this folder, relative to it.</summary>
+    public ValueTask<string[]> FoldersAsync(CancellationToken cancellation = default) => ValueTask.FromResult(Folders());
+
     /// <summary>Every file in this folder, relative to it.</summary>
     public string[] List() => Relative(Directory.GetFiles(_root, "*", SearchOption.AllDirectories));
 

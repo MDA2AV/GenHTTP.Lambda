@@ -14,9 +14,9 @@ using GenHTTP.Modules.Layouting;
 // the LAMBDA_* variables, with the lambdas at subdomains of LAMBDA_HOSTING_URL
 var settings = LambdaSettings.FromEnvironment();
 
-await using var platform = LambdaPlatform.Create()
-                                         .Options(CloudInstallation.Of(settings.Platform))
-                                         .Build();
+await using var platform = await LambdaPlatform.Create()
+                                               .Options(CloudInstallation.Of(settings.Platform))
+                                               .BuildAsync();
 
 var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))

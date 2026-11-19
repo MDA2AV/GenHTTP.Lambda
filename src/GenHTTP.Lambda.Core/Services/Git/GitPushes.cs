@@ -265,7 +265,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         foreach (var (key, tip) in index.Features.Where(f => made.Contains(f.Value.Commit)).ToList())
         {
-            var name = features.Delete(lambda.PrivateKey, key);
+            var name = await features.DeleteAsync(lambda.PrivateKey, key);
 
             index.Features.Remove(key);
 
@@ -298,7 +298,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
                 return;
             }
 
-            var name = features.Delete(lambda.PrivateKey, feature.Key);
+            var name = await features.DeleteAsync(lambda.PrivateKey, feature.Key);
 
             index.Features.Remove(feature.Key);
 
@@ -389,7 +389,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         catch (LambdaException) when (started)
         {
             // refused, so the branch is not there: neither is the feature started for it
-            features.Delete(lambda.PrivateKey, feature.Key);
+            await features.DeleteAsync(lambda.PrivateKey, feature.Key);
             throw;
         }
 

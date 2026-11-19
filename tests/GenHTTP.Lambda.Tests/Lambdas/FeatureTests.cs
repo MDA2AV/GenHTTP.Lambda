@@ -798,7 +798,7 @@ public sealed class FeatureTests
 
         var features = fixture.Platform.Services.GetRequiredService<IFeatureService>();
 
-        Assert.AreEqual(1, features.Sweep());
+        Assert.AreEqual(1, await features.SweepAsync());
         Assert.IsFalse(Directory.Exists(Path.GetDirectoryName(orphan)));
 
         using var kept = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}");

@@ -14,7 +14,7 @@
 //
 // Both live in the lambda's database, in the tables resources/migrations/ makes, read
 // and written through Entity Framework Core. Every call makes a context on a
-// connection of its own, uses it synchronously and lets it go.
+// connection of its own, awaits what it asks of it and lets it go.
 
 using System.Globalization;
 using System.Security.Cryptography;
@@ -141,7 +141,7 @@ public sealed class UtcText() : ValueConverter<DateTime, string>(
 #endregion
 
 /// <param name="readPepper">Reads the pepper, or null where there is none - asked each time, so a new one counts at once</param>
-public sealed class Accounts(Func<string> readPepper)
+public sealed class Accounts(Func<ValueTask<string>> readPepper)
 {
     // anybody can register on a demo, so it keeps the newest accounts only;
     // your own lambda would rather refuse than forget somebody
@@ -149,7 +149,7 @@ public sealed class Accounts(Func<string> readPepper)
 
     #region Routes
 
-    public (SignedIn Member, string Token) Register(Credentials credentials)
+    public async ValueTask<(SignedIn Member, string Token)> RegisterAsync(Credentials credentials)
     {
         var name = (credentials?.Name ?? "").Trim();
         var password = credentials?.Password ?? "";
@@ -166,11 +166,11 @@ public sealed class Accounts(Func<string> readPepper)
 
         var salt = RandomNumberGenerator.GetBytes(16);
 
-        var pepper = readPepper();
+        var pepper = await readPepper();
 
         var folded = Fold(name);
 
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
         db.Accounts.Add(new Account
         {
@@ -184,7 +184,7 @@ public sealed class Accounts(Func<string> readPepper)
 
         try
         {
-            db.SaveChanges();
+            await db.SaveChangesAsync();
         }
         catch (DbUpdateException)
         {
@@ -192,7 +192,7 @@ public sealed class Accounts(Func<string> readPepper)
             // two people registering the same name at once cannot both win.
             // Every database says so in words of its own, so whether that is
             // what failed is asked of the table: is the account there now?
-            if (!Taken(folded))
+            if (!await TakenAsync(folded))
             {
                 throw;
             }
@@ -201,61 +201,61 @@ public sealed class Accounts(Func<string> readPepper)
             throw new ProviderException(ResponseStatus.Conflict, "That name is taken.");
         }
 
-        Forget(db);
+        await ForgetAsync(db);
 
-        return Open(db, name);
+        return await OpenAsync(db, name);
     }
 
-    public (SignedIn Member, string Token) Login(Credentials credentials)
+    public async ValueTask<(SignedIn Member, string Token)> LoginAsync(Credentials credentials)
     {
         var name = (credentials?.Name ?? "").Trim();
 
         var folded = Fold(name);
 
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
-        var account = db.Accounts.AsNoTracking().FirstOrDefault(a => a.Folded == folded);
+        var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Folded == folded);
 
         // an unknown name and a wrong password get the same answer, so
         // this cannot be used to find out who has an account
-        if (account == null || !Matches(credentials?.Password ?? "", account.Salt, account.Hash, account.Peppered))
+        if (account == null || !await MatchesAsync(credentials?.Password ?? "", account.Salt, account.Hash, account.Peppered))
         {
             throw new ProviderException(ResponseStatus.Unauthorized, "That name and password do not go together.");
         }
 
-        return Open(db, account.Name);
+        return await OpenAsync(db, account.Name);
     }
 
-    public Profile Describe(Member member)
+    public async ValueTask<Profile> DescribeAsync(Member member)
     {
         var folded = Fold(member.Name);
 
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
-        var account = db.Accounts.AsNoTracking().FirstOrDefault(a => a.Folded == folded)
+        var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Folded == folded)
                    ?? throw new ProviderException(ResponseStatus.NotFound, "That account is gone.");
 
-        return new Profile(account.Name, account.Joined, db.Accounts.Count());
+        return new Profile(account.Name, account.Joined, await db.Accounts.CountAsync());
     }
 
-    public List<Newcomer> Newest()
+    public async ValueTask<List<Newcomer>> NewestAsync()
     {
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
-        return db.Accounts.OrderByDescending(a => a.Joined)
-                          .Take(10)
-                          .Select(a => new Newcomer(a.Name, a.Joined))
-                          .ToList();
+        return await db.Accounts.OrderByDescending(a => a.Joined)
+                                .Take(10)
+                                .Select(a => new Newcomer(a.Name, a.Joined))
+                                .ToListAsync();
     }
 
     /// <summary>Ends the session of the token presented, if it is one.</summary>
-    public void Logout(string token)
+    public async ValueTask LogoutAsync(string token)
     {
         var hash = HashToken(token);
 
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
-        db.Sessions.Where(s => s.TokenHash == hash).ExecuteDelete();
+        await db.Sessions.Where(s => s.TokenHash == hash).ExecuteDeleteAsync();
     }
 
     #endregion
@@ -266,41 +266,41 @@ public sealed class Accounts(Func<string> readPepper)
     /// The member a session cookie belongs to, or null - which the
     /// Authentication module answers with 403.
     /// </summary>
-    public Member Authenticate(string token)
+    public async ValueTask<Member> AuthenticateAsync(string token)
     {
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
         var hash = HashToken(token);
 
         var now = DateTime.UtcNow;
 
         // following Owner joins the account in; a session of an account that is gone is no session
-        var name = db.Sessions.Where(s => s.TokenHash == hash && s.Expires > now)
-                              .Select(s => s.Owner.Name)
-                              .FirstOrDefault();
+        var name = await db.Sessions.Where(s => s.TokenHash == hash && s.Expires > now)
+                                    .Select(s => s.Owner.Name)
+                                    .FirstOrDefaultAsync();
 
         return name != null ? new Member(name) : null;
     }
 
-    private (SignedIn Member, string Token) Open(MemberContext db, string name)
+    private static async ValueTask<(SignedIn Member, string Token)> OpenAsync(MemberContext db, string name)
     {
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         var now = DateTime.UtcNow;
 
         // the expired ones go whenever a new one comes
-        db.Sessions.Where(s => s.Expires <= now).ExecuteDelete();
+        await db.Sessions.Where(s => s.Expires <= now).ExecuteDeleteAsync();
 
         db.Sessions.Add(new StoredSession { TokenHash = HashToken(token), Account = Fold(name), Expires = now + Session.Lifetime });
 
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         return (new SignedIn(name), token);
     }
 
     /// <summary>Drops the oldest accounts once there are too many - a demo's housekeeping. Their sessions go with them.</summary>
-    private static void Forget(MemberContext db)
-        => db.Accounts.OrderByDescending(a => a.Joined).Skip(MaxAccounts).ExecuteDelete();
+    private static async ValueTask ForgetAsync(MemberContext db)
+        => await db.Accounts.OrderByDescending(a => a.Joined).Skip(MaxAccounts).ExecuteDeleteAsync();
 
     #endregion
 
@@ -320,9 +320,9 @@ public sealed class Accounts(Func<string> readPepper)
     // compared in constant time, so how long the answer takes says nothing
     // about how close a guess was; an account made without a pepper is
     // checked without one, and one made with it cannot be checked without it
-    private bool Matches(string password, string salt, string hash, bool peppered)
+    private async ValueTask<bool> MatchesAsync(string password, string salt, string hash, bool peppered)
     {
-        var pepper = peppered ? readPepper() : null;
+        var pepper = peppered ? await readPepper() : null;
 
         if (peppered && pepper == null)
         {
@@ -344,11 +344,11 @@ public sealed class Accounts(Func<string> readPepper)
     private static string Fold(string name) => name.ToUpperInvariant();
 
     /// <summary>Whether an account of the name is there, asked on a connection of its own.</summary>
-    private static bool Taken(string folded)
+    private static async ValueTask<bool> TakenAsync(string folded)
     {
-        using var db = new MemberContext(Database.GetConnection());
+        await using var db = new MemberContext(await Database.GetConnectionAsync());
 
-        return db.Accounts.Any(a => a.Folded == folded);
+        return await db.Accounts.AnyAsync(a => a.Folded == folded);
     }
 
 }

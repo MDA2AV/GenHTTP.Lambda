@@ -57,7 +57,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The entry, as the showcase lists it")]
-    public ShowcaseResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ShowcaseRequest request)
+    public async ValueTask<ShowcaseResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ShowcaseRequest request)
     {
         byte[]? image = null;
 
@@ -73,7 +73,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
             }
         }
 
-        var saved = showcases.Save(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
+        var saved = await showcases.SaveAsync(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
 
         logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", saved.PublicKey, saved.Title);
 
@@ -85,9 +85,9 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     [Remarks("Its entry and its picture are deleted. Nothing happens if it has none.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        showcases.Remove(privateKey);
+        await showcases.RemoveAsync(privateKey);
 
         logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
     }

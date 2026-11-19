@@ -226,7 +226,7 @@ public sealed class DemoTests
         await fixture.SeedDemosAsync();
 
         // far enough ahead that everything else would be long gone
-        fixture.Meta.RunMaintenance(DateTime.UtcNow.AddYears(1));
+        await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow.AddYears(1));
 
         var status = fixture.Meta.DescribeKey("demo-crud");
 

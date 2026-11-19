@@ -17,7 +17,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: 'Datenbank',
-      what: 'Eine eigene Datenbank, in der das Lambda seine Einträge aufbewahrt, erreichbar über Database.GetConnection().',
+      what: 'Eine eigene Datenbank, in der das Lambda seine Einträge aufbewahrt, erreichbar über Database.GetConnectionAsync().',
       count: (items) => (items === 1 ? '1 Tabelle' : `${items} Tabellen`),
       confirmOff: 'Datenbank ausschalten?',
       switchedOn: 'Die Datenbank ist eingeschaltet und leer. Beim nächsten Request startet das Lambda neu, dann mit Datenbank.',
@@ -72,7 +72,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Im Code',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} öffnet eine Verbindung zu ihr – für einen {code('DbContext')} von Entity
+        {code('Database.GetConnectionAsync()')} öffnet eine Verbindung zu ihr – für einen {code('DbContext')} von Entity
         Framework Core oder für SQL –, und die Migrationen in {code('migrations/')} legen ihre Tabellen an, angewendet von
         Evolve. In einem heruntergeladenen Projekt ist sie die einfache SQLite-Datei {code('database/database.db')}.
       </>
@@ -136,7 +136,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${name} ist gelöscht.`,
     deleteFailed: 'Das Secret konnte nicht gelöscht werden.',
     used: 'vom Code gelesen',
-    usedHint: 'Der Code liest es mit Secret.Read oder Secret.Exists.',
+    usedHint: 'Der Code liest es mit Secret.ReadAsync oder Secret.ExistsAsync.',
     unused: 'nicht vom Code gelesen',
     unusedHint: 'Kein Code liest es unter diesem Namen. Ist es so geschrieben wie im Code?',
     set: (when) => <>gesetzt {when}</>,
@@ -153,7 +153,7 @@ export const data: EditorMessages['data'] = {
     howTo: 'Im Code',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')} liest einen Wert, {code('Secret.Exists("NAME")')} sagt, ob er gesetzt ist. In
+        {code('Secret.ReadAsync("NAME")')} liest einen Wert, {code('Secret.ExistsAsync("NAME")')} sagt, ob er gesetzt ist. In
         einem heruntergeladenen Projekt lesen beide die gleichnamige Umgebungsvariable.
       </>
     ),

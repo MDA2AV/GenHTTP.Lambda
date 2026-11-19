@@ -10,19 +10,21 @@ namespace GenHTTP.Lambda.Integrations.Databases;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The platform's own records are in named stores - <see cref="DatabaseStores.Platform"/>
-/// and <see cref="DatabaseStores.Analytics"/> - whose schema the platform
-/// migrates itself, in the <see cref="Dialect"/> the provider says it speaks.
-/// A lambda's database, and the copy a feature works on, is a database of its
-/// own however the provider makes one: a file, a schema, a database on a
-/// server. Whatever it is, a lambda reaches only its own.
+/// The platform's own records are in named stores (<see cref="DatabaseStore"/>)
+/// whose schema the platform migrates itself, in the <see cref="Dialect"/> the
+/// provider says it speaks. A lambda's database, and the copy a feature works
+/// on, is a database of its own however the provider makes one: a file, a
+/// schema, a database on a server. Whatever it is, a lambda reaches only its
+/// own.
 /// </para>
 /// <para>
 /// Whether a lambda has a database, how large it may grow and who may read
 /// it is decided by the platform before it asks; what is asked here is only
-/// ever done. Synchronous, as the platform's services are: a call to a
-/// database on another machine waits on the network, which the operator who
-/// chooses one accepts.
+/// ever done. Whatever reaches the database is awaited (see
+/// <see cref="IIntegration"/>): a provider for a server awaits the network, a
+/// provider for files on the disk answers at once. A whole database - a
+/// copy, an export - is asked for away from the thread a request is served
+/// on, so a provider that answers at once may take its time there.
 /// </para>
 /// </remarks>
 public interface IDatabaseProvider : IIntegration
@@ -32,19 +34,19 @@ public interface IDatabaseProvider : IIntegration
 
     /// <summary>
     /// The SQL the provider speaks, which decides the migrations the
-    /// platform's own stores are made with: <c>sqlite</c> or <c>postgresql</c>.
+    /// platform's own stores are made with.
     /// </summary>
     /// <remarks>
     /// A provider of a dialect the platform has no migrations for is refused
     /// as the platform starts.
     /// </remarks>
-    string Dialect { get; }
+    DatabaseDialect Dialect { get; }
 
     /// <summary>
     /// Configures a context of Entity Framework for one of the platform's
     /// stores, as it is pooled for the life of the platform.
     /// </summary>
-    void ConfigureStore(DbContextOptionsBuilder options, string store);
+    void ConfigureStore(DbContextOptionsBuilder options, DatabaseStore store);
 
     /// <summary>
     /// Opens a connection to one of the platform's stores - made where it is
@@ -54,7 +56,7 @@ public interface IDatabaseProvider : IIntegration
     /// The caller disposes of it. Commands on it are written in the
     /// <see cref="Dialect"/>, with parameters named <c>@name</c>.
     /// </remarks>
-    DbConnection Open(string store);
+    ValueTask<DbConnection> OpenAsync(DatabaseStore store, CancellationToken cancellation = default);
 
     #endregion
 
@@ -75,12 +77,12 @@ public interface IDatabaseProvider : IIntegration
     /// <summary>
     /// Makes the database of a lambda, empty, where there is none.
     /// </summary>
-    void Create(DataScope scope);
+    ValueTask CreateAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Whether the database is there.
     /// </summary>
-    bool Exists(DataScope scope);
+    ValueTask<bool> ExistsAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Opens a connection a running lambda reads and writes its database
@@ -95,20 +97,20 @@ public interface IDatabaseProvider : IIntegration
     /// or - where the database cannot refuse one - a connection opened while
     /// it is past it only reads.
     /// </param>
-    DbConnection Connect(DataScope scope, long room);
+    ValueTask<DbConnection> ConnectAsync(DataScope scope, long room, CancellationToken cancellation = default);
 
     /// <summary>
     /// Opens a connection that only reads, for the owner and the agents to
     /// look into a database - or nothing where there is none.
     /// </summary>
     /// <param name="patience">How long a statement may run before it is stopped</param>
-    DbConnection? Read(DataScope scope, TimeSpan patience);
+    ValueTask<DbConnection?> ReadAsync(DataScope scope, TimeSpan patience, CancellationToken cancellation = default);
 
     /// <summary>
     /// The room the database takes, in bytes, which counts against the data
     /// of its lambda.
     /// </summary>
-    long SizeOf(DataScope scope);
+    ValueTask<long> SizeOfAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Replaces the database of one scope with a copy of another's, as it
@@ -119,26 +121,30 @@ public interface IDatabaseProvider : IIntegration
     /// A whole database, so the platform asks for it away from the thread
     /// a request is served on.
     /// </remarks>
-    void Copy(DataScope source, DataScope target);
+    ValueTask CopyAsync(DataScope source, DataScope target, CancellationToken cancellation = default);
 
     /// <summary>
     /// Deletes a database, letting go of the connections to it first. A
     /// database made later in its place is a new one.
     /// </summary>
-    void Delete(DataScope scope);
+    ValueTask DeleteAsync(DataScope scope, CancellationToken cancellation = default);
 
     /// <summary>
     /// Deletes the database of a lambda and every copy of its features.
     /// </summary>
-    void DeleteAll(long lambdaId);
+    ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes what a lambda's database holds into a SQLite file of its own,
     /// which is what an exported project keeps its records in - or nothing
     /// where it has none, or the provider cannot.
     /// </summary>
+    /// <remarks>
+    /// A whole database, so the platform asks for it away from the thread
+    /// a request is served on.
+    /// </remarks>
     /// <returns>Where the file was written, for the caller to delete</returns>
-    string? Export(DataScope scope);
+    ValueTask<string?> ExportAsync(DataScope scope, CancellationToken cancellation = default);
 
     #endregion
 
@@ -148,20 +154,20 @@ public interface IDatabaseProvider : IIntegration
     /// The tables and views a database holds that its lambda made - not
     /// what the database keeps for itself - views last.
     /// </summary>
-    IReadOnlyList<DatabaseTableInfo> Tables(DbConnection connection);
+    ValueTask<IReadOnlyList<DatabaseTableInfo>> TablesAsync(DbConnection connection, CancellationToken cancellation = default);
 
     /// <summary>
     /// The columns of a table or view, in their order - none where there is
     /// no table of that name.
     /// </summary>
-    IReadOnlyList<DatabaseColumnInfo> Columns(DbConnection connection, string table);
+    ValueTask<IReadOnlyList<DatabaseColumnInfo>> ColumnsAsync(DbConnection connection, string table, CancellationToken cancellation = default);
 
     /// <summary>
     /// What a table's rows are ordered by where nobody chose a column -
     /// the order they were written in, where the database keeps one - or
     /// nothing.
     /// </summary>
-    string? NaturalOrder(DbConnection connection, string table);
+    ValueTask<string?> NaturalOrderAsync(DbConnection connection, string table, CancellationToken cancellation = default);
 
     /// <summary>
     /// A name as the dialect quotes it in a statement.
@@ -173,21 +179,43 @@ public interface IDatabaseProvider : IIntegration
 }
 
 /// <summary>
+/// The SQL a database speaks, which the platform has migrations for.
+/// </summary>
+public enum DatabaseDialect
+{
+
+    /// <summary>
+    /// SQLite's.
+    /// </summary>
+    Sqlite,
+
+    /// <summary>
+    /// PostgreSQL's.
+    /// </summary>
+    PostgreSql
+
+}
+
+/// <summary>
 /// The stores the platform keeps its own records in.
 /// </summary>
-public static class DatabaseStores
+/// <remarks>
+/// What a store is called where it is kept - a file, a schema - is the
+/// provider's to decide, and stays what it was once data is kept under it.
+/// </remarks>
+public enum DatabaseStore
 {
 
     /// <summary>
     /// The lambdas, their versions, features, settings and secrets.
     /// </summary>
-    public const string Platform = "platform";
+    Platform,
 
     /// <summary>
     /// What was counted of the visits to lambdas, kept apart so writing a
     /// batch of counts never holds up the platform's own records.
     /// </summary>
-    public const string Analytics = "analytics";
+    Analytics
 
 }
 

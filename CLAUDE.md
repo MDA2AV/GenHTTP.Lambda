@@ -537,11 +537,12 @@ hosting URL. What follows is about subdomains unless it says otherwise.
 ### Secrets
 
 - **A value is written and never read back** - not by the editor, the API, MCP
-  or the owner. Only the lambda reads it (`Secret.Read`, `Secret.Exists`). No
-  answer, log line or note may contain a value; name only.
+  or the owner. Only the lambda reads it (`Secret.ReadAsync`, `Secret.ExistsAsync`,
+  and their plain forms `Secret.Read` and `Secret.Exists`). No answer, log line
+  or note may contain a value; name only.
 - **Off by default.** Names are environment variable names (letters, digits,
   underscore, no leading digit, case sensitive), because an exported project
-  reads `Secret.Read("X")` from `$X`. Values are not exported.
+  reads `Secret.ReadAsync("X")` from `$X`. Values are not exported.
 - Kept by the secrets integration (see Integrations below); the platform's own
   (`DatabaseSecrets`) stores them in the platform's database, sealed with
   AES-GCM under a key made from the installation's key (`LAMBDA_SECRETS_KEY`,
@@ -550,12 +551,13 @@ hosting URL. What follows is about subdomains unless it says otherwise.
   key. Do not put the installation's key in the database, and do not describe
   the encryption as isolating lambdas from each other: they share a process.
 - Read at runtime through a function handed to the compiled lambda, never
-  compiled in, so a changed value applies without a deploy.
+  compiled in, so a changed value applies without a deploy. What the
+  integration loaded is held in memory until something changes it.
 - A feature gets a copy (copied sealed); merging throws it away.
-- Agents are steered to write `Secret.Read("NAME")`, switch secrets on and let
+- Agents are steered to write `Secret.ReadAsync("NAME")`, switch secrets on and let
   the **owner enter the value in the editor**, so it never passes through the
   agent. The platform lists the names the code reads that have no value
-  (`missing`; only-`Exists` ones are `optional`), and the editor and the
+  (`missing`; only-`Exists` ones are `optional`, either form), and the editor and the
   simple overview ask the owner for them. That is the asymmetric interface for
   secrets: the agent declares the need, the human supplies the value. The build
   agent may switch secrets on and list them, and cannot set or delete one.
@@ -564,22 +566,25 @@ hosting URL. What follows is about subdomains unless it says otherwise.
 
 - **A database per lambda**, kept by the database integration (see
   Integrations below) - a SQLite file, or a PostgreSQL schema - reached with
-  `Database.GetConnection()` (an open `DbConnection`, pooled, one per request,
-  disposed of). **Off by default**; switching it on makes it empty, switching
-  it off deletes it and the features' copies. Either switch restarts the lambda on its
-  next request, so its startup migrations run against what is there.
+  `await Database.GetConnectionAsync()` (an open `DbConnection`, pooled, one
+  per request, disposed of; `Database.GetConnection()` for code written
+  before). **Off by default**; switching it on makes it empty, switching it
+  off deletes it and the features' copies. Either switch restarts the lambda
+  on its next request, so its startup migrations run against what is there.
 - **Schema by Evolve migrations** shipped as resources in `resources/migrations/`, applied as
   the lambda starts - never Entity Framework's migrations, `EnsureCreated` or
   `Migrate`, which the code guard refuses. A migration that was applied is
   never edited.
 - **Records through Entity Framework Core - decided.** A lambda writes a
   `DbContext` of its own that maps the tables the migrations make, on the
-  connection it is handed: `new Records(Database.GetConnection())`, configured
-  with `options.UseDatabase(connection)`, one per request. Plain SQL on the
-  connection stays possible. The demos use EF Core, and agents are steered to
-  it. They are steered to use it **synchronously** - `ToList`, `SaveChanges`,
-  never the `Async` forms: the platform's model is synchronous and the Ioxide
-  engine has its own async model. This is a hint, not enforced.
+  connection it is handed: `new Records(await Database.GetConnectionAsync())`,
+  configured with `options.UseDatabase(connection)`, one per request. Plain
+  SQL on the connection stays possible. The demos use EF Core, and agents are
+  steered to it - **awaited, decided by the owner**: `ToListAsync`,
+  `SaveChangesAsync`, in routes that are async (see Serving, and the threads
+  it runs on). It was the other way round until the integrations' contracts
+  became asynchronous. This is a hint, not enforced: the synchronous forms
+  keep working.
 - **A lambda names no database - decided by the owner.** "They should just use
   EF Core and Evolve, with the connection retrieved from the integration, so
   the lambda does not know anything about the underlying provider." So lambdas,
@@ -1061,7 +1066,8 @@ how to write apps and to give them a good starting point.
   (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
   keep their records in the database, migrated with Evolve and read and
   written through Entity Framework Core, and files
-  (`demo-files`' uploads) in the workspace; the seeder switches the database on
+  (`demo-files`' uploads) in the workspace - every one of them awaited, as
+  agents are taught; the seeder switches the database on
   (`LambdaDemo.Database`), and a copy starts with one of its own. A demo that
   reads a secret is given a random value by the seeder (`LambdaDemo.Secrets`)
   and works without one, so a copy runs before its owner switches secrets on
@@ -1472,26 +1478,45 @@ integrations (yet - the owner's words: "not for now").
   workspace refuses, who may read what - all of it stays in the services
   (`DatabaseVault`, `SecretVault`, `WorkspaceService`, `LambdaWorkspace`),
   which ask the integration only once they have decided. Addressed by ids
-  (`DataScope`), never by keys. Synchronous but for an upload; copying a
-  whole database or workspace is synchronous in the integration and done
-  through `Offload` by the platform, so no integration needs a hop of its own.
+  (`DataScope`), never by keys.
+- **The contracts are asynchronous - decided by the owner.** Every member that
+  reaches the infrastructure returns a `ValueTask` and takes a
+  `CancellationToken`, building one included (`IIntegrationBuilder.BuildAsync`);
+  what an integration says of itself (`Describe`, `Guide`) and what only
+  configures (`ConfigureStore`, `ConfigureContext`, `Binding`, `Quote`, `Tree`)
+  stays synchronous. How an integration answers is its own: SQLite, the local
+  files and `DatabaseSecrets` are synchronous inside, PostgreSQL awaits Npgsql
+  (see Serving, and the threads it runs on). A whole database or workspace is
+  copied or exported through `Offload` by the platform, so no integration
+  needs a hop of its own.
+- **Kinds, dialects and stores are enums, never strings - decided by the
+  owner**: `IntegrationKind`, `DatabaseDialect`, `DatabaseStore`, `FileStore`,
+  and the server's `DatabaseProvider` for `LAMBDA_DATABASE`. Where one becomes a
+  name - a file, a schema, a directory, the admin API's JSON, an environment
+  variable - a mapper where it is needed spells it out (`StoreFile`,
+  `PostgreSqlNames.Schema`, `StoreDirectory`, `IntegrationResponse.KindOf`,
+  `DatabaseSettings.Parse` and `NameOf`), never `ToString()`: what data is kept
+  under does not follow a rename in the code.
 - **Used by the platform itself as well - asked for by the owner.** The
-  platform's records (the store `platform`, `LambdaDbContext`) and its
-  analytics (`analytics`) are kept by the database integration too, in the
-  dialect it speaks (`IDatabaseProvider.Dialect`) - see Database below; the
-  branding's name and the guide's section are rows of those records.
+  platform's records (`DatabaseStore.Platform`, `LambdaDbContext`) and its
+  analytics (`DatabaseStore.Analytics`) are kept by the database integration
+  too, in the dialect it speaks (`IDatabaseProvider.Dialect`), and both are
+  migrated as the platform starts - see Database below; the branding's name
+  and the guide's section are rows of those records.
   **No picture is kept in a database - decided by the owner**: the logo and
-  the showcase's pictures are files of the files integration (`FileStores`,
+  the showcase's pictures are files of the files integration (`FileStore`,
   `branding/logo`, `showcase/{lambda}`), their rows saying what each is and
   how large. Those kept in rows before are moved out once as the platform
   starts (`PictureMove`) and read from the row until then; the emptied
-  columns are dropped in a later release, in both sets of migrations.
+  columns are dropped in a later release, in both sets of migrations. The
+  brand is read once as the platform starts and held in memory, since every
+  page shows it.
 - **Towards a lambda, no change when an integration changes - asked for by the
-  owner.** Its database through `Database.GetConnection()` and `UseDatabase`
-  (see Databases), its secrets through `Secret.Read`, and its files through
-  the generated `Workspace` class, which **calls functions the platform hands
-  it and touches no directory itself - decided by the owner, in this change**:
-  an S3 provider needs no change to lambdas. **`Workspace.Root` went with it
+  owner.** Its database through `Database.GetConnectionAsync()` and
+  `UseDatabase` (see Databases), its secrets through `Secret.ReadAsync`, and
+  its files through the generated `Workspace` class, which **calls functions
+  the platform hands it and touches no directory itself - decided by the
+  owner**: an S3 provider needs no change to lambdas. **`Workspace.Root` went with it
   - decided by the owner**: a path means nothing on object storage. Of the
   code on genhttp.dev, one lambda named it, in a line that printed it, which
   its owner changes; nothing brings it back. `Resources.Root` stays:
@@ -1534,32 +1559,70 @@ integrations (yet - the owner's words: "not for now").
 On Ioxide a request runs on a **reactor**: one thread per core that owns that
 core's connections and resumes each request inline where its I/O completed.
 Whatever a request does there, every other connection of that core waits for.
-.NET `async` works on it (ioxide posts continuations back to the reactor), but
-the platform's database answers synchronously - SQLite whatever the method is
-called, and PostgreSQL is asked the same way - so the code is written the way
-it runs:
+.NET `async` works on it - ioxide's synchronization context posts what an
+await continues with back to the reactor - and a task that has completed when
+it is awaited never leaves the thread. Kestrel and GenHTTP's internal engine
+serve on the thread pool, where a thread that waits on the network is a
+thread taken from every other request. So:
 
-- **Synchronous by default - decided.** Services, resources and MCP tools are
-  plain methods returning plain values, and every query is a synchronous EF
-  call (`ToList`, `FirstOrDefault`, `SaveChanges`, `CreateDbContext`) - on
-  PostgreSQL too, its wait on the network accepted by whoever chooses it
-  rather than an asynchronous path beside the synchronous one. A
-  method is `async` only where it awaits something that really leaves the
-  thread: compiling, packing, copying a workspace or a database, reading a
-  lambda's own database for the editor (it may be slow by design), a request
-  body, the network. Do not add an async path beside a synchronous one.
+- **Async is fine in integrations - decided by the owner**, turning around the
+  synchronous design they had at first. Their contracts return `ValueTask`s
+  (see Integrations), so one that waits on the network - PostgreSQL, object
+  storage, a vault - awaits it, which Kestrel and the internal engine make use
+  of. On Ioxide, take care: an integration meant for it answers on the thread
+  it is asked on, as SQLite, the local files and the platform's own secrets
+  do - synchronous inside, every task they return completed - so nothing
+  leaves the reactor. PostgreSQL through Npgsql works on Ioxide, its
+  continuations posted back to the reactor, but does not complete there; an
+  integration on Ioxide's own PostgreSQL client would, and is not needed for
+  now (the owner's words).
+- **Whatever reaches an integration awaits it**: the vaults, the services over
+  them, the resources and MCP tools that call those, the background jobs, and
+  the platform's start (`LambdaPlatformBuilder.BuildAsync`, which builds the
+  integrations, migrates both stores, moves the pictures and reads the brand).
+  A method is `async` where it awaits an integration, compiling, packing, a
+  request body or the network; anything else stays a plain method returning
+  a plain value.
+- **The platform's own records are still asked for synchronously.** Entity
+  Framework over `LambdaDbContext` - `ToList`, `FirstOrDefault`, `SaveChanges`,
+  `CreateDbContext` - on PostgreSQL too, its wait on the network accepted by
+  whoever chooses it. Making those asynchronous is a change of its own, not
+  taken with the integrations; until then `DatabaseSecrets`, which keeps the
+  secrets in those records, is synchronous inside like SQLite. What the
+  platform sends over a connection an integration opened - the analytics, the
+  editor's look into a lambda's database - is awaited (`ExecuteReaderAsync`).
+  Do not add an async path beside a synchronous one.
+- **Lambdas are taught the asynchronous form - decided by the owner.**
+  `await Database.GetConnectionAsync()`, `Workspace.ReadTextAsync` and the
+  rest, `await Secret.ReadAsync(...)`, and EF's `ToListAsync` and
+  `SaveChangesAsync` in routes that are async: the demos, the guide, the MCP
+  instructions, the tool descriptions, the briefs and a repository's
+  `AGENTS.md` say so. The plain forms stay - `GetConnection()`, `ReadText`,
+  `Secret.Read` - as a layer that keeps code written before working: the same
+  functions through `Synchronous`, which takes the synchronization context off
+  the thread before the work starts - so what it awaits resumes on the pool
+  rather than being posted to the reactor it blocks - and hands over the
+  result at once where the task completed already, which SQLite, the local
+  files and the platform's secrets always do. Only the functions handed to a
+  compiled lambda go through it; the platform's code awaits. A workspace's
+  tree (`Tree`, `Files`, `App`) is made rather than read, and has a plain
+  form only.
 - **Enforced when it compiles.** `src/BannedSymbols.txt`
   (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's async
   methods, waiting for a task, the `File.*Async` helpers and `Task.Run`, each
-  with the reason. It lists every overload by its id, generated from the
-  assemblies; a new overload in a new version of EF is added the same way.
+  with the reason; `Synchronous` and `Offload` are the places that suppress it.
+  It lists every overload by its id, generated from the assemblies; a new
+  overload in a new version of EF is added the same way.
 - **Serving a lambda does not touch the database.** What answers to a key, an
   id or a preview key is held by `ResolutionCache`, and every write to the
   platform's database makes it stale (`DatabaseChanges`, an EF interceptor).
   So every write goes through EF; one that does not is never seen by the
   caches.
 - **Long work leaves the reactor in one hop**, through `Offload`: compiling and
-  binding with Roslyn, packing, copying a workspace or a database. Not in many
+  binding with Roslyn, packing, copying or exporting a whole workspace or
+  database - which an integration that answers at once does on the thread it
+  is asked on, however it is awaited - and reading a lambda's own database for
+  the editor (slow by design: the statements are the lambda's). Not in many
   small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
   buffer), and not in place. A version's file is read and written in place:
   it is bounded by its tier's allowance, and saving one is rare. `Task.Run` is
@@ -1572,13 +1635,18 @@ it runs:
   write down what it came to (`MetaService.DeployAsync`,
   `FeatureService.DeployAsync`, `MergeAsync`); serving compares the build it
   finds with what is online and builds again where they differ, so the order
-  two deployments finish in does not matter. A lock that has to be held across
-  an await is a `SemaphoreSlim` taken with `WaitAsync` (copying a feature's
-  data), never with `Wait()`.
+  two deployments finish in does not matter. What an integration is asked for
+  waits for the turn to be over - a merged or deleted feature's copy of the
+  data is removed once its row is gone, and what is left behind the sweep
+  removes. A lock that has to be held across an await is a `SemaphoreSlim`
+  taken with `WaitAsync` (copying a feature's data, writing the analytics,
+  changing the brand, making a lambda's role on PostgreSQL), never with
+  `Wait()`.
 - **Never wait on a task** (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`):
   on a reactor its continuation is posted to the very thread that is waiting,
   and that core deadlocks for good. Lambdas are held to the same by the code
-  guard (`CodeGuard.InspectWaiting`), and agents are told so.
+  guard (`CodeGuard.InspectWaiting`), and agents are told so. The one wait
+  there is, `Synchronous`, takes the synchronization context off first.
 - **No lock that every request takes may be held for more than a moment.** The
   log ring's is the one every request takes: an append happens under it, and a
   reader walks back from the newest line only as far as its cursor.
@@ -1667,7 +1735,11 @@ change; the helpers are in `OperationLog`.
   after the behaviour (`AFeatureStartsAsACopyOfTheNewestVersion`).
 - **Prefer these over unit tests with mocks.** There are none with mocks in this
   repository today; keep it that way. A fake is acceptable only for something
-  outside our process (`FakeAgent` stands in for the build agent's runner).
+  outside our process (`FakeAgent` stands in for the build agent's runner;
+  `YieldingIntegrations` for infrastructure on another machine - the platform's
+  own integrations yielding before every call, the secrets in memory - so what
+  awaits an integration, and the plain calls' bridge, are tested on tasks that
+  have not completed; the platform's own never hand one out).
 - Each test has its own temporary data directory and runs in parallel.
 - MSTest, `TreatWarningsAsErrors` is on.
 

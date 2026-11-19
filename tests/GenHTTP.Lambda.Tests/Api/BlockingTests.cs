@@ -229,7 +229,7 @@ public sealed class BlockingTests
 
         Assert.IsNull(detail.Lambda.KeptUntil, "removed by itself, its key would be free again for whoever it was blocked for");
 
-        fixture.Meta.RunMaintenance(DateTime.UtcNow.AddYears(1));
+        await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow.AddYears(1));
 
         Assert.IsNotNull(fixture.Meta.Get(lambda.PrivateKey));
     }

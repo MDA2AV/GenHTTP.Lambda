@@ -21,7 +21,7 @@ switching one that has apps: an installation switched over starts empty, its
 SQLite files left where they were.
 
 The apps themselves need no change. An app reaches its database with
-`Database.GetConnection()` and `options.UseDatabase(connection)`, which mean
+`Database.GetConnectionAsync()` and `options.UseDatabase(connection)`, which mean
 SQLite on one installation and PostgreSQL on another, and agents are taught
 to write migrations in plain SQL both accept. Code written before that, for
 SQLite in particular (`SqliteConnection`, `UseSqlite`, `SqliteException`),
@@ -117,9 +117,19 @@ few for the platform. 100, PostgreSQL's default, is enough for a handful; the
 overlay sets 200. With many busy apps, put PgBouncer in front of the server in
 session mode, or lower the pool size.
 
-The platform asks the database the way it asks SQLite - synchronously, on the
-thread serving the request - so a slow or distant server slows every request
-that waits on it. Keep it close.
+What the apps send to their databases is awaited, and so is everything the
+platform asks of the integration - opening a connection, measuring a
+database, copying one for a draft, the analytics. On the image's engine, and
+on Kestrel, no thread waits while PostgreSQL answers. An app that still calls
+`Database.GetConnection()`, or Entity Framework's synchronous methods, holds
+one; the asynchronous forms, which agents are taught, do not. The platform's
+own records are still read and written synchronously, so a slow or distant
+server slows the editor, the panel and the API. Keep it close.
+
+The Ioxide engine (`LAMBDA_ENGINE=ioxide`) is built for a database that
+answers on the thread that asks, as SQLite does. With PostgreSQL it works -
+what is awaited resumes on the reactor of its core - but the internal engine
+or Kestrel suit it better.
 
 ## What differs from SQLite
 

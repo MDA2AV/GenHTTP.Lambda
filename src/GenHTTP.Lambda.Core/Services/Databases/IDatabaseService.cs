@@ -34,6 +34,6 @@ public interface IDatabaseService
     /// a file of its own, whole - what an export carries.
     /// </summary>
     /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database</returns>
-    string? Export(long lambdaId);
+    ValueTask<string?> ExportAsync(long lambdaId, CancellationToken cancellation = default);
 
 }

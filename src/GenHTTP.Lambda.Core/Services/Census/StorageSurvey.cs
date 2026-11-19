@@ -1,7 +1,6 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Settings;
@@ -62,7 +61,7 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
         }
     }
 
-    public StorageCensus Measure(DateTime now)
+    public async ValueTask<StorageCensus> MeasureAsync(DateTime now, CancellationToken cancellation = default)
     {
         var parts = new Dictionary<string, (long Bytes, long Files)>(StringComparer.Ordinal);
         var owned = new Dictionary<long, Owned>();
@@ -79,9 +78,9 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             [Name(options.SourceDirectory)] = ("sources", true),
             [Name(options.AssemblyDirectory)] = ("compiled", true),
             [Name(options.ResourceDirectory)] = ("resources", true),
-            // the platform's pictures, kept by the files integration where it is local
-            [FileStores.Branding] = ("pictures", false),
-            [FileStores.Showcase] = ("pictures", false),
+            // the platform's pictures, where the local files integration keeps them
+            ["branding"] = ("pictures", false),
+            ["showcase"] = ("pictures", false),
             // the lists the log and the analytics read, downloaded by their jobs
             ["geo"] = ("locations", false),
             ["crawlers"] = ("crawlers", false),
@@ -144,7 +143,7 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             }
         }
 
-        var lambdas = Describe(owned);
+        var lambdas = await DescribeAsync(owned, cancellation);
 
         return new StorageCensus(
             options.DataDirectory,
@@ -181,7 +180,7 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
     /// data directory is asked about where it is switched on. A folder of a
     /// lambda that is gone is left out of the lambdas but counted in its part.
     /// </remarks>
-    private List<LambdaStorage> Describe(Dictionary<long, Owned> owned)
+    private async ValueTask<List<LambdaStorage>> DescribeAsync(Dictionary<long, Owned> owned, CancellationToken cancellation)
     {
         using var database = databases.CreateDbContext();
 
@@ -207,8 +206,8 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
 
             found ??= new Owned();
 
-            var data = (found.Database || keeping.Contains(lambda.Id) ? databaseVault.SizeOf(lambda.Id, null) : 0)
-                     + (found.Workspace ? workspaces.SizeOf(lambda.Id, null) : 0);
+            var data = (found.Database || keeping.Contains(lambda.Id) ? await databaseVault.SizeOfAsync(lambda.Id, null, cancellation) : 0)
+                     + (found.Workspace ? await workspaces.SizeOfAsync(lambda.Id, null, cancellation) : 0);
 
             described.Add(new LambdaStorage(lambda.PublicKey, lambda.Tier, data, limits.PolicyOf(lambda.Tier).MaxDataBytes,
                                             found.Versions, found.Drafts, found.Other));

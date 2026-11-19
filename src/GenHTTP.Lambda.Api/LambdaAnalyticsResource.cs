@@ -45,18 +45,18 @@ public sealed class LambdaAnalyticsResource(IAnalyticsService analytics, ILogger
              so and has no figures.
              """)]
     [return: Summary("Whether visits are counted, and what was counted")]
-    public AnalyticsResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                 [Summary("How many days, today included; left out, as many as the tier shows, which is also the most")] int? days = null)
-        => AnalyticsResponse.Of(analytics.Get(privateKey, days));
+    public async ValueTask<AnalyticsResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                  [Summary("How many days, today included; left out, as many as the tier shows, which is also the most")] int? days = null)
+        => AnalyticsResponse.Of(await analytics.GetAsync(privateKey, days));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/analytics")]
     [Summary("Switches counting on")]
     [Remarks("Counting starts with the next request. Nothing happens if it is on already.")]
     [Response(ResponseStatus.Forbidden, "The lambda is a demo, whose visitors are not counted.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Analytics, switched on")]
-    public AnalyticsResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<AnalyticsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var enabled = analytics.Enable(privateKey);
+        var enabled = await analytics.EnableAsync(privateKey);
 
         logger.LogInformation("Switched on analytics of lambda {Lambda}", enabled.PublicKey);
 
@@ -68,9 +68,9 @@ public sealed class LambdaAnalyticsResource(IAnalyticsService analytics, ILogger
     [Remarks("**This cannot be undone**: the whole year that was kept is deleted. Switched on again, counting starts from nothing.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, "The lambda is a demo, whose visitors are not counted.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var publicKey = analytics.Disable(privateKey);
+        var publicKey = await analytics.DisableAsync(privateKey);
 
         logger.LogInformation("Switched off analytics of lambda {Lambda}", publicKey);
     }

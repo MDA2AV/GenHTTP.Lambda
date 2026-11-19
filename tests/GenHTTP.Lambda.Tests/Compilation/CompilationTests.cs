@@ -98,7 +98,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         // what the snippet returns is only known once it ran, so this is caught
         // when the lambda is deployed rather than when its code is checked
@@ -160,7 +160,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         fixture.Meta.Save(lambda.PrivateKey, """
             Workspace.WriteText("note.txt", "kept");
@@ -186,7 +186,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = fixture.Meta.Create(null);
+        var lambda = await fixture.Meta.CreateAsync(null);
 
         // a store in a file of its own is the first thing an agent writes, and
         // Workspace used to exist only in the top-level code of lambda.cs - so
@@ -299,8 +299,8 @@ public sealed class CompilationTests
             record Entry(string Name);
             """;
 
-        var first = fixture.Meta.Create(null);
-        var second = fixture.Meta.Create(null);
+        var first = await fixture.Meta.CreateAsync(null);
+        var second = await fixture.Meta.CreateAsync(null);
 
         foreach (var lambda in new[] { first, second })
         {

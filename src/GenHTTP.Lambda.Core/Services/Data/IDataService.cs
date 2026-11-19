@@ -17,17 +17,17 @@ public interface IDataService
     /// Every kind of data there is, as the lambda has it - or, where a feature
     /// is named, as that feature's copy of it is.
     /// </summary>
-    IReadOnlyList<DataStoreInfo> List(string privateKey, string? feature = null);
+    ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// One kind of data, as the lambda has it.
     /// </summary>
-    DataStoreInfo Get(string privateKey, string kind);
+    ValueTask<DataStoreInfo> GetAsync(string privateKey, string kind, CancellationToken cancellation = default);
 
     /// <summary>
     /// Switches a kind of data on. Nothing happens if it is on already.
     /// </summary>
-    DataStoreInfo Enable(string privateKey, string kind);
+    ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default);
 
     /// <summary>
     /// Switches a kind of data off, deleting everything it held - the copies
@@ -38,6 +38,6 @@ public interface IDataService
     /// off holds nothing, so there is no data nobody can see left lying about,
     /// and switching it on again starts empty.
     /// </remarks>
-    DataStoreInfo Disable(string privateKey, string kind);
+    ValueTask<DataStoreInfo> DisableAsync(string privateKey, string kind, CancellationToken cancellation = default);
 
 }

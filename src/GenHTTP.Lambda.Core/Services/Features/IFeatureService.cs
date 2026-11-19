@@ -82,7 +82,7 @@ public interface IFeatureService
     /// Removes a feature, its preview and its copy of the data.
     /// </summary>
     /// <returns>The name it had, which is all there is left to say about it</returns>
-    string Delete(string privateKey, string feature);
+    ValueTask<string> DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default);
 
     /// <summary>
     /// The identities a feature's files and data are kept under, for the
@@ -112,6 +112,6 @@ public interface IFeatureService
     /// Removes the files of features that no longer exist.
     /// </summary>
     /// <returns>How many were removed</returns>
-    int Sweep();
+    ValueTask<int> SweepAsync(CancellationToken cancellation = default);
 
 }

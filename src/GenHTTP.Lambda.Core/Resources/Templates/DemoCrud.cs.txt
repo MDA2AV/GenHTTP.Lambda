@@ -32,7 +32,7 @@
 // order and once each - Evolve remembers which in a table of its own, so this
 // runs on every start and only ever changes what is new. A migration that was
 // applied is never edited: a change to the schema is the next file, V2__...
-using (var connection = Database.GetConnection())
+await using (var connection = await Database.GetConnectionAsync())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
@@ -45,9 +45,9 @@ using (var connection = Database.GetConnection())
 
 var store = new TaskStore(limit: 200);
 
-if (store.Count() == 0)
+if (await store.CountAsync() == 0)
 {
-    Tasks.Seed(store);
+    await Tasks.SeedAsync(store);
 }
 
 // what an agent is told before it calls anything: how the tools fit together

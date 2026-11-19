@@ -19,17 +19,17 @@ public interface ISecretService
     /// <summary>
     /// Which secrets there are, and which the code reads.
     /// </summary>
-    SecretListing List(string privateKey, string? feature = null);
+    ValueTask<SecretListing> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Stores a value under a name, replacing the one there. Refused while the
     /// lambda has secrets switched off.
     /// </summary>
-    SecretInfo Set(string privateKey, string name, string value, string? feature = null);
+    ValueTask<SecretInfo> SetAsync(string privateKey, string name, string value, string? feature = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a secret.
     /// </summary>
-    void Delete(string privateKey, string name, string? feature = null);
+    ValueTask DeleteAsync(string privateKey, string name, string? feature = null, CancellationToken cancellation = default);
 
 }

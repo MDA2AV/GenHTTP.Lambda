@@ -18,7 +18,7 @@ export const data: EditorMessages['data'] = {
   kinds: {
     database: {
       name: '데이터베이스',
-      what: '람다가 레코드를 보관하는 전용 데이터베이스예요. Database.GetConnection()으로 연결해요.',
+      what: '람다가 레코드를 보관하는 전용 데이터베이스예요. Database.GetConnectionAsync()으로 연결해요.',
       count: (items) => `테이블 ${items}개`,
       confirmOff: '데이터베이스를 끌까요?',
       switchedOn: '데이터베이스를 켰어요. 아직 비어 있어요. 람다는 다음 요청 때 데이터베이스를 쓸 수 있는 상태로 다시 시작해요.',
@@ -73,7 +73,7 @@ export const data: EditorMessages['data'] = {
     howTo: '코드에서',
     howToText: (code) => (
       <>
-        {code('Database.GetConnection()')} 메서드가 데이터베이스 연결을 열어요. Entity Framework Core의{' '}
+        {code('Database.GetConnectionAsync()')} 메서드가 데이터베이스 연결을 열어요. Entity Framework Core의{' '}
         {code('DbContext')}에도, SQL에도 쓸 수 있어요. 테이블은 {code('migrations/')} 폴더의 마이그레이션이 만들고,
         마이그레이션은 Evolve가 적용해요. 다운로드한 프로젝트에서는 평범한 SQLite 파일인{' '}
         {code('database/database.db')}예요.
@@ -138,7 +138,7 @@ export const data: EditorMessages['data'] = {
     deleted: (name) => `${josa(name, '을', '를')} 삭제했어요.`,
     deleteFailed: '시크릿을 삭제하지 못했어요.',
     used: '코드가 읽음',
-    usedHint: '코드가 Secret.Read 또는 Secret.Exists로 읽어요.',
+    usedHint: '코드가 Secret.ReadAsync 또는 Secret.ExistsAsync로 읽어요.',
     unused: '코드가 읽지 않음',
     unusedHint: '이 이름으로 읽는 코드가 없어요. 코드와 철자가 같은가요?',
     set: (when) => <>{when} 설정</>,
@@ -155,7 +155,7 @@ export const data: EditorMessages['data'] = {
     howTo: '코드에서',
     howToText: (code) => (
       <>
-        {code('Secret.Read("NAME")')}는 값을 읽고, {code('Secret.Exists("NAME")')}는 설정되어 있는지 알려 줘요.
+        {code('Secret.ReadAsync("NAME")')}는 값을 읽고, {code('Secret.ExistsAsync("NAME")')}는 설정되어 있는지 알려 줘요.
         다운로드한 프로젝트에서는 둘 다 같은 이름의 환경 변수를 읽어요.
       </>
     ),

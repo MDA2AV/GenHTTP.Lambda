@@ -61,7 +61,7 @@ public static class ModuleCatalog
 
     /// <summary>
     /// What a lambda keeps its records with on the connection
-    /// <c>Database.GetConnection()</c> hands out - Entity Framework Core - and
+    /// <c>Database.GetConnectionAsync()</c> hands out - Entity Framework Core - and
     /// migrates its database with - Evolve - whatever keeps it.
     /// </summary>
     /// <remarks>
@@ -121,7 +121,7 @@ public static class ModuleCatalog
             "System.Collections",
             "System.Collections.Concurrent",
             "System.Collections.Generic",
-            // DbConnection, which Database.GetConnection() hands out, and the
+            // DbConnection, which Database.GetConnectionAsync() hands out, and the
             // rest of what every database has
             "System.Data.Common",
             "System.Globalization",

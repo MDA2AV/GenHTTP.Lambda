@@ -12,7 +12,7 @@
 // Writing happens outside the lock: a slow browser must not stop every other
 // game while its frame is on its way.
 
-public sealed class Lobby(Action<string> finished) : IReactiveHandler
+public sealed class Lobby(Func<string, ValueTask> finished) : IReactiveHandler
 {
     private readonly object _lock = new();
 
@@ -193,6 +193,8 @@ public sealed class Lobby(Action<string> finished) : IReactiveHandler
     {
         BoardState forX, forO;
 
+        var over = false;
+
         lock (_lock)
         {
             var board = game.Board;
@@ -203,9 +205,14 @@ public sealed class Lobby(Action<string> finished) : IReactiveHandler
             if (board.Over && !game.Counted)
             {
                 game.Counted = true;
-
-                finished(board.Winner);
+                over = true;
             }
+        }
+
+        // counted outside the lock, which no await may happen in
+        if (over)
+        {
+            await finished(forX.Winner);
         }
 
         await game.X.Send(forX);

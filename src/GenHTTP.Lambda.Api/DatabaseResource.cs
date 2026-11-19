@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Database)]
 [Summary("The database of a lambda, read as its owner reads it: its tables, and the records in them.")]
 [Remarks("""
-         Every lambda may have a database of its own, which its code reaches with `Database.GetConnection()` - whichever
+         Every lambda may have a database of its own, which its code reaches with `Database.GetConnectionAsync()` - whichever
          database the installation keeps it in (`GET /admin/integrations` tells its operator). Its schema is made
          by migrations the lambda ships in `resources/migrations/`, applied as it starts; its records are written by the
          lambda. This API only reads it - there is no way to change a record from outside the lambda.
