@@ -1793,8 +1793,8 @@ its own:
 | Kind | Contract | Keeps | The platform's own | Others |
 |---|---|---|---|---|
 | database | `IDatabaseProvider` | the platform's records and analytics (the stores `platform` and `analytics`), and the database of every lambda and draft | SQLite files in the data directory (`SqliteDatabase`) | PostgreSQL (`PostgreSqlDatabase`), community edition only |
-| files | `IFileProvider` | the workspace of every lambda and draft | directories in the data directory (`LocalFiles`) | - |
-| secrets | `ISecretProvider` | the secrets of every lambda and draft | sealed in the platform's own database (`InternalSecrets`) | - |
+| files | `IFileProvider` | the workspace of every lambda and draft, and the platform's pictures (the stores `branding` and `showcase`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
+| secrets | `ISecretProvider` | the secrets of every lambda and draft | sealed in the platform's own records (`DatabaseSecrets`), wherever the database integration keeps them | - |
 
 A host chooses them on the platform's builder - `LambdaPlatform.Create()
 .Database(...).Files(...).Secrets(...)` - and the platform uses its own for a
@@ -1812,6 +1812,15 @@ changes none of the rules. Addressed by the ids of a lambda and a feature
 (`DataScope`), never by keys. Synchronous but for an upload, which arrives as
 it is sent, and for copying a whole database or workspace, which the platform
 does away from the reactor (`Offload`).
+
+**No picture is kept in a database.** The pictures the platform keeps for
+itself are files of the files integration, in stores named as the database's
+are (`FileStores`): the logo at `branding/logo`, the picture of a showcase
+entry at `showcase/{lambda}`. Their rows say what a picture is and how large
+(`image_bytes`, V27). An installation from before kept them in their rows: the
+platform moves them out once as it starts (`PictureMove`), reading a picture
+from its row until it is moved, and the emptied columns are dropped in a later
+release. A picture goes with its entry, and with its lambda.
 
 **A lambda names none of them.** It reaches its database through
 `Database.GetConnection()` - a `DbConnection` - and `options.UseDatabase(connection)`,
@@ -2040,7 +2049,7 @@ line, and not `LAMBDA_PUBLIC_URL` - the tests check that a report holds none
 of the keys of the lambdas it counts, nor the installation's address. Whether
 its operator branded it is a switch (`configuration.branded`), never the name
 or the logo; what keeps its data is named (`configuration.database`, `files`,
-`secrets`: `sqlite` or `postgresql`, `local`, `internal`), never where it is. The
+`secrets`: `sqlite` or `postgresql`, `local`, `database`), never where it is. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
 
@@ -2864,8 +2873,9 @@ platform's mark rather than another value in it; the server takes the second
 for a branded installation and fills it in, and sends a page without content
 for the browser to draw where a build has none.
 
-The name is a setting (`branding.name`), the logo a row of `branding_pictures`
-(V26), both held in memory once read (`Services/Branding`). An SVG is checked
+The name is a setting (`branding.name`), the logo a file of the files
+integration (`branding/logo`) with a row of `branding_pictures` saying what it
+is (V26), both held in memory once read (`Services/Branding`). An SVG is checked
 to be one a browser draws as a picture - well formed, its root in the SVG
 namespace - and is served with `X-Content-Type-Options: nosniff` and a
 `Content-Security-Policy` that runs nothing, should anybody open it on its own;

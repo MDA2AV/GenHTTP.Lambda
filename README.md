@@ -198,7 +198,7 @@ server can also serve TLS itself; the reference describes how.
 
 The installation stores all of its data in the volume at `/data`: its
 database, every version of every app, the apps' records and files, their git
-history, and `secrets.key`, the key the apps' secrets are encrypted with. Back
+history, the logo and the showcase's pictures, and `secrets.key`, the key the apps' secrets are encrypted with. Back
 up the entire volume, including `secrets.key`. Without that file, the stored
 secrets cannot be decrypted. With PostgreSQL, back up the database as well.
 

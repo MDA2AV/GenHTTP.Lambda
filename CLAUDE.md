@@ -534,7 +534,7 @@ hosting URL. What follows is about subdomains unless it says otherwise.
   underscore, no leading digit, case sensitive), because an exported project
   reads `Secret.Read("X")` from `$X`. Values are not exported.
 - Kept by the secrets integration (see Integrations below); the platform's own
-  (`InternalSecrets`) stores them in the platform's database, sealed with
+  (`DatabaseSecrets`) stores them in the platform's database, sealed with
   AES-GCM under a key made from the installation's key (`LAMBDA_SECRETS_KEY`,
   or `secrets.key` in the data directory - never in the database) and a random
   per-lambda salt; the name is associated data. Backup and migration = the database + the installation's
@@ -1450,10 +1450,11 @@ integrations (yet - the owner's words: "not for now").
   `.Secrets(...)`, each an `IIntegrationBuilder<T>` built with an
   `IntegrationContext`), and the platform has its own for what it is given
   nothing for: SQLite files (`GenHTTP.Lambda.Integrations.Sqlite`), local
-  directories and secrets sealed in its own database (`LocalFiles`,
-  `InternalSecrets` in Core's `Integrations/` folder - they are the platform's
-  own: one is a directory, the other needs its database). An integration with
-  a system of its own is a project of its own. **Moving data from one to
+  directories (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) and secrets
+  sealed in its own records (`DatabaseSecrets`, named so by the owner, in
+  Core's `Integrations/` folder, since it needs the platform's database and
+  is kept wherever that is). An integration with a system of its own is a
+  project of its own. **Moving data from one to
   another is not done - decided by the owner**: an installation chooses as it
   starts.
 - **An integration keeps; the platform decides - decided by the owner** ("the
@@ -1469,17 +1470,24 @@ integrations (yet - the owner's words: "not for now").
   platform's records (the store `platform`, `LambdaDbContext`) and its
   analytics (`analytics`) are kept by the database integration too, in the
   dialect it speaks (`IDatabaseProvider.Dialect`) - see Database below; the
-  branding and the guide's section are rows of those records.
+  branding's name and the guide's section are rows of those records.
+  **No picture is kept in a database - decided by the owner**: the logo and
+  the showcase's pictures are files of the files integration (`FileStores`,
+  `branding/logo`, `showcase/{lambda}`), their rows saying what each is and
+  how large. Those kept in rows before are moved out once as the platform
+  starts (`PictureMove`) and read from the row until then; the emptied
+  columns are dropped in a later release, in both sets of migrations.
 - **Towards a lambda, no change when an integration changes - asked for by the
   owner.** Its database through `Database.GetConnection()` and `UseDatabase`
   (see Databases), its secrets through `Secret.Read`, and its files through
   the generated `Workspace` class, which **calls functions the platform hands
   it and touches no directory itself - decided by the owner, in this change**:
-  an S3 provider needs no change to lambdas. **`Workspace.Root` went with it**
-  - a path means nothing on object storage, and none of the published sources
-  used it (the owner leaned to removing it; see the PR for the grep over the
-  rest). `Resources.Root` stays: resources are the version's own files,
-  written to disk on every deploy, and not an integration's.
+  an S3 provider needs no change to lambdas. **`Workspace.Root` went with it
+  - decided by the owner**: a path means nothing on object storage. Of the
+  code on genhttp.dev, one lambda named it, in a line that printed it, which
+  its owner changes; nothing brings it back. `Resources.Root` stays:
+  resources are the version's own files, written to disk on every deploy, and
+  not an integration's.
 - **An integration may add to the guide** (`IIntegration.Guide`): lines at the
   end of the section of its kind - what SQLite refuses, what PostgreSQL folds
   and copies. What it adds counts against the guide's 24 KB like the rest.

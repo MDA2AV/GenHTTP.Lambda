@@ -61,7 +61,8 @@ docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
 | `LAMBDA_POSTGRES_POOL_SIZE` | `10` | connections an app or a draft keeps open at most |
 
 The data volume is still needed: it holds the code of the apps, their files,
-what they serve, and the installation's key for the secrets (`secrets.key`,
+what they serve, the logo and the pictures of the showcase, and the
+installation's key for the secrets (`secrets.key`,
 unless `LAMBDA_SECRETS_KEY` is set). Back up both the volume and the database,
 and keep the key with them: without it, no secret can be read.
 
