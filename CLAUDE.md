@@ -91,8 +91,11 @@ together the GenHTTP way, and there are two hosts - two editions:
   screenshot of the real editor or workspace - all of one example app, the
   court booking of a tennis club that does not exist, taken on a local
   installation with the app, its records, visitors and history made up for
-  it, in both themes. The front page from before - the video, the three
-  steps, the contact cards - went with it.
+  it, in both themes. **Its first picture is that app being built on
+  `/build` - decided by the owner**: the request, the agent's answer that
+  it is online and the editor link, so a visitor sees how building one feels
+  before anything else (it was the editor's overview before). The front page
+  from before - the video, the three steps, the contact cards - went with it.
 - **The cloud has a page about self-hosting - decided by the owner.**
   `/self-hosting` sets genhttp.dev and the community edition side by side to
   say that the platform can be run elsewhere: **neither is preferred** -

@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Criar algo',
   ownAgent: 'Usar seu próprio agente',
   free: 'Grátis. Sem cadastro, sem cartão de crédito.',
-  heroAlt: 'O editor de um app de reserva de quadras: no ar no domínio do próprio clube, quantas pessoas o usaram hoje e sua última mudança',
+  heroAlt: 'Um clube de tênis pede um site de reserva de quadras, e o agente responde que ele está no ar - com um botão para abri-lo e o link de edição para guardar',
   example: 'Todas as imagens desta página mostram o mesmo app de exemplo: a reserva de quadras de um clube de tênis.',
 
   contents: 'Nesta página',

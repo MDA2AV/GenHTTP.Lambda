@@ -10,7 +10,7 @@ export const platform: Messages['platform'] = {
   build: 'Bouw iets',
   ownAgent: 'Gebruik je eigen agent',
   free: 'Gratis. Geen account, geen creditcard.',
-  heroAlt: 'De editor van een app voor het reserveren van tennisbanen: online op het eigen domein van de club, hoeveel mensen hem vandaag gebruikten en zijn laatste wijziging',
+  heroAlt: 'Een tennisclub vraagt om een website voor het reserveren van banen en de agent antwoordt dat die online staat - met een knop om hem te openen en de editorlink om te bewaren',
   example: 'Elke afbeelding op deze pagina toont dezelfde voorbeeldapp: de baanreservering van een tennisclub.',
 
   contents: 'Op deze pagina',

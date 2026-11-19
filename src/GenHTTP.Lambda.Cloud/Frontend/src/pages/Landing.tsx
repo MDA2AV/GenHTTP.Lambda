@@ -58,7 +58,9 @@ const GROUPS: { id: string; features: Key[] }[] = [
  * the owner made it the front page, and /platform leads here now.
  *
  * Every picture shows one example app, so the page reads as one app's story
- * rather than as a catalogue: a tennis club's court booking. They are
+ * rather than as a catalogue: a tennis club's court booking - the first one
+ * being asked for on /build and the agent answering that it is online, so a
+ * visitor sees how building one feels before anything else. They are
  * screenshots of the real editor and workspace, taken on an installation run
  * for them; the app, its records, its visitors and its history were made up
  * for it.
@@ -143,15 +145,15 @@ export function Landing() {
         </p>
       </section>
 
-      {/* the app's editor, which every section below is a part of */}
+      {/* how it starts: the app asked for on /build, and the agent's answer that it is online */}
       <div className="relative z-10 mx-auto w-full max-w-5xl px-5 sm:px-6">
         <Reveal>
           <Screen
-            name="overview"
+            name="build"
             width={1800}
             height={1050}
             alt={said.heroAlt}
-            address="genhttp.dev/editor/••••••"
+            address="genhttp.dev/build?app=kestrel-courts"
             zoom={said.zoom}
             close={said.close}
           />
