@@ -2,6 +2,7 @@
 
 [![Cloud: genhttp.dev](https://img.shields.io/badge/cloud-genhttp.dev-blue)](https://genhttp.dev/)
 [![Community: community.genhttp.run](https://img.shields.io/badge/community-community.genhttp.run-green)](https://community.genhttp.run/)
+[![Documentation](https://img.shields.io/badge/docs-community.genhttp.run%2Fdocs-purple)](https://community.genhttp.run/docs/)
 [![Docker Hub: genhttp/lambda](https://img.shields.io/docker/pulls/genhttp/lambda?label=genhttp%2Flambda&logo=docker)](https://hub.docker.com/r/genhttp/lambda)
 
 **A self-hosted platform for the apps your coding agent builds.**
@@ -14,13 +15,31 @@ agent is connected, every app it builds is online at its own address within
 seconds, with a database, a version history and rollback. You operate one
 container.
 
+![An app being built from a description on GenHTTP Lambda](https://genhttp.dev/media/platform/build-dark.webp)
+
+## Documentation
+
+**[community.genhttp.run/docs](https://community.genhttp.run/docs/)** covers
+everything you need to run and use GenHTTP Lambda:
+
+- [Quick start](https://community.genhttp.run/docs/quick-start/) - from an empty server to an app online in five minutes
+- [Concepts](https://community.genhttp.run/docs/concepts/apps/) - apps and keys, versions, drafts, data, tiers and connectivity
+- [Connect an agent](https://community.genhttp.run/docs/build/mcp/) - Claude Code, Cursor, VS Code and any MCP client, plus git and the REST API
+- [The editor](https://community.genhttp.run/docs/editor/) - looking after an app: its history, drafts, records, keys and visitors
+- [Running a server](https://community.genhttp.run/docs/hosting/install/) - configuration, HTTPS and domains, the admin panel, security, backups, PostgreSQL and the build agent
+- [Extending](https://community.genhttp.run/docs/extending/custom-host/) - a host of your own and integrations for where data is kept
+
+## Quick start
+
 ```bash
 docker run -d -p 8080:8080 -v lambda-data:/data -e LAMBDA_ADMIN_TOKEN=secure-password genhttp/lambda
+claude mcp add --transport http genhttp http://localhost:8080/mcp
 ```
 
-Then open <http://localhost:8080>.
-
-![The front page of a GenHTTP Lambda server](docs/images/community.png)
+Then ask your agent for an app - *"Build a shared task list for the team"* -
+and it answers with the app's address and its editor link. Other agents, a
+public address with HTTPS and everything else are in the
+[documentation](https://community.genhttp.run/docs/quick-start/).
 
 ## Why GenHTTP Lambda
 
@@ -39,309 +58,42 @@ Then open <http://localhost:8080>.
   why, restores any earlier version in one click, and gives you access to its
   records, its visitors and its code.
 
-## Use cases
+GenHTTP Lambda is designed for small tools that often go unhosted because
+deploying them takes more effort than writing them: in a company, the tools
+that replace a shared spreadsheet - an inventory, an on-call planner, a
+tracker for requests; at home, the pieces around your home automation - a
+dashboard for your sensors, a webhook receiver, a small API for your scripts.
 
-GenHTTP Lambda is designed for small internal tools that often go unhosted
-because deploying them takes more effort than writing them:
-
-- **In a company**, the tools that replace a shared spreadsheet: an inventory
-  of devices and licenses, a vacation or on-call planner, a tracker for
-  orders, approvals or support requests, a form that collects requests and
-  lists them for whoever handles them. Each gets a database instead of a file
-  on a shared drive, a version history, and an address the whole team opens.
-- **At home**, the pieces around your home automation: a dashboard for your
-  sensors, a webhook receiver that records what your devices report, a small
-  API for your scripts and automations, a page that shows the household the
-  heating schedule or the meter readings.
-
-A request such as *"Build a shared task list for the team"* produces an app
-that is online. A follow-up such as *"Give every task the day it is due"* is
-tested in a draft before it goes live.
-
-## Screenshots
-
-<table>
-  <tr>
-    <td width="50%" valign="top"><img src="docs/images/agents.png" alt="Connecting an agent"><br><sub><b>Connecting an agent</b> - a single command for Claude Code, and the endpoint address for any other MCP client.</sub></td>
-    <td width="50%" valign="top"><img src="docs/images/app.png" alt="A task list built by an agent"><br><sub><b>A generated app</b> - served at its own address, here <code>/lambda/tasks/</code>.</sub></td>
-  </tr>
-  <tr>
-    <td valign="top"><img src="docs/images/draft.png" alt="A draft of a change"><br><sub><b>Drafts</b> - a change is tested with a copy of the data at a separate address before it is published.</sub></td>
-    <td valign="top"><img src="docs/images/versions.png" alt="The versions of an app"><br><sub><b>Versions</b> - what each change did and why, with rollback to any of them.</sub></td>
-  </tr>
-  <tr>
-    <td valign="top"><img src="docs/images/records.png" alt="The records of an app"><br><sub><b>Records</b> - each app can have its own database, which can be browsed in the editor.</sub></td>
-    <td valign="top"><img src="docs/images/analytics.png" alt="The visitors of an app"><br><sub><b>Analytics</b> - page views and referrers, counted on the server without cookies.</sub></td>
-  </tr>
-  <tr>
-    <td valign="top"><img src="docs/images/code.png" alt="The code of an app"><br><sub><b>Code</b> - available when you need it: read it, edit it, or clone it with git.</sub></td>
-    <td valign="top"><img src="docs/images/panel.png" alt="The administration panel"><br><sub><b>Administration panel</b> - what needs your attention, every app on the server and what it uses, its traffic and errors, the free disk space, the limits and the log.</sub></td>
-  </tr>
-</table>
-
-## What every app gets
-
-- **An address** below `/lambda/` on your server or at a subdomain of its own,
-  and a custom domain once the app is moved to *production* in the panel.
-- **Data that is independent of versions**: a database for records, a folder
-  for saved files, and secrets for the API keys and passwords of the services
-  it uses. Secret values are entered in the editor; the agent only
-  ever sees their names.
-- **Drafts and versions**: a change is tested in a draft with a copy of the
-  data and then published, and earlier versions remain available for
-  rollback.
-- **Git**: every app is a repository. Pushing a commit to `main` saves a
-  version, and pushing a branch starts a draft.
-- **Analytics and logs**: page views, referrers and countries once enabled,
-  and the app's output for each request.
-- **No lock-in**: any app can be downloaded as a standard .NET project and run
-  anywhere else. Nothing ties it to this server.
-
-Under the hood, every app is a small C# program, a [GenHTTP][genhttp] handler,
-which the server compiles and starts within seconds. Writing one by hand is
-optional:
+Every app is a small C# program, a [GenHTTP][genhttp] handler, which the
+server compiles and starts within seconds - written by your agent, and yours
+to read, change, clone with git or download as an ordinary .NET project:
 
 ```csharp
 return Inline.Create()
              .Get(() => "Hello from my app!");
 ```
 
-## Running it
+## Good to know
 
-```bash
-docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
-  -e LAMBDA_PUBLIC_URL=https://lambda.example.com \
-  -e LAMBDA_ADMIN_TOKEN=a-long-password \
-  genhttp/lambda
-```
-
-- **One container, one port, one volume.** No other services are required:
-  the platform's data and every app's database are SQLite files in `/data`.
-  If you would rather keep the databases in PostgreSQL, see
-  [PostgreSQL](#postgresql).
-- **`LAMBDA_PUBLIC_URL`** is the address at which you and your agents reach
-  the server, and the apps' addresses are derived from it. If it is not set,
-  the server answers at any host name and the addresses use
-  `http://localhost:8080`.
-- **`LAMBDA_ADMIN_TOKEN`** is the password for the administration panel at
-  `/admin`. If it is not set, the panel is disabled.
-- Images are published for **amd64 and arm64**.
-
-The [sample in samples/community](samples/community) provides the same setup
-with Docker Compose and can optionally include the build agent:
-
-```bash
-cd samples/community
-cp .env.example .env     # the panel's password is secure-password - change it
-docker compose up -d
-```
-
-### Configuration
-
-| Variable | Description |
-|---|---|
-| `LAMBDA_PUBLIC_URL` | The address at which people and agents reach the installation, such as `https://lambda.example.com` - a host name or an IPv4 address. The apps' addresses are derived from it, and once it is set the server answers only at that name and at `localhost`. If it is not set, the server answers at any name and the addresses use `http://localhost:8080`. |
-| `LAMBDA_ADMIN_TOKEN` | The password for the administration panel at `/admin`. If it is not set, the panel is disabled. |
-| `LAMBDA_HOSTING_URL` | A domain for the apps, such as `https://apps.example.com`. Each app then answers at its own subdomain (`https://my-app.apps.example.com/`) instead of below `/lambda/`. Requires a wildcard DNS record and a wildcard certificate. |
-| `LAMBDA_CONTACT` | An email address the pages offer for questions, such as requests to move an app to production. |
-| `LAMBDA_ABUSE_CONTACT` | An email address the pages offer for reporting a harmful app. |
-| `LAMBDA_AGENT_URL`, `LAMBDA_AGENT_TOKEN` | The address of the build agent and the secret shared with it (see below). |
-| `LAMBDA_USAGE_REPORTS` | Set to `false` to stop sending the daily usage report (see [Telemetry](#telemetry)). |
-| `LAMBDA_DATABASE`, `LAMBDA_POSTGRES_CONNECTION` | Keep the databases in PostgreSQL instead of SQLite files (see [PostgreSQL](#postgresql)). |
-
-Further settings, covering limits, logging, TLS and analytics, are described
-in [the reference](docs/reference.md#configuration).
-
-### Name and logo
-
-The installation presents itself as GenHTTP Lambda until you give it a name
-and a logo of your own: in the administration panel, under *Configuration* →
-*Branding*. They replace GenHTTP Lambda's in the header of every page, in page
-titles and link previews, and as the browser tab icon; without a logo, the
-first letter of the name is shown. Apps built on the installation name it in
-the "Made with" line at the foot of their pages, and so do the pages that say
-what an app was built with. The logo may be a PNG, JPEG, GIF, WebP or
-SVG image of up to 512 KB; a square mark works best. Changes apply to the next
-page that is opened, without a restart. An agent that you give the admin token
-can do the same through the REST API (`PUT /api/v1/admin/branding`) or the MCP
-tool `customize_installation`. The links to the project's source code and
-community remain.
-
-### PostgreSQL
-
-Instead of SQLite files in the volume, the installation can keep the
-platform's records, its analytics and every app's database in one PostgreSQL
-database - each app in a schema of its own, reached under a database role
-that can access nothing else:
-
-```bash
-docker run -d --name lambda -p 8080:8080 -v lambda-data:/data \
-  -e LAMBDA_DATABASE=postgresql \
-  -e LAMBDA_POSTGRES_CONNECTION="Host=db;Database=lambda;Username=lambda;Password=..." \
-  genhttp/lambda
-```
-
-`samples/community` has a Compose overlay that runs PostgreSQL beside the
-server. Choose the database before you create apps: data is not moved from
-one to the other. The apps themselves need no change, since their code does
-not depend on the database. [docs/postgresql.md](docs/postgresql.md) covers
-the privileges the user needs, connections, and what differs from SQLite.
-
-### HTTPS
-
-The image serves plain HTTP on port 8080. Place it behind your existing
-reverse proxy, such as Caddy, nginx or Traefik, with a single entry for the
-whole server, and set `LAMBDA_PUBLIC_URL` to the `https://` address. The
-server can also serve TLS itself; the reference describes how.
-
-### Data and backups
-
-The installation stores all of its data in the volume at `/data`: its
-database, every version of every app, the apps' records and files, their git
-history, the logo and the showcase's pictures, and `secrets.key`, the key the apps' secrets are encrypted with. Back
-up the entire volume, including `secrets.key`. Without that file, the stored
-secrets cannot be decrypted. With PostgreSQL, back up the database as well.
-
-### Updating
-
-```bash
-docker pull genhttp/lambda
-docker compose up -d     # or: docker rm -f lambda, then run it again
-```
-
-The database is migrated when the server starts. Apps and their data are left
-unchanged.
-
-## Connecting an agent
-
-The *Publish* page (`/ship`) explains how to connect each agent. For Claude
-Code, a single command is sufficient:
-
-```bash
-claude mcp add --transport http genhttp http://localhost:8080/mcp
-```
-
-Other agents can add a remote MCP server at `http://localhost:8080/mcp` (the
-value of `LAMBDA_PUBLIC_URL` followed by `/mcp`).
-
-You can then describe what you need, for example *"Build a guestbook, with a
-page where I approve the entries."* The agent creates the app, publishes it
-and returns its address and its editor link. **Store the editor link
-safely**: it grants full control over the app and cannot be recovered.
-
-Agents that can make HTTP requests or use git can work that way instead: the
-REST API is documented at `/api/v1/scalar/`, and each app's git address is
-shown in its editor.
-
-### Rules for agents
-
-Every agent, the build agent included, starts by reading the platform's guide
-(the MCP tool `platform_guide`). You can add a section of your own to it, with
-how apps are built on your installation - the architecture you prefer, the
-language apps are written in, the colours of your organisation, data they
-must not keep: in the administration panel, under *Platform* → *Guide*, which
-also shows the guide as agents read it, or through the REST API
-(`PUT /api/v1/admin/guide`). Your section comes last, after the platform's
-own: agents follow it wherever the guide leaves them the choice, and it
-cannot change what the platform requires or enforces, such as its limits or
-the rules about connecting to other servers. It is limited to 6 KB, since agents read the whole guide with
-every call. Agents working in a git clone read its `AGENTS.md` instead, which
-does not include your section.
-
-## Building apps from a description: the build agent (optional)
-
-With the build agent enabled, the *Create a website* page (`/build`) is a
-workspace in the style of a chat: people describe the app they want, and an
-agent on your server writes it and publishes it. The app then appears in a list
-beside the conversation, where they can keep asking the agent about it - how
-many people visited, what was entered, whether something fails - or for
-changes and settings, each a message. No coding agent of their own is required.
-The list is kept in the browser that built the apps; other apps are added with
-their editor link. Each message counts against the daily limit set in the
-panel's *Limits* section, and the panel's *Settings* can turn off building new
-apps, asking about existing ones, or both.
-
-The build agent is optional and is the only part of the setup that runs
-outside the main container. It requires:
-
-- a Claude subscription, with a token created by `claude setup-token`;
-- Docker on the same machine: for every build, the agent starts a short-lived
-  container that can reach only this server and Anthropic.
-
-In `samples/community/.env`, set `CLAUDE_CODE_OAUTH_TOKEN`, a random
-`LAMBDA_AGENT_TOKEN` (`openssl rand -hex 32`), `LAMBDA_AGENT_URL=http://agent:8401`
-and `DOCKER_GID` (`getent group docker | cut -d: -f3`), then start it:
-
-```bash
-docker compose --profile agent up -d
-```
-
-## Security and operations
-
-- **Apps share the platform's address.** Below `/lambda/`, an app runs on the
-  same origin as the editor and the administration panel, so its pages could
-  read what those store in your browser - including the editor links that the
-  `/build` workspace remembers. The editor does not send its address to apps,
-  and the panel keeps its password for the current tab only, but this setup is
-  intended for apps built by you and your team. To host apps for
-  people you do not know, give the installation a separate domain for them
-  (`LAMBDA_HOSTING_URL`); each app is then a site of its own.
-- **Apps run inside the server process.** This is what makes hosting hundreds
-  of them inexpensive. Their code is checked for prohibited operations before
-  it runs, but it shares the server's process: this is not a sandbox. Only run
-  code you would be prepared to run yourself.
-- **Connecting to other servers requires approval.** An app's code may connect
-  to other servers, for example to call an API, open a socket or send email,
-  only once you have allowed it in the panel's *Connectivity* section, where
-  its owner's request is listed together with its purpose. Apps in
-  *production* may connect without approval, unless you decline it; this
-  default is set per tier under *Limits*. Without this rule, anybody could route their
-  traffic through your server with an app that fetches whatever address it is
-  given. Pages that fetch from other sites in the browser need no approval,
-  and agents are instructed to use that approach wherever possible.
-- **Unused apps are taken offline.** A new app starts in the *sandbox*: by
-  default, one that is neither visited nor changed for 30 days is taken
-  offline, and removed 90 days after that. Moving an app to *production* in the
-  panel (*All lambdas*, the app's page, *Manage*, *Tier*) keeps it online, with more room and
-  a custom domain, and has it compiled as the server starts, so its first visitor
-  after a restart does not wait for that. On an installation run for a team rather than for
-  strangers, set *New lambdas start in* to *Production* under *Limits*; how
-  long sandbox apps last is set there as well. Every app is then compiled in the
-  background after each restart, one after another.
-
-## Telemetry
-
-The community edition sends a usage report once a day to
-`https://telemetry.genhttp.run`: the version, the machine, which options are
-enabled and counts over the apps, never anything about an individual app or
-person. Set `LAMBDA_USAGE_REPORTS=false` to disable it.
-[docs/telemetry.md](docs/telemetry.md) lists what a report contains.
+- **Apps run inside the server's process.** Their code is checked before it
+  runs, but this is not a sandbox: host apps of people you trust, and read
+  [Security](https://community.genhttp.run/docs/hosting/security/) before
+  others build on your installation.
+- **Telemetry.** The community edition sends a usage report once a day -
+  counts and switches, never anything about an app or a person.
+  `LAMBDA_USAGE_REPORTS=false` turns it off; [docs/telemetry.md](docs/telemetry.md)
+  lists what a report contains.
 
 ## For developers
 
-GenHTTP Lambda is a set of components (the platform's services, the REST API,
+GenHTTP Lambda is a set of components - the platform's services, the REST API,
 the MCP endpoint, the runner that serves the apps, the editor, the
-administration panel and the published sources) which a host composes in the
-same way as any other GenHTTP application:
-
-```csharp
-var site = Layout.Create()
-                 .Add(PlatformRoutes.Api, RestApi.Create(platform))
-                 .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
-                 .Add(PlatformRoutes.Editor, Editor.Create(platform))
-                 .Add(PlatformRoutes.Admin, AdminPanel.Create(platform))
-                 .Add(SourcePages.Create(platform))
-                 .Add(LandingPage.Create(platform));
-
-return await LambdaServer.Create(platform)
-                         .Settings(settings)
-                         .Handler(Runner.Create(platform).Site(site))
-                         .RunAsync();
-```
-
-This is `src/GenHTTP.Lambda.Community/Program.cs`; genhttp.dev runs
-`src/GenHTTP.Lambda.Cloud` alongside it. Building and running from source
-requires the .NET 11 SDK and Node 22:
+administration panel and the published sources - which a host composes the
+way any GenHTTP application is composed. `src/GenHTTP.Lambda.Community` is
+the community edition's host, `src/GenHTTP.Lambda.Cloud` genhttp.dev's;
+[A host of your own](https://community.genhttp.run/docs/extending/custom-host/)
+shows how to write another. Building and running from source requires the
+.NET 11 SDK and Node 22:
 
 ```bash
 npm install && npm run build                              # the frontends

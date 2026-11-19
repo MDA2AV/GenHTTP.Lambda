@@ -4,9 +4,10 @@ This file holds the product and architectural decisions of this repository.
 Follow it, and when a decision is made or changed - by the owner in a
 conversation, in a review, anywhere - **put it here in the same change**. A rule
 that only lives in a chat is lost. The [reference](docs/reference.md) has the
-routes, API, configuration and operations, and the [README](README.md) is the
-guide for whoever runs the community edition; this file has the *why* and the
-rules.
+routes, API, configuration and operations, the documentation at
+<https://community.genhttp.run/docs/> is the guide for whoever runs or uses the
+community edition, and the [README](README.md) leads there; this file has the
+*why* and the rules.
 
 `docker/agent/AGENTS.md` is something else: it is the brief of the build agent
 inside its throwaway container, not a steering file for people working on this
@@ -76,7 +77,8 @@ together the GenHTTP way, and there are two hosts - two editions:
   send no referrer (its key is in their address) and are not indexed, the
   panel keeps its token for the tab only (session storage) wherever the
   lambdas answer on its origin - local storage only once `/system` says they
-  do not - and the README says who should switch to subdomains.
+  do not - and the documentation (Security) says who should switch to
+  subdomains.
 - **Nothing in the pages names the cloud.** What differs per installation -
   where a lambda answers, the git address, where a domain has to point (the
   server resolves its own public name, `DomainResponse.Target`), the page
@@ -163,8 +165,8 @@ together the GenHTTP way, and there are two hosts - two editions:
 - **The community edition sends a usage report once a day - decided by the
   owner** (`Services/UsageReports`), on by default and switched off with
   `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
-  pushed: documented like any other feature (the README's Telemetry
-  section, which stays a paragraph, with the details in `docs/telemetry.md`;
+  pushed: documented like any other feature (a line of the README, with the
+  details in `docs/telemetry.md`; the documentation's Install page;
   the reference, a line on startup, the panel's **Usage report** section
   with the last report as sent), never a banner or a prompt. It says
   **how an installation runs, never what it runs**: the version, the
@@ -336,7 +338,7 @@ said, with what came of it underneath.
   (the owner's ask); the conversation is kept beside it, the newest sixty
   turns. There are still no accounts. A script on the platform's own origin -
   a draft's preview at `/features/…`, every lambda of an installation that
-  answers by path - can read that storage; the README says so for path mode,
+  answers by path - can read that storage; the documentation says so (Security),
   and moving previews off the site's host is still a decision of its own. A
   demo is not added. Which app is open is in the address by its public key
   (`?app=`), never its editor key.
@@ -1793,17 +1795,23 @@ touches all that apply:
 
 1. `docs/reference.md` - routes, API, configuration, operations, how it fits
    together. Where the other documents say "the reference", they mean it.
-2. `README.md` - the community edition for whoever might run it, written from
-   their use case - **decided by the owner**: what it *is* before what it
-   does (self-hosted hosting for the apps coding agents build), that hosting
-   it is one container and nothing else (no database server, one volume),
-   and that it hosts hundreds of apps, not one. Then what people build with
-   it, small screenshots of the features that matter (`docs/images/`, taken
-   from a real app on a local server, never mock-ups), how to run it,
-   connect an agent and the build agent, and what to know before letting
-   strangers build there. Not a reference: it links to one. Its tone is that
-   of a professional project README - decided by the owner - plain technical
+2. `README.md` - short, and leading to the documentation - **decided by the
+   owner**: what GenHTTP Lambda *is* (self-hosted hosting for the apps coding
+   agents build, one container, hundreds of apps), the teaser picture of the
+   cloud's front page (`https://genhttp.dev/media/platform/build-dark.webp`),
+   the documentation's entry points, a quick start of two commands, why it
+   exists and what it is for, what to know first (not a sandbox; the usage
+   report), and how to build it from source. Everything else - configuration,
+   HTTPS, backups, the build agent, security - is the documentation's, and
+   the README links there rather than repeating it. Its tone is that of a
+   professional project README - decided by the owner - plain technical
    English, not the style of this file.
+   **The user documentation** is at <https://community.genhttp.run/docs/>, in
+   the lambda `community` on genhttp.dev rather than in this repository: the
+   concepts and every door - MCP, git, the API, the editor, the panel, the
+   configuration, custom hosts and integrations - as contracts, with
+   screenshots of a real installation. A change people would notice is
+   followed there.
 3. `platform_guide`, the MCP instructions and the tool descriptions
    (`GenHTTP.Lambda.Mcp`) - for agents; and `AGENTS.md` in every lambda's
    repository (`Resources/Export/Agents.md.txt`) for an agent working in a
@@ -1820,7 +1828,8 @@ owner's; `/.well-known/ai-catalog.json` names the API's description instead. The
 the editor's look changes, its section and its picture change with it.
 
 The same rule is worded the same way in all of them. Where an older rule
-here says "the README" for a feature, it means the reference.
+here says "the README" for a feature, it means the reference and the
+documentation.
 
 The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
