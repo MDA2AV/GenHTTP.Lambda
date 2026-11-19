@@ -1392,7 +1392,7 @@ services. The rules that matter:
   `ISecretService`), and where other services work through a lower layer, that
   layer's own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`,
   `ILogBook`). What another folder needs of a unit is added to the service's
-  interface (`IMetaService.GetFacts`, `ISourceService.Star`), not taken from
+  interface (`IMetaService.GetFacts`, `ISourceService.StarAsync`), not taken from
   the unit. An exception is an entry in the test with its reason; today only
   the platform's composition (`LambdaPlatform`, its builder and
   `PlatformLogging`) has one. The test reads every component's assembly - a
@@ -1708,8 +1708,8 @@ change; the helpers are in `OperationLog`.
   service that only has the id writes `lambda #{LambdaId}`. One template per
   case, never a fragment built beforehand (`of {Owner}`), so a structured sink
   can filter on each.
-- A lambda is named by its **public key** (`PublicKeyOf`), a feature by its
-  **name** (`NameOf`, or the name a service hands back). Never the editor key,
+- A lambda is named by its **public key** (`PublicKeyOfAsync`), a feature by its
+  **name** (`NameOfAsync`, or the name a service hands back). Never the editor key,
   never a feature's key.
 - **Never a model as a whole.** A record's `ToString()` prints every property,
   and `LambdaInfo` carries the editor key, others code and specifications.

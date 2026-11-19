@@ -165,6 +165,10 @@ public sealed class AsynchronousIntegrationTests
         await DraftsCopyItAsync(fixture, lambda.PrivateKey);
 
         await MergesExportsAndSwitchesOffAsync(fixture, lambda.PrivateKey, Awaited);
+
+        // a draft merged in its turn, the version saved in the lambda's turn
+        // inside it, each statement of the records waited for
+        Assert.IsTrue(counter.Records > 0, "and the platform's own records");
     }
 
     [TestMethod]
