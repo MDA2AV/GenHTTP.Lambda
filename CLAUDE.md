@@ -225,10 +225,10 @@ together the GenHTTP way, and there are two hosts - two editions:
   by the owner.** **Used where it clearly fits, never as a switch spread
   through the code - decided by the owner** ("avoid spaghetti code and too
   many ifs").
-  - **Words and steering, nothing else** - chosen with it, open to change.
-    No limit, tier, default, rule of connectivity, block or decline depends
-    on it, and `PURPOSE` frames the request as data alike for every
-    profile. A new use keeps to that.
+  - **Words, steering and the platform's own links, nothing else** - chosen
+    with it, open to change. No limit, tier, default, rule of connectivity,
+    block or decline depends on it, and `PURPOSE` frames the request as data
+    alike for every profile. A new use keeps to that.
   - **The words are the catalogs'**: a section says what a profile says its
     own way under `profiles` - only what differs - and the kit's catalogs
     hand every page the words of the installation's profile (`profile.ts`,

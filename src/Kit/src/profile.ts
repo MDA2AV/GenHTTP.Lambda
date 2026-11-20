@@ -11,7 +11,8 @@ import { askPlatform, sentProfile } from './site';
  * It changes how the pages speak, never what they do: a section of a catalog
  * may say some of its words its own way for a profile (see wordsFor), and the
  * catalogs hand every page the words of the installation's profile - so no
- * component asks which profile it is.
+ * component asks which profile it is. The one thing that is not words, the
+ * links to the platform's project, has a hook of its own (useProjectLinks).
  *
  * A page the server rendered says which profile it was rendered for (in
  * `#site-facts`, see site.ts), so the first render draws the same words. Any

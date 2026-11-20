@@ -3119,8 +3119,8 @@ An installation says whom it is for - its **profile**: `cloud`, a public
 platform anybody builds on (genhttp.dev); `home`, somebody, their household
 and their friends; or `enterprise`, an organization and its people. It changes
 how the installation speaks and nothing else: the examples its pages offer and
-a few of their words, and what agents read about the apps built here in
-`platform_guide`. No limit, tier, rule of connectivity, block or refusal
+a few of their words, whether they link to GenHTTP Lambda's project, and what
+agents read about the apps built here in `platform_guide`. No limit, tier, rule of connectivity, block or refusal
 depends on it; those stay the operator's in their sections. An installation
 run for a team that wants every app kept starts new lambdas in production
 under **Limits** as well.
