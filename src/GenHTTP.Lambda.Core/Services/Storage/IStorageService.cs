@@ -78,6 +78,13 @@ public interface IStorageService
     ValueTask<IReadOnlyList<VersionFile>> KeepAsync(long lambdaId, IReadOnlyList<VersionFile> files, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Says that what the files hold is about to be read at length, so it is
+    /// not collected meanwhile though a save replaces the manifest it was
+    /// read from.
+    /// </summary>
+    ValueTask ReadingAsync(long lambdaId, IReadOnlyList<VersionFile> files);
+
+    /// <summary>
     /// The files the lambda keeps whose git blob ids are among those given,
     /// by their id - without a name, binary where they are not text.
     /// </summary>

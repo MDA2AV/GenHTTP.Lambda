@@ -833,15 +833,18 @@ twice for every feature.
   previews hold it (`ContentStore`). A feature's `files.manifest.json` and
   `preview.manifest.json` are manifests over the same store, so starting a
   feature, deploying its preview and merging it copy no content. Everything
-  goes by reference, the code included, not only the resources.
-- **Content is named by the store's own hash - decided by the owner**: git's
-  ids are git's concern, kept as data, "not a storage decision influencing
-  our architecture". A row of `blobs` per piece of content says its size, its
-  length as text and the ids git gives it - **SHA-1 and SHA-256 both, decided
-  by the owner**, since git's SHA-256 object format is coming - so a push does
-  not read a file the lambda keeps, and a commit is laid out without hashing.
-  A row is what is known of content; one lost is made again as it is next
-  kept. Moving to git's SHA-256 changes the git layer, not the store.
+  goes by reference, the code included, not only the resources. Chosen with
+  it, open to change: a store per lambda rather than one for all, the
+  manifests' names, and what a manifest holds.
+- **Git's ids are git's concern, kept as data - decided by the owner**: "not a
+  storage decision influencing our architecture". A row of `blobs` per piece
+  of content says its size, its length as text and the ids git gives it -
+  **SHA-1 and SHA-256 both, decided by the owner**, since git's SHA-256 object
+  format is coming - so a push does not read a file the lambda keeps, and a
+  commit is laid out without hashing. A row is what is known of content; one
+  lost is made again as it is next kept. Moving to git's SHA-256 changes the
+  git layer, not the store. Chosen with it, open to change: the store names
+  content by the SHA-256 of its bytes, its own id and none of git's.
 - **Services hand on `VersionFile`s, never a string of the version.** Name,
   size, text or binary, and where the content is: kept by the store, or as it
   arrived (a request's string, a push's bytes, an archive's file in
@@ -863,13 +866,18 @@ twice for every feature.
   manifest names for the lambdas whose manifests changed, and for all once
   after a start, leaving what was written or named in the last hour
   (`ContentStore.Fresh`), which a save may be about to name.
-- **Versions from before are moved, not rewritten - decided by the owner**
-  ("just migrate all of them at the start"). As the platform starts, before
-  anything is served, `StoreMigration` reads each `v{n}.cs`, `files.json` and
+- **Versions from before are moved into the store at the start, not
+  rewritten - decided by the owner** ("just migrate all of them at the
+  start"; a manifest beside the untouched file, the owner's choice among
+  those proposed). `StoreMigration` reads each `v{n}.cs`, `files.json` and
   `preview.json` of before once, keeps its files and writes the manifest
   beside it. The file of before stays as it was: a version never changes, and
   its room is taken twice until it is pruned. A feature's goes with its next
   save, as it always went. One that cannot be moved is read whole, as before.
+  Chosen with it, open to change: it runs before anything is served, rather
+  than in the background as the warm-up does, so no request reads one of them
+  whole meanwhile nor saves one while it is moved - measured on a copy that
+  0.6.0 wrote, 7 versions and a draft with 32 MB of pictures moved in 1.4 s.
 - **The git store stays apart - decided by the owner.** Its commits' files are
   copied from the store, not shared with it: a commit is served for as long as
   it is reachable, which is longer than a version may be kept.

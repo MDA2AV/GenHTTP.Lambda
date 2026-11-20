@@ -323,18 +323,34 @@ public static class LambdaArchive
     /// <remarks>
     /// Read where the request is, and only then is the rest - unpacking, and
     /// holding every path against the .gitignore files - taken away from the
-    /// reactor in one hop.
+    /// reactor in one hop. Written as it is read, in place: a piece of the
+    /// body goes to the page cache in less than a hop would take.
     /// </remarks>
     private static async ValueTask<Stream> BufferAsync(Stream content, long maxBytes, string folder)
     {
-        var body = new FileStream(Path.Combine(folder, "archive.zip"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 81920,
-                                  FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        var body = new FileStream(Path.Combine(folder, "archive.zip"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
 
         try
         {
-            // what a build installed is the likeliest reason, and leaving it out
-            // here would mean taking it in first
-            await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be. It is counted as it is sent, before any .gitignore leaves something out, so zip what a commit would hold - never what a build installed, node_modules for example.");
+            var buffer = new byte[81920];
+
+            long total = 0;
+
+            int read;
+
+            while ((read = await content.ReadAsync(buffer)) > 0)
+            {
+                total += read;
+
+                // what a build installed is the likeliest reason, and leaving it out
+                // here would mean taking it in first
+                if (total > maxBytes)
+                {
+                    throw LambdaException.Invalid("The archive is larger than a lambda may be. It is counted as it is sent, before any .gitignore leaves something out, so zip what a commit would hold - never what a build installed, node_modules for example.");
+                }
+
+                body.Write(buffer, 0, read);
+            }
 
             body.Position = 0;
 

@@ -78,6 +78,8 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             [Name(options.SourceDirectory)] = ("sources", true),
             [Name(options.AssemblyDirectory)] = ("compiled", true),
             [Name(options.ResourceDirectory)] = ("resources", true),
+            // archives on their way into a store or out of one
+            [Name(options.StagingDirectory)] = ("staging", false),
             // the platform's pictures, where the local files integration keeps them
             ["branding"] = ("pictures", false),
             ["showcase"] = ("pictures", false),

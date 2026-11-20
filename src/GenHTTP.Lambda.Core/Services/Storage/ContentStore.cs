@@ -166,13 +166,46 @@ public sealed class ContentStore(LambdaOptions options, IDbContextFactory<Lambda
         }
         finally
         {
+            // what was written beside the store and not moved in; what was
+            // staged is the archive's, and goes with it
             foreach (var (_, _, source) in prepared)
             {
-                Discard(source);
+                if (source != null && !IsStaged(source, files))
+                {
+                    Discard(source);
+                }
             }
         }
 
         return (result, added);
+    }
+
+    /// <summary>
+    /// Says that what the files hold is about to be read, at length: it is
+    /// made fresh, so no collection takes it meanwhile, though the manifest
+    /// it was read from were replaced.
+    /// </summary>
+    /// <remarks>
+    /// For what reads while a save of the same files may land - a deployment
+    /// copying the resources out, a commit made of a feature - rather than
+    /// for every read: one that takes a moment is not worth a write.
+    /// </remarks>
+    /// <exception cref="LambdaException">Something it names is no longer kept</exception>
+    public async ValueTask ReadingAsync(long lambdaId, IReadOnlyList<VersionFile> files)
+    {
+        if (!files.Any(f => Keeps(lambdaId, f)))
+        {
+            return;
+        }
+
+        using var turn = await _turns.TakeAsync(lambdaId);
+
+        var now = DateTime.UtcNow;
+
+        foreach (var file in files.Where(f => Keeps(lambdaId, f)))
+        {
+            Freshen(((StoredContent)file.Content).Path, now, file);
+        }
     }
 
     /// <summary>
@@ -513,7 +546,9 @@ public sealed class ContentStore(LambdaOptions options, IDbContextFactory<Lambda
                     }
                 }
 
-                if (!Directory.EnumerateFileSystemEntries(folder).Any())
+                // the folder content is written into before it is moved in
+                // is left: a save writes there without the turn
+                if (prefix != WritingFolder && !Directory.EnumerateFileSystemEntries(folder).Any())
                 {
                     try
                     {

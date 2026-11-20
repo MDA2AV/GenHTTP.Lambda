@@ -175,6 +175,8 @@ public sealed class FileSystemStorageService : IStorageService
         return kept;
     }
 
+    public ValueTask ReadingAsync(long lambdaId, IReadOnlyList<VersionFile> files) => Store.ReadingAsync(lambdaId, files);
+
     public ValueTask<IReadOnlyDictionary<string, VersionFile>> FindAsync(long lambdaId, IReadOnlyCollection<string> gitIds) => Store.FindAsync(lambdaId, gitIds);
 
     public ValueTask<IReadOnlyDictionary<string, string>> GitIdsAsync(long lambdaId, IReadOnlyList<VersionFile> files) => Store.GitIdsAsync(lambdaId, files);
@@ -213,6 +215,9 @@ public sealed class FileSystemStorageService : IStorageService
             catch (Exception e)
             {
                 Logger.LogWarning(e, "Failed to collect the store of lambda #{LambdaId}", lambda);
+
+                // and tried again next time
+                Changed(lambda);
             }
         }
 

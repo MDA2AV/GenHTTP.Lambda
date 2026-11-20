@@ -1560,7 +1560,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     tables = s.Items,
                     s.UsedBytes,
                     s.QuotaBytes,
-                    note = !s.Enabled && files.Any(f => f.IsCompiled && DatabaseService.Uses(f.ReadText()))
+                    note = !s.Enabled && files.Any(f => f.IsCode && !f.Binary && DatabaseService.Uses(f.ReadText()))
                         ? "The code connects to the database, which is switched off: Database.GetConnectionAsync() throws until it is on (enable_data with kind 'database')."
                         : s.Enabled ? "read_database lists its tables and reads their rows." : null
                 },

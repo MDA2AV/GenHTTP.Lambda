@@ -304,6 +304,9 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
         // the year a published source's license names is the year of the commit
         var project = lambda.Project.License is { } license ? lambda.Project with { License = license with { Year = at.Year } } : lambda.Project;
 
+        // copied from the store below, while a save of the feature may land
+        await storage.ReadingAsync(lambda.Id, files);
+
         var laid = ProjectTree.Lay(files, project, previous, await storage.GitIdsAsync(lambda.Id, files));
 
         foreach (var (blob, content) in laid.Contents)

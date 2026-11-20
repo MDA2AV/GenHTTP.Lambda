@@ -183,6 +183,10 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                 : "The preview of this feature has nothing to serve anymore.");
         }
 
+        // read at length from here on: not collected meanwhile, though a save
+        // of the feature replaced what it was read from
+        await Storage.ReadingAsync(slot.LambdaId, files);
+
         // what this version ships is written out before it is compiled, so the
         // handler it returns is serving the resources of the version going
         // online rather than whatever the last one left behind

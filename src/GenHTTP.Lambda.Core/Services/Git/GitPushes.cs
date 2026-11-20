@@ -28,9 +28,9 @@ namespace GenHTTP.Lambda.Services.Git;
 /// <see cref="ProjectTree"/>).
 ///
 /// A file the lambda keeps already is not read: git names it by an id the
-/// store knows. What is new is kept as each commit is read, from the bytes
-/// the git module holds, so a push is handed from one service to the next as
-/// what the store keeps - never turned into text, nor read again.
+/// store knows. What is new is handed on as the bytes the git module holds,
+/// and kept by the save that is allowed it - never turned into text, nor
+/// copied before then.
 ///
 /// What happened is told back as the push goes, in the lines git shows after
 /// <c>remote:</c> - never with the editor key, which whoever pushed has, and
@@ -190,9 +190,6 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
                 Refuse(lambda, update, chain.Count > 1 ? $"{Short(id)}: {read.Complaint}" : read.Complaint!);
                 return;
             }
-
-            // kept as each is read, so what the push brings is not held for the commits after it
-            read = read with { Files = await storage.KeepAsync(lambda.Id, read.Files) };
 
             steps.Add((id, commits.Find(id)!, tree, read));
 
@@ -375,9 +372,6 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             return;
         }
 
-        // the files of the branch's tip, which the feature is to hold
-        var files = await storage.KeepAsync(lambda.Id, read.Files);
-
         var (change, _) = Message(commits.Find(update.NewId)!);
 
         var started = feature == null;
@@ -393,7 +387,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         try
         {
-            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
+            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, read.Files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
                                               after: feature.Revision);
         }
         catch (LambdaException) when (started)
