@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Storage;
 
 using Microsoft.Extensions.Logging;
 
@@ -34,9 +35,10 @@ namespace GenHTTP.Lambda.Services.Git;
 ///
 /// Called in the lambda's turn to be read (see <see cref="GitService"/>), and
 /// away from the reactor: the first read of a lambda with a long history
-/// reads every version.
+/// lays out every version - from their manifests and the git ids the store
+/// knows, copying into the commits' files what they do not have yet.
 /// </remarks>
-public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureService features, ILogger<GitHistory> logger)
+public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureService features, IStorageService storage, ILogger<GitHistory> logger)
 {
 
     /// <summary>
@@ -84,11 +86,11 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             // as it is laid out now
             var parent = before.Where(v => v.Key < version.Version).Select(v => index.Current(v.Value)).LastOrDefault();
 
-            string code;
+            IReadOnlyList<VersionFile> files;
 
             try
             {
-                code = (await meta.GetVersionAsync(lambda.PrivateKey, version.Version)).Code;
+                files = (await meta.GetVersionAsync(lambda.PrivateKey, version.Version)).Files;
             }
             catch (LambdaException)
             {
@@ -98,7 +100,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
             var previous = parent != null ? store.ReadCommit(lambda.Id, GitObjectId.Parse(parent)) : null;
 
-            var made = await CommitAsync(lambda, LambdaSource.Parse(code), parent != null ? [parent] : [], previous,
+            var made = await CommitAsync(lambda, files, parent != null ? [parent] : [], previous,
                                          OneLine(version.Change) ?? $"Version {version.Version}", version.Created, version.Version);
 
             index.Versions[version.Version] = made;
@@ -112,7 +114,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
         {
             try
             {
-                changed |= await MoveAsync(lambda, index, newest, async () => (await meta.GetVersionAsync(lambda.PrivateKey, versions[^1].Version)).Code) != newest;
+                changed |= await MoveAsync(lambda, index, newest, async () => (await meta.GetVersionAsync(lambda.PrivateKey, versions[^1].Version)).Files) != newest;
             }
             catch (LambdaException)
             {
@@ -164,14 +166,14 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     {
         index.Features.TryGetValue(feature.Key, out var tip);
 
-        async ValueTask<string> Code() => (await features.GetAsync(lambda.PrivateKey, feature.Key)).Code;
+        async ValueTask<IReadOnlyList<VersionFile>> Files() => (await features.GetAsync(lambda.PrivateKey, feature.Key)).Files;
 
         if (tip != null && tip.Revision == feature.Revision && tip.Base >= feature.Base)
         {
             try
             {
                 // what a clone builds the branch on is laid out as today
-                var laid = await MoveAsync(lambda, index, tip.Commit, Code);
+                var laid = await MoveAsync(lambda, index, tip.Commit, Files);
 
                 if (laid == tip.Commit)
                 {
@@ -195,11 +197,11 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             return false;
         }
 
-        string code;
+        IReadOnlyList<VersionFile> files;
 
         try
         {
-            code = await Code();
+            files = await Files();
         }
         catch (LambdaException)
         {
@@ -213,11 +215,11 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         if (!own)
         {
-            var version = (await meta.GetVersionAsync(lambda.PrivateKey, feature.Base)).Code;
+            var version = (await meta.GetVersionAsync(lambda.PrivateKey, feature.Base)).Files;
 
             // nothing of its own yet: as long as it holds what its version
             // holds, it is that version's commit - as it is laid out now
-            if (LambdaSource.Same(code, version))
+            if (LambdaSource.Same(files, version))
             {
                 index.Features[feature.Key] = new FeatureTip(await MoveAsync(lambda, index, based, () => ValueTask.FromResult(version)), feature.Revision, feature.Base);
                 return true;
@@ -236,7 +238,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             ? $"Brings version {feature.Base} into the feature '{feature.Name}'"
             : OneLine(feature.Change) ?? feature.Name;
 
-        var commit = await CommitAsync(lambda, LambdaSource.Parse(code), parents, previous, message, feature.Modified, null);
+        var commit = await CommitAsync(lambda, files, parents, previous, message, feature.Modified, null);
 
         index.Features[feature.Key] = new FeatureTip(commit, feature.Revision, feature.Base);
 
@@ -252,9 +254,9 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     /// Its Project.cs is made anew rather than kept, since what the platform
     /// puts around the snippet changed with the rest of its files.
     /// </remarks>
-    /// <param name="code">What the tip holds: its version, or its feature as it is</param>
+    /// <param name="files">What the tip holds: its version, or its feature as it is</param>
     /// <returns>The commit that stands for the tip</returns>
-    private async ValueTask<string> MoveAsync(GitLambda lambda, GitIndex index, string tip, Func<ValueTask<string>> code)
+    private async ValueTask<string> MoveAsync(GitLambda lambda, GitIndex index, string tip, Func<ValueTask<IReadOnlyList<VersionFile>>> files)
     {
         if (index.Moved.TryGetValue(tip, out var moved))
         {
@@ -272,7 +274,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             ? "Moves assets/ to resources/, where the platform keeps what a lambda reads and serves now"
             : "Brings the platform's files up to date with how it lays a lambda out now";
 
-        var made = await CommitAsync(lambda, LambdaSource.Parse(await code()), [tip], null, message, DateTime.UtcNow, null);
+        var made = await CommitAsync(lambda, await files(), [tip], null, message, DateTime.UtcNow, null);
 
         index.Moved[tip] = made;
 
@@ -288,7 +290,13 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     /// <summary>
     /// Makes a commit of the platform's, keeps it, and says which it is.
     /// </summary>
-    private async ValueTask<string> CommitAsync(GitLambda lambda, IReadOnlyList<LambdaFile> files, IReadOnlyList<string> parents, StoredCommit? previous,
+    /// <remarks>
+    /// The files are laid out by the git ids the store knows of them, and
+    /// copied into the commits' own files where those do not have them yet -
+    /// nothing of them read into memory but the snippet, which is put into
+    /// its class.
+    /// </remarks>
+    private async ValueTask<string> CommitAsync(GitLambda lambda, IReadOnlyList<VersionFile> files, IReadOnlyList<string> parents, StoredCommit? previous,
                                                 string message, DateTime when, int? version)
     {
         var at = new DateTimeOffset(DateTime.SpecifyKind(when, DateTimeKind.Utc));
@@ -296,11 +304,16 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
         // the year a published source's license names is the year of the commit
         var project = lambda.Project.License is { } license ? lambda.Project with { License = license with { Year = at.Year } } : lambda.Project;
 
-        var laid = ProjectTree.Lay(files, project, previous);
+        var laid = ProjectTree.Lay(files, project, previous, await storage.GitIdsAsync(lambda.Id, files));
 
         foreach (var (blob, content) in laid.Contents)
         {
             store.WriteBlob(lambda.Id, GitObjectId.Parse(blob), content);
+        }
+
+        foreach (var (blob, file) in laid.Own)
+        {
+            store.WriteBlob(lambda.Id, GitObjectId.Parse(blob), file);
         }
 
         var tree = await TreeOf(lambda.Id, laid.Entries).ComputeIdAsync();

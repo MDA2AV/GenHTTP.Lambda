@@ -47,10 +47,11 @@ public sealed record DocumentationSummary(
 /// </summary>
 /// <remarks>
 /// The overview is asked for every ten seconds by every editor that is open
-/// on it, and reading these facts means reading and unpacking the whole
-/// version - resources included, up to a hundred megabytes and more. A version
-/// never changes once saved, so what is read off it once holds for good: kept
-/// by the lambda's id, which is never handed out again, and the number of the
+/// on it. What a version is made of is read off its manifest, and what its
+/// code reaches for and its documentation says off its C# and its pages -
+/// never its resources, however much they weigh. A version never changes
+/// once saved, so what is read off it once holds for good: kept by the
+/// lambda's id, which is never handed out again, and the number of the
 /// version. Bounded by starting over, like the other caches of requests.
 /// </remarks>
 public sealed partial class VersionFactsCache(IStorageService storage)
@@ -77,10 +78,21 @@ public sealed partial class VersionFactsCache(IStorageService storage)
             return known;
         }
 
-        // a version whose code has gone missing is reported as empty rather
+        // a version whose files have gone missing is reported as empty rather
         // than making the whole overview unavailable - and not remembered as
         // empty, it is asked about again
-        if (storage.Read(lambdaId, wanted) is not { } code)
+        VersionFacts facts;
+
+        try
+        {
+            if (storage.Read(lambdaId, wanted) is not { } files)
+            {
+                return Empty;
+            }
+
+            facts = Read(files);
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException)
         {
             return Empty;
         }
@@ -90,7 +102,7 @@ public sealed partial class VersionFactsCache(IStorageService storage)
             _facts.Clear();
         }
 
-        return _facts[(lambdaId, wanted)] = Read(LambdaSource.Parse(code));
+        return _facts[(lambdaId, wanted)] = facts;
     }
 
     public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0));
@@ -99,11 +111,12 @@ public sealed partial class VersionFactsCache(IStorageService storage)
 
     #region Helpers
 
-    private static VersionFacts Read(IReadOnlyList<LambdaFile> files)
+    private static VersionFacts Read(IReadOnlyList<VersionFile> files)
     {
         var code = files.Where(f => f.IsCode).ToList();
 
-        var compiled = code.Where(f => f.IsCompiled).ToList();
+        // the C# alone is read, once each
+        var compiled = LambdaSource.Compiled(files);
 
         var resources = files.Where(f => f.IsResource).ToList();
 
@@ -126,7 +139,7 @@ public sealed partial class VersionFactsCache(IStorageService storage)
     /// What the documentation of that version says the app is, and which of
     /// its pages there are.
     /// </summary>
-    private static DocumentationSummary Document(IReadOnlyList<LambdaFile> files)
+    private static DocumentationSummary Document(IReadOnlyList<VersionFile> files)
     {
         var product = ContextPages.Read(files, LambdaSource.ProductDoc);
 

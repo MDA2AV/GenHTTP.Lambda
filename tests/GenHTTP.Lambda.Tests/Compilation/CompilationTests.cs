@@ -17,13 +17,13 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             var service = Inline.Create()
                                 .Get(() => new { Answer = 42 });
 
             return Layout.Create()
                          .Add("answers", service);
-            """);
+            """));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -42,7 +42,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet(code));
 
         Assert.IsFalse(outcome.Success, how);
         Assert.IsTrue(outcome.Diagnostics.Any(d => (d.Message.Contains("await", StringComparison.OrdinalIgnoreCase) && d.Message.Contains("one thread per core", StringComparison.Ordinal)) || d.Message.Contains("WaitAsync", StringComparison.Ordinal)), $"{how}: refused for waiting, saying what to do instead");
@@ -53,7 +53,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             var gate = new SemaphoreSlim(1);
 
             return Inline.Create().Get(async () =>
@@ -72,7 +72,7 @@ public sealed class CompilationTests
             });
 
             record Outcome(int Result);
-            """);
+            """));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -82,10 +82,10 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             var greeting = "hello";
             return Content.From(Resource.FromString(greeting)
-            """);
+            """));
 
         Assert.IsFalse(outcome.Success);
         Assert.IsNotEmpty(outcome.Diagnostics);
@@ -102,7 +102,7 @@ public sealed class CompilationTests
 
         // what the snippet returns is only known once it ran, so this is caught
         // when the lambda is deployed rather than when its code is checked
-        await fixture.Meta.SaveAsync(lambda.PrivateKey, "return 42;");
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("return 42;"));
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -122,7 +122,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet(code));
 
         Assert.IsFalse(outcome.Success, $"a lambda must not reach for {because}");
         Assert.IsNotEmpty(outcome.Diagnostics);
@@ -137,7 +137,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet(code));
 
         Assert.IsFalse(outcome.Success, $"a banned type {how} is still that type");
     }
@@ -150,7 +150,7 @@ public sealed class CompilationTests
         // the guard reads what was written rather than what it means, and a
         // handler has every reason to ask a request for its path
         var outcome = await fixture.Deployments.ValidateAsync(
-            "return Inline.Create().Get((IRequest request) => new Seen(request.Header.Path.ToString()));\n\nrecord Seen(string Path);");
+            LambdaFixture.Snippet("return Inline.Create().Get((IRequest request) => new Seen(request.Header.Path.ToString()));\n\nrecord Seen(string Path);"));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -162,11 +162,11 @@ public sealed class CompilationTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        await fixture.Meta.SaveAsync(lambda.PrivateKey, """
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("""
             Workspace.WriteText("note.txt", "kept");
 
             return Content.From(Resource.FromString(Workspace.ReadText("note.txt")));
-            """);
+            """));
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -191,7 +191,7 @@ public sealed class CompilationTests
         // a store in a file of its own is the first thing an agent writes, and
         // Workspace used to exist only in the top-level code of lambda.cs - so
         // this failed to compile, and took a whole build down with it
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, """
                 new Note().Keep("from a type in lambda.cs");
 
@@ -210,7 +210,7 @@ public sealed class CompilationTests
                     public static string Read() => Workspace.ReadText("kept.txt");
                 }
                 """)
-        ]));
+        ]);
 
         using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
@@ -224,7 +224,7 @@ public sealed class CompilationTests
 
         // in another file Assets is the Files module's type of that name, which
         // has no ReadText - the message has to say what to write instead
-        var outcome = await fixture.Deployments.ValidateAsync(LambdaSource.Serialize([
+        var outcome = await fixture.Deployments.ValidateAsync(VersionFile.FromSent([
             new LambdaFile(LambdaSource.EntryName, "return Content.From(Resource.FromString(Shipped.Text()));"),
             new LambdaFile("Shipped.cs", """
                 public static class Shipped
@@ -248,7 +248,7 @@ public sealed class CompilationTests
 
         // a lambda written while they were called assets goes on working as
         // it did, and the new name works everywhere
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, """
                 var old = Assets.ReadText("notes.txt");
 
@@ -261,7 +261,7 @@ public sealed class CompilationTests
                 }
                 """),
             new LambdaFile("resources/notes.txt", "kept")
-        ]));
+        ]);
 
         using var response = await fixture.GetAsync("http://shipped.localhost/");
 
@@ -276,10 +276,10 @@ public sealed class CompilationTests
         var lambda = await fixture.CreateLambdaAsync("named");
 
         // written before the platform had the name, it means what it meant
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Inline.Create().Get(() => Resources.Greeting);"),
             new LambdaFile("Resources.cs", "public static class Resources { public const string Greeting = \"mine\"; }")
-        ]));
+        ]);
 
         using var response = await fixture.GetAsync("http://named.localhost/");
 
@@ -304,7 +304,7 @@ public sealed class CompilationTests
 
         foreach (var lambda in new[] { first, second })
         {
-            await fixture.Meta.SaveAsync(lambda.PrivateKey, Code);
+            await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet(Code));
 
             var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 

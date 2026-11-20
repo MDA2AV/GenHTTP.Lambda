@@ -63,6 +63,40 @@ public sealed class ArchiveTests
     }
 
     [TestMethod]
+    public async Task TextIsReadWithoutItsByteOrderMarkAndAnythingElseAsItIs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        byte[] mark = [0xEF, 0xBB, 0xBF];
+
+        byte[] picture = [0x89, 0x50, 0x4E, 0x47, 0x00, 0xEF, 0xBB, 0xBF];
+
+        var archive = Zip(("lambda.cs", [.. mark, .. Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"marked\"));")]),
+                          ("resources/page.html", [.. mark, .. mark, .. Encoding.UTF8.GetBytes("<p>twice</p>")]),
+                          ("resources/picture.png", [.. mark, .. picture]));
+
+        using var uploaded = await UploadAsync(fixture, lambda.PrivateKey, archive);
+
+        Assert.AreEqual(HttpStatusCode.Created, uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync());
+
+        var version = await uploaded.GetContentAsync<VersionResponse>();
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{version.Version}");
+
+        var files = (await read.GetContentAsync<VersionContentResponse>()).Files;
+
+        Assert.AreEqual("return Content.From(Resource.FromString(\"marked\"));", files.Single(f => f.Name == "lambda.cs").Code, "C# without its mark");
+        Assert.AreEqual("<p>twice</p>", files.Single(f => f.Name == "resources/page.html").Code, "text without every mark it begins with");
+
+        var kept = files.Single(f => f.Name == "resources/picture.png");
+
+        Assert.AreEqual("base64", kept.Encoding);
+        CollectionAssert.AreEqual((byte[])[.. mark, .. picture], kept.Bytes, "and what is no text as it came, whatever it begins with");
+    }
+
+    [TestMethod]
     public async Task AWrappingFolderAndHiddenFilesAreIgnored()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

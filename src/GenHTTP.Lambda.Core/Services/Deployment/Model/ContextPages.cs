@@ -24,9 +24,19 @@ public static partial class ContextPages
     }
 
     /// <summary>
+    /// The text of a page, if the version has it as text - read from where it is kept.
+    /// </summary>
+    public static string? Read(IReadOnlyList<VersionFile> files, string name)
+    {
+        var file = files.FirstOrDefault(f => f.Name == name);
+
+        return file == null || file.Binary ? null : file.ReadText();
+    }
+
+    /// <summary>
     /// Which of the pages every version is meant to have are not there.
     /// </summary>
-    public static IReadOnlyList<string> Missing(IReadOnlyList<LambdaFile> files)
+    public static IReadOnlyList<string> Missing(IReadOnlyList<VersionFile> files)
         => [.. LambdaSource.ExpectedPages.Where(page => string.IsNullOrWhiteSpace(Read(files, page)))];
 
     /// <summary>

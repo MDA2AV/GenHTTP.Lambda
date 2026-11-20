@@ -73,7 +73,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
             await domains.ReloadAsync();
         }
 
-        storage.Delete(lambda.Id);
+        await storage.DeleteAsync(lambda.Id);
 
         // what its owner counted of its visitors goes with it
         await analytics.ForgetAsync(lambda.Id);

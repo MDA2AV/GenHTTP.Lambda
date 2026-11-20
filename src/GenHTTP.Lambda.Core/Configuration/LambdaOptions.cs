@@ -608,7 +608,19 @@ public sealed record LambdaOptions
     /// </summary>
     public string AnalyticsFile => Path.Combine(DataDirectory, "analytics.db");
 
+    /// <summary>
+    /// Where the versions of the lambdas are kept, a folder each: a manifest
+    /// per version, and the content of their files once in the lambda's store.
+    /// </summary>
     public string CodeDirectory => Path.Combine(DataDirectory, "code");
+
+    /// <summary>
+    /// Where what is sent to become part of a lambda waits until it is kept -
+    /// an archive unpacked, a download being packed - on the volume of the
+    /// data rather than in memory, so it is moved into a store rather than
+    /// copied. Emptied as the platform starts.
+    /// </summary>
+    public string StagingDirectory => Path.Combine(DataDirectory, "staging");
 
     public string WorkspaceDirectory => Path.Combine(DataDirectory, "workspaces");
 

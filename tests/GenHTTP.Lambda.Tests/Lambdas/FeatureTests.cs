@@ -883,7 +883,7 @@ public sealed class FeatureTests
 
         var feature = await CreateAsync(fixture, lambda.PrivateKey, "Walls");
 
-        foreach (var path in (string[])["..%2Ffiles.json", "..%2Fpreview.json", "..%2F..%2F..%2Fsomething"])
+        foreach (var path in (string[])["..%2Ffiles.manifest.json", "..%2Fpreview.manifest.json", "..%2F..%2F..%2Fsomething"])
         {
             using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/workspace/{path}");
 

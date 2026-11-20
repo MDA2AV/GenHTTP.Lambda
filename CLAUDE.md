@@ -771,14 +771,16 @@ build machinery for compatibility that nobody needs.
   leaves (`DatabaseVault.RoomOf`).
 - **Lambdas saved before keep working, untouched on disk.** A version or a
   feature is read in the layout it was saved in and translated as it is read
-  (`LambdaSource.Parse`: an envelope `"version": 1` is the old layout, 2 is
-  today's) - assets at the top move below `resources/`, `.lambda/docs/`,
+  (`LambdaSource.Parse`: an envelope `"version": 1` is the old layout, 2 the
+  one after it) - assets at the top move below `resources/`, `.lambda/docs/`,
   `.lambda/tests/` and `.lambda/build/` to `docs/`, `tests/` and `build/`;
   C# that was in `.lambda/` was never compiled, so it keeps a `.txt` ending
   (`tests/Smoke.cs.txt`) rather than be compiled into a lambda online.
   Never rewrite stored versions for it. Their git history keeps its commits;
   the move is a commit of its own on top (see Git). A top-level `assets/` or
-  `.lambda/` is refused with a hint where it goes now.
+  `.lambda/` is refused with a hint where it goes now. Such a version is
+  moved into the store as the platform starts (see How versions are kept),
+  translated as it is read.
 - Names: a C# file's own name as C# names (dots allowed), its folders as the
   rest of the code; a resource as files that are served
   always were (an extension, no dot names, six folders deep); the rest of the
@@ -815,6 +817,66 @@ build machinery for compatibility that nobody needs.
 - This is said in the MCP instructions (a line), `platform_guide` (`code`,
   `resources`), the tool descriptions, a clone's `AGENTS.md`, the build
   agent's brief and the README - keep them the same.
+
+### How versions are kept
+
+**Asked for by the owner**, after a lambda with 68 MB of resources took the
+server to 3.5 GB on one push: a version was one string holding every file -
+text escaped, binaries in base64 - parsed and serialized whole by every
+service it passed through, and stored whole again for every version and
+twice for every feature.
+
+- **A version is a manifest over a store per lambda.** `v{n}.manifest.json`
+  names the files in their order - size, text or binary, and the SHA-256 of
+  what each holds - and the content is kept once per lambda below
+  `code/{lambda}/blobs/`, as its bytes, however many versions, features and
+  previews hold it (`ContentStore`). A feature's `files.manifest.json` and
+  `preview.manifest.json` are manifests over the same store, so starting a
+  feature, deploying its preview and merging it copy no content. Everything
+  goes by reference, the code included, not only the resources.
+- **Content is named by the store's own hash - decided by the owner**: git's
+  ids are git's concern, kept as data, "not a storage decision influencing
+  our architecture". A row of `blobs` per piece of content says its size, its
+  length as text and the ids git gives it - **SHA-1 and SHA-256 both, decided
+  by the owner**, since git's SHA-256 object format is coming - so a push does
+  not read a file the lambda keeps, and a commit is laid out without hashing.
+  A row is what is known of content; one lost is made again as it is next
+  kept. Moving to git's SHA-256 changes the git layer, not the store.
+- **Services hand on `VersionFile`s, never a string of the version.** Name,
+  size, text or binary, and where the content is: kept by the store, or as it
+  arrived (a request's string, a push's bytes, an archive's file in
+  `/data/staging`). Content is read by what needs it and nowhere else -
+  compiling and checking the C#, the facts and the scans the C# and the
+  documentation, deploying copies the resources out by the file system
+  (copied, never linked: the served folder is the lambda's to read), zips,
+  exports and git stream it. `LambdaFile` stays the doors' shape, whose JSON
+  answers read only the files they return. `ContentReads` counts what is
+  read, and the tests hold every path that needs no resource to reading none
+  (`StoreTests`); keep it that way when adding one.
+- **Kept before the turn, named in it.** A save keeps what the lambda does not
+  have yet before it takes the lambda's or the feature's turn, and in the turn
+  writes the manifest. The store's own turn is taken last and held for a
+  moment - moving content in, freshening it, writing a manifest - and for
+  collecting; it takes no other.
+- **What nothing names is collected, not counted.** Pruning a version or
+  deleting a feature removes its manifest; the maintenance removes content no
+  manifest names for the lambdas whose manifests changed, and for all once
+  after a start, leaving what was written or named in the last hour
+  (`ContentStore.Fresh`), which a save may be about to name.
+- **Versions from before are moved, not rewritten - decided by the owner**
+  ("just migrate all of them at the start"). As the platform starts, before
+  anything is served, `StoreMigration` reads each `v{n}.cs`, `files.json` and
+  `preview.json` of before once, keeps its files and writes the manifest
+  beside it. The file of before stays as it was: a version never changes, and
+  its room is taken twice until it is pruned. A feature's goes with its next
+  save, as it always went. One that cannot be moved is read whole, as before.
+- **The git store stays apart - decided by the owner.** Its commits' files are
+  copied from the store, not shared with it: a commit is served for as long as
+  it is reachable, which is longer than a version may be kept.
+- **Nothing changed at the doors**: the API, MCP, git, zips and the export
+  keep their shapes and layouts, and the commits git makes are the same. What
+  the doors still hold is theirs: a JSON save holds what it carries, and
+  GenHTTP.Modules.Git holds a push while it unpacks it.
 
 ### Documentation and tests
 
@@ -1189,7 +1251,8 @@ what the platform keeps (`Services/Git`); there is no repository on disk.
 - **A commit is made once and kept.** The platform makes the commits of
   versions and of features' saves when the repository is read, not when they
   are saved - saving stays as it was, and a lambda nobody clones costs
-  nothing - and keeps their bytes and their files below `/data/git/{lambda}`.
+  nothing - and keeps their bytes and their files below `/data/git/{lambda}`,
+  copied from the lambda's store by the ids its rows know.
   Never make one again from the version: a newer platform would make it
   differently, and every clone would see its history rewritten. Pushed
   commits are kept exactly as they came.
@@ -1562,7 +1625,8 @@ services. The rules that matter:
   services behind interfaces; every component talks to the interfaces. `Meta`
   is the only part that speaks to the database, and its public surface is
   hand-mapped DTOs. Code lives on the file system (`Storage`), never in the
-  database. The components over it, and the hosts that put them together, are
+  database - which knows of what a lambda's store keeps, a row each, and
+  nothing of what it holds. The components over it, and the hosts that put them together, are
   in Editions and components above.
 - **A service orchestrates, and the concerns it would mix are units of their
   own - decided in the architecture review.** A protocol, a count, a check:
@@ -1839,8 +1903,11 @@ thread taken from every other request. So:
   is asked on, however it is awaited - and reading a lambda's own database for
   the editor (slow by design: the statements are the lambda's). Not in many
   small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
-  buffer), and not in place. A version's file is read and written in place:
-  it is bounded by its tier's allowance, and saving one is rare. `Task.Run` is
+  buffer), and not in place. A manifest is read and written in place, and so
+  is the C# of a version and content a save keeps that comes to little;
+  content that is large - a request's resources, an archive, a push - is
+  hashed and written away from the reactor in one hop, and copying the
+  resources out to be served is part of the deployment's. `Task.Run` is
   refused, so every hop is marked in `Offload` and can be given a scheduler of
   its own there; work started in the background rather than awaited (the
   scheduler's jobs, seeding the demos, warming up the lambdas) is not a hop and suppresses RS0030
@@ -1879,7 +1946,8 @@ thread taken from every other request. So:
   `Console.Out` first (`LogBookProvider`); the other order deadlocked the
   server on startup.
 - What is read off a version is read once: a version never changes
-  (`VersionFactsCache`).
+  (`VersionFactsCache`) - and only its C# and its documentation are read for
+  it.
 
 ### Logging what was done
 

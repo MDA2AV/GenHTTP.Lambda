@@ -48,7 +48,7 @@ public sealed class ConnectivityTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet(code));
 
         Assert.IsFalse(outcome.Success, how);
 
@@ -66,7 +66,7 @@ public sealed class ConnectivityTests
 
         // an address family, a mail address, XML from a string, encoding for
         // a page - and names of the lambda's own - connect to nothing
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             using System.Net.Sockets;
 
             var mail = new System.Net.Mail.MailAddress("someone@example.com");
@@ -76,7 +76,7 @@ public sealed class ConnectivityTests
             return Inline.Create().Get((IRequest request) => new Ping(request.Client.Address?.AddressFamily == AddressFamily.InterNetworkV6, mail.Host, feed.Root!.Name.LocalName, safe));
 
             record Ping(bool Six, string Host, string Root, string Safe);
-            """);
+            """));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -86,7 +86,7 @@ public sealed class ConnectivityTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             using System.Net.Http;
             using System.Net.Sockets;
 
@@ -95,7 +95,7 @@ public sealed class ConnectivityTests
             var feed = System.Xml.Linq.XDocument.Load("https://example.com/feed.xml");
 
             return Content.From(Resource.FromString("networking is available"));
-            """, settings: new BuildSettings(Connectivity: true));
+            """), settings: new BuildSettings(Connectivity: true));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }

@@ -54,8 +54,8 @@ public sealed record FeatureInfo(
 /// <summary>
 /// A feature with the files it holds.
 /// </summary>
-/// <param name="Code">Every file, as the single blob a version is stored as</param>
-public sealed record FeatureContent(FeatureInfo Feature, string Code);
+/// <param name="Files">Every file, whose content is read by whoever needs it</param>
+public sealed record FeatureContent(FeatureInfo Feature, IReadOnlyList<VersionFile> Files);
 
 /// <summary>
 /// What a new feature is to be.

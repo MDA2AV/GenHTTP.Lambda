@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Meta.Model;
@@ -126,14 +127,18 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         var lambda = await meta.GetAsync(demo.Key, cancellation);
 
-        var current = await CurrentCodeAsync(demo.Key, lambda, cancellation);
+        var current = await CurrentFilesAsync(demo.Key, lambda, cancellation);
 
-        if (current == wanted && lambda?.ActiveVersion != null)
+        // told by what the files hold, not by how the version was written:
+        // one written before there was a store is the same demo all the same
+        var same = current != null && LambdaSource.Same(current, wanted);
+
+        if (same && lambda?.ActiveVersion != null)
         {
             return false;
         }
 
-        if (current != wanted)
+        if (!same)
         {
             var change = current == null ? "Set up as a demo" : "Brought up to date with its template";
 
@@ -330,9 +335,9 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     }
 
     /// <summary>
-    /// The code of the newest version, or null where there is none.
+    /// The files of the newest version, or null where there is none.
     /// </summary>
-    private async ValueTask<string?> CurrentCodeAsync(string key, LambdaInfo? lambda, CancellationToken cancellation)
+    private async ValueTask<IReadOnlyList<VersionFile>?> CurrentFilesAsync(string key, LambdaInfo? lambda, CancellationToken cancellation)
     {
         if (lambda?.LatestVersion is not { } version)
         {
@@ -341,7 +346,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         try
         {
-            return (await meta.GetVersionAsync(key, version, cancellation)).Code;
+            return (await meta.GetVersionAsync(key, version, cancellation)).Files;
         }
         catch (Exception)
         {

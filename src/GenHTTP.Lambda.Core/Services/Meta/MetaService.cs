@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
 /// The meta data side of a lambda: keys, versions and which of them is live.
-/// Code itself is handed to the storage service, building it to the deployment service.
+/// Files themselves are handed to the storage service, building them to the deployment service.
 /// </summary>
 /// <remarks>
 /// The face every door into a lambda talks to, and the part that decides what
@@ -392,10 +392,10 @@ public sealed class MetaService : IMetaService
                                        .FirstOrDefaultAsync(d => d.LambdaId == lambda.Id && d.Version == version, cancellation)
                       ?? throw LambdaException.NotFound($"Version {version} does not exist.");
 
-        var code = Storage.Read(lambda.Id, version)
-                ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
+        var files = Storage.Read(lambda.Id, version)
+                 ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin);
+        return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, deployment.Origin);
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
@@ -445,25 +445,47 @@ public sealed class MetaService : IMetaService
 
     #region Editing
 
-    public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null,
+    /// <remarks>
+    /// Kept before the lambda's turn is taken, and written once it is: what a
+    /// version holds that the lambda does not keep yet can be a hundred
+    /// megabytes, which a save of the same lambda would otherwise wait for
+    /// (see <see cref="_turns"/>). What would be refused is refused before
+    /// anything is kept, and checked again in the turn.
+    /// </remarks>
+    public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, VersionNote? note = null, int? after = null,
                                                         CancellationToken cancellation = default)
     {
-        var files = VersionInput.Validate(code);
-
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
-
-        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
-
-        using var turn = held;
+        VersionInput.Validate(files);
 
         note ??= new VersionNote(Origin: VersionOrigins.Api);
 
-        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), note.Origin);
+        long id;
+
+        await using (var database = await Databases.CreateDbContextAsync(cancellation))
+        {
+            var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
+
+            LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), note.Origin);
+
+            VersionInput.ValidateAllowance(files, lambda.Tier, Limits);
+
+            id = lambda.Id;
+        }
+
+        var kept = await Storage.KeepAsync(id, files, cancellation);
+
+        await using var context = await Databases.CreateDbContextAsync(cancellation);
+
+        var (locked, held) = await LockedAsync(context, privateKey, cancellation);
+
+        using var turn = held;
+
+        LambdaGuard.EnsureEditable(locked, Limits.PolicyOf(locked.Tier), note.Origin);
 
         if (after is { } expected)
         {
-            var newest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                       .MaxAsync(d => (int?)d.Version, cancellation);
+            var newest = await context.Deployments.Where(d => d.LambdaId == locked.Id)
+                                      .MaxAsync(d => (int?)d.Version, cancellation);
 
             if (newest != expected)
             {
@@ -471,19 +493,20 @@ public sealed class MetaService : IMetaService
             }
         }
 
-        VersionInput.ValidateAllowance(files, lambda.Tier, Limits);
+        // moved to another tier meanwhile, perhaps
+        VersionInput.ValidateAllowance(kept, locked.Tier, Limits);
 
         // written whoever cancels from here on (see LambdaHistory)
-        var version = await History.AppendAsync(database, lambda, code, DateTime.UtcNow, note);
+        var version = await History.AppendAsync(context, locked, kept, DateTime.UtcNow, note);
 
-        Logger.LogInformation("Saved lambda #{LambdaId} version {Version}", lambda.Id, version.Version);
+        Logger.LogInformation("Saved lambda #{LambdaId} version {Version}", locked.Id, version.Version);
 
         return version;
     }
 
-    public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default)
+    public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, IReadOnlyList<VersionFile> files, CancellationToken cancellation = default)
     {
-        var files = VersionInput.Validate(code);
+        VersionInput.Validate(files);
 
         long id;
 
@@ -498,7 +521,7 @@ public sealed class MetaService : IMetaService
             (id, settings) = (lambda.Id, await SettingsOfAsync(database, lambda, cancellation));
         }
 
-        return await Deployments.ValidateAsync(code, id, settings, cancellation);
+        return await Deployments.ValidateAsync(files, id, settings, cancellation);
     }
 
     /// <remarks>

@@ -397,10 +397,10 @@ public sealed class ControlCenterTests
 
         var lambda = await fixture.CreateLambdaAsync("summed");
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.App(\"site\"));"),
             new LambdaFile("resources/site/index.html", "<!doctype html><title>summed</title>")
-        ]));
+        ]);
 
         using (var _ = await fixture.GetAsync("http://summed.localhost/")) { }
 

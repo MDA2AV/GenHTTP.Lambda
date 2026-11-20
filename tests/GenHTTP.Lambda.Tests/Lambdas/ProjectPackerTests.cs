@@ -46,12 +46,17 @@ public sealed class ProjectPackerTests
         new("resources/site/dot.gif", "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64")
     ];
 
+    /// <summary>
+    /// The project of the files, as one of the doors would have sent them.
+    /// </summary>
+    private static byte[] Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files) => ProjectPacker.Pack(lambda, VersionFile.FromSent(files));
+
     #region Layout
 
     [TestMethod]
     public void TheProjectIsLaidOutTheDotNetWay()
     {
-        var names = Names(ProjectPacker.Pack(Lambda, Files));
+        var names = Names(Pack(Lambda, Files));
 
         foreach (var wanted in (string[])
                  ["my-lambda/my-lambda.csproj", "my-lambda/Program.cs", "my-lambda/Project.cs", "my-lambda/Shelf.cs",
@@ -69,7 +74,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void ItReferencesTheGenHttpTheServerRunsWithTheInternalEngine()
     {
-        var project = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/my-lambda.csproj");
+        var project = Read(Pack(Lambda, Files), "my-lambda/my-lambda.csproj");
 
         var version = typeof(IHandler).Assembly.GetName().Version!;
 
@@ -80,7 +85,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void ProgramHostsTheProjectAndSaysWhereItCameFrom()
     {
-        var program = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Program.cs");
+        var program = Read(Pack(Lambda, Files), "my-lambda/Program.cs");
 
         Assert.Contains(".Handler(Project.Create())", program);
         Assert.Contains(".Defaults()", program);
@@ -99,7 +104,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void TheContainerRunsWhatThePackageNeeds()
     {
-        var docker = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Dockerfile");
+        var docker = Read(Pack(Lambda, Files), "my-lambda/Dockerfile");
 
         // GenHTTP.Full needs nothing of ASP.NET Core since 11.1, so the plain
         // runtime image is enough - the aspnet one would only be larger
@@ -114,7 +119,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void TheSnippetIsTheBodyOfProjectAndItsTypesSitBesideIt()
     {
-        var project = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Project.cs");
+        var project = Read(Pack(Lambda, Files), "my-lambda/Project.cs");
 
         Assert.Contains("public static IHandler Create() => Platform.Handlers.From(Build());", project);
         Assert.Contains("        // the shelf everything is served from\n        var shelf = new Shelf();", project,
@@ -139,7 +144,7 @@ public sealed class ProjectPackerTests
                 """)
         ];
 
-        var zip = ProjectPacker.Pack(Lambda, files);
+        var zip = Pack(Lambda, files);
 
         Assert.Contains(".Handler(await Project.CreateAsync())", Read(zip, "my-lambda/Program.cs"));
         Assert.Contains("private static async Task<object> BuildAsync()", Read(zip, "my-lambda/Project.cs"));
@@ -153,7 +158,7 @@ public sealed class ProjectPackerTests
             new("lambda.cs", "var text = @\"one\n  two\";\n\nreturn Content.From(Resource.FromString(text));")
         ];
 
-        var project = Read(ProjectPacker.Pack(Lambda, files), "my-lambda/Project.cs");
+        var project = Read(Pack(Lambda, files), "my-lambda/Project.cs");
 
         Assert.Contains("        var text = @\"one\n  two\";", project);
     }
@@ -165,7 +170,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void AResourceKeepsItsBytes()
     {
-        using var zip = new ZipArchive(new MemoryStream(ProjectPacker.Pack(Lambda, Files)));
+        using var zip = new ZipArchive(new MemoryStream(Pack(Lambda, Files)));
 
         using var stream = zip.GetEntry("my-lambda/resources/site/dot.gif")!.Open();
         using var buffer = new MemoryStream();
@@ -180,7 +185,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void AKeyThatIsNotAnIdentifierStillNamesAProject()
     {
-        var names = Names(ProjectPacker.Pack(Lambda with { PublicKey = "9lives!" }, Files));
+        var names = Names(Pack(Lambda with { PublicKey = "9lives!" }, Files));
 
         Assert.IsTrue(names.Any(n => n.EndsWith(".csproj", StringComparison.Ordinal)));
         Assert.IsTrue(names.All(n => !n.Contains('!')));
@@ -189,7 +194,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void OtherFilesSeeWhatThePlatformImportedForThem()
     {
-        var usings = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Platform/Usings.cs");
+        var usings = Read(Pack(Lambda, Files), "my-lambda/Platform/Usings.cs");
 
         // Shelf.cs names JsonSerializerOptions without a using, as it could on the platform
         Assert.Contains("global using System.Text.Json;", usings);
@@ -210,7 +215,7 @@ public sealed class ProjectPackerTests
             new("frontend/package.json", "{}"),
         ];
 
-        var zip = ProjectPacker.Pack(Lambda, documented);
+        var zip = Pack(Lambda, documented);
 
         var names = Names(zip);
 
@@ -236,7 +241,7 @@ public sealed class ProjectPackerTests
     [TestMethod]
     public void AProjectWithoutDocumentationSaysNothingAboutIt()
     {
-        var zip = ProjectPacker.Pack(Lambda, Files);
+        var zip = Pack(Lambda, Files);
 
         Assert.DoesNotContain("docs/", Read(zip, "my-lambda/Program.cs"));
     }
@@ -246,10 +251,10 @@ public sealed class ProjectPackerTests
     {
         IReadOnlyList<LambdaFile> files = [new("lambda.cs", "return Assets.App(\"site\");")];
 
-        Assert.Contains("private static Platform.ResourceFolder Assets => Platform.LambdaEnvironment.Resources;", Read(ProjectPacker.Pack(Lambda, files), "my-lambda/Project.cs"),
+        Assert.Contains("private static Platform.ResourceFolder Assets => Platform.LambdaEnvironment.Resources;", Read(Pack(Lambda, files), "my-lambda/Project.cs"),
                         "what the resources were called before is what code written then says");
 
-        Assert.DoesNotContain("Assets =>", Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Project.cs"), "and only that code");
+        Assert.DoesNotContain("Assets =>", Read(Pack(Lambda, Files), "my-lambda/Project.cs"), "and only that code");
     }
 
     #endregion

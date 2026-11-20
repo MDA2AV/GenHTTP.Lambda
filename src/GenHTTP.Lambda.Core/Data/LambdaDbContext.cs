@@ -43,6 +43,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<DatabaseOptimizationEntity> DatabaseOptimizations => Set<DatabaseOptimizationEntity>();
 
+    public DbSet<BlobEntity> Blobs => Set<BlobEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -345,6 +347,24 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         optimizations.Property(o => o.Steps).HasColumnName("steps");
         optimizations.Property(o => o.Skipped).HasColumnName("skipped");
         optimizations.Property(o => o.Failure).HasColumnName("failure");
+
+        var blobs = builder.Entity<BlobEntity>();
+
+        blobs.ToTable("blobs");
+
+        blobs.HasKey(b => new { b.LambdaId, b.Hash });
+
+        blobs.Property(b => b.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        blobs.Property(b => b.Hash).HasColumnName("hash");
+        blobs.Property(b => b.Size).HasColumnName("size");
+        blobs.Property(b => b.Chars).HasColumnName("chars");
+        blobs.Property(b => b.GitSha1).HasColumnName("git_sha1");
+        blobs.Property(b => b.GitSha256).HasColumnName("git_sha256");
+
+        blobs.HasOne(b => b.Lambda)
+             .WithMany()
+             .HasForeignKey(b => b.LambdaId)
+             .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

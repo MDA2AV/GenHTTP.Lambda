@@ -1,24 +1,39 @@
+using GenHTTP.Lambda.Services.Deployment.Model;
+
 namespace GenHTTP.Lambda.Services.Storage;
 
 /// <summary>
-/// Persists the source code of the lambdas. Backed by the file system for now,
-/// a git repository would be a natural next step.
+/// Keeps the files of the lambdas: their versions, their features and what
+/// the previews of those were deployed with - on the file system, never in
+/// the database.
 /// </summary>
+/// <remarks>
+/// A version is a manifest naming what it holds, and what it holds is kept
+/// once per lambda however many versions hold it (see <see cref="ContentStore"/>),
+/// so a file is handed on as a <see cref="VersionFile"/> and read only by
+/// whoever needs it. Content is kept before the turn a change is written in -
+/// <see cref="KeepAsync"/> - so writing a version or a feature in its turn is
+/// writing its manifest.
+/// </remarks>
 public interface IStorageService
 {
 
-    /// <summary>
-    /// Stores the code of a newly created version.
-    /// </summary>
-    void Write(long lambdaId, int version, string code);
+    #region Versions
 
     /// <summary>
-    /// Reads the code of the given version, if it exists.
+    /// The files of a version, or nothing where it has none.
     /// </summary>
-    string? Read(long lambdaId, int version);
+    IReadOnlyList<VersionFile>? Read(long lambdaId, int version);
 
     /// <summary>
-    /// Removes a single version of a lambda.
+    /// Stores the files as a version: what of their content the lambda does
+    /// not keep yet is kept, and the version names it.
+    /// </summary>
+    ValueTask WriteAsync(long lambdaId, int version, IReadOnlyList<VersionFile> files);
+
+    /// <summary>
+    /// Removes a single version of a lambda. Its content stays as long as
+    /// another version, a feature or a preview holds it.
     /// </summary>
     void DeleteVersion(long lambdaId, int version);
 
@@ -27,7 +42,7 @@ public interface IStorageService
     /// features, what it serves and the commits it was read as with git. Its
     /// data is its integrations' to remove.
     /// </summary>
-    void Delete(long lambdaId);
+    ValueTask DeleteAsync(long lambdaId);
 
     /// <summary>
     /// The directory the assemblies generated for a lambda are written to.
@@ -47,6 +62,45 @@ public interface IStorageService
     /// <param name="featureId">The feature whose preview is meant, or nothing for the lambda itself</param>
     string GetResourceDirectory(long lambdaId, long? featureId = null);
 
+    #endregion
+
+    #region Content
+
+    /// <summary>
+    /// Keeps the content of the files that the lambda does not keep yet, and
+    /// says where each is kept now.
+    /// </summary>
+    /// <remarks>
+    /// Called before the turn a change is written in, so a large file is
+    /// written while nobody waits for the turn: what was kept and is not
+    /// named by a version or a feature soon after is collected.
+    /// </remarks>
+    ValueTask<IReadOnlyList<VersionFile>> KeepAsync(long lambdaId, IReadOnlyList<VersionFile> files, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// The files the lambda keeps whose git blob ids are among those given,
+    /// by their id - without a name, binary where they are not text.
+    /// </summary>
+    /// <remarks>
+    /// For a push, whose files the lambda keeps already are then not read.
+    /// </remarks>
+    ValueTask<IReadOnlyDictionary<string, VersionFile>> FindAsync(long lambdaId, IReadOnlyCollection<string> gitIds);
+
+    /// <summary>
+    /// The git blob id of each of the files, by the SHA-256 of what it holds,
+    /// for laying them out as a commit without reading them.
+    /// </summary>
+    ValueTask<IReadOnlyDictionary<string, string>> GitIdsAsync(long lambdaId, IReadOnlyList<VersionFile> files);
+
+    /// <summary>
+    /// Removes the content of the lambdas whose versions, features or
+    /// previews changed that nothing names any more.
+    /// </summary>
+    /// <returns>How many files were removed</returns>
+    ValueTask<int> CollectAsync(CancellationToken cancellation = default);
+
+    #endregion
+
     #region Features
 
     /// <summary>
@@ -56,24 +110,24 @@ public interface IStorageService
     /// Written whole or not at all: a feature is saved over again and again
     /// while it is worked on, and a save cut short must not leave half of one.
     /// </remarks>
-    void WriteFeature(long lambdaId, long featureId, string code);
+    ValueTask WriteFeatureAsync(long lambdaId, long featureId, IReadOnlyList<VersionFile> files);
 
     /// <summary>
     /// Reads the files of a feature, if it has any.
     /// </summary>
-    string? ReadFeature(long lambdaId, long featureId);
+    IReadOnlyList<VersionFile>? ReadFeature(long lambdaId, long featureId);
 
     /// <summary>
     /// Keeps what the preview of a feature was deployed with, so it serves that
     /// until it is deployed again - a restart included - however much the
     /// feature is changed in the meantime.
     /// </summary>
-    void WritePreview(long lambdaId, long featureId, string code);
+    ValueTask WritePreviewAsync(long lambdaId, long featureId, IReadOnlyList<VersionFile> files);
 
     /// <summary>
     /// Reads what the preview of a feature was deployed with, if it was.
     /// </summary>
-    string? ReadPreview(long lambdaId, long featureId);
+    IReadOnlyList<VersionFile>? ReadPreview(long lambdaId, long featureId);
 
     /// <summary>
     /// Removes everything stored for a feature: its files and what its

@@ -162,8 +162,8 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
 
     /// <summary>
     /// The secrets one version reads, remembered: a version never changes,
-    /// and the dashboard asks every few seconds - reading a version with a
-    /// hundred megabytes of assets each time to find two names would not do.
+    /// and the dashboard asks every few seconds - reading its C# each time to
+    /// find two names would not do.
     /// </summary>
     private IReadOnlyList<(string Name, bool Checked)> ReadsOf(long lambdaId, int version)
     {
@@ -182,8 +182,11 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
         return _reads[(lambdaId, version)] = found;
     }
 
-    private static IReadOnlyList<(string Name, bool Checked)> Reads(string? source)
-        => source == null ? [] : [.. LambdaSource.Parse(source).Where(f => f.IsCompiled).SelectMany(f => SecretVault.ReadBy(f.Code))];
+    /// <summary>
+    /// The secrets the C# of the files reads, which is all of them that is read.
+    /// </summary>
+    private static IReadOnlyList<(string Name, bool Checked)> Reads(IReadOnlyList<VersionFile>? files)
+        => files == null ? [] : [.. files.Where(f => f.IsCompiled).SelectMany(f => SecretVault.ReadBy(f.ReadText()))];
 
     #endregion
 

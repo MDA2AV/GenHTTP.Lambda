@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
@@ -25,6 +26,11 @@ namespace GenHTTP.Lambda.Api;
 ///
 /// Every way of storing one takes an optional specification and change: what
 /// the user wanted and what was done about it, which the code alone cannot say.
+///
+/// A version is read as far as an answer holds it: the files of a folder
+/// asked for and no others. An archive is packed into a file beside the
+/// stores and sent from there, and one that is sent is written there before
+/// it is unpacked, so neither is held in memory.
 /// </remarks>
 [Tag(ApiDocumentation.Versions)]
 [Summary("The saved versions of a lambda: its program, which never changes once it is saved.")]
@@ -41,7 +47,7 @@ namespace GenHTTP.Lambda.Api;
          feature can be tried at its own address first.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> logger)
+public sealed class VersionResource(IMetaService meta, LambdaOptions options, ILogger<VersionResource> logger)
 {
 
     [ResourceMethod("lambdas/:privateKey/versions")]
@@ -66,7 +72,7 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     [return: Summary("The version with its files")]
     public async ValueTask<VersionContentResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
                                       [Summary("Only the files whose name starts with this, such as `docs/` or `resources/`")] string? folder)
-        => Describe(await meta.GetVersionAsync(privateKey, version), folder);
+        => await DescribeAsync(await meta.GetVersionAsync(privateKey, version), folder);
 
     [ResourceMethod("lambdas/:privateKey/versions/:version/zip")]
     [Summary("Downloads a version as a zip archive")]
@@ -89,12 +95,12 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
 
         var content = await meta.GetVersionAsync(privateKey, version);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code), laid);
+        var zip = await LambdaArchive.PackAsync(content.Files, laid, options.StagingDirectory);
 
         logger.LogInformation("Downloaded lambda {Lambda} version {Version} layout {Layout}", lambda.PublicKey, version, laid);
 
         return request.Respond()
-                      .Content(zip, new ContentType("application/zip"))
+                      .Content(zip, new ContentType("application/zip"), (ulong)zip.Length)
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}-v{version}{(laid == ArchiveLayout.Project ? "-project" : string.Empty)}.zip\"")
                       .Build();
     }
@@ -131,9 +137,9 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
         // read depends on the tier - and a key that names nothing needs none
         var lambda = await meta.RequireAsync(privateKey);
 
-        var files = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, await meta.LatestFilesAsync(privateKey));
+        using var staged = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, await meta.LatestFilesAsync(privateKey), options.StagingDirectory);
 
-        return await SaveAsync(privateKey, files, deploy, specification, change);
+        return await SaveAsync(privateKey, staged.Files, deploy, specification, change);
     }
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/changes")]
@@ -173,7 +179,7 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<SavedVersionResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey,
                                                                 [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionRequest request)
-        => await SaveAsync(privateKey, request.Files, deploy, request.Specification, request.Change);
+        => await SaveAsync(privateKey, FilesOf(request.Files), deploy, request.Specification, request.Change);
 
     /// <summary>
     /// Stores the files as a new version and deploys it if asked to.
@@ -182,16 +188,16 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     /// Answers with 201 either way, because the version was stored; whether
     /// it went online is in the deployment it carries.
     /// </remarks>
-    private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<LambdaFile>? files, bool? deploy,
+    private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, bool? deploy,
                                                                      string? specification, string? change)
     {
         var note = new VersionNote(specification, change, VersionOrigins.Api);
 
-        var version = await meta.SaveAsync(privateKey, Serialize(files), note);
+        var version = await meta.SaveAsync(privateKey, files, note);
 
         var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
-        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", publicKey, version.Version, files!.Count);
+        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", publicKey, version.Version, files.Count);
 
         DeploymentOutcomeResponse? deployment = null;
 
@@ -220,35 +226,61 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     };
 
     /// <summary>
-    /// The files of an uploaded archive in the given layout.
+    /// The files of an uploaded archive in the given layout, waiting beside
+    /// the stores until the lambda keeps them - disposed of once the request
+    /// is answered.
     /// </summary>
     /// <param name="basis">The files it was made from: what it already has is kept whatever a .gitignore says, and a project's names are read against them</param>
-    internal static ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream body, long maxBytes, ArchiveLayout layout, IReadOnlyList<LambdaFile> basis)
-        => layout == ArchiveLayout.Project ? LambdaArchive.UnpackProjectAsync(body, maxBytes, basis) : LambdaArchive.UnpackAsync(body, maxBytes, basis);
+    internal static ValueTask<StagedFiles> UnpackAsync(Stream body, long maxBytes, ArchiveLayout layout, IReadOnlyList<VersionFile> basis, string staging)
+        => layout == ArchiveLayout.Project
+            ? LambdaArchive.UnpackProjectAsync(body, maxBytes, basis, staging)
+            : LambdaArchive.UnpackAsync(body, maxBytes, basis, staging);
 
     internal static VersionResponse Describe(LambdaVersionInfo version)
         => new(version.Version, version.Created, version.Specification, version.Change, version.Origin);
 
-    internal static VersionContentResponse Describe(LambdaVersionContent content, string? folder = null)
-        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, Below(LambdaSource.Parse(content.Code), folder));
+    /// <summary>
+    /// A version with the files of a folder, or all of them when none is
+    /// named - read away from the reactor, being as large as a version.
+    /// </summary>
+    internal static async ValueTask<VersionContentResponse> DescribeAsync(LambdaVersionContent content, string? folder = null)
+        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, await SentAsync(Below(content.Files, folder)));
 
     /// <summary>
-    /// The files below a folder, or all of them when none is named.
+    /// The files below a folder, or all of them when none is named - before
+    /// any of them is read.
     /// </summary>
-    internal static IReadOnlyList<LambdaFile> Below(IReadOnlyList<LambdaFile> files, string? folder)
+    internal static IReadOnlyList<VersionFile> Below(IReadOnlyList<VersionFile> files, string? folder)
         => string.IsNullOrEmpty(folder) ? files : [.. files.Where(f => f.Name.StartsWith(folder, StringComparison.Ordinal))];
 
     /// <summary>
-    /// Turns what was submitted into the single blob a version is stored as.
+    /// The files as the API sends them, read from where they are kept - away
+    /// from the reactor where they come to much, and in place where they are
+    /// a few pages of documentation.
     /// </summary>
-    internal static string Serialize(IReadOnlyList<LambdaFile>? files)
+    internal static async ValueTask<IReadOnlyList<LambdaFile>> SentAsync(IReadOnlyList<VersionFile> files)
+    {
+        IReadOnlyList<LambdaFile> Read() => [.. files.Select(f => f.ToSent())];
+
+        return LambdaSource.Size(files) <= InPlace ? Read() : await Offload.Run(Read);
+    }
+
+    /// <summary>
+    /// How much of a version is read in place rather than away from the reactor.
+    /// </summary>
+    private const long InPlace = 256 * 1024;
+
+    /// <summary>
+    /// What was submitted, checked and taken as the files of a version.
+    /// </summary>
+    internal static IReadOnlyList<VersionFile> FilesOf(IReadOnlyList<LambdaFile>? files)
     {
         if (LambdaSource.Validate(files) is { } complaint)
         {
             throw LambdaException.Invalid(complaint);
         }
 
-        return LambdaSource.Serialize(files!);
+        return VersionFile.FromSent(files!);
     }
 
 }

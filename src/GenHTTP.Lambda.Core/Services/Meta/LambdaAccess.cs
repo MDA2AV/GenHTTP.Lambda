@@ -41,9 +41,10 @@ public static class LambdaAccess
     /// </summary>
     /// <remarks>
     /// What a change is applied to, through either door: the API's and the
-    /// MCP tools' edits both start from here.
+    /// MCP tools' edits both start from here. Nothing of them is read until a
+    /// change reads the file it edits.
     /// </remarks>
-    public static async ValueTask<IReadOnlyList<LambdaFile>> LatestFilesAsync(this IMetaService meta, string privateKey, CancellationToken cancellation = default)
+    public static async ValueTask<IReadOnlyList<VersionFile>> LatestFilesAsync(this IMetaService meta, string privateKey, CancellationToken cancellation = default)
     {
         var lambda = await meta.RequireAsync(privateKey, cancellation);
 
@@ -52,7 +53,7 @@ public static class LambdaAccess
             return [];
         }
 
-        return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, latest, cancellation)).Code);
+        return (await meta.GetVersionAsync(privateKey, latest, cancellation)).Files;
     }
 
 }

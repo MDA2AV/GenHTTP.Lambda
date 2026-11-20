@@ -3,6 +3,7 @@ using System.Text;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Storage;
 
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
@@ -39,6 +40,11 @@ public enum ArchiveLayout
 /// layout, with the lambda's files only: the platform's - the host, the
 /// project file, what stands in for the platform - are the clone's to have,
 /// and left out going both ways.
+///
+/// Neither way holds an archive in memory: one is packed from where its
+/// files are kept into a file beside the stores, and one sent is written to
+/// such a file as it arrives and unpacked from there, each of its files into
+/// a file of its own, which the store of the lambda moves in as it keeps it.
 /// </remarks>
 public static class LambdaArchive
 {
@@ -49,40 +55,81 @@ public static class LambdaArchive
     #region Packing
 
     /// <summary>
-    /// Packs the given files into a zip archive.
+    /// Packs the given files into a zip archive in memory - for an archive
+    /// known to be small.
     /// </summary>
-    public static byte[] Pack(IReadOnlyList<LambdaFile> files, ArchiveLayout layout = ArchiveLayout.Lambda)
+    public static byte[] Pack(IReadOnlyList<VersionFile> files, ArchiveLayout layout = ArchiveLayout.Lambda)
     {
         using var buffer = new MemoryStream();
 
-        using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, true))
-        {
-            foreach (var file in files)
-            {
-                var (name, content) = layout == ArchiveLayout.Lambda ? (file.Name, file.Bytes) : InProject(file);
-
-                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
-
-                // fixed, so the same version always packs to the same bytes
-                entry.LastWriteTime = Timestamp;
-
-                using var target = entry.Open();
-
-                target.Write(content);
-            }
-        }
+        Pack(files, layout, buffer);
 
         return buffer.ToArray();
     }
 
     /// <summary>
-    /// A file of the lambda where a clone has it: the snippet in the class
-    /// it is the body of, the rest where <see cref="ProjectPaths"/> puts it.
+    /// Packs the given files into a file beside the stores, away from the
+    /// reactor, and opens it to be sent - removed once it is closed.
     /// </summary>
-    private static (string Path, byte[] Content) InProject(LambdaFile file)
-        => file.Name == LambdaSource.EntryName
-            ? (ProjectPaths.Snippet, Encoding.UTF8.GetBytes(ProjectSnippet.ForRepository(file.Code)))
-            : (ProjectPaths.Of(file.Name), file.Bytes);
+    /// <param name="staging">Where the archive is written to</param>
+    public static async ValueTask<Stream> PackAsync(IReadOnlyList<VersionFile> files, ArchiveLayout layout, string staging)
+    {
+        Directory.CreateDirectory(staging);
+
+        var target = Path.Combine(staging, $"{Guid.NewGuid():n}.zip");
+
+        try
+        {
+            await Offload.Run(() =>
+            {
+                using var stream = File.Create(target);
+
+                Pack(files, layout, stream);
+            });
+
+            return new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 81920, FileOptions.DeleteOnClose);
+        }
+        catch
+        {
+            File.Delete(target);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Packs the given files into a zip archive written to the stream, one
+    /// file after another as they are read.
+    /// </summary>
+    public static void Pack(IReadOnlyList<VersionFile> files, ArchiveLayout layout, Stream target)
+    {
+        using var zip = new ZipArchive(target, ZipArchiveMode.Create, true);
+
+        foreach (var file in files)
+        {
+            var snippet = layout == ArchiveLayout.Project && file.Name == LambdaSource.EntryName;
+
+            var name = layout == ArchiveLayout.Lambda ? file.Name : snippet ? ProjectPaths.Snippet : ProjectPaths.Of(file.Name);
+
+            var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
+
+            // fixed, so the same version always packs to the same bytes
+            entry.LastWriteTime = Timestamp;
+
+            using var content = entry.Open();
+
+            if (snippet)
+            {
+                // a clone has the snippet in the class it is the body of
+                content.Write(Encoding.UTF8.GetBytes(ProjectSnippet.ForRepository(file.ReadText())));
+            }
+            else
+            {
+                using var source = file.OpenRead();
+
+                source.CopyTo(content);
+            }
+        }
+    }
 
     #endregion
 
@@ -111,18 +158,31 @@ public static class LambdaArchive
     /// <param name="content">The archive</param>
     /// <param name="maxBytes">How many uncompressed bytes the archive may hold in total</param>
     /// <param name="basis">The files the archive was made from: the newest version's, or the feature's</param>
-    public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream content, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    /// <param name="staging">Where the archive and its files wait until the lambda keeps them</param>
+    public static async ValueTask<StagedFiles> UnpackAsync(Stream content, long maxBytes, IReadOnlyList<VersionFile> basis, string staging)
     {
-        using var body = await BufferAsync(content, maxBytes);
+        var staged = StagedFiles.In(staging);
 
-        return await Offload.Run(() => UnpackAsync(body, maxBytes, basis));
+        try
+        {
+            await using var body = await BufferAsync(content, maxBytes, staged.Folder);
+
+            staged.Files = await Offload.Run(() => FilesOfAsync(body, maxBytes, basis, staged.Folder));
+
+            return staged;
+        }
+        catch
+        {
+            staged.Dispose();
+            throw;
+        }
     }
 
-    private static async Task<IReadOnlyList<LambdaFile>> UnpackAsync(MemoryStream body, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    private static async Task<IReadOnlyList<VersionFile>> FilesOfAsync(Stream body, long maxBytes, IReadOnlyList<VersionFile> basis, string folder)
     {
-        var read = await ReadAsync(body, maxBytes, Lambda, basis.Select(f => f.Name));
+        var read = await ReadAsync(body, maxBytes, Lambda, basis.Select(f => f.Name), folder);
 
-        return Ordered(read.Select(r => ToFile(r.Path, r.Bytes)).ToList(), []);
+        return Ordered(read.Select(r => ToFile(r.Path, r.File)).ToList(), []);
     }
 
     /// <summary>
@@ -143,25 +203,38 @@ public static class LambdaArchive
     /// git keeps a file it tracks.
     /// </remarks>
     /// <param name="basis">The files the archive was made from: the newest version's, or the feature's</param>
-    public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackProjectAsync(Stream content, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    /// <param name="staging">Where the archive and its files wait until the lambda keeps them</param>
+    public static async ValueTask<StagedFiles> UnpackProjectAsync(Stream content, long maxBytes, IReadOnlyList<VersionFile> basis, string staging)
     {
-        using var body = await BufferAsync(content, maxBytes);
+        var staged = StagedFiles.In(staging);
 
-        // a snippet taken out of its class is parsed, so all of it is work
-        return await Offload.Run(() => UnpackProjectAsync(body, maxBytes, basis));
+        try
+        {
+            await using var body = await BufferAsync(content, maxBytes, staged.Folder);
+
+            // a snippet taken out of its class is parsed, so all of it is work
+            staged.Files = await Offload.Run(() => ProjectFilesOfAsync(body, maxBytes, basis, staged.Folder));
+
+            return staged;
+        }
+        catch
+        {
+            staged.Dispose();
+            throw;
+        }
     }
 
-    private static async Task<IReadOnlyList<LambdaFile>> UnpackProjectAsync(MemoryStream body, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    private static async Task<IReadOnlyList<VersionFile>> ProjectFilesOfAsync(Stream body, long maxBytes, IReadOnlyList<VersionFile> basis, string folder)
     {
         var names = basis.ToDictionary(f => ProjectPaths.Of(f.Name), f => f.Name, StringComparer.Ordinal);
 
-        var read = await ReadAsync(body, maxBytes, Project, names.Keys);
+        var read = await ReadAsync(body, maxBytes, Project, names.Keys, folder);
 
-        var files = new List<LambdaFile>(read.Count);
+        var files = new List<VersionFile>(read.Count);
 
         string? project = null;
 
-        foreach (var (path, bytes) in read)
+        foreach (var (path, file) in read)
         {
             var kind = ProjectPaths.Classify(path);
 
@@ -172,11 +245,11 @@ public static class LambdaArchive
 
             if (kind.Name == LambdaSource.EntryName)
             {
-                project = TryText(bytes, out var text) ? text : throw LambdaException.Invalid($"{ProjectPaths.Snippet} is not UTF-8 text.");
+                project = TryText(File.ReadAllBytes(file), out var text) ? text : throw LambdaException.Invalid($"{ProjectPaths.Snippet} is not UTF-8 text.");
                 continue;
             }
 
-            files.Add(ToFile(names.GetValueOrDefault(path, kind.Name!), bytes));
+            files.Add(ToFile(names.GetValueOrDefault(path, kind.Name!), file));
         }
 
         if (project == null)
@@ -184,7 +257,7 @@ public static class LambdaArchive
             throw LambdaException.Invalid($"The archive has no {ProjectPaths.Snippet}, which holds the code of the lambda.");
         }
 
-        files.Insert(0, new LambdaFile(LambdaSource.EntryName, Snippet(project, basis)));
+        files.Insert(0, VersionFile.FromText(LambdaSource.EntryName, Snippet(project, basis)));
 
         return Ordered(files, basis);
     }
@@ -193,12 +266,16 @@ public static class LambdaArchive
     /// The snippet a Project.cs holds: the one of the files it was made from,
     /// where it is what that one becomes, and taken out of the class otherwise.
     /// </summary>
-    private static string Snippet(string project, IReadOnlyList<LambdaFile> basis)
+    private static string Snippet(string project, IReadOnlyList<VersionFile> basis)
     {
-        if (basis.FirstOrDefault(f => f.Name == LambdaSource.EntryName) is { } before
-            && ProjectSnippet.ForRepository(before.Code).ReplaceLineEndings("\n") == project.ReplaceLineEndings("\n"))
+        if (basis.FirstOrDefault(f => f.Name == LambdaSource.EntryName) is { Binary: false } before)
         {
-            return before.Code;
+            var snippet = before.ReadText();
+
+            if (ProjectSnippet.ForRepository(snippet).ReplaceLineEndings("\n") == project.ReplaceLineEndings("\n"))
+            {
+                return snippet;
+            }
         }
 
         var unwrapped = ProjectSnippet.Unwrap(project);
@@ -210,7 +287,7 @@ public static class LambdaArchive
     /// The snippet first, then the files in the order the lambda they came
     /// from had them, then the new ones by kind and name.
     /// </summary>
-    private static List<LambdaFile> Ordered(List<LambdaFile> files, IReadOnlyList<LambdaFile> basis)
+    private static List<VersionFile> Ordered(List<VersionFile> files, IReadOnlyList<VersionFile> basis)
     {
         var known = basis.Select((f, i) => (f.Name, i)).ToDictionary(x => x.Name, x => x.i, StringComparer.Ordinal);
 
@@ -240,39 +317,48 @@ public static class LambdaArchive
     #region Reading
 
     /// <summary>
-    /// The body of the request, which reading needs to be able to seek in.
+    /// The body of the request, which reading needs to be able to seek in -
+    /// written to a file beside the stores rather than held.
     /// </summary>
     /// <remarks>
     /// Read where the request is, and only then is the rest - unpacking, and
     /// holding every path against the .gitignore files - taken away from the
     /// reactor in one hop.
     /// </remarks>
-    private static async ValueTask<MemoryStream> BufferAsync(Stream content, long maxBytes)
+    private static async ValueTask<Stream> BufferAsync(Stream content, long maxBytes, string folder)
     {
-        // copying the body ourselves keeps what is buffered bounded
-        var body = new MemoryStream();
+        var body = new FileStream(Path.Combine(folder, "archive.zip"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 81920,
+                                  FileOptions.DeleteOnClose | FileOptions.Asynchronous);
 
-        // what a build installed is the likeliest reason, and leaving it out
-        // here would mean taking it in first
-        await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be. It is counted as it is sent, before any .gitignore leaves something out, so zip what a commit would hold - never what a build installed, node_modules for example.");
+        try
+        {
+            // what a build installed is the likeliest reason, and leaving it out
+            // here would mean taking it in first
+            await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be. It is counted as it is sent, before any .gitignore leaves something out, so zip what a commit would hold - never what a build installed, node_modules for example.");
 
-        body.Position = 0;
+            body.Position = 0;
 
-        return body;
+            return body;
+        }
+        catch
+        {
+            await body.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
     /// The files of an archive that are kept in the given layout, by their
-    /// paths in it.
+    /// paths in it, each written into a file of its own in the folder.
     /// </summary>
     /// <param name="tracked">Paths kept whatever a .gitignore says, as they are in the lambda already</param>
-    private static async ValueTask<List<(string Path, byte[] Bytes)>> ReadAsync(MemoryStream body, long maxBytes, Layout layout, IEnumerable<string> tracked)
+    private static async ValueTask<List<(string Path, string File)>> ReadAsync(Stream body, long maxBytes, Layout layout, IEnumerable<string> tracked, string folder)
     {
         ZipArchive zip;
 
         try
         {
-            zip = await ZipArchive.CreateAsync(body, ZipArchiveMode.Read, false, null);
+            zip = await ZipArchive.CreateAsync(body, ZipArchiveMode.Read, true, null);
         }
         catch (InvalidDataException)
         {
@@ -311,7 +397,7 @@ public static class LambdaArchive
             }
         }
 
-        var result = new List<(string Path, byte[] Bytes)>(kept.Count);
+        var result = new List<(string Path, string File)>(kept.Count);
 
         long total = 0;
 
@@ -320,7 +406,7 @@ public static class LambdaArchive
         // a folder they leave out is never read, as git never reads it. The
         // one at the top is the platform's, in a clone: what it says is what
         // applies there, in either layout
-        var rules = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        var rules = new Dictionary<string, string>(StringComparer.Ordinal);
 
         var ignored = IgnoredPaths.None.With(".gitignore", ProjectPacker.RepositoryIgnored);
 
@@ -336,13 +422,13 @@ public static class LambdaArchive
                 continue;
             }
 
-            var bytes = await ReadAsync(entry, maxBytes - total);
+            var file = await StageAsync(entry, maxBytes - total, folder);
 
-            total += bytes.Length;
+            total += new FileInfo(file).Length;
 
-            rules[name] = bytes;
+            rules[name] = file;
 
-            ignored = ignored.With(name, Encoding.UTF8.GetString(bytes));
+            ignored = ignored.With(name, Encoding.UTF8.GetString(File.ReadAllBytes(file)));
         }
 
         foreach (var (name, entry) in kept)
@@ -352,32 +438,83 @@ public static class LambdaArchive
                 continue;
             }
 
-            if (!rules.TryGetValue(name, out var bytes))
+            if (!rules.TryGetValue(name, out var file))
             {
-                bytes = await ReadAsync(entry, maxBytes - total);
+                file = await StageAsync(entry, maxBytes - total, folder);
 
-                total += bytes.Length;
+                total += new FileInfo(file).Length;
             }
 
-            result.Add((name, bytes));
+            result.Add((name, file));
         }
 
         return result;
     }
 
-    private static LambdaFile ToFile(string name, byte[] bytes)
+    /// <summary>
+    /// A file of the lambda from a file of the archive: text where it is
+    /// UTF-8, without the byte order marks it begins with, and binary
+    /// otherwise - which C# may not be.
+    /// </summary>
+    private static VersionFile ToFile(string name, string file)
     {
-        if (TryText(bytes, out var text))
+        var facts = ContentFacts.Of(file);
+
+        if (facts.Chars == null)
         {
-            return new LambdaFile(name, text);
+            if (LambdaSource.IsCompiled(name))
+            {
+                throw LambdaException.Invalid($"'{name}' is not UTF-8 text.");
+            }
+
+            return Staged(name, file, facts, true);
         }
 
-        if (LambdaSource.IsCompiled(name))
+        var marks = Marks(file);
+
+        if (marks > 0)
         {
-            throw LambdaException.Invalid($"'{name}' is not UTF-8 text.");
+            // the text without them, which is what it is read as
+            var trimmed = file + ".text";
+
+            using (var source = File.OpenRead(file))
+            using (var target = File.Create(trimmed))
+            {
+                source.Position = marks;
+                source.CopyTo(target);
+            }
+
+            File.Delete(file);
+
+            file = trimmed;
+
+            facts = ContentFacts.Of(file);
         }
 
-        return new LambdaFile(name, Convert.ToBase64String(bytes), "base64");
+        return Staged(name, file, facts, false);
+    }
+
+    private static VersionFile Staged(string name, string file, ContentFacts facts, bool binary)
+        => VersionFile.Stored(name, facts.Size, binary, facts.Chars, new StoredContent(file, facts.Hash, null, true, facts));
+
+    /// <summary>
+    /// How many bytes of byte order marks a file of text begins with - any
+    /// number of them, as the characters they stand for were trimmed off it.
+    /// </summary>
+    private static int Marks(string file)
+    {
+        using var source = File.OpenRead(file);
+
+        var mark = new byte[3];
+
+        var marks = 0;
+
+        while (source.ReadAtLeast(mark, 3, throwOnEndOfStream: false) == 3 && mark is [0xEF, 0xBB, 0xBF])
+        {
+            marks += 3;
+        }
+
+        return marks;
     }
 
     private static bool TryText(byte[] bytes, out string text)
@@ -397,21 +534,26 @@ public static class LambdaArchive
             return false;
         }
 
-        text = text.TrimStart('﻿');
+        text = text.TrimStart('\uFEFF');
         return true;
     }
 
-    private static async ValueTask<byte[]> ReadAsync(ZipArchiveEntry entry, long remaining)
+    /// <summary>
+    /// Writes a file of the archive into a file of its own in the folder.
+    /// </summary>
+    private static async ValueTask<string> StageAsync(ZipArchiveEntry entry, long remaining, string folder)
     {
+        var file = Path.Combine(folder, Guid.NewGuid().ToString("n"));
+
         // the sizes in the archive are whatever the sender claims, so the
         // limit is enforced on what is actually read
         await using var source = await entry.OpenAsync();
 
-        using var target = new MemoryStream();
+        await using var target = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous);
 
         await CopyAsync(source, target, remaining, "The archive is larger than a lambda may be once unpacked.");
 
-        return target.ToArray();
+        return file;
     }
 
     private static async ValueTask CopyAsync(Stream source, Stream target, long limit, string complaint)
@@ -482,5 +624,54 @@ public static class LambdaArchive
     }
 
     #endregion
+
+}
+
+/// <summary>
+/// The files of an archive that was sent, each waiting in a file of its own
+/// beside the stores until the lambda keeps it - which moves it in.
+/// </summary>
+/// <remarks>
+/// Disposed of once the request is answered: what was kept was moved, and
+/// what is left - an archive that was refused, a file the lambda had - goes.
+/// </remarks>
+public sealed class StagedFiles : IDisposable
+{
+
+    private StagedFiles(string folder)
+    {
+        Folder = folder;
+    }
+
+    /// <summary>
+    /// The folder they wait in, one per archive.
+    /// </summary>
+    public string Folder { get; }
+
+    /// <summary>
+    /// The files, in the order of a lambda.
+    /// </summary>
+    public IReadOnlyList<VersionFile> Files { get; internal set; } = [];
+
+    internal static StagedFiles In(string staging)
+    {
+        var folder = Path.Combine(staging, Guid.NewGuid().ToString("n"));
+
+        Directory.CreateDirectory(folder);
+
+        return new StagedFiles(folder);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(Folder, true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // still open somewhere: the next start empties the staging
+        }
+    }
 
 }

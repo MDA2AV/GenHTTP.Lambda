@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -23,7 +24,7 @@ public sealed class MetaServiceTests
 
         var seeded = await fixture.Meta.GetVersionAsync(lambda.PrivateKey, 1);
 
-        Assert.Contains(lambda.PublicKey, seeded.Code, "the example mentions the URL of the lambda");
+        Assert.Contains(lambda.PublicKey, seeded.Files.Single(f => f.Name == LambdaSource.EntryName).ReadText(), "the example mentions the URL of the lambda");
     }
 
     [TestMethod]
@@ -50,7 +51,7 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        var saved = await fixture.Meta.SaveAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"second\"));");
+        var saved = await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("return Content.From(Resource.FromString(\"second\"));"));
 
         Assert.AreEqual(2, saved.Version);
 
@@ -61,7 +62,7 @@ public sealed class MetaServiceTests
 
         var content = await fixture.Meta.GetVersionAsync(lambda.PrivateKey, 2);
 
-        Assert.Contains("second", content.Code);
+        Assert.Contains("second", content.Files.Single().ReadText());
     }
 
     [TestMethod]
@@ -71,7 +72,7 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        var error = await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.Meta.SaveAsync(lambda.PrivateKey, "   "));
+        var error = await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("   ")));
 
         Assert.AreEqual(LambdaError.Invalid, error.Error);
     }
@@ -108,7 +109,7 @@ public sealed class MetaServiceTests
 
         var lambda = await fixture.Meta.CreateAsync(null);
 
-        await fixture.Meta.SaveAsync(lambda.PrivateKey, "return this is not csharp;");
+        await fixture.Meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("return this is not csharp;"));
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 

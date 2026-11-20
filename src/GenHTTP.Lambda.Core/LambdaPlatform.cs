@@ -128,6 +128,14 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         await Services.GetRequiredService<AddressBlocks>().ReloadAsync();
 
+        // what was on its way into a store when the server stopped goes, before
+        // anything could be on its way again
+        Services.GetRequiredService<IStorageService>();
+
+        // the versions and features kept before there were stores, into them:
+        // once, and before anything is served, so nothing reads them whole
+        await Services.GetRequiredService<StoreMigration>().RunAsync(cancellation);
+
         // the pictures out of the records they were kept in before - read
         // from there meanwhile where that fails, and tried again next time
         try
@@ -232,6 +240,9 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IDatabaseVault>(provider => provider.GetRequiredService<DatabaseVault>());
         services.AddSingleton<WorkspaceVault>();
         services.AddSingleton<IWorkspaceVault>(provider => provider.GetRequiredService<WorkspaceVault>());
+        services.AddSingleton<ContentReads>();
+        services.AddSingleton<ContentStore>();
+        services.AddSingleton<StoreMigration>();
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<EditorAddresses>();

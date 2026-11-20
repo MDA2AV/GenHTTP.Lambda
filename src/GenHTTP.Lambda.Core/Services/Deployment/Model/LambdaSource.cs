@@ -54,12 +54,6 @@ public sealed record LambdaFile(
 /// The source of a lambda: its code and its resources.
 /// </summary>
 /// <remarks>
-/// A lambda is stored as one blob of text and always was, so the several files
-/// are kept in that one blob as a small envelope rather than in a new column
-/// and a new directory layout. Anything written before there was more than one
-/// file is not an envelope, is read as a single entry file, and never has to
-/// be migrated.
-///
 /// A version holds two things. Its code is every file that is not a
 /// resource, in whatever folders it is in: the snippet in <c>lambda.cs</c>,
 /// the other <c>.cs</c> files - all of them compiled, in whichever folder,
@@ -75,11 +69,15 @@ public sealed record LambdaFile(
 /// agents are asked to keep them; the platform keeps them as it keeps every
 /// file of the code.
 ///
-/// The envelope says which layout it holds. The first one (version 1) kept
-/// the files to serve at the root and what was not the program below
-/// <c>.lambda/</c> - its documentation, its tests and its build folder. It is
-/// read in the layout of today, as it is read: nothing written in it is ever
-/// rewritten, so nothing can be half moved.
+/// A version is kept as a manifest over the store of its lambda (see
+/// <see cref="Storage.ContentStore"/>). Before there was a store, it was one
+/// blob of text holding every file: the file itself where there was only
+/// <c>lambda.cs</c>, an envelope otherwise. <see cref="Parse"/> reads that
+/// blob, in the layout of today whichever it was written in - the first
+/// envelope (version 1) kept the files to serve at the root and what was
+/// not the program below <c>.lambda/</c>. Nothing written then is rewritten:
+/// it is moved into the store as the platform starts, with a manifest beside
+/// it, and nothing writes such a blob any more.
 /// </remarks>
 public static class LambdaSource
 {
@@ -165,12 +163,12 @@ public static class LambdaSource
     };
 
     /// <summary>
-    /// Marks the stored text as an envelope in today's layout.
+    /// Marks a blob as an envelope in today's layout of the files.
     /// </summary>
     /// <remarks>
-    /// No C# begins this way, so a blob that starts with it was written by this
-    /// and one that does not is code from before there was more than one file
-    /// - or an envelope of the first layout, which starts with its own marker.
+    /// No C# begins this way, so a blob that starts with it is an envelope and
+    /// one that does not is code from before there was more than one file -
+    /// or an envelope of the first layout, which starts with its own marker.
     /// </remarks>
     private const string Marker = "{\"version\":2,\"files\":";
 
@@ -183,7 +181,8 @@ public static class LambdaSource
     #region Functionality
 
     /// <summary>
-    /// Reads stored text as the files it holds, in today's layout.
+    /// Reads a version as it was kept before there was a store - one blob of
+    /// text - as the files it holds, in today's layout.
     /// </summary>
     public static IReadOnlyList<LambdaFile> Parse(string? stored)
     {
@@ -212,47 +211,6 @@ public static class LambdaSource
         }
 
         return [new LambdaFile(EntryName, text)];
-    }
-
-    /// <summary>
-    /// Writes the files as the single blob a version is stored as.
-    /// </summary>
-    /// <remarks>
-    /// A lambda that is still one file is stored as that file and nothing else,
-    /// so the common case stays readable on disk and anything reading an older
-    /// version cannot tell the difference.
-    /// </remarks>
-    public static string Serialize(IReadOnlyList<LambdaFile> files)
-    {
-        if (files.Count == 1 && files[0].Name == EntryName)
-        {
-            return files[0].Code;
-        }
-
-        return JsonSerializer.Serialize(new Envelope(2, files), Format);
-    }
-
-    /// <summary>
-    /// Whether two stored blobs hold the same files, whichever layout either
-    /// was written in.
-    /// </summary>
-    /// <remarks>
-    /// Compared as they are first, which is the answer nearly always: only a
-    /// blob of the first layout beside one written since is read to tell.
-    /// </remarks>
-    public static bool Same(string? stored, string? other)
-    {
-        if (string.Equals(stored, other, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        if (stored == null || other == null)
-        {
-            return false;
-        }
-
-        return Serialize(Parse(stored)) == Serialize(Parse(other));
     }
 
     /// <summary>
@@ -313,6 +271,11 @@ public static class LambdaSource
     }
 
     /// <summary>
+    /// How many bytes the files come to, as the store keeps them or as they arrived.
+    /// </summary>
+    public static long Size(IEnumerable<VersionFile> files) => files.Sum(f => f.Size);
+
+    /// <summary>
     /// How many bytes one file comes to, decoded.
     /// </summary>
     public static long Size(LambdaFile file)
@@ -325,6 +288,42 @@ public static class LambdaSource
         }
 
         return System.Text.Encoding.UTF8.GetByteCount(file.Code);
+    }
+
+    /// <summary>
+    /// The C# of a version, read as text: all of it the compiler is given,
+    /// and all that says what its code reaches for.
+    /// </summary>
+    public static IReadOnlyList<LambdaFile> Compiled(IEnumerable<VersionFile> files)
+        => [.. files.Where(f => f.IsCompiled).Select(f => new LambdaFile(f.Name, f.ReadText()))];
+
+    /// <summary>
+    /// Whether two versions hold the same files: the same names in the same
+    /// order, each the same content and the same way of sending it.
+    /// </summary>
+    /// <remarks>
+    /// Told by what the content hashes to, so nothing is read of what the
+    /// store keeps - a feature that holds what its version holds is a copy of
+    /// its manifest.
+    /// </remarks>
+    public static bool Same(IReadOnlyList<VersionFile> files, IReadOnlyList<VersionFile> other)
+    {
+        if (files.Count != other.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < files.Count; i++)
+        {
+            var (mine, theirs) = (files[i], other[i]);
+
+            if (mine.Name != theirs.Name || mine.Binary != theirs.Binary || mine.Size != theirs.Size || mine.Hash != theirs.Hash)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -374,19 +373,71 @@ public static class LambdaSource
             }
         }
 
-        // a file and a folder of the same name cannot both be on a disk
-        foreach (var file in files)
+        return Clash(files.Select(f => f.Name), seen);
+    }
+
+    /// <summary>
+    /// A file and a folder of the same name, which cannot both be on a disk.
+    /// </summary>
+    private static string? Clash(IEnumerable<string> names, HashSet<string> seen)
+    {
+        foreach (var name in names)
         {
-            for (var slash = file.Name.IndexOf('/'); slash > 0; slash = file.Name.IndexOf('/', slash + 1))
+            for (var slash = name.IndexOf('/'); slash > 0; slash = name.IndexOf('/', slash + 1))
             {
-                if (seen.Contains(file.Name[..slash]))
+                if (seen.Contains(name[..slash]))
                 {
-                    return $"'{file.Name[..slash]}' is a file and a folder at once: '{file.Name}' is in it.";
+                    return $"'{name[..slash]}' is a file and a folder at once: '{name}' is in it.";
                 }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Checks the shape of a version on its way to being kept: its names, and
+    /// that what is compiled is text.
+    /// </summary>
+    /// <remarks>
+    /// The content was checked as it came in - base64 that is base64, text
+    /// that is UTF-8 - so this is about the names, which a change to what is
+    /// kept can get wrong as well as any door.
+    /// </remarks>
+    /// <returns>The complaint, or null where there is none</returns>
+    public static string? Validate(IReadOnlyList<VersionFile>? files)
+    {
+        if (files is not { Count: > 0 })
+        {
+            return "A lambda needs at least one file.";
+        }
+
+        if (files[0].Name != EntryName)
+        {
+            return $"The first file has to be '{EntryName}', which is the one that returns a handler.";
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in files)
+        {
+            if (Complaint(file.Name) is { } complaint)
+            {
+                return complaint;
+            }
+
+            if (file.IsCompiled && file.Binary)
+            {
+                return $"'{file.Name}' is C# to compile and has to be text (UTF-8), not base64.";
+            }
+
+            if (!seen.Add(file.Name))
+            {
+                return $"There is more than one file called '{file.Name}' - names differ by more than their case, as they do on Windows and macOS.";
+            }
+        }
+
+        return Clash(files.Select(f => f.Name), seen);
     }
 
     /// <summary>

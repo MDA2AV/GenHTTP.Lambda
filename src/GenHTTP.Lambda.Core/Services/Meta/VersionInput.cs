@@ -20,21 +20,21 @@ internal static class VersionInput
     /// Checks what can be checked without knowing whose code it is.
     /// </summary>
     /// <returns>The files, for the checks that do need to know</returns>
-    public static IReadOnlyList<LambdaFile> Validate(string? code)
+    public static IReadOnlyList<VersionFile> Validate(IReadOnlyList<VersionFile>? files)
     {
-        if (string.IsNullOrWhiteSpace(code))
+        // a snippet that is nothing, which is all there is: what was refused
+        // as empty code while a version was one blob of text
+        if (files is [{ Name: LambdaSource.EntryName, Binary: false } only] && only.Size < 4096 && string.IsNullOrWhiteSpace(only.ReadText()))
         {
             throw LambdaException.Invalid("The code must not be empty.");
         }
-
-        var files = LambdaSource.Parse(code);
 
         if (LambdaSource.Validate(files) is { } complaint)
         {
             throw LambdaException.Invalid(complaint);
         }
 
-        return files;
+        return files!;
     }
 
     /// <summary>
@@ -49,10 +49,11 @@ internal static class VersionInput
     /// installation calls them, so whoever reads it knows there is more. A
     /// feature is held to the same, since what it holds becomes a version.
     ///
-    /// Counted in bytes as they are, whatever a file is - every version
-    /// carries its own copy of all of it, and is read and written whole.
+    /// Counted in bytes as they are, whatever a file is, from what is known of
+    /// them rather than by reading them - what a version comes to, though the
+    /// store keeps a file that many versions hold once.
     /// </remarks>
-    public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, ILimitsService limits)
+    public static void ValidateAllowance(IReadOnlyList<VersionFile> files, LambdaTier tier, ILimitsService limits)
     {
         var policy = limits.PolicyOf(tier);
 

@@ -71,9 +71,10 @@ public sealed record LambdaPage(
 public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Specification = null, string? Change = null, string? Origin = null);
 
 /// <summary>
-/// A stored version, including the code itself.
+/// A stored version, with its files - whose content is read by whoever needs it.
 /// </summary>
-public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null);
+public sealed record LambdaVersionContent(int Version, DateTime Created, IReadOnlyList<VersionFile> Files, string? Specification = null, string? Change = null,
+                                          string? Origin = null);
 
 /// <summary>
 /// Why a version was written, as whoever wrote it tells it.
