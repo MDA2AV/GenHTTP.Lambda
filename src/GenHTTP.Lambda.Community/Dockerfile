@@ -98,8 +98,6 @@ ENV HOME=/home/lambda \
 
 WORKDIR /app
 
-COPY --from=backend /app ./
-
 # the database, the stored code and the workspaces of the lambdas - and
 # dumps/, where the runtime writes a dump if the process dies (see
 # deploy/cloud/docker-compose.yml): createdump will not make the folder itself, and a
@@ -109,7 +107,13 @@ COPY --from=backend /app ./
 # issuers of its own certificate cannot send them
 RUN useradd --uid 1001 --home-dir /home/lambda --create-home --shell /usr/sbin/nologin lambda \
  && mkdir -p /data/dumps \
- && chown -R lambda:lambda /data /app /home/lambda
+ && chown -R lambda:lambda /data /home/lambda
+
+# the server, owned by root: it reads what is here and never writes beside
+# itself, so the user it runs as cannot change it either. Copied last and
+# once - changing the owner after copying wrote every file into a second
+# layer, the size of the application again.
+COPY --link --from=backend /app /app/
 
 USER lambda
 
