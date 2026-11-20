@@ -1811,9 +1811,8 @@ integrations (yet - the owner's words: "not for now").
   connections once a database is past it, since PostgreSQL cannot hold a
   schema to a size; a draft's copy made from the catalog in one repeatable
   read transaction (tables, sequences, keys, views - not functions, triggers
-  or types). The provider for EF Core 11 is a release candidate, taken with
-  the owner's consent (NU1608 suppressed where it surfaces); move to 11.0.0
-  once it is released.
+  or types). The provider for EF Core 11 ran as a release candidate, taken
+  with the owner's consent, until 11.0.0 was released with Npgsql 11.
 - A new kind of integration, or a new one of a kind, keeps to this: the
   contract says what it keeps and nothing it decides, the services keep the
   rules, the guide and the panel are told through `Guide` and `Describe`, and

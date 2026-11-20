@@ -5,10 +5,6 @@
         the one address an installation is run at, and a front page of its own.
     -->
     <PropertyGroup>
-        <!-- NU1608: the PostgreSQL integration runs a release candidate of Npgsql's provider on EF Core 11.0.0, see Directory.Packages.props -->
-        <NoWarn>$(NoWarn);NU1608</NoWarn>
-
-
         <OutputType>Exe</OutputType>
 
         <RootNamespace>GenHTTP.Lambda.Community</RootNamespace>

@@ -28,13 +28,10 @@
 
         <!--
             PostgreSQL, for installations that keep their data there (see
-            GenHTTP.Lambda.Integrations.PostgreSql). The provider for EF Core 11
-            is a release candidate as of writing, pinned to the RC of EF Core it
-            was built against; the integration takes EF Core's 11.0.0 instead
-            and says so (NU1608). Move to 11.0.0 once it is released.
+            GenHTTP.Lambda.Integrations.PostgreSql)
         -->
-        <PackageVersion Include="Npgsql" Version="10.0.3" />
-        <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-rc.3" />
+        <PackageVersion Include="Npgsql" Version="11.0.0" />
+        <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="11.0.0" />
 
         <PackageVersion Include="Evolve" Version="3.2.0" />
