@@ -201,7 +201,7 @@ export function ShowcaseTab({ control }: { control: Control }) {
   return (
     <Section
       title={heading}
-      hint={said.hint(<code className="font-mono">showcase</code>)}
+      hint={said.hint}
       actions={
         entry && live ? (
           <Link to="/showcase" target="_blank" className="btn-ghost !px-3 !py-1.5 text-[13px]">

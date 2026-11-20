@@ -193,7 +193,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
 | `GET /demos`                                          | the demos, and the keys to read them with |
-| `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
+| `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture as base64), take it off - agents too, since no tool does it |
 | `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a lambda in production or the system tier, whether it is served, and what it resolves to |
 | `GET / PUT / DELETE /lambdas/:privateKey/connectivity`      | whether its code may connect to other servers; asks the operator for it (`purpose`); takes the request back or gives it up, see [Connectivity](#connectivity) |
 | `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
@@ -2507,16 +2507,19 @@ The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_cod
 `check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
 data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
-`read_database`, `set_secret`, `list_secrets` and `delete_secret`, `showcase` for listing
-a lambda on the public showcase and `open_source` for publishing its code -
-only when its owner asks for either - `analytics` for reading who visits a
-lambda, and switching that on when the user asks, and
-`list_demos` for reading something that already works. Where the installation
+`read_database`, `set_secret`, `list_secrets` and `delete_secret`, `open_source`
+for publishing its code - only when its owner asks for it - `analytics` for
+reading who visits a lambda, and switching that on when the user asks, and
+`list_demos` for reading something that already works. No tool lists a lambda
+on the showcase: its picture, base64 in a tool call, was too large for the
+agents that tried, so the instructions point to `platform_guide` (`showcase`),
+which sends them to `PUT /lambdas/{privateKey}/showcase` with the body written
+to a file, and the user to the editor where they cannot make requests. Where the installation
 may be branded and has an admin token, `customize_installation` names it and
 gives it a logo, for an agent its operator handed the token (see
 [Branding](#branding)). `platform_guide` is the one to call first. It answers
 with one Markdown document, sent once as text rather than as an object (which
-the MCP module sends twice), written for a model and held under 24 KB by a
+the MCP module sends twice), written for a model and held under 28 KB by a
 test - at 65 KB, clients wrote it to a file instead of the conversation. It
 opens with what a lambda is and how versions, features and data live, then
 git and the REST API, code and resources, paths, compiling, requests and the
@@ -2990,7 +2993,7 @@ bytes - with headings of the third level and below, as `#` and `##` would end
 the section early, and no code block left open (a line in a fenced code
 block is no heading). So a guide
 with a full section stays a tool result an agent reads in full: the
-platform's under 24 KB, the operator's 6 KB, under 30 KB together.
+platform's under 28 KB, the operator's 6 KB, under 34 KB together.
 
 Kept as two settings (`guide.title`, `guide.text`) and read only where the
 installation has an admin token: a copy of another installation's data hands

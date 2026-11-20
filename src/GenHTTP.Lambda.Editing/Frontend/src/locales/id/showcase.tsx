@@ -16,13 +16,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Itu bukan gambar PNG, JPEG, GIF, atau WebP.',
   tooLarge: (size, limit) => `Ukurannya ${size}, padahal gambar maksimal ${limit}.`,
   unreadable: 'File itu gagal dibaca.',
-  hint: (tool) => (
-    <>
-      Halaman showcase menampilkan lambda yang dipamerkan pemiliknya, yang baru-baru ini dipakai lebih dulu. Hanya
-      pemegang kunci editor yang bisa memasang lambda di sana atau menariknya lagi, dan lambda hanya tampil selama
-      online. Agen juga bisa melakukannya dengan tool {tool}.
-    </>
-  ),
+  hint: 'Halaman showcase menampilkan lambda yang dipamerkan pemiliknya, yang baru-baru ini dipakai lebih dulu. Hanya pemegang kunci editor yang bisa memasang lambda di sana atau menariknya lagi, dan lambda hanya tampil selama online.',
   open: 'Buka showcase',
   switch: 'Tampilkan lambda ini di halaman showcase',
   listedNow: 'Sudah tampil. Siapa pun yang melihat showcase bisa membukanya.',

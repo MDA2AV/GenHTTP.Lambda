@@ -165,7 +165,7 @@ public sealed class GuideTests
         var guide = await Guide.ReadAsync(fixture);
 
         Assert.Contains(full, guide);
-        Assert.IsLessThan(30_720, Encoding.UTF8.GetByteCount(guide), "the platform's 24 KB and the operator's 6 KB, under 30 KB together");
+        Assert.IsLessThan(34_816, Encoding.UTF8.GetByteCount(guide), "the platform's 28 KB and the operator's 6 KB, under 34 KB together");
     }
 
     [TestMethod]

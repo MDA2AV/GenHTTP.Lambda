@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Bu bir PNG, JPEG, GIF ya da WebP görseli değil.',
   tooLarge: (size, limit) => `Bu dosya ${size}. Bir görsel en fazla ${limit} olabilir.`,
   unreadable: 'Bu dosya okunamadı.',
-  hint: (tool) => (
-    <>
-      Vitrin sayfası, sahiplerinin göstermeyi seçtiği lambdaları listeler; son zamanlarda kullanılanlar önce gelir. Bir
-      lambdayı oraya yalnızca editör anahtarına sahip olan ekleyebilir ya da oradan kaldırabilir. Lambda yalnızca
-      yayındayken listelenir. Bir ajan da aynısını {tool} aracıyla yapabilir.
-    </>
-  ),
+  hint: 'Vitrin sayfası, sahiplerinin göstermeyi seçtiği lambdaları listeler; son zamanlarda kullanılanlar önce gelir. Bir lambdayı oraya yalnızca editör anahtarına sahip olan ekleyebilir ya da oradan kaldırabilir. Lambda yalnızca yayındayken listelenir.',
   open: 'Vitrini aç',
   switch: 'Bu lambdayı vitrin sayfasında göster',
   listedNow: 'Şu anda listede. Vitrine göz atan herkes açabilir.',

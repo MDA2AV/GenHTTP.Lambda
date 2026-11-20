@@ -11,6 +11,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.Showcase;
 
 namespace GenHTTP.Lambda.Services.Guide;
 
@@ -308,7 +309,16 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## showcase
 
-            Only when the user asks. The picture shows the lambda in use, up to {{Size(limits.ShowcaseImageBytes)}}; one too large for a tool call goes by PUT {{home}}api/v1/lambdas/{privateKey}/showcase with {"title": "...", "description": "...", "image": "<base64>"} written to a file: curl -X PUT -H "Content-Type: application/json" --data-binary @entry.json <url>.
+            Only when the user asks: an entry lists the lambda on {{home}}showcase while it is online. No tool does it - the REST API: GET, PUT and DELETE {{home}}api/v1/lambdas/{privateKey}/showcase read the entry, list the lambda and take it off. PUT takes the title (one line, up to {{ShowcaseLimits.MaxTitle}} characters) and the description (up to {{ShowcaseLimits.MaxDescription}}) each time, and for a new entry the picture as base64 - a screenshot or short GIF of the lambda in use, PNG, JPEG, GIF or WebP up to {{Size(limits.ShowcaseImageBytes)}}; left out, the one there is kept. {{ShowcaseLimits.Tone}}
+
+            The base64 never goes through a tool call, your output or a command line - a picture does not fit into one. Write the body to a file, the texts JSON-escaped, and send the file:
+
+            ```sh
+            { printf '{"title":"...","description":"...","image":"'; base64 < shot.png | tr -d '\n'; printf '"}'; } > entry.json
+            curl -T entry.json -H "Content-Type: application/json" {{home}}api/v1/lambdas/{privateKey}/showcase
+            ```
+
+            Without HTTP requests, the user does it in the editor's Showcase section.
 
             ## openSource
 

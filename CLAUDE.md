@@ -1001,6 +1001,15 @@ New functionality is developed in a **feature** (a *draft* in the editor):
 ### Showcase, export, ownership of the code
 
 - **Showcasing is the owner's choice**: opt-in, never automatic.
+- **No MCP tool puts a lambda there - decided by the owner** (2026-11-20). An
+  entry needs a picture, and as base64 in a tool call it was too large for the
+  agents that tried; they gave up rather than find the REST API, which took it
+  all along. So agents are sent to `PUT /lambdas/{privateKey}/showcase` with
+  the body written to a file, never through a tool call, their output or a
+  command line (`platform_guide`, `showcase`, which shows how, and a line of
+  the MCP instructions that points there), and an agent that cannot make
+  requests sends the user to the editor's Showcase section.
+  Do not bring the tool back for the picture's sake.
 - **The code belongs to whoever created the lambda.** We do not interfere with
   it. They can export it as a runnable C# project (`GET …/export`) and run it
   elsewhere. Do not add lock-in, and keep the export working.
@@ -1596,7 +1605,7 @@ integrations (yet - the owner's words: "not for now").
   not an integration's.
 - **An integration may add to the guide** (`IIntegration.Guide`): lines at the
   end of the section of its kind - what SQLite refuses, what PostgreSQL folds
-  and copies. What it adds counts against the guide's 24 KB like the rest.
+  and copies. What it adds counts against the guide's 28 KB like the rest.
 - **The operator sees which are used - asked for by the owner, on both
   editions**: the panel's **Integrations** section (group Platform, read
   only, cards) over `GET /admin/integrations`, from what each says of itself
@@ -2014,7 +2023,8 @@ The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
 would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
-meant to be found). The rest
+meant to be found), and what only the REST API does - the showcase, which an
+agent that sees no tool for it would otherwise say cannot be done. The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
 
 **`platform_guide` is written for agents, not people - asked for by the
@@ -2027,8 +2037,12 @@ demo already says is not repeated. Chosen with it, open to change: it is one
 Markdown string rather than an object, so the MCP module sends it once as
 text instead of twice with every quote escaped; its sections are headings
 named as the pointers say ("platform_guide, connectivity"), and a renamed one
-renames every pointer; a test holds it under 24 KB
-(`TheGuideFitsIntoOneToolResult`), so a new rule makes room for itself.
+renames every pointer; a test holds it under 28 KB
+(`TheGuideFitsIntoOneToolResult`), so a new rule makes room for itself. **28 KB
+- raised from 24 by the owner** (2026-11-20, when the showcase lost its tool
+and its section had to say how to send a picture): the number is a budget of
+ours, not a client's limit, there so the guide stays one result an agent reads
+in full rather than a file it is handed.
 
 **The operator writes rules for agents into the guide - decided by the
 owner, on both editions.** The panel's **Guide** section (group Platform)
@@ -2044,7 +2058,7 @@ platform requires or refuses (the code guard, connectivity, limits, blocks);
 its title may not be
 one of the platform's sections, which pointers name, and its text takes no
 `#` or `##` headings, no open code block and at most 6 KB in UTF-8, so a full
-guide stays under 30 KB; it is read only where there is an admin token, as the branding is
+guide stays under 34 KB; it is read only where there is an admin token, as the branding is
 only where it may be changed. The rules reach agents through `platform_guide`
 only - not the MCP instructions, nor a repository's `AGENTS.md`.
 

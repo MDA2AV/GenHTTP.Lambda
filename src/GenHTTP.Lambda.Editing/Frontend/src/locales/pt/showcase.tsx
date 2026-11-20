@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Isso não é uma imagem PNG, JPEG, GIF ou WebP.',
   tooLarge: (size, limit) => `Essa imagem tem ${size}; o máximo é ${limit}.`,
   unreadable: 'Não foi possível ler esse arquivo.',
-  hint: (tool) => (
-    <>
-      A vitrine lista as lambdas que os donos escolheram mostrar, as mais usadas ultimamente primeiro. Só quem tem a
-      chave de edição pode colocar ou tirar uma lambda de lá, e ela só aparece enquanto está no ar. Um agente pode
-      fazer o mesmo com a ferramenta {tool}.
-    </>
-  ),
+  hint: 'A vitrine lista as lambdas que os donos escolheram mostrar, as mais usadas ultimamente primeiro. Só quem tem a chave de edição pode colocar ou tirar uma lambda de lá, e ela só aparece enquanto está no ar.',
   open: 'Abrir a vitrine',
   switch: 'Mostrar esta lambda na vitrine',
   listedNow: 'Na vitrine. Qualquer pessoa que passar por lá pode abrir.',

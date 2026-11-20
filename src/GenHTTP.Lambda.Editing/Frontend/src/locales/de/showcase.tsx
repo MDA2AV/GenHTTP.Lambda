@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Das ist kein PNG-, JPEG-, GIF- oder WebP-Bild.',
   tooLarge: (size, limit) => `Das sind ${size}; ein Bild darf höchstens ${limit} groß sein.`,
   unreadable: 'Die Datei konnte nicht gelesen werden.',
-  hint: (tool) => (
-    <>
-      Der Showcase zeigt Lambdas, die ihre Besitzer zeigen möchten – zuletzt genutzte zuerst. Nur wer den
-      Editor-Schlüssel hat, kann ein Lambda dort eintragen oder entfernen. Und es erscheint nur, solange es online ist.
-      Ein Agent kann dasselbe mit seinem Tool {tool}.
-    </>
-  ),
+  hint: 'Der Showcase zeigt Lambdas, die ihre Besitzer zeigen möchten – zuletzt genutzte zuerst. Nur wer den Editor-Schlüssel hat, kann ein Lambda dort eintragen oder entfernen. Und es erscheint nur, solange es online ist.',
   open: 'Showcase öffnen',
   switch: 'Dieses Lambda im Showcase zeigen',
   listedNow: 'Jetzt gelistet. Wer den Showcase durchstöbert, kann es öffnen.',
