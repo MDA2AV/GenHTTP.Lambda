@@ -586,7 +586,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
              How many requests the server answers in each hour of a typical day, in UTC, and its quietest three hours - an
              indication for work that can wait, such as optimizing the databases, not a measurement. Counted in memory as requests
              are answered and written down hourly, an average in which a week ago counts half as much as today; until every hour
-             of the day was counted at least once, `known` is false. A lambda's own are part of `GET /admin/lambdas/{publicKey}`.
+             of the day was counted at least once, `known` is false. A lambda's typical day is `typicalDay` of `GET /admin/lambdas/{publicKey}`.
              """)]
     [return: Summary("The installation's typical day")]
     public async ValueTask<TypicalDay> GetQuietHours() => await quietHours.OfInstallationAsync(DateTime.UtcNow);

@@ -4,7 +4,7 @@ import { api, refusedToken, type TypicalDay } from '@genhttp-lambda/kit/api';
 import { Ago, Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
 import { Card, Fact, Facts, Reading, count, share } from './parts';
-import { DayChart, counted, quietStretch, zone } from './quiet';
+import { DayChart, counted, describe, zone } from './day';
 
 /**
  * When the installation is usually quiet: every request the server answers,
@@ -39,7 +39,7 @@ export function QuietHoursSection({ access }: { access: Access }) {
         <div className="space-y-6">
           <Card title="A typical day" hint={`Requests per hour, on your clock (${zone()}).`}>
             {counted(day) ? (
-              <DayChart day={day} dark={dark} label="Requests the server answers on a typical day" />
+              <DayChart day={day} dark={dark} label="Requests the server answers on a typical day" stretch="quietest" />
             ) : (
               <p className="text-[13px] text-slate-500">Nothing counted yet: the first hour is written down an hour after the server starts.</p>
             )}
@@ -48,7 +48,7 @@ export function QuietHoursSection({ access }: { access: Access }) {
           <Card title="What it says">
             <Facts>
               <Fact label="Quietest">
-                {day.known ? <>{quietStretch(day)} <span className="text-slate-500">({zone()})</span></> : 'Not known yet'}
+                {day.known ? <>{describe(day, 'quietest').ranges} <span className="text-slate-500">({zone()})</span></> : 'Not known yet'}
               </Fact>
               <Fact label="Of a day's requests">{day.known ? share(day.quietShare, 1) : '-'}</Fact>
               <Fact label="On a typical day">{counted(day) ? `${count(Math.round(total))} requests` : '-'}</Fact>

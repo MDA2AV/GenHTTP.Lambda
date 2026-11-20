@@ -130,8 +130,8 @@ public sealed record AdminLambdaDetail(
     SourceSettingsResponse? Source = null,
     [Summary("Its features (drafts), the most recently changed first")]
     IReadOnlyList<FeatureResponse>? Features = null,
-    [Summary("How busy it is on a typical day by the hour, from the requests it answered - not its drafts' previews - and when it is quietest")]
-    TypicalDay? QuietHours = null,
+    [Summary("How busy it is on a typical day by the hour, from the requests it answered - not its drafts' previews")]
+    TypicalDay? TypicalDay = null,
     [Summary("What the last optimization of its database did; absent before the first, and where it keeps none")]
     OptimizationRecord? Optimization = null
 );

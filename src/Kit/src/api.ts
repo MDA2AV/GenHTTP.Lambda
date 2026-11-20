@@ -974,8 +974,8 @@ export interface AdminLambdaDetail {
   source?: SourceSettings | null;
   /** Its features (drafts), the most recently changed first. */
   features?: Feature[] | null;
-  /** How busy it is on a typical day by the hour, and when it is quietest. */
-  quietHours?: TypicalDay | null;
+  /** How busy it is on a typical day by the hour. */
+  typicalDay?: TypicalDay | null;
   /** What the last optimization of its database did. */
   optimization?: OptimizationRecord | null;
 }

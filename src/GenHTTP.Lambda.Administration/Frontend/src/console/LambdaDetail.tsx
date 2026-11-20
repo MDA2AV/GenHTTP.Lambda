@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { ApiError, api, isDemo, type AdminLambdaDetail, type LambdaFile, type OptimizationRecord } from '@genhttp-lambda/kit/api';
+import { ApiError, api, isDemo, type AdminLambdaDetail, type LambdaFile, type TypicalDay } from '@genhttp-lambda/kit/api';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconChevronLeft, IconExternal, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
@@ -14,7 +14,7 @@ import { BlockAction } from './BlockControl';
 import { ConnectivityAction } from './ConnectivityControl';
 import type { Access } from './context';
 import { Action, Actions, Card, Fact, Facts, Notice, Reading, Tile, Tiles, actionButton, bytes, count, plural, share } from './parts';
-import { DayChart, counted, quietStretch, zone } from './quiet';
+import { DayChart, counted, describe, total, zone } from './day';
 import { FEATURES, connectivityWord } from './uses';
 
 type Busy = 'deploy' | 'undeploy' | 'tier' | 'domain' | 'remove' | null;
@@ -322,8 +322,6 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
                        extra={<span className="text-xs text-slate-500">{plural(storage.codeFiles + storage.resourceFiles, 'file')}</span>} />
                 <Meter label="Data - database and workspace" used={dataBytes} of={limits.dataBytes} format={bytes} />
               </div>
-
-              {detail.optimization && <Optimized record={detail.optimization} />}
             </Card>
           )}
 
@@ -372,20 +370,16 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
             )}
           </Card>
 
-          <Card title="Quiet hours" hint={`Its requests on a typical day, by the hour on your clock (${zone()}) - its drafts' previews left out.`}>
-            {detail.quietHours && counted(detail.quietHours) ? (
+          <Card title="When it is used" hint={`Its requests on a typical day, by the hour on your clock (${zone()}) - its drafts' previews left out.`}>
+            {detail.typicalDay && counted(detail.typicalDay) ? (
               <>
-                <DayChart day={detail.quietHours} dark={dark} label="Requests it answers on a typical day" height={130} />
+                <DayChart day={detail.typicalDay} dark={dark} label="Requests it answers on a typical day" stretch="busy" height={130} />
                 <p className="mt-2 text-xs text-slate-500">
-                  {detail.quietHours.known
-                    ? <>Quietest {quietStretch(detail.quietHours)}, {share(detail.quietHours.quietShare, 1)} of its requests · counted since <Ago at={detail.quietHours.since!} /></>
-                    : <>Not known yet: too little counted to tell its hours apart{storage?.databaseEnabled ? ', so its database is optimized in the installation’s quiet hours' : ''}.</>}
+                  {detail.typicalDay.known ? <Used day={detail.typicalDay} /> : 'Too few requests yet to tell when it is busy.'}
                 </p>
               </>
             ) : (
-              <p className="text-[13px] text-slate-500">
-                Nothing counted yet{storage?.databaseEnabled ? ': its database is optimized in the installation’s quiet hours' : ''}.
-              </p>
+              <p className="text-[13px] text-slate-500">No requests counted yet.</p>
             )}
           </Card>
 
@@ -793,21 +787,18 @@ function Notices({ detail, dataBytes }: { detail: AdminLambdaDetail; dataBytes: 
 }
 
 /**
- * What optimizing its database last did, in the database's own terms: when,
- * what was given back, the statements run and what was left out.
+ * When an app is used, in a line: the hours it is busy - every hour with at
+ * least half the requests of its busiest - the share of its requests they
+ * hold, its busiest hour and how many requests a day comes to.
  */
-function Optimized({ record }: { record: OptimizationRecord }) {
+function Used({ day }: { day: TypicalDay }) {
+  const busy = describe(day, 'busy');
+
   return (
-    <div className="mt-4 border-t border-grey-300 pt-3 text-xs text-slate-500 dark:border-ink-800">
-      <p>
-        Database optimized <Ago at={record.optimized} />
-        {record.failure
-          ? <span className="text-red-500"> - failed: {record.failure}</span>
-          : <>: {bytes(Math.max(0, record.before - record.after))} given back, in {count(record.millis)} ms</>}
-      </p>
-      {record.steps.length > 0 && <p className="mt-1 break-words font-mono text-[11px]">{record.steps.join('; ')}</p>}
-      {record.skipped.length > 0 && <p className="mt-1 break-words">Left out: {record.skipped.join('; ')}</p>}
-    </div>
+    <>
+      {busy.allDay ? 'Used around the clock' : <>Busy {busy.ranges}, with {share(busy.share, 1)} of its requests</>}
+      {' · '}busiest {busy.peak} · about {count(Math.round(total(day)))} requests a day · counted since <Ago at={day.since!} />
+    </>
   );
 }
 

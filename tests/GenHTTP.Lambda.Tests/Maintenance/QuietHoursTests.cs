@@ -49,9 +49,9 @@ public sealed class QuietHoursTests
 
         var detail = await DetailAsync(fixture, "counted");
 
-        Assert.IsNotNull(detail.QuietHours);
-        Assert.AreEqual(5.0, detail.QuietHours.Hours.Sum(), 0.01, "only the requests it answered, as requests on a typical day");
-        Assert.IsFalse(detail.QuietHours.Known);
+        Assert.IsNotNull(detail.TypicalDay);
+        Assert.AreEqual(5.0, detail.TypicalDay.Hours.Sum(), 0.01, "only the requests it answered, as requests on a typical day");
+        Assert.IsFalse(detail.TypicalDay.Known);
     }
 
     [TestMethod]
@@ -65,10 +65,10 @@ public sealed class QuietHoursTests
 
         var detail = await DetailAsync(fixture, "unvisited");
 
-        Assert.IsNotNull(detail.QuietHours);
-        Assert.IsFalse(detail.QuietHours.Known);
-        Assert.IsNull(detail.QuietHours.Since, "nothing was counted");
-        Assert.AreEqual(0.0, detail.QuietHours.Hours.Sum());
+        Assert.IsNotNull(detail.TypicalDay);
+        Assert.IsFalse(detail.TypicalDay.Known);
+        Assert.IsNull(detail.TypicalDay.Since, "nothing was counted");
+        Assert.AreEqual(0.0, detail.TypicalDay.Hours.Sum());
     }
 
     [TestMethod]

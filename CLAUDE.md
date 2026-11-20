@@ -884,8 +884,14 @@ nothing it keeps is about the databases.
   three in a row; known once every hour was counted, over a day, with a
   request an hour on average - an hour never counted is not a quiet one.
 - **Shown in the panel - decided by the owner**: its **Quiet hours** section
-  (Misc) for the installation, and a card on a lambda's page, on the
-  operator's clock. Nothing about it is shown to owners or in the editor.
+  (Misc) for the installation, on the operator's clock. **A lambda's page
+  shows when it is used, not when it is quiet - decided by the owner**: its
+  typical day with the hours it is busy singled out ("When it is used"),
+  since that is what anybody looking at an app wants to know, and its quiet
+  hours are maintenance's business. Chosen with it, open to change: busy is
+  every hour with at least half the requests of its busiest, said as ranges
+  of the operator's clock with the busiest hour. Nothing about it is shown to
+  owners or in the editor.
 
 ### Optimizing the databases
 
@@ -918,9 +924,12 @@ features").
   an index, so a file with one is not rebuilt; `VACUUM FULL` locks out
   PostgreSQL's readers and is not run. A database that is not there is not
   made by optimizing it.
-- What each came to is kept per database (`database_optimizations`) and shown
-  where the switch is and on a lambda's page; written once per run, since a
-  write to the platform's records makes the caches stale.
+- What each came to is kept per database (`database_optimizations`),
+  written once per run, since a write to the platform's records makes the
+  caches stale. The panel shows it where the switch is - the platform's own
+  and a count of the lambdas' - and **not on a lambda's page - decided by the
+  owner**: nobody looking at an app cares when its database was optimized.
+  The API still answers it (`optimization` of a lambda).
 
 ### Pushing, not polling
 

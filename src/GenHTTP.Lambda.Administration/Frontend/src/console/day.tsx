@@ -4,11 +4,23 @@ import type { TypicalDay } from '@genhttp-lambda/kit/api';
 import { BLUE, GREY } from './charts';
 
 /*
- * A typical day by the hour, as the quiet hours are worked out from: the
- * server counts in UTC, the operator reads their own clock. So the hours are
- * drawn from the operator's midnight on, each labelled with the time it
- * starts at there - half past where their zone is half an hour off.
+ * A typical day by the hour, as the server counts it: in UTC, while the
+ * operator reads their own clock. So the hours are drawn from the operator's
+ * midnight on, each labelled with the time it starts at there - half past
+ * where their zone is half an hour off.
+ *
+ * Read two ways. The installation's is read for its quiet hours, which work
+ * that can wait is planned by; an app's for the hours it is busy, which is
+ * what anybody looking at an app wants to know - its quiet hours are
+ * maintenance's business, not its own.
  */
+
+/**
+ * Which hours are singled out: the quietest three in a row, as the server
+ * worked them out, or the busy ones - every hour with at least half the
+ * requests of the busiest, which is when an app is in use.
+ */
+export type Stretch = 'quietest' | 'busy';
 
 /** One hour of the day as the browser's clock has it. */
 interface Slot {
@@ -17,7 +29,8 @@ interface Slot {
   /** Where it starts on the operator's clock, in minutes after their midnight. */
   start: number;
   requests: number;
-  quiet: boolean;
+  /** Whether it is singled out. */
+  marked: boolean;
 }
 
 /** The browser's offset from UTC, in minutes. */
@@ -42,24 +55,79 @@ export function zone(): string {
   return `UTC${sign}${Math.floor(whole / 60)}${whole % 60 ? `:${String(whole % 60).padStart(2, '0')}` : ''}`;
 }
 
-/** Whether an hour of the day, in UTC, is in the quietest stretch. */
-const isQuiet = (day: TypicalDay, utc: number) => (((utc - day.quietFrom) % 24) + 24) % 24 < day.quietLength;
+/** Which hours of the day, in UTC, are singled out. */
+function markedOf(day: TypicalDay, stretch: Stretch): boolean[] {
+  if (stretch === 'quietest') {
+    return day.hours.map((_, utc) => (((utc - day.quietFrom) % 24) + 24) % 24 < day.quietLength);
+  }
 
-function slotsOf(day: TypicalDay): Slot[] {
+  const peak = Math.max(...day.hours);
+
+  return day.hours.map((requests) => peak > 0 && requests >= peak / 2);
+}
+
+function slotsOf(day: TypicalDay, stretch: Stretch): Slot[] {
+  const marked = markedOf(day, stretch);
+
   return day.hours
-    .map((requests, utc) => ({ utc, start: (((utc * 60 + offset()) % 1440) + 1440) % 1440, requests, quiet: day.known && isQuiet(day, utc) }))
+    .map((requests, utc) => ({ utc, start: (((utc * 60 + offset()) % 1440) + 1440) % 1440, requests, marked: day.known && marked[utc] }))
     .sort((a, b) => a.start - b.start);
 }
 
-/** The quietest stretch on the operator's clock, such as 02:00–05:00. */
-export function quietStretch(day: TypicalDay): string {
-  const start = day.quietFrom * 60 + offset();
+/**
+ * The hours singled out as ranges on the operator's clock - one that goes
+ * past their midnight as one - what share of the day's requests falls into
+ * them, the busiest hour, and whether they are the whole day.
+ */
+export function describe(day: TypicalDay, stretch: Stretch): { ranges: string; share: number; peak: string; allDay: boolean } {
+  const marked = markedOf(day, stretch);
 
-  return `${clockOf(start)}–${clockOf(start + day.quietLength * 60)}`;
+  const slots = day.hours
+    .map((requests, utc) => ({ start: (((utc * 60 + offset()) % 1440) + 1440) % 1440, requests, marked: marked[utc] }))
+    .sort((a, b) => a.start - b.start);
+
+  const runs: { from: number; to: number }[] = [];
+
+  for (const slot of slots) {
+    const last = runs[runs.length - 1];
+
+    if (!slot.marked) continue;
+
+    if (last && last.to === slot.start) {
+      last.to = slot.start + 60;
+    } else {
+      runs.push({ from: slot.start, to: slot.start + 60 });
+    }
+  }
+
+  // a run up to the operator's midnight and one from it are one
+  if (runs.length > 1 && runs[0].from === slots[0].start && runs[runs.length - 1].to === slots[0].start + 1440) {
+    const first = runs.shift()!;
+
+    runs[runs.length - 1].to = first.to + 1440;
+  }
+
+  const said = runs.map((run) => `${clockOf(run.from)}–${clockOf(run.to)}`);
+
+  const total = day.hours.reduce((sum, h) => sum + h, 0);
+  const part = day.hours.reduce((sum, h, utc) => (marked[utc] ? sum + h : sum), 0);
+
+  const busiest = day.hours.indexOf(Math.max(...day.hours));
+  const peakStart = busiest * 60 + offset();
+
+  return {
+    ranges: said.length <= 1 ? said.join('') : `${said.slice(0, -1).join(', ')} and ${said[said.length - 1]}`,
+    share: total > 0 ? part / total : 0,
+    peak: `${clockOf(peakStart)}–${clockOf(peakStart + 60)}`,
+    allDay: marked.every(Boolean),
+  };
 }
 
 /** Whether anything was counted at all. */
 export const counted = (day: TypicalDay | null | undefined) => !!day && day.hours.some((h) => h > 0);
+
+/** The requests of a typical day, all together. */
+export const total = (day: TypicalDay) => day.hours.reduce((sum, h) => sum + h, 0);
 
 /** A typical count, which is an average: a decimal where it is small. */
 const requestsOf = (value: number) =>
@@ -67,16 +135,19 @@ const requestsOf = (value: number) =>
 
 const PAD = { top: 10, right: 8, bottom: 22, left: 44 };
 
+const NAMES: Record<Stretch, string> = { quietest: 'Quietest', busy: 'Busy' };
+
 /**
- * The requests of a typical day as a column per hour, the quietest stretch
- * in the accent and the rest in grey - and named under the columns, so the
- * colour is not what says which they are. Each column says its figure when
- * pointed at, and the figures are a table one click away.
+ * The requests of a typical day as a column per hour, the hours singled out -
+ * the quietest or the busy ones - in the accent and the rest in grey, and
+ * named under the columns, so the colour is not what says which they are.
+ * Each column says its figure when pointed at, and the figures are a table
+ * one click away.
  *
- * Until enough was counted the stretch is not singled out: what the columns
- * show is as far as the hours were counted, and nothing to plan by yet.
+ * Until enough was counted no stretch is singled out: what the columns show
+ * is as far as the hours were counted, and nothing to read a stretch off yet.
  */
-export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; dark: boolean; label: string; height?: number }) {
+export function DayChart({ day, dark, label, stretch, height = 150 }: { day: TypicalDay; dark: boolean; label: string; stretch: Stretch; height?: number }) {
   const [table, setTable] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
 
@@ -97,7 +168,8 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
     return () => observer.disconnect();
   }, []);
 
-  const slots = slotsOf(day);
+  const slots = slotsOf(day, stretch);
+  const name = NAMES[stretch];
 
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
@@ -118,7 +190,7 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
   const runs: { from: number; to: number }[] = [];
 
   slots.forEach((slot, i) => {
-    if (!slot.quiet) return;
+    if (!slot.marked) return;
 
     const last = runs[runs.length - 1];
 
@@ -129,17 +201,19 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
     }
   });
 
-  const named = runs.reduce<{ from: number; to: number } | null>((best, run) => (!best || run.to - run.from > best.to - best.from ? run : best), null);
+  // each run that has room for its name is named - the longest where none has
+  const longest = runs.reduce<{ from: number; to: number } | null>((best, run) => (!best || run.to - run.from > best.to - best.from ? run : best), null);
+  const named = runs.some((run) => run.to > run.from) ? runs.filter((run) => run.to > run.from) : longest ? [longest] : [];
 
-  const fill = (slot: Slot) => (day.known && !slot.quiet ? GREY : BLUE)[dark ? 1 : 0];
+  const fill = (slot: Slot) => (day.known && !slot.marked ? GREY : BLUE)[dark ? 1 : 0];
 
   const pointed = hover !== null ? slots[hover] : null;
 
   return (
     <div>
       <div ref={frame} className="relative">
-        <svg viewBox={`0 0 ${width} ${height + (named ? 16 : 0)}`} className="block w-full" role="img"
-             aria-label={`${label}, by the hour on your clock (${zone()})${day.known ? `; quietest ${quietStretch(day)}` : ''}`}
+        <svg viewBox={`0 0 ${width} ${height + (named.length > 0 ? 16 : 0)}`} className="block w-full" role="img"
+             aria-label={`${label}, by the hour on your clock (${zone()})${day.known ? `; ${name.toLowerCase()} ${describe(day, stretch).ranges}` : ''}`}
              onMouseLeave={() => setHover(null)}>
           {[0, max / 2, max].map((tick) => (
             <g key={tick}>
@@ -170,14 +244,14 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
             );
           })}
 
-          {named && (
-            <g className="fill-slate-600 dark:fill-slate-300">
-              <line x1={x(named.from)} x2={x(named.to) + thickness} y1={height + 2} y2={height + 2} className="stroke-slate-400" strokeWidth={1} />
-              <text x={(x(named.from) + x(named.to) + thickness) / 2} y={height + 13} textAnchor="middle" className="text-[11px]">
-                Quietest
+          {named.map((run) => (
+            <g key={run.from} className="fill-slate-600 dark:fill-slate-300">
+              <line x1={x(run.from)} x2={x(run.to) + thickness} y1={height + 2} y2={height + 2} className="stroke-slate-400" strokeWidth={1} />
+              <text x={(x(run.from) + x(run.to) + thickness) / 2} y={height + 13} textAnchor="middle" className="text-[11px]">
+                {name}
               </text>
             </g>
-          )}
+          ))}
         </svg>
 
         {pointed && hover !== null && (
@@ -188,7 +262,7 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
             <span className="tabular-nums">{clockOf(pointed.start)}–{clockOf(pointed.start + 60)}</span>
             <span className="ml-2 font-medium tabular-nums">{requestsOf(pointed.requests)}</span>
             <span className="text-slate-500"> requests</span>
-            {pointed.quiet && <span className="text-slate-500"> · quietest</span>}
+            {pointed.marked && <span className="text-slate-500"> · {name.toLowerCase()}</span>}
           </div>
         )}
       </div>
@@ -207,7 +281,7 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
               <tr key={slot.utc}>
                 <td className="py-1.5 tabular-nums">{clockOf(slot.start)}–{clockOf(slot.start + 60)}</td>
                 <td className="py-1.5 text-right tabular-nums">{requestsOf(slot.requests)}</td>
-                <td className="py-1.5 text-right text-slate-500">{slot.quiet ? 'quietest' : ''}</td>
+                <td className="py-1.5 text-right text-slate-500">{slot.marked ? name.toLowerCase() : ''}</td>
               </tr>
             ))}
           </tbody>

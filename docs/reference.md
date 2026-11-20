@@ -2190,9 +2190,12 @@ in the hour before a restart is lost, an hour the server was down counts as
 one nobody asked for anything in, and a weekend is not told from a weekday.
 
 The installation's are at `GET /api/v1/admin/quiet-hours` and in the panel's
-**Quiet hours** section (Misc), a lambda's in `quietHours` of `GET
-/api/v1/admin/lambdas/{publicKey}` and on its page - drawn on the operator's
-clock, in the time zone of their browser.
+**Quiet hours** section (Misc), drawn on the operator's clock, in the time
+zone of their browser. A lambda's typical day is `typicalDay` of `GET
+/api/v1/admin/lambdas/{publicKey}`, and its page shows it the other way
+round, as **When it is used**: the hours it is busy - every hour with at
+least half the requests of its busiest - and its busiest hour, since that is
+what matters about an app; its quiet hours are maintenance's business.
 
 ## Optimizing the databases
 
@@ -2722,9 +2725,9 @@ A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
 which features it uses (its database, workspace and secrets with what they
 hold, analytics, showcase entry, published source, domain, connectivity,
-drafts and view), what it keeps against its allowances and what optimizing
-its database last did, its quiet hours, its versions, deployments, lifetime
-and the addresses it was changed from - so the editor
+drafts and view), what it keeps against its allowances, when it is used on
+a typical day, its versions, deployments, lifetime and the addresses it was
+changed from - so the editor
 is opened to read or change the code, not to find out how a lambda is set
 up. What the operator decides about it is in a **Manage** card beside that:
 whether it is online, its tier, its domain, its connectivity, a block, and
