@@ -97,9 +97,9 @@ internal sealed class QuietProfile
     }
 
     /// <summary>
-    /// A day nothing was counted of yet.
+    /// A day nothing was counted of yet, counted from a moment on.
     /// </summary>
-    public static QuietProfile Start(DateTime now) => new(new double[Hours], now, now, 0);
+    public static QuietProfile Start(DateTime since, DateTime now) => new(new double[Hours], since, now, 0);
 
     /// <summary>
     /// The day a row keeps.

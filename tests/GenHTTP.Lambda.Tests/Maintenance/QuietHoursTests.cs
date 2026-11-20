@@ -76,7 +76,7 @@ public sealed class QuietHoursTests
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
 
-        var start = NextHour();
+        var start = ThisHour();
 
         // busy in the day, quiet from 02:00 to 05:00
         await LiveAsync(fixture, start, TimeSpan.FromHours(20), hour => hour is >= 2 and < 5 ? 1 : 40);
@@ -104,7 +104,7 @@ public sealed class QuietHoursTests
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
 
-        var start = NextHour();
+        var start = ThisHour();
 
         // a week quiet at night, then three weeks quiet in the afternoon
         await LiveAsync(fixture, start, TimeSpan.FromDays(7), hour => hour is >= 2 and < 5 ? 0 : 30);
@@ -123,7 +123,7 @@ public sealed class QuietHoursTests
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
 
-        var start = NextHour();
+        var start = ThisHour();
 
         // quiet from 03:00 to 06:00, and once a crawler asking for
         // everything at 03:00
@@ -150,7 +150,7 @@ public sealed class QuietHoursTests
 
         var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
-        var start = NextHour();
+        var start = ThisHour();
 
         // the installation is quiet at night, the lambda - used from another
         // part of the world - in the morning
@@ -174,6 +174,47 @@ public sealed class QuietHoursTests
         Assert.IsTrue(own.Known);
         Assert.AreEqual(8, own.QuietFrom);
         Assert.AreEqual(0.0, own.QuietShare, 0.0001);
+    }
+
+    /// <summary>
+    /// The job writes in the middle of an hour, so a lambda's first write
+    /// holds the end of one hour and the start of the next - neither of which
+    /// is taken for an hour nobody asked for anything in.
+    /// </summary>
+    [TestMethod]
+    public async Task AnHourWrittenDownInTwoPartsIsReadWhole()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync("half");
+
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
+
+        var counts = fixture.Platform.Services.GetRequiredService<HourlyCounts>();
+
+        var service = fixture.Platform.Services.GetRequiredService<IQuietHoursService>();
+
+        var hour = ThisHour();
+
+        await service.FlushAsync(hour.AddMinutes(30));
+
+        // its first visitors, in the second half of one hour and the first of the next
+        for (var i = 0; i < 10; i++)
+        {
+            counts.CountLambda(id, hour.Hour);
+            counts.CountLambda(id, hour.AddHours(1).Hour);
+        }
+
+        var written = hour.AddHours(1).AddMinutes(30);
+
+        await service.FlushAsync(written);
+
+        var day = await service.OfLambdaAsync(id, written);
+
+        // read as added when it was over, which it was half an hour before
+        // the write - a fraction of a percent
+        Assert.AreEqual(10.0, day.Hours[hour.Hour], 0.1, "the hour before the write");
+        Assert.AreEqual(10.0, day.Hours[hour.AddHours(1).Hour], 0.1, "the hour of the write");
     }
 
     [TestMethod]
@@ -242,13 +283,14 @@ public sealed class QuietHoursTests
     }
 
     /// <summary>
-    /// The beginning of the next hour, which no request of the test falls into.
+    /// The beginning of this hour, which the fixture began counting in: a
+    /// day simulated from then on is one the server counted all of.
     /// </summary>
-    private static DateTime NextHour()
+    private static DateTime ThisHour()
     {
         var now = DateTime.UtcNow;
 
-        return new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc).AddHours(1);
+        return new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
     }
 
     private static async Task<TypicalDay> InstallationAsync(LambdaFixture fixture, DateTime? now = null)

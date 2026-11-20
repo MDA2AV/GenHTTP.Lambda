@@ -35,6 +35,12 @@ public sealed class QuietHoursService(IDbContextFactory<LambdaDbContext> databas
     /// </summary>
     private readonly SemaphoreSlim _turn = new(1, 1);
 
+    /// <summary>
+    /// When the counts were last written down, which is where what is written
+    /// next was counted from - nothing before the first write.
+    /// </summary>
+    private DateTime? _written;
+
     #region Reading
 
     public async ValueTask<TypicalDay> OfInstallationAsync(DateTime now, CancellationToken cancellation = default)
@@ -102,15 +108,24 @@ public sealed class QuietHoursService(IDbContextFactory<LambdaDbContext> databas
 
             var rows = await database.QuietHours.Where(q => wanted.Contains(q.LambdaId)).ToDictionaryAsync(q => q.LambdaId, cancellation);
 
+            // a day begun now begins where what is written was counted from:
+            // the hour before the write was counted too, by the job that
+            // writes in the middle of an hour
+            var from = _written ?? counts.Since;
+
+            from = from < now ? from : now;
+
             // the hours this process counted are the installation's to know
-            Fold(database, rows, QuietHoursEntity.Installation, installation, now, counts.Since);
+            Fold(database, rows, QuietHoursEntity.Installation, installation, from, now, counts.Since);
 
             foreach (var (lambda, hours) in lambdas.Where(l => existing.Contains(l.Lambda)))
             {
-                Fold(database, rows, lambda, hours, now);
+                Fold(database, rows, lambda, hours, from, now);
             }
 
             await database.SaveChangesAsync(cancellation);
+
+            _written = now;
 
             logger.LogDebug("Wrote quiet hours of lambdas count {Count}", existing.Count);
         }
@@ -124,19 +139,21 @@ public sealed class QuietHoursService(IDbContextFactory<LambdaDbContext> databas
     /// Adds what was counted to the day of a row, making the row where there
     /// is none, and writes the day back into it.
     /// </summary>
+    /// <param name="from">Where what was counted was counted from, which a row made now begins at</param>
     /// <param name="counting">Since when the server has been counting, for the row that keeps which hours were</param>
-    private static void Fold(LambdaDbContext database, Dictionary<long, QuietHoursEntity> rows, long lambdaId, long[] counted, DateTime now, DateTime? counting = null)
+    private static void Fold(LambdaDbContext database, Dictionary<long, QuietHoursEntity> rows, long lambdaId, long[] counted, DateTime from, DateTime now,
+                             DateTime? counting = null)
     {
         if (!rows.TryGetValue(lambdaId, out var row))
         {
-            row = new QuietHoursEntity { LambdaId = lambdaId, Hours = string.Empty, Since = now, Updated = now };
+            row = new QuietHoursEntity { LambdaId = lambdaId, Hours = string.Empty, Since = from, Updated = now };
 
             database.QuietHours.Add(row);
 
             rows[lambdaId] = row;
         }
 
-        var profile = row.Hours.Length == 0 ? QuietProfile.Start(now) : QuietProfile.Read(row);
+        var profile = row.Hours.Length == 0 ? QuietProfile.Start(from, now) : QuietProfile.Read(row);
 
         profile.Add(counted, now);
 

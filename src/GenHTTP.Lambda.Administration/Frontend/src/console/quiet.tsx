@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { TypicalDay } from '@genhttp-lambda/kit/api';
 import { BLUE, GREY } from './charts';
@@ -80,16 +80,35 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
   const [table, setTable] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
 
+  // drawn at the width it has, so its text stays legible on a phone rather
+  // than shrinking with a drawing made for a wide screen
+  const frame = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(720);
+
+  useEffect(() => {
+    const element = frame.current;
+
+    if (!element) return;
+
+    const observer = new ResizeObserver(() => setWidth(Math.max(280, Math.round(element.clientWidth))));
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
   const slots = slotsOf(day);
 
-  const width = 720;
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
 
   const max = niceCeiling(Math.max(...slots.map((s) => s.requests)));
 
   const band = plotW / slots.length;
-  const thickness = Math.min(20, band - 6);
+  const thickness = Math.min(20, Math.max(3, band - (band > 14 ? 6 : 2)));
+
+  // a label every three hours where they fit, every six where they do not
+  const every = band * 3 >= 40 ? 3 : 6;
 
   const x = (i: number) => PAD.left + i * band + (band - thickness) / 2;
   const y = (value: number) => PAD.top + plotH - (value / max) * plotH;
@@ -118,7 +137,7 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
 
   return (
     <div>
-      <div className="relative">
+      <div ref={frame} className="relative">
         <svg viewBox={`0 0 ${width} ${height + (named ? 16 : 0)}`} className="block w-full" role="img"
              aria-label={`${label}, by the hour on your clock (${zone()})${day.known ? `; quietest ${quietStretch(day)}` : ''}`}
              onMouseLeave={() => setHover(null)}>
@@ -139,7 +158,7 @@ export function DayChart({ day, dark, label, height = 150 }: { day: TypicalDay; 
               <g key={slot.utc}>
                 {tall > 0 && <path d={column(x(i), top, thickness, tall)} fill={fill(slot)} opacity={hover === null || hover === i ? 1 : 0.55} />}
 
-                {i % 3 === 0 && (
+                {i % every === 0 && (
                   <text x={x(i) + thickness / 2} y={height - 6} textAnchor="middle" className="fill-slate-500 text-[11px] tabular-nums">
                     {clockOf(slot.start)}
                   </text>

@@ -146,7 +146,8 @@ public sealed class OptimizationService(IDbContextFactory<LambdaDbContext> datab
                          where lambda.LastSeen != null
                          join optimization in database.DatabaseOptimizations.AsNoTracking() on lambda.Id equals optimization.LambdaId into optimizations
                          from last in optimizations.DefaultIfEmpty()
-                         where last == null || (last.Optimized <= cutoff && lambda.LastSeen > last.Optimized)
+                         // a database that failed is tried again, visited or not
+                         where last == null || (last.Optimized <= cutoff && (lambda.LastSeen > last.Optimized || last.Failure != null))
                          select new Candidate(lambda.Id, lambda.PublicKey, last == null ? null : last.Optimized))
                         .ToListAsync(cancellation);
 

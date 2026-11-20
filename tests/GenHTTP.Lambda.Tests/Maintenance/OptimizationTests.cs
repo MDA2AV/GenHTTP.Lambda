@@ -38,7 +38,10 @@ public sealed class OptimizationTests
         var file = DatabaseOf(fixture, id);
 
         Fill(file, "INSERT INTO notes (id, text, created) VALUES (@id, @text, '2026-11-20T00:00:00Z')");
-        Execute(file, "DELETE FROM notes WHERE id <> 'kept'");
+        Execute(file, "DELETE FROM notes WHERE id NOT IN ('kept', 'note-1999')");
+
+        // the last one written: a table with a key keeps the ids of its rows
+        var last = Execute(file, "SELECT rowid FROM notes WHERE id = 'note-1999'");
 
         var before = SizeOf(file);
 
@@ -46,7 +49,8 @@ public sealed class OptimizationTests
 
         Assert.IsLessThan(before / 4, SizeOf(file), "the room the deleted notes left, given back");
 
-        Assert.AreEqual("1", await NeutralNotes.ServedAsync(fixture, "/lambda/tidy/count"), "and nothing of what it holds");
+        Assert.AreEqual("2", await NeutralNotes.ServedAsync(fixture, "/lambda/tidy/count"), "and nothing of what it holds");
+        Assert.AreEqual(last, Execute(file, "SELECT rowid FROM notes WHERE id = 'note-1999'"), "nor where it holds it");
 
         var detail = await DetailAsync(fixture, "tidy");
 
@@ -151,6 +155,39 @@ public sealed class OptimizationTests
         Assert.AreEqual(first.Optimized, (await DetailAsync(fixture, "daily")).Optimization!.Optimized);
 
         Assert.IsGreaterThan(first.Optimized, (await OverviewAsync(fixture, quiet.AddDays(1))).Platform!.Optimized, "the platform's own are, every day");
+    }
+
+    /// <summary>
+    /// A database that failed is tried again the next day, whether or not its
+    /// lambda was visited since.
+    /// </summary>
+    [TestMethod]
+    public async Task ADatabaseThatFailedIsTriedAgainTheNextDay()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
+
+        var id = await NotesAsync(fixture, "failing");
+
+        var quiet = Quiet();
+
+        await Optimization(fixture).RunAsync(quiet);
+
+        var databases = fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+
+        // as a run that failed leaves it
+        await using (var database = await databases.CreateDbContextAsync())
+        {
+            await database.DatabaseOptimizations.Where(o => o.LambdaId == id)
+                          .ExecuteUpdateAsync(s => s.SetProperty(o => o.Failure, "disk I/O error").SetProperty(o => o.Steps, string.Empty));
+        }
+
+        await Optimization(fixture).RunAsync(quiet.AddDays(1));
+
+        var again = (await DetailAsync(fixture, "failing")).Optimization;
+
+        Assert.IsNotNull(again);
+        Assert.IsNull(again.Failure);
+        Assert.IsGreaterThan(quiet, again.Optimized);
     }
 
     [TestMethod]
