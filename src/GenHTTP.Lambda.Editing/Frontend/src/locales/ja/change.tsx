@@ -148,4 +148,9 @@ export const change: EditorMessages['change'] = {
   own: 'お使いのエージェントを使う',
   ownText:
     'MCPに対応したエージェントなら、このアプリも変更できます。下のアドレスに接続し、編集用リンクを渡して、変えたい点を伝えてください。1日の上限も時間制限もありません。',
+  profiles: {
+    enterprise: {
+      placeholder: '例：部署の列を追加して、一覧を日付順に並べ替えて、…',
+    },
+  },
 };

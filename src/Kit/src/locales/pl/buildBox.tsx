@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'Nie udało się wysłać prośby.',
   noAnswer: 'Agent skończył, ale nie napisał, co się stało.',
   failed: 'Nie udało się.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Potrzebujemy aplikacji, która…',
+      unlimited:
+        'Ten model wymaga hasła, a wtedy działa bez limitu czasu: pracuje, aż twoja aplikacja będzie gotowa, a nie tylko dopóki nie upłynie czas.',
+      ideas: [
+        'formularz wniosku o urlop, zatwierdzany przez przełożonego',
+        'kalendarz rezerwacji naszych sal konferencyjnych',
+        'listę kontrolną wdrażania nowych współpracowników',
+        'spis naszego sprzętu i tego, kto go ma',
+        'listę otwartych zgłoszeń do pomocy technicznej i osób, które się nimi zajmują',
+        'formularz opinii o naszych szkoleniach',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Przed twoją jest jeszcze jedna aplikacja – potem twoja kolej.' : `Aplikacji przed twoją: ${waiting}.`),
+      online: 'Twoja aplikacja jest online',
+      notOnline: 'Twoja aplikacja powstała, ale nie trafiła do sieci.',
+      open: 'Otwórz swoją aplikację',
+      steps: {
+        create: 'Wybieranie adresu twojej aplikacji',
+        write: 'Pisanie twojej aplikacji',
+        improve: 'Ulepszanie twojej aplikacji',
+        looking: 'Przeglądanie twojej aplikacji',
+      },
+      keep: 'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej aplikacji z innego urządzenia i nikt go nie odzyska – także osoby, które prowadzą tę stronę.',
+    },
+  },
 };

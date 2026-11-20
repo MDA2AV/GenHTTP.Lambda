@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'Não foi possível enviar o pedido.',
   noAnswer: 'Terminou sem dizer o que aconteceu.',
   failed: 'Não correu bem.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Precisamos de uma app que…',
+      unlimited:
+        'Este modelo precisa da palavra-passe e depois corre sem limite de tempo: continua até a tua app ficar pronta, em vez de parar quando o tempo acaba.',
+      ideas: [
+        'um formulário para pedir férias, aprovado pelo chefe de equipa',
+        'um calendário de reservas das nossas salas de reunião',
+        'uma lista de verificação para integrar novos colegas',
+        'um inventário do nosso equipamento e de quem o tem',
+        'uma lista de pedidos de suporte em aberto e de quem trata de cada um',
+        'um formulário de feedback para as nossas formações',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Há uma app à frente da tua. Depois és tu.' : `Há ${waiting} apps à frente da tua.`),
+      online: 'A tua app está online',
+      notOnline: 'A tua app foi criada, mas não ficou online.',
+      open: 'Abrir a tua app',
+      steps: {
+        create: 'A escolher um endereço para a tua app',
+        write: 'A escrever a tua app',
+        improve: 'A melhorar a tua app',
+        looking: 'A rever a tua app',
+      },
+      keep: 'Guarda este link num sítio seguro. É a única forma de entrares na tua app a partir de outro dispositivo e não pode ser recuperado, nem por quem gere este site.',
+    },
+  },
 };

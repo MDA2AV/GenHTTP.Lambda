@@ -56,4 +56,37 @@ export const buildBox = {
   failedToStart: 'That did not go through.',
   noAnswer: 'It finished without saying what happened.',
   failed: 'That did not work.',
+
+  /**
+   * The same box on an installation an organization runs for its people
+   * (its operator chose "enterprise"): what colleagues have built for their
+   * work rather than for a club or a party, called an app rather than a
+   * website. Only what differs from the sentences above.
+   */
+  profiles: {
+    enterprise: {
+      placeholder: 'We need an app that…',
+      unlimited:
+        'This model needs the password, and then runs with no time limit: it keeps going until your app is finished rather than until the clock runs out.',
+      ideas: [
+        'a form to request time off, approved by the team lead',
+        'a booking calendar for our meeting rooms',
+        'a checklist for onboarding new colleagues',
+        'an inventory of our equipment and who has it',
+        'a list of open support requests and who is on each',
+        'a feedback form for our training sessions',
+      ],
+      ahead: (waiting: number) => (waiting === 1 ? 'One app ahead of yours - you are next.' : `${waiting} apps ahead of yours.`),
+      online: 'Your app is online',
+      notOnline: 'Your app was created, but it did not go online.',
+      open: 'Open your app',
+      steps: {
+        create: 'Choosing an address for your app',
+        write: 'Writing your app',
+        improve: 'Improving your app',
+        looking: 'Looking over your app',
+      },
+      keep: 'Keep that link somewhere safe. It is the only way into your app from another device, and nobody can recover it - not the people who run this site either.',
+    },
+  },
 };

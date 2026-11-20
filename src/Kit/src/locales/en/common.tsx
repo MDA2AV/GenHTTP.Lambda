@@ -22,6 +22,17 @@ export const shell = {
   imprint: 'Legal notice',
   writeCode: 'Write the code yourself',
   contact: 'Contact',
+
+  /**
+   * The same frame on an installation an organization runs for its people
+   * (its operator chose "enterprise"), where what is built is an app for work
+   * rather than a website: the menu's way to /build.
+   */
+  profiles: {
+    enterprise: {
+      build: 'Build an app',
+    },
+  },
 };
 
 /** Words more than one page needs. */

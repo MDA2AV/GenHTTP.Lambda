@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import type { KitMessages } from '../locales/en';
+import { useProfile, wordsFor, type Profile } from '../profile';
 import { DEFAULT_LANGUAGE, LANGUAGES, languageOf, preferredLanguage, rememberLanguage, type Language } from './languages';
 
 export * from './languages';
@@ -17,6 +18,11 @@ export * from './languages';
  * visitor lands on has its catalog fetched before it is drawn (each bundle's
  * main.tsx), and the switcher fetches the next one before it goes there, so in
  * practice this only ever waits where a Suspense boundary is waiting anyway.
+ *
+ * Every page is handed the words of the installation's profile (see
+ * profile.ts): a section that says some of its words its own way for it has
+ * them over its own, made once per language and profile. So a component reads
+ * its words as it always did, whoever the installation is for.
  */
 
 export type Loader<T> = () => Promise<T>;
@@ -26,6 +32,9 @@ export class Catalogs<T> {
   private readonly loaded = new Map<Language, T>();
 
   private readonly pending = new Map<Language, Promise<T>>();
+
+  /** The catalogs in the words of a profile, by language and profile. */
+  private readonly profiled = new Map<string, T>();
 
   constructor(private readonly loaders: Record<Language, Loader<T>>) {}
 
@@ -56,15 +65,28 @@ export class Catalogs<T> {
     return promise;
   }
 
-  /** The catalog, or a suspension until it is there. */
-  read(language: Language): T {
+  /** The catalog, or a suspension until it is there - in the words of a profile, where one is given. */
+  read(language: Language, profile: Profile | null = null): T {
     const catalog = this.loaded.get(language);
 
-    if (catalog !== undefined) {
+    if (catalog === undefined) {
+      throw this.load(language);
+    }
+
+    if (profile === null) {
       return catalog;
     }
 
-    throw this.load(language);
+    const key = `${language}:${profile}`;
+
+    let words = this.profiled.get(key);
+
+    if (words === undefined) {
+      words = wordsFor(catalog as object, profile) as T;
+      this.profiled.set(key, words);
+    }
+
+    return words;
   }
 }
 
@@ -156,14 +178,14 @@ export function useLanguage(): Language {
   return languageOf(pathname) ?? fallback;
 }
 
-/** The words the kit's components read, in the language of the page. */
+/** The words the kit's components read, in the language of the page and the words of the installation's profile. */
 export function useT(): KitMessages {
-  return requireSite().read(useLanguage());
+  return requireSite().read(useLanguage(), useProfile());
 }
 
-/** The words of a catalog of this bundle, in the language of the page. */
+/** The words of a catalog of this bundle, in the language of the page and the words of the installation's profile. */
 export function useCatalog<T>(catalogs: Catalogs<T>): T {
-  return catalogs.read(useLanguage());
+  return catalogs.read(useLanguage(), useProfile());
 }
 
 /** Every language of the site at once, for rendering the pages when the frontend is built. */

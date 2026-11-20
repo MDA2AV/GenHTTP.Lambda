@@ -125,4 +125,17 @@ export const features = {
   },
   missingTitle: 'This draft is not there any more',
   missingText: 'It was put online or discarded. The versions show what became of it.',
+
+  /**
+   * The examples in the fields of a new draft on an installation an
+   * organization runs for its people (its operator chose "enterprise"): a
+   * step of a tool for work rather than a game's leaderboard.
+   */
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Approval step',
+      wantedPlaceholder: 'Optional. Let the team lead approve each request before it counts.',
+      whatPlaceholder: 'Adds an approval step for the team lead',
+    },
+  },
 };

@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'No se ha podido enviar.',
   noAnswer: 'Terminó sin indicar qué ha pasado.',
   failed: 'No ha funcionado.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Necesitamos una app que…',
+      unlimited:
+        'Este modelo necesita la contraseña y entonces se ejecuta sin límite de tiempo: sigue hasta terminar su app en lugar de hasta que se agote el reloj.',
+      ideas: [
+        'un formulario para solicitar días libres, aprobado por el responsable del equipo',
+        'un calendario de reservas para nuestras salas de reuniones',
+        'una lista de comprobación para incorporar a los nuevos compañeros',
+        'un inventario de nuestros equipos y de quién los tiene',
+        'una lista de solicitudes de soporte abiertas y de quién atiende cada una',
+        'un formulario de opinión para nuestras formaciones',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Hay una app por delante de la suya: después le toca a usted.' : `Hay ${waiting} apps por delante de la suya.`),
+      online: 'Su app está en línea',
+      notOnline: 'Su app se ha creado, pero no se ha puesto en línea.',
+      open: 'Abrir su app',
+      steps: {
+        create: 'Eligiendo una dirección para su app',
+        write: 'Creando su app',
+        improve: 'Mejorando su app',
+        looking: 'Revisando su app',
+      },
+      keep: 'Guarde ese enlace en un lugar seguro. Es la única forma de entrar en su app desde otro dispositivo, y nadie puede recuperarlo, ni siquiera quienes gestionan este sitio.',
+    },
+  },
 };

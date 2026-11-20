@@ -48,4 +48,12 @@ export const ship: Messages['ship'] = {
       <>Ja: {create('schrijf de code zelf')}, te beginnen met een van de demo’s. Een app is een C#-handler van GenHTTP, op deze server gecompileerd.</>,
     ],
   ],
+  profiles: {
+    enterprise: {
+      asks: [
+        'Bouw een formulier om verlof aan te vragen, met een pagina waar de teamleider elke aanvraag goedkeurt.',
+        'Publiceer deze app hier en stuur me de link.',
+      ],
+    },
+  },
 };

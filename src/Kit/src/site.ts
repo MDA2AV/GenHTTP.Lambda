@@ -34,6 +34,8 @@ export interface SiteFacts {
   retentionDays: number;
   /** Whether a new lambda is taken offline when unused at all - it starts in the sandbox. */
   expires?: boolean;
+  /** Who the installation is for, which the page was rendered for (see profile.ts). */
+  profile?: string;
   /** The first page of the showcase, on the showcase only. */
   showcase?: ShowcaseListing | null;
 }
@@ -174,6 +176,11 @@ export function useLifetimes(): Lifetimes {
       expires: true,
     }
   );
+}
+
+/** Who the installation is for, as the server said it with the page it rendered - nothing where it rendered none. */
+export function sentProfile(): string | null {
+  return sentFacts()?.profile ?? null;
 }
 
 /** The first page of the showcase as the server sent it, if it did. */

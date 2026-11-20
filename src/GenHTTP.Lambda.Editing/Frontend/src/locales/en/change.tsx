@@ -148,4 +148,15 @@ export const change = {
   own: 'Or use your own agent',
   ownText:
     'Any agent that speaks MCP can change this app too: connect it to the address below, give it the editor link, and tell it what should be different. It has no daily allowance and no clock.',
+
+  /**
+   * The box on an installation an organization runs for its people (its
+   * operator chose "enterprise"): a change to a tool for work rather than to
+   * a game.
+   */
+  profiles: {
+    enterprise: {
+      placeholder: 'Add a column for the department, sort the list by date, …',
+    },
+  },
 };

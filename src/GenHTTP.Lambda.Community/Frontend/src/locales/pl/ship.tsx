@@ -48,4 +48,12 @@ export const ship: Messages['ship'] = {
       <>Tak: {create('napisz kod samodzielnie')}, zaczynając od jednego z dem. Aplikacja to handler C# GenHTTP, kompilowany na tym serwerze.</>,
     ],
   ],
+  profiles: {
+    enterprise: {
+      asks: [
+        'Zbuduj formularz wniosku o urlop ze stroną, na której przełożony zatwierdza każdy wniosek.',
+        'Opublikuj tę aplikację tutaj i wyślij mi link.',
+      ],
+    },
+  },
 };

@@ -209,6 +209,43 @@ together the GenHTTP way, and there are two hosts - two editions:
   description, the MCP server and the export. The usage report says whether
   an installation is branded (`branded`, decided by the owner), never as
   what.
+- **Who an installation is for - asked for by the owner**, since the
+  community edition read like private stuff in a company: a profile
+  (`InstallationProfile`) - `cloud`, a public platform; `home`, somebody and
+  the people around them; `enterprise`, an organization and its people -
+  which the pages and the guide for agents speak to. **Chosen in the panel,
+  home by default on the community edition and fixed cloud on genhttp.dev -
+  decided by the owner**: the host says which there may be
+  (`LambdaOptions.Profile`, `Profiles`), as it does the branding, and the
+  operator chooses under **Settings** (`/admin/settings`, a row `profile`).
+  **Used where it clearly fits, never as a switch spread through the code -
+  decided by the owner** ("avoid spaghetti code and too many ifs"). Chosen
+  with it, open to change:
+  - **Words and steering, nothing else.** No limit, tier, default, rule of
+    connectivity, block or decline depends on it, and `PURPOSE` frames the
+    request as data alike for every profile. A new use keeps to that.
+  - **The words are the catalogs'**: a section says what a profile says its
+    own way under `profiles` - only what differs - and the kit's catalogs
+    hand every page the words of the installation's profile (`profile.ts`,
+    `wordsFor`), so no component asks which it is. Only `enterprise` has
+    words of its own: the menu's "Build an app", the ideas and the
+    placeholder on `/build`, the build box calling what it builds an app,
+    the asks on the community's `/ship`,
+    and the examples in the editor's Change box, new draft and showcase.
+    `home` says what the cloud says, which reads right for somebody's own
+    (the home `/build` still says "website" - a question for the owner), so
+    genhttp.dev's site is built as it was.
+  - **Prerendered for each profile** the community site names, as the
+    platform and as a brand, keeping the pages that differ - every page, for
+    enterprise, since the menu differs; `#site-facts` says which profile a
+    page was rendered for. The editor asks `/system`.
+  - **The guide's introduction says whom the apps are for**, a sentence per
+    profile; the build agent's brief points there. The MCP instructions,
+    fixed when the endpoint starts, do not.
+  - The community edition offers `home` and `enterprise`, not `cloud`; the
+    usage report says which (`configuration.profile`), not asked for by the
+    owner. Left as they were: the backlink (the operator's section of the
+    guide can ask for none), the demos, the front pages.
 - **The community edition sends a usage report once a day - decided by the
   owner** (`Services/UsageReports`), on by default and switched off with
   `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
@@ -1949,6 +1986,9 @@ with `LAMBDA_ENGINE=Kestrel`.
   every other catalog is typed as it, so a missing string fails the frontend
   build. A new language is added in both places, in every catalog, in every
   table of pages and in the social images.
+- **What a profile says its own way** is a section's `profiles`
+  (`profiles: { enterprise: { … } }`), only the sentences that differ, with a
+  doc comment saying for whom; it is translated like any other sentence.
 - The editor's words are a file per section and language
   (`src/GenHTTP.Lambda.Editing/Frontend/src/locales/<language>/`), named
   after its key, and an `index.ts` that puts them together - so a change to

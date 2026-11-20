@@ -28,7 +28,8 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// agents rules nobody here can see or take away.
 /// </remarks>
 public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses,
-                                 IBrandingService branding, IDatabaseProvider database, IFileProvider files, ISecretProvider secrets) : IGuideService
+                                 IBrandingService branding, ISettingsService settings, IDatabaseProvider database, IFileProvider files,
+                                 ISecretProvider secrets) : IGuideService
 {
     private const string TitleKey = "guide.title";
 
@@ -59,7 +60,7 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     /// <summary>
     /// The guide as an agent reads it now.
     /// </summary>
-    public string Write(string origin) => _document.Write(origin, branding.Current.Name, Section);
+    public string Write(string origin) => _document.Write(origin, branding.Current.Name, Section, settings.Get().Profile);
 
     /// <summary>
     /// Reads the operator's section into memory, before anything is served -

@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'La demande n’est pas passée.',
   noAnswer: 'C’est terminé, mais sans dire ce qui s’est passé.',
   failed: 'Ça n’a pas marché.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Il nous faut une app qui…',
+      unlimited:
+        'Ce modèle demande le mot de passe, puis fonctionne sans limite de temps : il continue jusqu’à ce que votre app soit terminée, et non jusqu’à la fin du délai.',
+      ideas: [
+        'un formulaire de demande de congés, approuvé par le chef d’équipe',
+        'un calendrier de réservation de nos salles de réunion',
+        'une liste de contrôle pour l’accueil des nouveaux collègues',
+        'un inventaire de notre matériel et de qui l’utilise',
+        'une liste des demandes d’assistance ouvertes et de la personne qui s’en occupe',
+        'un formulaire de retour sur nos formations',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Une app passe avant la vôtre : vous êtes le suivant.' : `${waiting} apps passent avant la vôtre.`),
+      online: 'Votre app est en ligne',
+      notOnline: 'Votre app a été créée, mais elle n’a pas été mise en ligne.',
+      open: 'Ouvrir votre app',
+      steps: {
+        create: 'Choix d’une adresse pour votre app',
+        write: 'Écriture de votre app',
+        improve: 'Amélioration de votre app',
+        looking: 'Relecture de votre app',
+      },
+      keep: 'Gardez ce lien en lieu sûr. C’est le seul moyen d’accéder à votre app depuis un autre appareil, et personne ne peut le récupérer, pas même les personnes qui gèrent ce site.',
+    },
+  },
 };

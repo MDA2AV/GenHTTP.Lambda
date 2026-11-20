@@ -48,4 +48,12 @@ export const ship: Messages['ship'] = {
       <>Bisa: {create('tulis kodenya sendiri')}, mulai dari salah satu demo. Aplikasi adalah handler GenHTTP berbahasa C#, yang dikompilasi di server ini.</>,
     ],
   ],
+  profiles: {
+    enterprise: {
+      asks: [
+        'Buatkan formulir pengajuan cuti, dengan halaman tempat atasan tim menyetujui setiap pengajuan.',
+        'Publikasikan aplikasi ini di sini dan kirimkan link-nya kepada saya.',
+      ],
+    },
+  },
 };

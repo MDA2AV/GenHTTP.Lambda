@@ -49,4 +49,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Datei wählen',
   keepSaved: 'Gespeichertes behalten',
   clear: 'Leeren',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Buchung von Besprechungsräumen',
+      descriptionPlaceholder: 'Kolleginnen und Kollegen buchen einen Raum für ein Zeitfenster und sehen auf einen Blick, welche Räume heute noch frei sind.',
+    },
+  },
 };

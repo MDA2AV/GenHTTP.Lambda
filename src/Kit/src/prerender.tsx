@@ -7,6 +7,7 @@ import { BRAND_PLACEHOLDERS, PLATFORM, prerenderBrand, type Brand } from './bran
 import { loadEverything } from './i18n';
 import { LANGUAGES, inLanguage } from './i18n/languages';
 import { Entry } from './pages/Showcase';
+import { prerenderProfile, type Profile } from './profile';
 import { PLACEHOLDERS, prerenderWith } from './site';
 
 /*
@@ -26,6 +27,13 @@ import { PLACEHOLDERS, prerenderWith } from './site';
  * with a brand made of placeholders (see brand.ts): its operator's name and
  * picture are other markup than the platform's mark, so the server takes
  * this rendering for a branded installation and fills them in.
+ *
+ * And a site whose installation may be for one profile or another has all of
+ * it rendered in the words of each profile it names (see profile.ts), as the
+ * platform and as a brand - keeping only the pages that differ from those
+ * rendered in the words every profile shares, since most say nothing of
+ * their own. The server takes the rendering of the installation's profile,
+ * and tells the page which it was.
  */
 
 /** A showcase entry made of placeholders, which the server fills in. */
@@ -81,11 +89,18 @@ export interface Prerendered extends PrerenderedPages {
   entry: Record<string, string>;
   /** The same pages as a branded installation shows them, where the site may be branded. */
   branded?: PrerenderedPages;
+  /**
+   * The pages that differ in the words of each profile the site names, as the
+   * platform and as a brand - empty where a profile differs nowhere.
+   */
+  profiles?: Partial<Record<Profile, PrerenderedPages & { branded?: PrerenderedPages }>>;
 }
 
 export interface PrerenderOptions {
   /** Whether the installation of the site may be branded, so its pages are rendered for a brand as well. */
   branded?: boolean;
+  /** The profiles the installation of the site may have, so its pages are rendered in the words of each as well. */
+  profiles?: Profile[];
 }
 
 /**
@@ -104,10 +119,51 @@ export const prerendering = (app: () => React.ReactNode, options: PrerenderOptio
     entry[language] = render(inLanguage(language, '/showcase'), <Entry entry={ENTRY} index={0} />);
   }
 
-  const plain = renderAll(app, paths, PLATFORM);
+  // in the words every profile shares, then in each profile's own
+  prerenderProfile(null);
 
-  return options.branded ? { ...plain, entry, branded: renderAll(app, paths, BRAND_PLACEHOLDERS) } : { ...plain, entry };
+  const plain = renderAll(app, paths, PLATFORM);
+  const branded = options.branded ? renderAll(app, paths, BRAND_PLACEHOLDERS) : undefined;
+
+  const result: Prerendered = branded ? { ...plain, entry, branded } : { ...plain, entry };
+
+  if (options.profiles?.length) {
+    result.profiles = {};
+
+    for (const profile of options.profiles) {
+      prerenderProfile(profile);
+
+      const own = differing(renderAll(app, paths, PLATFORM), plain);
+
+      result.profiles[profile] = branded ? { ...own, branded: differing(renderAll(app, paths, BRAND_PLACEHOLDERS), branded) } : own;
+    }
+
+    prerenderProfile(null);
+  }
+
+  return result;
 };
+
+/** What a rendering of the pages has that differs from another: the pages, and the shapes of the showcase. */
+function differing(pages: PrerenderedPages, shared: PrerenderedPages): PrerenderedPages {
+  const own: PrerenderedPages = { pages: {}, showcase: {} };
+
+  for (const [path, page] of Object.entries(pages.pages)) {
+    if (shared.pages[path] !== page) {
+      own.pages[path] = page;
+    }
+  }
+
+  for (const [language, shapes] of Object.entries(pages.showcase)) {
+    for (const [shape, page] of Object.entries(shapes)) {
+      if (shared.showcase[language]?.[shape] !== page) {
+        (own.showcase[language] ??= {})[shape] = page;
+      }
+    }
+  }
+
+  return own;
+}
 
 /** Every page and every shape of the showcase in every language, as the given brand shows them. */
 function renderAll(app: () => React.ReactNode, paths: string[], brand: Brand): PrerenderedPages {

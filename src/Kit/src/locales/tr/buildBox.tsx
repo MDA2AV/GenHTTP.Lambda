@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'İstek gönderilemedi.',
   noAnswer: 'Ajan işini bitirdi ama ne olduğunu söylemedi.',
   failed: 'Bir şeyler ters gitti.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Şöyle bir uygulamaya ihtiyacımız var…',
+      unlimited:
+        'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, uygulamanız bitene kadar devam eder.',
+      ideas: [
+        'izin talep etmek için, ekip lideri tarafından onaylanan bir form',
+        'toplantı odalarımız için bir rezervasyon takvimi',
+        'yeni çalışma arkadaşlarının işe alıştırılması için bir kontrol listesi',
+        'ekipmanlarımızın ve kimde olduklarının envanteri',
+        'açık destek taleplerinin ve her birinden sorumlu kişinin listesi',
+        'eğitimlerimiz için bir geri bildirim formu',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Sizinkinden önce bir uygulama var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} uygulama var.`),
+      online: 'Uygulamanız yayında',
+      notOnline: 'Uygulamanız oluşturuldu, ancak yayına alınmadı.',
+      open: 'Uygulamayı aç',
+      steps: {
+        create: 'Uygulamanız için bir adres seçiliyor',
+        write: 'Uygulamanız yazılıyor',
+        improve: 'Uygulamanız iyileştiriliyor',
+        looking: 'Uygulamanıza bakılıyor',
+      },
+      keep: 'Bu linki güvenli bir yerde saklayın. Uygulamanıza başka bir cihazdan girmenin tek yolu bu ve kaybolursa bu siteyi işletenler de dahil kimse kurtaramaz.',
+    },
+  },
 };

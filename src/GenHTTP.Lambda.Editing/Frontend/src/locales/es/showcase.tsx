@@ -51,4 +51,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Elegir un archivo',
   keepSaved: 'Mantener la guardada',
   clear: 'Quitar',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Reserva de salas de reuniones',
+      descriptionPlaceholder: 'Los compañeros reservan una sala para una franja horaria y ven de un vistazo qué salas siguen libres hoy.',
+    },
+  },
 };

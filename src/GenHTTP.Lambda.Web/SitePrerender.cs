@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
@@ -36,6 +37,14 @@ namespace GenHTTP.Lambda.Web;
 /// from the brand the page hands it (<c>#lambda-brand</c>, see
 /// <see cref="PageBranding"/>); where the build has no such rendering, they
 /// are sent without content and drawn by the browser.
+///
+/// A site whose words differ by who the installation is for has its pages
+/// rendered once more for each profile it names (<c>profiles</c>), as GenHTTP
+/// Lambda and as a brand, keeping only the pages that differ from the ones
+/// above. The page tells the application which profile it was rendered for
+/// (<c>profile</c> in <c>#site-facts</c>), so it draws the same words; a
+/// profile the build names nothing for is sent without content, as a brand
+/// is, and one built without any profiles is the same for every profile.
 /// </remarks>
 public sealed partial class SitePrerender
 {
@@ -92,14 +101,16 @@ public sealed partial class SitePrerender
     /// The index page with the content of the given page in it, or as it is if
     /// there is none to put there.
     /// </summary>
-    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request, Brand? brand = null)
+    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request, Brand? brand = null,
+                                               InstallationProfile profile = InstallationProfile.Home)
     {
         brand ??= Brand.Platform;
 
         var read = Read();
 
-        // the rendering of the pages as this installation presents itself
-        var prerendered = brand.Own ? read?.Branded : read?.Plain;
+        // the rendering of the pages as this installation presents itself,
+        // to whom it speaks
+        var prerendered = read?.For(profile, brand.Own);
 
         if (prerendered == null || read == null || !markup.Contains(Root, StringComparison.Ordinal))
         {
@@ -124,13 +135,14 @@ public sealed partial class SitePrerender
             lifetimeHours,
             (int)Math.Round(lifetimeHours / 24.0, MidpointRounding.AwayFromZero),
             (int)limits.RemovedAfter.TotalDays,
-            Limits.PolicyOf(limits.DefaultTier).ExpiresWhenUnused
+            Limits.PolicyOf(limits.DefaultTier).ExpiresWhenUnused,
+            InstallationProfiles.NameOf(profile)
         );
 
         string content;
 
         // the showcase as it is right now, or as it is drawn while it loads
-        if (page.Path == Showcase && await ListShowcaseAsync() is { } listing && RenderShowcase(prerendered, read.Entry, page.Language, listing, facts, brand) is { } showcase)
+        if (page.Path == Showcase && await ListShowcaseAsync() is { } listing && RenderShowcase(prerendered, read.Content.Entry, page.Language, listing, facts, brand) is { } showcase)
         {
             content = showcase;
             facts = facts with { Showcase = listing };
@@ -252,10 +264,10 @@ public sealed partial class SitePrerender
         }
     }
 
-    private Prerendered? Read()
+    private Renderings? Read()
     {
         // read again whenever it changes, because "npm run build" updates a
-        // running server - and only then, because it is most of a megabyte
+        // running server - and only then, because it is a few megabytes
         try
         {
             var written = System.IO.File.GetLastWriteTimeUtc(File);
@@ -269,9 +281,11 @@ public sealed partial class SitePrerender
                         ? JsonSerializer.Deserialize<Prerendered>(System.IO.File.ReadAllText(File), Json)
                         : null;
 
-            Cached = new Snapshot(written, content);
+            var renderings = content == null ? null : new Renderings(content);
 
-            return content;
+            Cached = new Snapshot(written, renderings);
+
+            return renderings;
         }
         catch (Exception e) when (e is IOException or JsonException)
         {
@@ -280,7 +294,69 @@ public sealed partial class SitePrerender
         }
     }
 
-    private sealed record Snapshot(DateTime Written, Prerendered? Content);
+    private sealed record Snapshot(DateTime Written, Renderings? Content);
+
+    /// <summary>
+    /// The pages as each profile and brand shows them, made once as the
+    /// build is read: a profile's own pages over the ones every profile
+    /// shares - the same strings, so it costs the dictionaries alone.
+    /// </summary>
+    private sealed class Renderings(Prerendered content)
+    {
+        private readonly Dictionary<(InstallationProfile Profile, bool Branded), PrerenderedPages?> _made = Make(content);
+
+        public Prerendered Content => content;
+
+        /// <summary>
+        /// The pages as the given profile and brand show them, or nothing
+        /// where the build did not render them so.
+        /// </summary>
+        public PrerenderedPages? For(InstallationProfile profile, bool branded)
+            => content.Profiles == null
+                   ? branded ? content.Branded : content.Plain
+                   : _made.GetValueOrDefault((profile, branded));
+
+        private static Dictionary<(InstallationProfile, bool), PrerenderedPages?> Make(Prerendered content)
+        {
+            var made = new Dictionary<(InstallationProfile, bool), PrerenderedPages?>();
+
+            foreach (var (name, own) in content.Profiles ?? [])
+            {
+                if (InstallationProfiles.TryParse(name, out var profile))
+                {
+                    made[(profile.Value, false)] = Over(content.Plain, own.Plain);
+                    made[(profile.Value, true)] = content.Branded is { } branded && own.Branded is { } brandedOwn ? Over(branded, brandedOwn) : null;
+                }
+            }
+
+            return made;
+        }
+
+        private static PrerenderedPages Over(PrerenderedPages shared, PrerenderedPages own)
+        {
+            var pages = new Dictionary<string, string>(shared.Pages);
+
+            foreach (var (path, page) in own.Pages)
+            {
+                pages[path] = page;
+            }
+
+            var showcase = shared.Showcase.ToDictionary(l => l.Key, l => new Dictionary<string, string>(l.Value));
+
+            foreach (var (language, shapes) in own.Showcase)
+            {
+                var into = showcase.TryGetValue(language, out var existing) ? existing : showcase[language] = [];
+
+                foreach (var (shape, page) in shapes)
+                {
+                    into[shape] = page;
+                }
+            }
+
+            return new PrerenderedPages(pages, showcase);
+        }
+
+    }
 
     #endregion
 
@@ -291,13 +367,15 @@ public sealed partial class SitePrerender
 /// the path it has in that language, the showcase by language and by the shape
 /// of its first page, and one entry of the showcase by language, as it appears
 /// in there - and all of it once more as a branded installation shows it,
-/// where the site may be branded.
+/// where the site may be branded, and the pages that differ for each profile
+/// the site says something of its own to, by its name.
 /// </summary>
 public sealed record Prerendered(
     Dictionary<string, string> Pages,
     Dictionary<string, Dictionary<string, string>> Showcase,
     Dictionary<string, string> Entry,
-    PrerenderedPages? Branded = null
+    PrerenderedPages? Branded = null,
+    Dictionary<string, PrerenderedProfile>? Profiles = null
 )
 {
 
@@ -319,10 +397,31 @@ public sealed record PrerenderedPages(
 );
 
 /// <summary>
+/// The pages of a site that differ for one profile from the pages every
+/// profile shares - as GenHTTP Lambda shows them, and as a brand does where
+/// the site may be branded. A page not here is the shared one; nothing at
+/// all is still a rendering, of a profile that differs nowhere.
+/// </summary>
+public sealed record PrerenderedProfile(
+    Dictionary<string, string> Pages,
+    Dictionary<string, Dictionary<string, string>> Showcase,
+    PrerenderedPages? Branded = null
+)
+{
+
+    /// <summary>
+    /// The pages as GenHTTP Lambda shows them.
+    /// </summary>
+    public PrerenderedPages Plain => new(Pages, Showcase);
+
+}
+
+/// <summary>
 /// What the server knows and the build could not, as <c>SiteFacts</c> in <c>site.ts</c>.
 /// </summary>
 /// <param name="Before">What a lambda's address is shown with before its key: "", or "localhost:8080/lambda/"</param>
 /// <param name="After">And after it: ".genhttp.run", or ""</param>
 /// <param name="Expires">Whether a new lambda is taken offline when unused - it starts in the sandbox - so the pages say how long it is kept</param>
+/// <param name="Profile">Who the installation is for, which the page was rendered for: <c>cloud</c>, <c>home</c> or <c>enterprise</c></param>
 public sealed record SiteFacts(string Origin, string Host, string Before, string After, int LifetimeHours, int OfflineDays, int RetentionDays,
-                               bool Expires = true, ShowcaseListing? Showcase = null);
+                               bool Expires = true, string Profile = "home", ShowcaseListing? Showcase = null);

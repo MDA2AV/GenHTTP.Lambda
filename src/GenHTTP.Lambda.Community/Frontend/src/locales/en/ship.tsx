@@ -54,4 +54,18 @@ export const ship = {
       <>Yes: {create('write the code yourself')}, starting from one of the demos. An app is a C# GenHTTP handler, compiled on this server.</>,
     ],
   ],
+
+  /**
+   * What to say to the agent on an installation an organization runs for its
+   * people (its operator chose "enterprise"): a tool for work rather than a
+   * guestbook.
+   */
+  profiles: {
+    enterprise: {
+      asks: [
+        'Build a form to request time off, with a page where the team lead approves each request.',
+        'Publish this app here and send me the link.',
+      ],
+    },
+  },
 };

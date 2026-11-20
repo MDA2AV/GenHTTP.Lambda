@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'Permintaan gagal dikirim.',
   noAnswer: 'Selesai, tapi tanpa keterangan apa yang terjadi.',
   failed: 'Tidak berhasil.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Kami membutuhkan aplikasi yang…',
+      unlimited:
+        'Model ini memerlukan kata sandi, lalu berjalan tanpa batas waktu: terus bekerja sampai aplikasi Anda selesai, bukan sampai waktunya habis.',
+      ideas: [
+        'formulir pengajuan cuti, disetujui oleh atasan tim',
+        'kalender pemesanan untuk ruang rapat kami',
+        'daftar periksa untuk menyambut rekan kerja baru',
+        'inventaris peralatan kami dan siapa yang memegangnya',
+        'daftar permintaan dukungan yang masih terbuka dan siapa yang menanganinya',
+        'formulir umpan balik untuk sesi pelatihan kami',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Ada satu aplikasi sebelum milik Anda. Setelah itu giliran Anda.' : `Ada ${waiting} aplikasi sebelum milik Anda.`),
+      online: 'Aplikasi Anda sudah online',
+      notOnline: 'Aplikasi Anda sudah dibuat, tetapi belum online.',
+      open: 'Buka aplikasi Anda',
+      steps: {
+        create: 'Memilih alamat untuk aplikasi Anda',
+        write: 'Menulis aplikasi Anda',
+        improve: 'Menyempurnakan aplikasi Anda',
+        looking: 'Memeriksa aplikasi Anda',
+      },
+      keep: 'Simpan link itu di tempat yang aman. Itu satu-satunya cara untuk masuk ke aplikasi Anda dari perangkat lain, dan tidak bisa dipulihkan. Pengelola situs ini pun tidak bisa.',
+    },
+  },
 };

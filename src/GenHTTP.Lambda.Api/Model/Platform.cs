@@ -31,7 +31,9 @@ public sealed record PlatformResponse(
     [Summary("Every tier the operator assigns - `Sandbox`, `Production` and `System` - and what each lets a lambda have, as this installation set it")]
     IReadOnlyList<TierResponse> Tiers,
     [Summary("How the installation presents itself on its pages: its name, and the picture beside it")]
-    BrandResponse Brand
+    BrandResponse Brand,
+    [Summary("Who the installation is for, which its pages and its guide for agents speak to: `cloud` (a public platform), `home` (somebody, their household and friends) or `enterprise` (an organization and its people)")]
+    string Profile
 );
 
 [Summary("Who runs an installation, as far as its pages have to say so.")]

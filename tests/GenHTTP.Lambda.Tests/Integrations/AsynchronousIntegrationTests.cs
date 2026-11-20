@@ -319,7 +319,7 @@ public sealed class AsynchronousIntegrationTests
 
         Assert.IsTrue(AtOnce(meta.ListAsync(new LambdaQuery()), "the panel lists the lambdas").Matched > 0);
 
-        Assert.IsFalse(AtOnce(settings.SaveAsync(new SiteSettings(OptimizeDatabases: false)), "a switch of the operator's is written").OptimizeDatabases);
+        Assert.IsFalse(AtOnce(settings.SaveAsync(settings.Get() with { OptimizeDatabases = false }), "a switch of the operator's is written").OptimizeDatabases);
         Assert.IsFalse(settings.Get().OptimizeDatabases, "and read from memory");
 
         Assert.IsFalse(AtOnce(builds.SaveSettingsAsync(builds.GetSettings() with { Builds = false }), "what the build agent offers is written").Builds);

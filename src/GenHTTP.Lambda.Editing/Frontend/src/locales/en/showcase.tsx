@@ -52,4 +52,16 @@ export const showcase = {
   choose: 'Choose a file',
   keepSaved: 'Keep the saved one',
   clear: 'Clear',
+
+  /**
+   * The examples in the title and the description on an installation an
+   * organization runs for its people (its operator chose "enterprise"): a
+   * tool colleagues use rather than a pub quiz.
+   */
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Meeting room booking',
+      descriptionPlaceholder: 'Colleagues book a room for a time slot and see at a glance which rooms are still free today.',
+    },
+  },
 };

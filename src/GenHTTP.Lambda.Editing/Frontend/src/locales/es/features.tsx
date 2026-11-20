@@ -119,4 +119,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Este borrador ya no existe',
   missingText: 'Se puso en línea o se descartó. Las versiones muestran qué fue de él.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Paso de aprobación',
+      wantedPlaceholder: 'Opcional. Que el responsable del equipo apruebe cada solicitud antes de que cuente.',
+      whatPlaceholder: 'Añade un paso de aprobación para el responsable del equipo',
+    },
+  },
 };

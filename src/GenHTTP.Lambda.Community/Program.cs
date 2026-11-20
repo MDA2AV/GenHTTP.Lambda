@@ -18,9 +18,15 @@ using GenHTTP.Modules.Layouting;
 // LAMBDA_DATABASE=postgresql
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
-// whoever runs it may give it a name and a logo of their own, in the panel
+// whoever runs it may give it a name and a logo of their own, in the panel,
+// and say whom it is for: themselves (home) or an organization (enterprise)
 await using var platform = await LambdaPlatform.Create()
-                                               .Options(settings.Platform with { Branding = true })
+                                               .Options(settings.Platform with
+                                               {
+                                                   Branding = true,
+                                                   Profile = InstallationProfile.Home,
+                                                   Profiles = [InstallationProfile.Home, InstallationProfile.Enterprise]
+                                               })
                                                .Database(CommunityDatabase.Of(settings.Database))
                                                .BuildAsync();
 

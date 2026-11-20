@@ -31,7 +31,8 @@ namespace GenHTTP.Lambda.Web;
 ///
 /// Every page is the installation's as it presents itself (see
 /// <see cref="PageBranding"/>): GenHTTP Lambda, or what its operator named
-/// it - with the manifest naming it too.
+/// it - with the manifest naming it too - and speaks to whom it is for, as
+/// its operator chose it (see <see cref="SitePrerender"/>).
 /// </remarks>
 public static class SitePages
 {
@@ -117,7 +118,7 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
         }
 
         var pages = new SitePagesHandler(bundle, meta, prerender, services.GetRequiredService<ISourceService>(), services.GetRequiredService<IBrandingService>(),
-                                         files.Build(), _head, _catalog, _moved);
+                                         services.GetRequiredService<ISettingsService>(), files.Build(), _head, _catalog, _moved);
 
         return Concerns.Chain(_concerns, pages);
     }
@@ -130,7 +131,8 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
 /// Answers the paths of a site.
 /// </summary>
 internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerender prerender, ISourceService sources, IBrandingService branding,
-                                       IHandler files, Func<SitePage, string?>? head, bool catalog, IReadOnlyDictionary<string, string> moved) : IHandler
+                                       ISettingsService settings, IHandler files, Func<SitePage, string?>? head, bool catalog,
+                                       IReadOnlyDictionary<string, string> moved) : IHandler
 {
 
     #region Functionality
@@ -186,7 +188,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 markup = SiteMeta.InHead(markup, more);
             }
 
-            markup = await prerender.RenderAsync(markup, page, request, brand);
+            markup = await prerender.RenderAsync(markup, page, request, brand, settings.Get().Profile);
 
             return Answer(request, PageBranding.Apply(markup, brand), "text/html; charset=utf-8");
         }

@@ -18,6 +18,11 @@ export const shell: KitMessages['shell'] = {
   imprint: '運営者情報',
   writeCode: 'コードを自分で書く',
   contact: 'お問い合わせ',
+  profiles: {
+    enterprise: {
+      build: 'アプリを作成',
+    },
+  },
 };
 
 export const common: KitMessages['common'] = {

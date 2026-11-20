@@ -535,26 +535,39 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     #region Settings
 
     [ResourceMethod("settings")]
-    [Summary("Reads what the operator has switched on or off")]
-    [return: Summary("The settings of the installation")]
-    public SettingsModel GetSettings()
+    [Summary("Reads what the operator has switched on or off, and chosen")]
+    [return: Summary("The settings of the installation, and the profiles it may have")]
+    public SettingsResponse GetSettings() => SettingsResponse.Of(settings);
+
+    [ResourceMethod(Method.Put, "settings")]
+    [Summary("Changes the settings")]
+    [Remarks("""
+             What the body names; what it leaves out stays as it is. They apply at once: the switches to the next run of the
+             platform's jobs, the profile to the next page served and the next `platform_guide` an agent reads. Whether the
+             build agent builds and changes apps is `PUT /admin/agent`.
+             """)]
+    [Response(ResponseStatus.BadRequest, "The profile is not one this installation offers - `profiles` lists those, and where it lists none the host decided which it is.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The settings, as they were saved")]
+    public async ValueTask<SettingsResponse> ChangeSettings(SettingsModel body)
     {
         var current = settings.Get();
 
-        return new SettingsModel(current.OptimizeDatabases);
-    }
+        var profile = current.Profile;
 
-    [ResourceMethod(Method.Put, "settings")]
-    [Summary("Replaces the settings")]
-    [Remarks("All of them. They apply to the next run of the platform's jobs. Whether the build agent builds and changes apps is `PUT /admin/agent`.")]
-    [return: Summary("The settings, as they were saved")]
-    public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
-    {
-        var saved = await settings.SaveAsync(new SiteSettings(body.OptimizeDatabases));
+        if (body.Profile != null)
+        {
+            profile = InstallationProfiles.TryParse(body.Profile, out var named)
+                    ? named.Value
+                    : throw LambdaException.Invalid($"'{body.Profile}' is not a profile: cloud, home or enterprise.");
+        }
 
-        logger.LogInformation("Updated settings optimizeDatabases {OptimizeDatabases} by operator", saved.OptimizeDatabases);
+        var saved = await settings.SaveAsync(new SiteSettings(body.OptimizeDatabases ?? current.OptimizeDatabases, profile));
 
-        return new SettingsModel(saved.OptimizeDatabases);
+        logger.LogInformation("Updated settings optimizeDatabases {OptimizeDatabases} profile {Profile} by operator", saved.OptimizeDatabases,
+                              InstallationProfiles.NameOf(saved.Profile));
+
+        return SettingsResponse.Of(settings);
     }
 
     #endregion

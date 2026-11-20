@@ -49,4 +49,31 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'La richiesta non è partita.',
   noAnswer: 'Ha finito senza dire cosa è successo.',
   failed: 'Non ha funzionato.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Ci serve un’app che…',
+      unlimited:
+        'Questo modello richiede la password e poi lavora senza limite di tempo: va avanti finché la Sua app non è finita, invece di fermarsi allo scadere del tempo.',
+      ideas: [
+        'un modulo per richiedere le ferie, approvato dal responsabile',
+        'un calendario per prenotare le nostre sale riunioni',
+        'una checklist per l’inserimento dei nuovi colleghi',
+        'un inventario della nostra attrezzatura e di chi la usa',
+        'un elenco delle richieste di assistenza aperte e di chi se ne occupa',
+        'un modulo di feedback per i nostri corsi di formazione',
+      ],
+      ahead: (waiting) =>
+        waiting === 1 ? 'C’è un’app prima della Sua: poi tocca a Lei.' : `Ci sono ${waiting} app prima della Sua.`,
+      online: 'La Sua app è online',
+      notOnline: 'La Sua app è stata creata, ma non è andata online.',
+      open: 'Apri l’app',
+      steps: {
+        create: 'Scelta di un indirizzo per la Sua app',
+        write: 'Scrittura della Sua app',
+        improve: 'Miglioramento della Sua app',
+        looking: 'Revisione della Sua app',
+      },
+      keep: 'Conservi questo link in un posto sicuro. È l’unico modo per accedere alla Sua app da un altro dispositivo e non si può recuperare, nemmeno da parte di chi gestisce questo sito.',
+    },
+  },
 };

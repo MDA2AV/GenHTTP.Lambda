@@ -301,19 +301,17 @@ export function Choices({ label, options, chosen, onChange }: {
 
 /**
  * A setting: what it is, what it does as it stands, how it fared lately, and
- * the switch that is what it is.
+ * the switch - or, for one of a few, the field - that is what it is.
  */
-export function Setting({ id, title, on, saving, onToggle, link, status, children }: {
+export function Setting({ id, title, saving, link, status, children, ...control }: {
   id: string;
   title: string;
-  on: boolean;
   saving: boolean;
-  onToggle: () => void;
   link?: string;
   /** What the setting came to lately, under what it does. */
   status?: ReactNode;
   children: ReactNode;
-}) {
+} & ({ on: boolean; onToggle: () => void } | { field: ReactNode })) {
   return (
     <div className="surface flex items-start gap-4 p-4">
       <div className="min-w-0 flex-1">
@@ -336,7 +334,7 @@ export function Setting({ id, title, on, saving, onToggle, link, status, childre
 
       {saving && <IconSpinner />}
 
-      <Switch on={on} onToggle={onToggle} labelledBy={id} />
+      {'field' in control ? control.field : <Switch on={control.on} onToggle={control.onToggle} labelledBy={id} />}
     </div>
   );
 }

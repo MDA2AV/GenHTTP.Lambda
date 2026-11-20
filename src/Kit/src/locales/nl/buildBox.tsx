@@ -49,4 +49,30 @@ export const buildBox: KitMessages['buildBox'] = {
   failedToStart: 'Starten is niet gelukt.',
   noAnswer: 'Klaar, maar zonder te zeggen wat er gebeurd is.',
   failed: 'Dat is niet gelukt.',
+  profiles: {
+    enterprise: {
+      placeholder: 'We hebben een app nodig die…',
+      unlimited:
+        'Dit model heeft het wachtwoord nodig en werkt dan zonder tijdslimiet: het gaat door tot je app klaar is, in plaats van tot de klok afloopt.',
+      ideas: [
+        'een formulier om verlof aan te vragen, goedgekeurd door de teamleider',
+        'een reserveringskalender voor onze vergaderruimtes',
+        'een checklist voor het inwerken van nieuwe collega’s',
+        'een overzicht van onze apparatuur en wie wat heeft',
+        'een lijst met openstaande supportverzoeken en wie ze behandelt',
+        'een feedbackformulier voor onze trainingen',
+      ],
+      ahead: (waiting) => (waiting === 1 ? 'Er is nog één app voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} apps voor de jouwe.`),
+      online: 'Je app staat online',
+      notOnline: 'Je app is gemaakt, maar staat niet online.',
+      open: 'Je app openen',
+      steps: {
+        create: 'Een adres voor je app kiezen',
+        write: 'Je app schrijven',
+        improve: 'Je app verbeteren',
+        looking: 'Je app bekijken',
+      },
+      keep: 'Bewaar deze link op een veilige plek. Het is de enige weg naar je app vanaf een ander apparaat, en hij is niet te herstellen, ook niet door de mensen die deze site beheren.',
+    },
+  },
 };

@@ -299,6 +299,27 @@ public sealed record LambdaOptions
     public bool Branding { get; init; }
 
     /// <summary>
+    /// Who the installation is for, until its operator chooses another of
+    /// <see cref="Profiles"/> - and for good where there are none to choose.
+    /// </summary>
+    /// <remarks>
+    /// A home installation by default: whoever runs one without saying more
+    /// runs it for themselves. genhttp.dev is the cloud.
+    /// </remarks>
+    public InstallationProfile Profile { get; init; } = InstallationProfile.Home;
+
+    /// <summary>
+    /// The profiles the operator may choose among in the panel's Settings, or
+    /// none to leave the installation the host's <see cref="Profile"/>.
+    /// </summary>
+    /// <remarks>
+    /// The host's to decide, as the branding is: the community edition offers
+    /// home and enterprise, and genhttp.dev, being the cloud, none. Where
+    /// there are some, <see cref="Profile"/> is one of them.
+    /// </remarks>
+    public IReadOnlyList<InstallationProfile> Profiles { get; init; } = [];
+
+    /// <summary>
     /// How often a telemetry reading is taken.
     /// </summary>
     public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);

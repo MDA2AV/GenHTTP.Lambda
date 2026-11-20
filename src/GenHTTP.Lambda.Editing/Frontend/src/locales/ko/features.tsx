@@ -117,4 +117,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: '이 초안은 이제 없어요',
   missingText: '온라인으로 전환됐거나 삭제됐어요. 어떻게 됐는지는 버전에서 확인할 수 있어요.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: '승인 단계',
+      wantedPlaceholder: '선택 사항. 팀장이 각 신청을 승인해야 반영되도록 하기',
+      whatPlaceholder: '팀장 승인 단계 추가',
+    },
+  },
 };
