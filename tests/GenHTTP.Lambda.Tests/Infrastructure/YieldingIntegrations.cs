@@ -35,13 +35,20 @@ internal static class YieldingIntegrations
 {
 
     public static IIntegrationBuilder<IDatabaseProvider> Database(Counter counter)
-        => new Builder<IDatabaseProvider>(async (context, cancellation) => new YieldingDatabase(await SqliteDatabase.Create().BuildAsync(context, cancellation), counter));
+        => new Builder<IDatabaseProvider>(context => new YieldingDatabase(SqliteDatabase.Create().Build(context), counter));
 
     public static IIntegrationBuilder<IFileProvider> Files(Counter counter)
-        => new Builder<IFileProvider>(async (context, cancellation) => new YieldingFiles(await LocalFiles.Create().BuildAsync(context, cancellation), counter));
+        => new Builder<IFileProvider>(context => new YieldingFiles(LocalFiles.Create().Build(context), counter));
 
     public static IIntegrationBuilder<ISecretProvider> Secrets(Counter counter)
-        => new Builder<ISecretProvider>((_, _) => ValueTask.FromResult<ISecretProvider>(new YieldingSecrets(counter)));
+        => new Builder<ISecretProvider>(_ => new YieldingSecrets(counter, true));
+
+    /// <summary>
+    /// Secrets in a vault that does not answer: preparing them fails, as it
+    /// does where the server is down or the address wrong.
+    /// </summary>
+    public static IIntegrationBuilder<ISecretProvider> UnreachableSecrets(Counter counter)
+        => new Builder<ISecretProvider>(_ => new YieldingSecrets(counter, false));
 
     /// <summary>
     /// How often each kind was asked something it had to wait for.
@@ -49,6 +56,16 @@ internal static class YieldingIntegrations
     internal sealed class Counter
     {
         private int _database, _files, _secrets, _records;
+
+        private readonly ConcurrentQueue<string> _lifecycle = [];
+
+        /// <summary>
+        /// What was prepared and let go of, in order: <c>prepared database</c>,
+        /// <c>disposed secrets</c> and so on.
+        /// </summary>
+        public IReadOnlyList<string> Lifecycle => [.. _lifecycle];
+
+        internal void Happened(string what) => _lifecycle.Enqueue(what);
 
         public int Database => Volatile.Read(ref _database);
 
@@ -86,10 +103,10 @@ internal static class YieldingIntegrations
         }
     }
 
-    private sealed class Builder<T>(Func<IntegrationContext, CancellationToken, ValueTask<T>> build) : IIntegrationBuilder<T> where T : IIntegration
+    private sealed class Builder<T>(Func<IntegrationContext, T> build) : IIntegrationBuilder<T> where T : IIntegration
     {
 
-        public ValueTask<T> BuildAsync(IntegrationContext context, CancellationToken cancellation = default) => build(context, cancellation);
+        public T Build(IntegrationContext context) => build(context);
 
     }
 
@@ -117,6 +134,21 @@ internal static class YieldingIntegrations
         public IntegrationInfo Describe() => inner.Describe();
 
         public string? Guide(GuideContext context) => inner.Guide(context);
+
+        public async ValueTask PrepareAsync(CancellationToken cancellation = default)
+        {
+            await Task.Yield();
+            await inner.PrepareAsync(cancellation);
+
+            counter.Happened("prepared database");
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync();
+
+            counter.Happened("disposed database");
+        }
 
         public async ValueTask<DbConnection> OpenAsync(DatabaseStore store, CancellationToken cancellation = default)
         {
@@ -246,6 +278,21 @@ internal static class YieldingIntegrations
 
         public string? Guide(GuideContext context) => inner.Guide(context);
 
+        public async ValueTask PrepareAsync(CancellationToken cancellation = default)
+        {
+            await Task.Yield();
+            await inner.PrepareAsync(cancellation);
+
+            counter.Happened("prepared files");
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync();
+
+            counter.Happened("disposed files");
+        }
+
         public IResourceTree Tree(DataScope scope, string? folder) => inner.Tree(scope, folder);
 
         public async ValueTask<byte[]?> ReadAsync(FileStore store, string name, CancellationToken cancellation = default)
@@ -344,7 +391,7 @@ internal static class YieldingIntegrations
     /// Secrets kept in memory, in the clear - for a test, a stand-in for a
     /// vault on another machine.
     /// </summary>
-    private sealed class YieldingSecrets(Counter counter) : ISecretProvider
+    private sealed class YieldingSecrets(Counter counter, bool reachable) : ISecretProvider
     {
         private readonly ConcurrentDictionary<DataScope, ConcurrentDictionary<string, SecretEntry>> _entries = [];
 
@@ -353,6 +400,24 @@ internal static class YieldingIntegrations
         public IntegrationInfo Describe() => new(IntegrationKind.Secrets, "Yielding", []);
 
         public string? Guide(GuideContext context) => null;
+
+        public async ValueTask PrepareAsync(CancellationToken cancellation = default)
+        {
+            await Task.Yield();
+
+            if (!reachable)
+            {
+                throw new HttpRequestException("The vault did not answer.");
+            }
+
+            counter.Happened("prepared secrets");
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            counter.Happened("disposed secrets");
+            return ValueTask.CompletedTask;
+        }
 
         public async ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default)
         {

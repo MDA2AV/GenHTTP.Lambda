@@ -965,6 +965,10 @@ and logging are not integrations, for now.
   infrastructure returns a `ValueTask` and takes a `CancellationToken`; what
   describes (`Describe`, `Guide`) or configures stays synchronous. Whole
   copies and exports go through `Offload` in the platform.
+- **An integration lives as a GenHTTP handler does**: its builder only
+  configures (`Build`), `PrepareAsync` reaches the infrastructure once as the
+  platform starts, and it is `IAsyncDisposable`, disposed of with the
+  platform - also where it was never prepared.
 - **Kinds, dialects and stores are enums, never strings (owner)**; where one
   becomes a name (file, schema, directory, JSON, env var) a mapper spells it
   out, never `ToString()`: stored names must not follow a code rename.

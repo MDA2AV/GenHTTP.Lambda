@@ -32,8 +32,7 @@ public static class LocalFiles
 public sealed class LocalFilesBuilder : IIntegrationBuilder<IFileProvider>
 {
 
-    public ValueTask<IFileProvider> BuildAsync(IntegrationContext context, CancellationToken cancellation = default)
-        => ValueTask.FromResult<IFileProvider>(new LocalFileProvider(context.DataDirectory));
+    public IFileProvider Build(IntegrationContext context) => new LocalFileProvider(context.DataDirectory);
 
 }
 
@@ -69,6 +68,21 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
     /// made by an earlier version of the platform leaves out the same files.
     /// </remarks>
     private const string Staging = ".uploading";
+
+    #region Lifecycle
+
+    /// <remarks>
+    /// Nothing to reach before the first request: a directory is made where a
+    /// file is first written into it.
+    /// </remarks>
+    public ValueTask PrepareAsync(CancellationToken cancellation = default) => ValueTask.CompletedTask;
+
+    /// <remarks>
+    /// Holds nothing open between calls.
+    /// </remarks>
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    #endregion
 
     #region The platform's own
 

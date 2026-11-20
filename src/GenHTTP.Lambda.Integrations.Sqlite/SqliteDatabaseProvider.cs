@@ -51,6 +51,22 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// </summary>
     private readonly ConcurrentDictionary<DatabaseStore, bool> _prepared = [];
 
+    #region Lifecycle
+
+    /// <remarks>
+    /// Nothing to reach before the first request: a file is made where it is
+    /// opened, and its journal is switched as it is.
+    /// </remarks>
+    public ValueTask PrepareAsync(CancellationToken cancellation = default) => ValueTask.CompletedTask;
+
+    /// <remarks>
+    /// Holds nothing open of its own: SQLite's pools are the process's, shared
+    /// with every other user of the library in it.
+    /// </remarks>
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    #endregion
+
     #region The platform's own
 
     public DatabaseDialect Dialect => DatabaseDialect.Sqlite;

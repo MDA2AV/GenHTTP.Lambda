@@ -16,23 +16,19 @@ namespace GenHTTP.Lambda.Services.Integrations;
 public sealed record PlatformIntegrations(IDatabaseProvider Database, IFileProvider Files, ISecretProvider? Secrets) : IAsyncDisposable
 {
 
-    private IEnumerable<IIntegration> Built => Secrets is { } secrets ? [Database, Files, secrets] : [Database, Files];
+    private IReadOnlyList<IIntegration> Built => Secrets is { } secrets ? [Database, Files, secrets] : [Database, Files];
 
     public ValueTask DisposeAsync() => DisposeAsync(Built);
 
-    internal static async ValueTask DisposeAsync(IEnumerable<IIntegration> integrations)
+    /// <summary>
+    /// Lets go of integrations in the order opposite to the one they were
+    /// built in, as what came later may lean on what came before.
+    /// </summary>
+    internal static async ValueTask DisposeAsync(IReadOnlyList<IIntegration> integrations)
     {
-        foreach (var integration in integrations)
+        for (var i = integrations.Count - 1; i >= 0; i--)
         {
-            switch (integration)
-            {
-                case IAsyncDisposable asynchronous:
-                    await asynchronous.DisposeAsync();
-                    break;
-                case IDisposable disposable:
-                    disposable.Dispose();
-                    break;
-            }
+            await integrations[i].DisposeAsync();
         }
     }
 

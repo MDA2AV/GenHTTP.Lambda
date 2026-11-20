@@ -15,16 +15,15 @@ public sealed record IntegrationContext(string DataDirectory, ILoggerFactory Log
 /// </summary>
 /// <remarks>
 /// A host makes the builder, with what only the host knows - a connection
-/// string, an address - and hands it to the platform's builder; the platform
-/// builds the integration before anything is migrated, and disposes of it
-/// with itself where it can be.
-///
-/// Building may reach the infrastructure - check that it answers, prepare
-/// what it needs - so it is awaited, as the platform starts.
+/// string, an address - and hands it to the platform's builder. Building
+/// configures and reaches nothing, as a GenHTTP handler's builder does: what
+/// talks to the infrastructure - checking that it answers, preparing what it
+/// needs - is <see cref="IIntegration.PrepareAsync"/>, which the platform
+/// awaits as it starts, before anything is migrated.
 /// </remarks>
-public interface IIntegrationBuilder<T> where T : IIntegration
+public interface IIntegrationBuilder<out T> where T : IIntegration
 {
 
-    ValueTask<T> BuildAsync(IntegrationContext context, CancellationToken cancellation = default);
+    T Build(IntegrationContext context);
 
 }

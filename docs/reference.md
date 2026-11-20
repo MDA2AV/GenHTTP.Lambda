@@ -1924,10 +1924,15 @@ its own:
 
 A host chooses them on the platform's builder - `LambdaPlatform.Create()
 .Database(...).Files(...).Secrets(...)` - and the platform uses its own for a
-kind it is given nothing for. Each is built with what the platform hands it
-(`IntegrationContext`: the data directory, the loggers) before anything is
-migrated - awaited, `IIntegrationBuilder<T>.BuildAsync`, so one may reach its
-server as it starts - and disposed of with the platform. One of each per installation:
+kind it is given nothing for. They live as GenHTTP's handlers do: built
+with what the platform hands their builder (`IIntegrationBuilder<T>.Build`,
+with an `IntegrationContext`: the data directory, the loggers), which only
+configures; prepared once, awaited, before anything is migrated
+(`IIntegration.PrepareAsync` - where one reaches its server, so a server that
+does not answer stops the platform from starting); and disposed of with the
+platform (`IAsyncDisposable`), the last built first. All are built before the
+first is prepared, and where one fails to build or prepare, every one built
+is disposed of again, prepared or not. One of each per installation:
 moving what one holds into another is not something the platform does.
 
 **An integration keeps; the platform decides.** Whether a lambda has a
@@ -2018,7 +2023,10 @@ written once, in SQL both accept.
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder
 (`IIntegrationBuilder<T>`), and have a host hand it to the platform's builder.
-Await what the infrastructure is asked; where it answers at once, return
+The builder checks what it was given and reaches nothing; reaching the
+infrastructure the first time is `PrepareAsync`, and letting go of what was
+opened `DisposeAsync`, which may come without the other. Await what the
+infrastructure is asked; where it answers at once, return
 completed tasks rather than hop - an installation on Ioxide keeps its
 reactors that way. A database integration keeps its databases in shape when
 it is asked (`OptimizeAsync`), and may answer that it did nothing where its
