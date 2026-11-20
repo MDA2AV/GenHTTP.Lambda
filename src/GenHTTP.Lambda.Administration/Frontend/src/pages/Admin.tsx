@@ -36,15 +36,14 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * the lambdas - counted, and every one of them. Then what keeps the
  * installation safe from what runs on it: the lambdas that ask to connect
  * out, and the addresses refused. Then how the machine is doing: the
- * process, the room on its volume, and what it logs. Then how the
- * installation presents itself: the name and logo its pages show, where its
- * host lets the operator give it some. Then the platform itself: the guide
- * agents read first with the operator's own rules in it, the switches of the
- * site and of what the platform does by itself, what it holds the lambdas
- * to, and what it keeps its data in, as its host chose. Last, what fits no
- * group: the report the installation sends about itself, and when it is
- * usually quiet. A group with nothing in it - Configuration, on a host that
- * does not let its operator brand it - is not shown.
+ * process, the room on its volume, and what it logs. Then the platform
+ * itself: the name and logo its pages show, where its host lets the operator
+ * give it some; the guide agents read first with the operator's own rules in
+ * it; the switches of the site and of what the platform does by itself; what
+ * it holds the lambdas to; and what it keeps its data in, as its host chose.
+ * Last, what fits no group: the report the installation sends about itself,
+ * and when it is usually quiet. A group a host leaves with nothing in it is
+ * not shown.
  */
 const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
   { id: 'start', label: null, sections: [
@@ -63,10 +62,8 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
     { id: 'storage', label: 'Storage', note: 'The room left, and what takes it' },
     { id: 'log', label: 'Log', note: 'What the server and the lambdas are printing, live' },
   ] },
-  { id: 'configuration', label: 'Configuration', sections: [
-    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
-  ] },
   { id: 'platform', label: 'Platform', sections: [
+    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
     { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
     { id: 'settings', label: 'Settings', note: 'What the site offers and the platform does by itself, switched without a restart' },
     { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },

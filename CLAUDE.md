@@ -910,7 +910,9 @@ features").
   bounded.
 - **Switched off by the operator - decided by the owner**, under Settings
   (`optimizeDatabases`): "DB engineers might want to do the optimization
-  themselves in postgres". On by default.
+  themselves in postgres". On by default. **The usage report says which -
+  decided by the owner** (`configuration.optimizeDatabases`), as it does the
+  site's other switches.
 - **Never anything that changes what a database holds.** SQLite's `VACUUM`
   numbers anew the rows of a table with neither an `INTEGER PRIMARY KEY` nor
   an index, so a file with one is not rebuilt; `VACUUM FULL` locks out
@@ -1140,11 +1142,11 @@ how it shows them did.
 - **Sections in groups, as the editor has them** (the kit's `Navigation`):
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Configuration** (Branding, where the host lets
-  the operator brand the installation - the group is not shown where it does
-  not); **Platform** (Guide, Settings, Limits, Integrations - Settings and
-  Integrations moved there, in that order, by the owner); **Misc** (Usage
-  report, Quiet hours) - the last three the owner's ask. A new section joins
+  (Server, Storage, Log); **Platform** (Branding - where the host lets the
+  operator brand the installation - Guide, Settings, Limits, Integrations:
+  the owner moved Settings, Integrations and then Branding there, in that
+  order, and the Configuration group went with them); **Misc** (Usage
+  report, Quiet hours) - the last two the owner's ask. A new section joins
   the group it belongs to, and a group left empty is not shown. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
