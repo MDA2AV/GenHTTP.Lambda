@@ -18,7 +18,12 @@ public sealed record ServerSettings
     /// <summary>
     /// The engine the root web server is hosted with.
     /// </summary>
-    public LambdaEngine Engine { get; init; } = LambdaEngine.Ioxide;
+    /// <remarks>
+    /// GenHTTP's internal engine unless a host or <c>LAMBDA_ENGINE</c> says
+    /// otherwise: it runs wherever .NET does, where io_uring is refused by
+    /// most container runtimes and Kestrel needs ASP.NET Core.
+    /// </remarks>
+    public LambdaEngine Engine { get; init; } = LambdaEngine.Internal;
 
     /// <summary>
     /// Which HTTP versions a port answers on.

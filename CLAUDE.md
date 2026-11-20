@@ -1118,7 +1118,8 @@ dotnet test GenHTTP.Lambda.slnx -c Release
 npm run build      # at the root: type checks and builds every bundle; CI runs it too
 ```
 
-On Windows Ioxide does not run: start the server with `LAMBDA_ENGINE=Kestrel`.
+The server starts on GenHTTP's internal engine, which runs anywhere; Ioxide
+(`LAMBDA_ENGINE=ioxide`) needs Linux and io_uring, and is never fallen back to.
 Build the frontend before the server when checking a page by hand.
 
 ## Translations

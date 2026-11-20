@@ -192,12 +192,14 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
 
     private static IServerHost CreateHost(ServerSettings settings) => settings.Engine switch
     {
-        LambdaEngine.Kestrel => GenHTTP.Engine.Kestrel.Host.Create(),
-        LambdaEngine.Internal => GenHTTP.Engine.Internal.Host.Create(),
-        _ => GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
+        LambdaEngine.Ioxide => GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
         {
             Tcp = new GenHTTP.Engine.Ioxide.TcpTransportOptions { RecvQueueEntries = settings.ReceiveQueueEntries }
-        })
+        }),
+        LambdaEngine.Kestrel => GenHTTP.Engine.Kestrel.Host.Create(),
+        // the engine that runs anywhere, never the one that asks the most of
+        // where it runs
+        _ => GenHTTP.Engine.Internal.Host.Create()
     };
 
     /// <remarks>
