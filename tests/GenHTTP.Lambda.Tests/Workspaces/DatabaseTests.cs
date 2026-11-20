@@ -309,7 +309,7 @@ public sealed class DatabaseTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             using Microsoft.EntityFrameworkCore.ChangeTracking;
             using Microsoft.EntityFrameworkCore.Metadata.Builders;
             using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -341,7 +341,7 @@ public sealed class DatabaseTests
 
                 protected override void OnModelCreating(ModelBuilder model) => model.ApplyConfiguration(new NoteMapping());
             }
-            """);
+            """));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
@@ -355,14 +355,14 @@ public sealed class DatabaseTests
 
         foreach (var attempt in attempts)
         {
-            var outcome = await fixture.Deployments.ValidateAsync($$"""
+            var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet($$"""
                 using (var db = new DbContext(new DbContextOptionsBuilder().UseSqlite(Database.GetConnection(), true).Options))
                 {
                     db.Database.{{attempt}};
                 }
 
                 return Inline.Create();
-                """);
+                """));
 
             Assert.IsFalse(outcome.Success, attempt);
             Assert.IsTrue(outcome.Diagnostics.Any(d => d.Message.Contains("Evolve", StringComparison.Ordinal)), $"{attempt}: refused, pointing at Evolve");
@@ -375,14 +375,14 @@ public sealed class DatabaseTests
         await using var fixture = await LambdaFixture.CreateAsync();
 
         // inside a DbContext, Database is the context's own - the message says so
-        var outcome = await fixture.Deployments.ValidateAsync("""
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaFixture.Snippet("""
             return Inline.Create();
 
             class Records : DbContext
             {
                 protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(Database.GetConnection(), true);
             }
-            """);
+            """));
 
         Assert.IsFalse(outcome.Success);
         Assert.IsTrue(outcome.Diagnostics.Any(d => d.Message.Contains("Inside a DbContext", StringComparison.Ordinal)), string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));

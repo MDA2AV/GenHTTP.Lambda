@@ -308,7 +308,7 @@ public sealed class AsynchronousIntegrationTests
         Assert.IsNotNull(AtOnce(meta.ResolveAsync("records"), "what answers to its key is loaded"));
         Assert.IsNotNull(AtOnce(meta.ResolveAsync("records"), "and answered from memory"));
 
-        var version = AtOnce(meta.SaveAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"two\"));"), "a version is saved, in the lambda's turn");
+        var version = AtOnce(meta.SaveAsync(lambda.PrivateKey, LambdaFixture.Snippet("return Content.From(Resource.FromString(\"two\"));")), "a version is saved, in the lambda's turn");
 
         Assert.AreEqual(2, version.Version);
         Assert.AreEqual(2, AtOnce(meta.GetVersionsAsync(lambda.PrivateKey), "the versions are listed").Count);

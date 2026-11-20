@@ -248,14 +248,12 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         var file = await cache.GetAsync(row.Id, version, fingerprint, async stream =>
         {
-            var code = storage.Read(row.Id, version)
-                    ?? throw LambdaException.NotFound($"The code of version {version} is missing.");
-
-            var files = LambdaSource.Parse(code);
+            var files = storage.Read(row.Id, version)
+                     ?? throw LambdaException.NotFound($"The code of version {version} is missing.");
 
             // the names the code reads, which it says itself - never what is
             // stored, and never a value
-            var secrets = files.Where(f => f.IsCompiled)
+            var secrets = LambdaSource.Compiled(files)
                                .SelectMany(f => SecretVault.ReadBy(f.Code))
                                .Select(r => r.Name)
                                .Distinct(StringComparer.Ordinal)
@@ -443,7 +441,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         try
         {
-            var files = LambdaSource.Parse(storage.Read(row.Id, version));
+            var files = storage.Read(row.Id, version) ?? [];
 
             about = ContextPages.FirstParagraph(ContextPages.Read(files, LambdaSource.ProductDoc));
         }

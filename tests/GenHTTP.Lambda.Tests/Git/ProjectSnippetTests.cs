@@ -17,7 +17,7 @@ public sealed class ProjectSnippetTests
     {
         foreach (var demo in DemoCatalog.All)
         {
-            var snippet = LambdaSource.Parse(TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true)).Single(f => f.Name == LambdaSource.EntryName).Code;
+            var snippet = TemplateCatalog.FilesFor(demo.Id, demo.Key, demo: true).Single(f => f.Name == LambdaSource.EntryName).Code;
 
             var project = ProjectSnippet.ForRepository(snippet);
 

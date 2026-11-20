@@ -79,19 +79,21 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Functionality
 
-    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, BuildSettings? settings = null, CancellationToken cancellation = default)
+    public async ValueTask<CompilationOutcome> ValidateAsync(IReadOnlyList<VersionFile> files, long? lambdaId = null, BuildSettings? settings = null,
+                                                            CancellationToken cancellation = default)
     {
         var id = lambdaId ?? 0;
-
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetResourceDirectory(id),
-                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, settings ?? BuildSettings.Standard, Provider.Binding);
 
         await _compiling.WaitAsync(cancellation);
 
         try
         {
-            // seconds of work, which a reactor would spend not serving (see Offload)
-            var (outcome, _) = await Offload.Run(() => LambdaCompiler.CompileAsync(request), cancellation);
+            // seconds of work, which a reactor would spend not serving (see
+            // Offload) - the C# read for it as well, and nothing else
+            var (outcome, _) = await Offload.Run(() => LambdaCompiler.CompileAsync(new CompilationRequest(LambdaSource.Compiled(files), Storage.GetResourceDirectory(id),
+                                                                                                          Storage.GetAssemblyDirectory(id), $"check_{id}", false,
+                                                                                                          settings ?? BuildSettings.Standard, Provider.Binding)),
+                                                  cancellation);
 
             return outcome;
         }
@@ -113,9 +115,9 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     public ValueTask<IHandler> ResolveAsync(long lambdaId, int version, BuildSettings settings, CancellationToken cancellation = default)
         => ResolveAsync(new Slot(lambdaId, null), version, settings, () => Storage.Read(lambdaId, version), cancellation);
 
-    public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, BuildSettings settings,
+    public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, IReadOnlyList<VersionFile> files, BuildSettings settings,
                                                       CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, featureId), preview, settings, () => code, cancellation);
+        => ActivateAsync(new Slot(lambdaId, featureId), preview, settings, () => files, cancellation);
 
     public ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, BuildSettings settings,
                                                    CancellationToken cancellation = default)
@@ -125,8 +127,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// Builds what a slot is to serve and makes it what it serves.
     /// </summary>
     /// <param name="stamp">Which build this is: the version, or the deployment of a preview</param>
-    /// <param name="read">Where the code comes from</param>
-    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
+    /// <param name="read">Where the files come from</param>
+    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, BuildSettings settings, Func<IReadOnlyList<VersionFile>?> read,
                                                               CancellationToken cancellation)
     {
         if (IsDeployed(slot, stamp, settings))
@@ -138,11 +140,9 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
          * Everything from reading the version on happens inside the lock, not
          * only the compilation. The requests that reach a lambda nobody has
          * compiled since the server started - or since its connectivity changed - all
-         * arrive here together, and each of them used to read, unpack and
-         * write out the whole version before queueing for the compiler; with
-         * a hundred megabytes of resources that is a hundred megabytes, several
-         * times over, per request. Now the first one does it and the others
-         * find it done.
+         * arrive here together, and each of them would copy out its resources
+         * and read its C# before queueing for the compiler. The first one does
+         * it and the others find it done.
          */
         await _compiling.WaitAsync(cancellation);
 
@@ -154,7 +154,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             }
 
             /*
-             * Reading, unpacking, writing out and compiling a version takes
+             * Copying out the resources of a version and compiling it takes
              * from a moment to seconds. The request that asked for it waits
              * either way; the other connections of its reactor should not
              * have to (see Offload).
@@ -171,19 +171,21 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// Reads, writes out and compiles what a slot is to serve - under the lock
     /// and away from the reactor, see the activation above.
     /// </summary>
-    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
+    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, BuildSettings settings, Func<IReadOnlyList<VersionFile>?> read,
                                                            CancellationToken cancellation)
     {
-        var code = read();
+        var files = read();
 
-        if (code == null)
+        if (files == null)
         {
             return CompilationOutcome.Failed(slot.FeatureId == null
                 ? $"Version {stamp} of this lambda does not exist anymore."
                 : "The preview of this feature has nothing to serve anymore.");
         }
 
-        var files = LambdaSource.Parse(code);
+        // read at length from here on: not collected meanwhile, though a save
+        // of the feature replaced what it was read from
+        await Storage.ReadingAsync(slot.LambdaId, files);
 
         // what this version ships is written out before it is compiled, so the
         // handler it returns is serving the resources of the version going
@@ -194,7 +196,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         var (lambdaId, featureId) = (slot.LambdaId, slot.FeatureId);
 
-        var request = new CompilationRequest(files, Storage.GetResourceDirectory(lambdaId, featureId),
+        var request = new CompilationRequest(LambdaSource.Compiled(files), Storage.GetResourceDirectory(lambdaId, featureId),
                                              Storage.GetAssemblyDirectory(lambdaId), name, true, settings, Provider.Binding,
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
@@ -271,13 +273,13 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         try
         {
-            var code = slot.FeatureId is { } feature
+            var files = slot.FeatureId is { } feature
                 ? Storage.ReadPreview(slot.LambdaId, feature)
                 : Storage.Read(slot.LambdaId, running.Stamp);
 
-            if (code != null)
+            if (files != null)
             {
-                Materialize(slot, LambdaSource.Parse(code));
+                Materialize(slot, files);
             }
         }
         catch (Exception e)
@@ -286,7 +288,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, BuildSettings settings, Func<string?> read,
+    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, BuildSettings settings, Func<IReadOnlyList<VersionFile>?> read,
                                                    CancellationToken cancellation)
     {
         if (_deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Settings == settings)
@@ -341,8 +343,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// rather than lingering because nothing overwrote it. Names were checked
     /// before they got here, and the path is resolved against the root again
     /// anyway - a file that would land outside is skipped rather than trusted.
+    ///
+    /// Copied from the store file by file, by the file system, so nothing of
+    /// them passes through memory; and copied rather than linked, since what
+    /// a lambda could write to there must not be what the store keeps.
     /// </remarks>
-    private void Materialize(Slot slot, IReadOnlyList<LambdaFile> files)
+    private void Materialize(Slot slot, IReadOnlyList<VersionFile> files)
     {
         var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Storage.GetResourceDirectory(slot.LambdaId, slot.FeatureId)))
                  + Path.DirectorySeparatorChar;
@@ -376,7 +382,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-                File.WriteAllBytes(path, file.Bytes);
+                file.CopyTo(path);
             }
         }
         catch (Exception e)

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -94,7 +95,7 @@ public sealed class TierAllowanceTests
         files.AddRange(Enumerable.Range(1, 30).Select(i => new LambdaFile($"Type{i}.cs", $"public record Type{i}(int Value);")));
         files.AddRange(Enumerable.Range(1, 150).Select(i => new LambdaFile($"resources/www/page{i}.html", $"<p>page {i}</p>")));
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize(files));
+        await fixture.DeployAsync(lambda.PrivateKey, files);
 
         using var page = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/www/page150.html");
 
@@ -109,10 +110,10 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var archive = LambdaArchive.Pack([
+        var archive = LambdaArchive.Pack(VersionFile.FromSent([
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             .. Enumerable.Range(1, 100).Select(i => new LambdaFile($"resources/www/{i}.txt", $"{i}"))
-        ]);
+        ]));
 
         using var saved = await UploadAsync(fixture, lambda.PrivateKey, archive);
 
@@ -159,7 +160,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var archive = LambdaArchive.Pack(Shipping(1024 * 1024));
+        var archive = LambdaArchive.Pack(VersionFile.FromSent(Shipping(1024 * 1024)));
 
         using (var refused = await UploadAsync(fixture, lambda.PrivateKey, archive))
         {
@@ -200,12 +201,9 @@ public sealed class TierAllowanceTests
         // that has to be escaped, so the pieces have to join up exactly
         var text = new string('a', 1024 * 1024 - 1) + "😀\"quoted\"" + new string('b', 2 * 1024 * 1024);
 
-        var files = LambdaSource.Parse(LambdaSource.Serialize([
-            new LambdaFile(LambdaSource.EntryName, "return null;"),
-            new LambdaFile("long.txt", text)
-        ]));
+        var written = JsonSerializer.Serialize(new LambdaFile("long.txt", text));
 
-        Assert.AreEqual(text, files[1].Code);
+        Assert.AreEqual(text, JsonSerializer.Deserialize<LambdaFile>(written)!.Code);
     }
 
     [TestMethod]

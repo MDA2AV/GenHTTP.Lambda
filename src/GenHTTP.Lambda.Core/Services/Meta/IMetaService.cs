@@ -49,12 +49,12 @@ public interface IMetaService
     ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Reads a single version including its code.
+    /// Reads a single version with its files.
     /// </summary>
     ValueTask<LambdaVersionContent> GetVersionAsync(string privateKey, int version, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Stores the given code as a new version.
+    /// Stores the given files as a new version.
     /// </summary>
     /// <remarks>
     /// Versions are never changed once they are stored: every change to the
@@ -66,12 +66,12 @@ public interface IMetaService
     /// merged only on top of the version it is based on, and refused if
     /// another was saved first
     /// </param>
-    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null, CancellationToken cancellation = default);
+    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, VersionNote? note = null, int? after = null, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Compiles the given code without deploying it.
+    /// Compiles the given files without deploying them.
     /// </summary>
-    ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default);
+    ValueTask<CompilationOutcome> CheckAsync(string privateKey, IReadOnlyList<VersionFile> files, CancellationToken cancellation = default);
 
     /// <summary>
     /// Builds the given version (or the latest one) and makes it the active deployment.

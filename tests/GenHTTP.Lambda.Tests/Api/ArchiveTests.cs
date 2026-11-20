@@ -35,9 +35,15 @@ public sealed class ArchiveTests
             Assert.IsNotNull(zip.GetEntry("lambda.cs"), "the files keep the names they have in the lambda");
         }
 
-        var changed = Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(Greeter.Text));")),
+        // text as editors write it, with byte order marks - and a picture that happens to begin with one
+        byte[] mark = [0xEF, 0xBB, 0xBF];
+
+        byte[] picture = [.. mark, 0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0xFF];
+
+        var changed = Zip(("lambda.cs", [.. mark, .. Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(Greeter.Text));")]),
                           ("Greeter.cs", Encoding.UTF8.GetBytes("static class Greeter { public const string Text = \"from a zip\"; }")),
-                          ("resources/site/logo.gif", [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0xFF]));
+                          ("resources/site/logo.gif", picture),
+                          ("resources/site/page.html", [.. mark, .. mark, .. Encoding.UTF8.GetBytes("<p>twice</p>")]));
 
         using var uploaded = await UploadAsync(fixture, lambda.PrivateKey, changed);
 
@@ -49,9 +55,13 @@ public sealed class ArchiveTests
 
         var content = await read.GetContentAsync<VersionContentResponse>();
 
-        CollectionAssert.AreEqual(new[] { "lambda.cs", "Greeter.cs", "resources/site/logo.gif" }, content.Files.Select(f => f.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "lambda.cs", "Greeter.cs", "resources/site/logo.gif", "resources/site/page.html" }, content.Files.Select(f => f.Name).ToArray());
 
         Assert.AreEqual("base64", content.Files[2].Encoding, "binary files are kept as base64");
+        CollectionAssert.AreEqual(picture, content.Files[2].Bytes, "as they came, whatever they begin with");
+
+        Assert.AreEqual("return Content.From(Resource.FromString(Greeter.Text));", content.Files[0].Code, "text without its byte order mark");
+        Assert.AreEqual("<p>twice</p>", content.Files[3].Code, "and without every one it begins with");
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 

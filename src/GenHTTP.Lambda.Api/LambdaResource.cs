@@ -214,13 +214,16 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
         {
             archive = await Offload.Run(() =>
             {
-                var target = Path.Combine(Path.GetTempPath(), $"genhttp-lambda-export-{Guid.NewGuid():N}.zip");
+                Directory.CreateDirectory(options.StagingDirectory);
+
+                // beside the stores rather than in a temporary folder, which may be held in memory
+                var target = Path.Combine(options.StagingDirectory, $"export-{Guid.NewGuid():N}.zip");
 
                 try
                 {
                     using var stream = File.Create(target);
 
-                    ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code), stream, database);
+                    ProjectPacker.Pack(exported, content.Files, stream, database);
 
                     return target;
                 }

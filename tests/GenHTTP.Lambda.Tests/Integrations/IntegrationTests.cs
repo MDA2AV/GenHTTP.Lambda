@@ -154,7 +154,7 @@ public sealed class IntegrationTests
     {
         foreach (var demo in DemoCatalog.All)
         {
-            var files = LambdaSource.Parse(TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true));
+            var files = TemplateCatalog.FilesFor(demo.Id, demo.Key, demo: true);
 
             foreach (var file in files.Where(f => f.IsCompiled))
             {

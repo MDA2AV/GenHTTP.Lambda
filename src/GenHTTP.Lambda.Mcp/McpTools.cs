@@ -440,16 +440,18 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> WriteAsync(string privateKey, List<CodeFile> sent, SaveRequest save, string origin)
     {
-        var files = Files(sent);
+        var written = Files(sent);
 
-        if (LambdaSource.Validate(files) is { } invalid)
+        if (LambdaSource.Validate(written) is { } invalid)
         {
             return ToolResult.Error(invalid);
         }
 
-        // what it held before the save replaces it
+        var files = VersionFile.FromSent(written);
+
+        // what it held before the save replaces it - by name, nothing of it read
         var had = save.Feature is { } feature
-            ? LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code)
+            ? (await features.GetAsync(privateKey, feature)).Files
             : (await meta.RequireAsync(privateKey)).LatestVersion != null ? await meta.LatestFilesAsync(privateKey) : [];
 
         var saved = Adding(await SaveAsync(privateKey, files, save, origin), "dropped", Dropped(had, files));
@@ -465,9 +467,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// for. Not said of single files, which a save of every file leaves out
     /// on purpose more often than not.
     /// </summary>
-    private static string? Dropped(IReadOnlyList<LambdaFile> had, IReadOnlyList<LambdaFile> after)
+    private static string? Dropped(IReadOnlyList<VersionFile> had, IReadOnlyList<VersionFile> after)
     {
-        static string? Folder(LambdaFile file) => file.Name.Contains('/') ? file.Name[..file.Name.IndexOf('/')] + "/" : null;
+        static string? Folder(VersionFile file) => file.Name.Contains('/') ? file.Name[..file.Name.IndexOf('/')] + "/" : null;
 
         var kept = after.Select(Folder).OfType<string>().ToHashSet(StringComparer.Ordinal);
 
@@ -492,8 +494,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var edits = replacements?.Select(e => new FileEdit(e.File, e.Find, e.Replace)).ToList();
 
         // a feature is changed from what it holds - and only if that is still
-        // what it holds when the change is saved; a new version from the newest
-        IReadOnlyList<LambdaFile> current;
+        // what it holds when the change is saved; a new version from the newest.
+        // What the change leaves alone is never read
+        IReadOnlyList<VersionFile> current;
 
         int? read = null;
 
@@ -501,7 +504,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             var content = await features.GetAsync(privateKey, feature);
 
-            current = LambdaSource.Parse(content.Code);
+            current = content.Files;
 
             read = content.Feature.Revision;
         }
@@ -526,7 +529,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// agent used to that writes them there without noticing, and as code they
     /// are kept and never read: Evolve finds no migration, and makes no table.
     /// </summary>
-    private static string? Misplaced(IReadOnlyList<LambdaFile> files)
+    private static string? Misplaced(IReadOnlyList<VersionFile> files)
     {
         var stray = files.Any(f => f.Name.StartsWith("migrations/", StringComparison.Ordinal) && f.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
 
@@ -539,11 +542,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files - as a new version, or into the feature named - and
     /// deploys or checks them if the arguments ask for that.
     /// </summary>
-    private async ValueTask<object> SaveAsync(string privateKey, IReadOnlyList<LambdaFile> files, SaveRequest save, string origin, int? read = null)
+    private async ValueTask<object> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, SaveRequest save, string origin, int? read = null)
     {
         var note = new VersionNote(save.Specification, save.Change, VersionOrigins.Agent);
-
-        var code = LambdaSource.Serialize(files);
 
         // said where the next save is decided, and as a request rather than a
         // refusal - like the note below: the code matters more
@@ -551,10 +552,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (save.Feature is { } feature)
         {
-            return await SaveFeatureAsync(save, privateKey, feature, code, files.Count, note, origin, read, documentation);
+            return await SaveFeatureAsync(save, privateKey, feature, files, note, origin, read, documentation);
         }
 
-        var version = await meta.SaveAsync(privateKey, code, note);
+        var version = await meta.SaveAsync(privateKey, files, note);
 
         logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", await meta.PublicKeyOfAsync(privateKey), version.Version, files.Count);
 
@@ -584,7 +585,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              * would have to read the whole lambda back to find out whether the
              * line compiles. The version is saved either way.
              */
-            var outcome = await meta.CheckAsync(privateKey, code);
+            var outcome = await meta.CheckAsync(privateKey, files);
 
             return new
             {
@@ -605,12 +606,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files as the feature's, and puts its preview online or
     /// compiles it if the arguments ask for that.
     /// </summary>
-    private async ValueTask<object> SaveFeatureAsync(SaveRequest save, string privateKey, string feature, string code, int files, VersionNote note,
+    private async ValueTask<object> SaveFeatureAsync(SaveRequest save, string privateKey, string feature, IReadOnlyList<VersionFile> files, VersionNote note,
                                                      string origin, int? read, string? documentation)
     {
-        var saved = await features.SaveAsync(privateKey, feature, code, note, read);
+        var saved = await features.SaveAsync(privateKey, feature, files, note, read);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, await meta.PublicKeyOfAsync(privateKey), files);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, await meta.PublicKeyOfAsync(privateKey), files.Count);
 
         if (save.Deploy)
         {
@@ -619,7 +620,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (save.Check)
         {
-            var outcome = await meta.CheckAsync(privateKey, code);
+            var outcome = await meta.CheckAsync(privateKey, files);
 
             return new
             {
@@ -652,7 +653,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return ToolResult.Error(invalid);
         }
 
-        var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
+        var outcome = await meta.CheckAsync(privateKey, VersionFile.FromSent(files));
 
         logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", await meta.PublicKeyOfAsync(privateKey), files.Count, outcome.Success);
 
@@ -802,16 +803,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// og:image needs the full address, since social networks do not resolve
     /// a relative one, and the page itself never follows it.
     /// </remarks>
-    private string? Leaks(IReadOnlyList<LambdaFile> files, string publicKey)
+    /// <remarks>
+    /// Text only, one file after another as it is read: a picture holds no link.
+    /// </remarks>
+    private string? Leaks(IReadOnlyList<VersionFile> files, string publicKey)
     {
         var address = addresses.Of(publicKey);
 
         // the host, so http, https, ws and wss are all caught
         var host = $"//{publicKey}.{addresses.Authority}";
 
-        return files.Any(f => (f.IsCompiled || f.IsResource) && LinksTo(f.Code, publicKey, host) && LinksTo(Named.Replace(f.Code, string.Empty), publicKey, host))
-            ? $"The code links to the lambda by its full address, {address}. From the preview that is the live lambda, with its real data - not the feature's copy. Use relative paths (\"api/items\", not \"{address}api/items\")."
-            : null;
+        foreach (var file in files.Where(f => (f.IsCompiled || f.IsResource) && !f.Binary))
+        {
+            var code = file.ReadText();
+
+            if (LinksTo(code, publicKey, host) && LinksTo(Named.Replace(code, string.Empty), publicKey, host))
+            {
+                return $"The code links to the lambda by its full address, {address}. From the preview that is the live lambda, with its real data - not the feature's copy. Use relative paths (\"api/items\", not \"{address}api/items\").";
+            }
+        }
+
+        return null;
     }
 
     private static bool LinksTo(string code, string publicKey, string host)
@@ -830,7 +842,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// documentation and tests, where the next save is decided - and nothing
     /// when it has them.
     /// </summary>
-    private static string? Unwritten(IReadOnlyList<LambdaFile> files)
+    private static string? Unwritten(IReadOnlyList<VersionFile> files)
     {
         var missing = ContextPages.Missing(files);
 
@@ -1274,9 +1286,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         // links that leave the preview for the live lambda, said while there is still time
         var lambda = await meta.GetAsync(privateKey);
 
-        var files = LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code);
+        var files = (await features.GetAsync(privateKey, feature)).Files;
 
-        var warning = lambda != null ? Leaks(files, lambda.PublicKey) : null;
+        // the text of its pages and scripts, read away from the reactor
+        var warning = lambda != null ? await Offload.Run(() => Leaks(files, lambda.PublicKey)) : null;
 
         return new
         {
@@ -1407,13 +1420,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         FeatureContent? feature = null;
 
-        IReadOnlyList<LambdaFile> files = [];
+        IReadOnlyList<VersionFile> files = [];
 
         if (wanted != null)
         {
             feature = await features.GetAsync(privateKey, wanted);
 
-            files = LambdaSource.Parse(feature.Code);
+            files = feature.Files;
         }
         else
         {
@@ -1423,7 +1436,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 content = await meta.GetVersionAsync(privateKey, which);
 
-                files = LambdaSource.Parse(content.Code);
+                files = content.Files;
             }
         }
 
@@ -1452,15 +1465,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             var one = files.FirstOrDefault(f => f.Name == only)
                    ?? throw LambdaException.NotFound($"There is no file '{only}' here. read_lambda without file lists what there is.");
 
-            if (one.Code.Length <= ReadFileLimit)
+            if (one.Length <= ReadFileLimit)
             {
-                listing = [new { one.Name, one.Code }];
+                listing = [new { one.Name, one.ToSent().Code }];
             }
             else
             {
-                listing = [new { one.Name, length = one.Code.Length }];
+                listing = [new { one.Name, length = one.Length }];
 
-                note = $"{one.Name} comes to {one.Code.Length:N0} characters, more than is sent here. {archive} has every file.";
+                note = $"{one.Name} comes to {one.Length:N0} characters, more than is sent here. {archive} has every file.";
             }
         }
         else
@@ -1515,7 +1528,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             limits = Limits(lambda),
             // whether its code may connect to other servers, which it does not compile without
             connectivity = Describe(lambda.Connectivity),
-            connectivityNote = lambda.Connectivity?.Allowed != true && CodeGuard.Connects(files)
+            connectivityNote = lambda.Connectivity?.Allowed != true && CodeGuard.Connects(LambdaSource.Compiled(files))
                 ? "The code connects to other servers, which this lambda may not do: it does not compile. Fetch what browsers may fetch from the page, or ask with request_connectivity - see platform_guide, connectivity."
                 : null,
             lambda.ActiveVersion,
@@ -1547,7 +1560,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     tables = s.Items,
                     s.UsedBytes,
                     s.QuotaBytes,
-                    note = !s.Enabled && files.Any(f => f.IsCode && DatabaseService.Uses(f.Code))
+                    note = !s.Enabled && files.Any(f => f.IsCode && !f.Binary && DatabaseService.Uses(f.ReadText()))
                         ? "The code connects to the database, which is switched off: Database.GetConnectionAsync() throws until it is on (enable_data with kind 'database')."
                         : s.Enabled ? "read_database lists its tables and reads their rows." : null
                 },
@@ -1595,15 +1608,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// picture, a script, the data a test uses - is named with its length and
     /// read with file when it is wanted.
     /// </remarks>
-    private static (object Documentation, object Tests) Context(IReadOnlyList<LambdaFile> files)
+    private static (object Documentation, object Tests) Context(IReadOnlyList<VersionFile> files)
     {
-        var budget = ContextBudget;
+        var budget = (long)ContextBudget;
 
         object Part(string folder, params string[] known)
         {
             var inside = files.Where(f => f.Name.StartsWith(folder, StringComparison.Ordinal)).ToList();
 
-            var pages = inside.Where(f => f.Encoding != "base64" && f.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            var pages = inside.Where(f => !f.Binary && f.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                               .OrderBy(f => Array.IndexOf(known, f.Name) is var at and >= 0 ? at : known.Length)
                               .ThenBy(f => f.Name, StringComparer.Ordinal)
                               .ToList();
@@ -1612,19 +1625,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
             foreach (var page in pages)
             {
-                if (page.Code.Length <= budget)
+                if (page.Length <= budget)
                 {
-                    budget -= page.Code.Length;
+                    budget -= page.Length;
 
-                    shown.Add(new { page.Name, content = page.Code });
+                    shown.Add(new { page.Name, content = page.ReadText() });
                 }
                 else
                 {
-                    shown.Add(new { page.Name, length = page.Code.Length, read = "Longer than this answer carries beside the rest: pass it as file." });
+                    shown.Add(new { page.Name, length = page.Length, read = "Longer than this answer carries beside the rest: pass it as file." });
                 }
             }
 
-            var others = inside.Except(pages).Select(f => new { f.Name, length = f.Code.Length }).ToList();
+            var others = inside.Except(pages).Select(f => new { f.Name, length = f.Length }).ToList();
 
             var missing = known.Where(k => string.IsNullOrWhiteSpace(ContextPages.Read(files, k))).ToList();
 
@@ -1653,7 +1666,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// file. A folder of the code may hold hundreds of files - the sources of
     /// a front end - so only so many are named before the rest is counted.
     /// </remarks>
-    private static (IEnumerable<object> Listing, string? Note) Listing(IReadOnlyList<LambdaFile> files, string archive)
+    private static (IEnumerable<object> Listing, string? Note) Listing(IReadOnlyList<VersionFile> files, string archive)
     {
         var program = files.Where(f => !f.Name.StartsWith(LambdaSource.DocsFolder, StringComparison.Ordinal)
                                     && !f.Name.StartsWith(LambdaSource.TestsFolder, StringComparison.Ordinal))
@@ -1668,15 +1681,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         foreach (var file in program)
         {
-            if (file.Code.Length <= budget)
+            // read only where it fits: the length of what does not is known without reading it
+            if (file.Length <= budget)
             {
-                budget -= file.Code.Length;
+                budget -= file.Length;
 
-                listing.Add(new { file.Name, file.Code });
+                listing.Add(new { file.Name, file.ToSent().Code });
             }
             else if (omitted++ < Listed)
             {
-                listing.Add(new { file.Name, length = file.Code.Length });
+                listing.Add(new { file.Name, length = file.Length });
             }
         }
 

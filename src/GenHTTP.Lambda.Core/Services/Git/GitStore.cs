@@ -3,6 +3,7 @@ using System.Text.Json;
 using GenHTTP.Modules.Git;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Services.Git;
 
@@ -18,9 +19,10 @@ namespace GenHTTP.Lambda.Services.Git;
 /// are kept as they came, which is what a client that pushed them expects.
 ///
 /// The files are kept once each, by the id git gives them, so a version that
-/// changes one file adds one file. They are what the versions hold already,
-/// and kept here all the same: a commit has to be served as it was for as
-/// long as it is reachable, and the files of a feature change in place.
+/// changes one file adds one file. They are what the stores of the lambdas
+/// hold already, and kept here all the same - copied from there, not read: a
+/// commit has to be served as it was for as long as it is reachable, which
+/// is longer than a version or a feature it was made of may be kept.
 ///
 /// Written through a file beside the one it replaces, so a write cut short
 /// leaves the one before. What nothing reaches any more is collected once a
@@ -89,6 +91,35 @@ public sealed class GitStore(LambdaOptions options)
         if (!File.Exists(file))
         {
             Write(file, content);
+        }
+    }
+
+    /// <summary>
+    /// Keeps what a file of a lambda holds, unless it is kept already - copied
+    /// from where the lambda keeps it, rather than read.
+    /// </summary>
+    public void WriteBlob(long lambda, GitObjectId id, VersionFile content)
+    {
+        var file = BlobFile(lambda, id);
+
+        if (File.Exists(file))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+
+        var staging = $"{file}.{Guid.NewGuid():n}.writing";
+
+        try
+        {
+            content.CopyTo(staging);
+
+            File.Move(staging, file, true);
+        }
+        finally
+        {
+            Delete(staging);
         }
     }
 

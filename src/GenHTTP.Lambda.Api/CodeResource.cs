@@ -43,7 +43,7 @@ public sealed class CodeResource(IMetaService meta, IDatabaseProvider database)
     [return: Summary("Whether it compiles, and what the compiler said")]
     public async ValueTask<CompilationResponse> Check([Summary(ApiDocumentation.PrivateKey)] string privateKey, CodeRequest request)
     {
-        var outcome = await meta.CheckAsync(privateKey, VersionResource.Serialize(request.Files));
+        var outcome = await meta.CheckAsync(privateKey, VersionResource.FilesOf(request.Files));
 
         return new CompilationResponse(outcome.Success, outcome.Diagnostics);
     }

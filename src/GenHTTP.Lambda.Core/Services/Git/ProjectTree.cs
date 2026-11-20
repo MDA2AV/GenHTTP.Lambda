@@ -33,11 +33,17 @@ public static class ProjectTree
     /// <summary>
     /// The tree of a commit the platform makes for the given files.
     /// </summary>
+    /// <remarks>
+    /// Laid out from what is known of the files rather than from what they
+    /// hold: the git id of each is its blob, and only the snippet is read, to
+    /// be put into its class.
+    /// </remarks>
     /// <param name="previous">
     /// The commit it follows, whose Project.cs is kept where lambda.cs did not change - a push may have written it
     /// in a way of its own, and putting the snippet back into the class again would change that for nothing
     /// </param>
-    public static LaidTree Lay(IReadOnlyList<LambdaFile> files, RepositoryProject project, StoredCommit? previous)
+    /// <param name="gitIds">The git blob id of each file, by the SHA-256 of what it holds</param>
+    public static LaidTree Lay(IReadOnlyList<VersionFile> files, RepositoryProject project, StoredCommit? previous, IReadOnlyDictionary<string, string> gitIds)
     {
         var entries = new List<StoredEntry>();
 
@@ -45,20 +51,30 @@ public static class ProjectTree
 
         var contents = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 
-        var snippet = files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty;
+        var own = new Dictionary<string, VersionFile>(StringComparer.Ordinal);
 
-        var snippetBytes = Encoding.UTF8.GetBytes(snippet);
+        // what lambda.cs holds, which the tree has as Project.cs: kept for the way back
+        string snippetBlob;
 
-        var snippetBlob = GitObjectId.ForBlob(snippetBytes).ToString();
+        if (files.FirstOrDefault(f => f.Name == LambdaSource.EntryName) is { } entry)
+        {
+            snippetBlob = gitIds[entry.Hash];
 
-        contents[snippetBlob] = snippetBytes;
+            own[snippetBlob] = entry;
+        }
+        else
+        {
+            snippetBlob = GitObjectId.ForBlob([]).ToString();
+
+            contents[snippetBlob] = [];
+        }
 
         // the class it was put into before, if the snippet is what it was
         var kept = previous?.Files?.FirstOrDefault(f => f.Name == LambdaSource.EntryName && f.Blob == snippetBlob) is { } same
                  ? previous.At(same.Path)
                  : null;
 
-        var binary = files.Where(f => f.Encoding == "base64").Select(f => f.Name).ToHashSet(StringComparer.Ordinal);
+        var binary = files.Where(f => f.Binary).Select(f => f.Name).ToHashSet(StringComparer.Ordinal);
 
         foreach (var file in ProjectPacker.Repository(project, files))
         {
@@ -68,11 +84,17 @@ public static class ProjectTree
             {
                 blob = kept.Blob;
             }
+            else if (file.File is { } mine)
+            {
+                blob = gitIds[mine.Hash];
+
+                own[blob] = mine;
+            }
             else
             {
-                blob = GitObjectId.ForBlob(file.Content).ToString();
+                blob = GitObjectId.ForBlob(file.Content!).ToString();
 
-                contents[blob] = file.Content;
+                contents[blob] = file.Content!;
             }
 
             entries.Add(new StoredEntry(file.Path, blob));
@@ -90,7 +112,7 @@ public static class ProjectTree
 
         entries.Sort((x, y) => string.CompareOrdinal(x.Path, y.Path));
 
-        return new LaidTree(entries, stored, contents);
+        return new LaidTree(entries, stored, contents, own);
     }
 
     #endregion
@@ -100,10 +122,18 @@ public static class ProjectTree
     /// <summary>
     /// The lambda a pushed tree holds, or why it holds none.
     /// </summary>
+    /// <remarks>
+    /// A file the lambda keeps already, by its git id, is not read at all:
+    /// it is what the lambda keeps. Every other file is read as the push
+    /// holds it, and held as it is - bytes the git module holds already -
+    /// until the lambda keeps it.
+    /// </remarks>
     /// <param name="tree">The files of the commit</param>
     /// <param name="parents">The commits it follows, as far as they are kept</param>
     /// <param name="read">Reads a kept file</param>
-    public static async ValueTask<ReadTree> ReadAsync(IReadOnlyList<GitFile> tree, IReadOnlyList<StoredCommit> parents, Func<GitObjectId, byte[]> read)
+    /// <param name="kept">What the lambda keeps of the files of the tree, by their git id</param>
+    public static async ValueTask<ReadTree> ReadAsync(IReadOnlyList<GitFile> tree, IReadOnlyList<StoredCommit> parents, Func<GitObjectId, byte[]> read,
+                                                      IReadOnlyDictionary<string, VersionFile> kept)
     {
         // laid out as the platform did once: what was in assets/ then would
         // be read as code, and the lambda would serve nothing
@@ -131,7 +161,7 @@ public static class ProjectTree
 
         var parentFiles = parents.SelectMany(p => p.Files ?? []).ToList();
 
-        var files = new List<LambdaFile>();
+        var files = new List<VersionFile>();
 
         var stored = new List<StoredFile>();
 
@@ -192,7 +222,7 @@ public static class ProjectTree
 
                 contents[snippetBlob] = snippetBytes;
 
-                files.Add(new LambdaFile(LambdaSource.EntryName, snippet));
+                files.Add(VersionFile.FromText(LambdaSource.EntryName, snippet));
                 stored.Add(new StoredFile(LambdaSource.EntryName, entry.Path, snippetBlob, false));
 
                 continue;
@@ -201,27 +231,41 @@ public static class ProjectTree
             // named as the lambda named it where a parent had it, as the path says otherwise
             var name = known?.Name is { } before && before != LambdaSource.EntryName ? before : path.Name!;
 
-            var content = (await entry.ReadAsync()).ToArray();
+            // binary as a parent had it, where it is what the parent had - and otherwise where it is no text
+            var wasBinary = known is { Binary: true } && known.Blob == blob;
+
+            VersionFile file;
+
+            if (kept.TryGetValue(blob, out var held))
+            {
+                // the lambda keeps it, and what it is was read off it as it was kept
+                file = held;
+            }
+            else
+            {
+                var content = await entry.ReadAsync();
+
+                file = VersionFile.FromBytes(string.Empty, content, !IsText(content.Span));
+            }
+
+            var isText = file.Chars != null;
 
             if (LambdaSource.IsCompiled(name))
             {
-                if (!TryText(content, out var text))
+                if (!isText)
                 {
                     return ReadTree.Refused($"'{entry.Path}' is not UTF-8 text.");
                 }
 
-                files.Add(new LambdaFile(name, text));
+                files.Add(file.As(name, false));
                 stored.Add(new StoredFile(name, entry.Path, blob, false));
-            }
-            else if (known is { Binary: true } && known.Blob == blob || !TryText(content, out var asText))
-            {
-                files.Add(new LambdaFile(name, Convert.ToBase64String(content), "base64"));
-                stored.Add(new StoredFile(name, entry.Path, blob, true));
             }
             else
             {
-                files.Add(new LambdaFile(name, asText));
-                stored.Add(new StoredFile(name, entry.Path, blob, false));
+                var binary = wasBinary || !isText;
+
+                files.Add(file.As(name, binary));
+                stored.Add(new StoredFile(name, entry.Path, blob, binary));
             }
         }
 
@@ -293,7 +337,7 @@ public static class ProjectTree
     /// files the commit before had in its order, then the new ones the way a
     /// zip of a lambda is read - so an unchanged lambda is the same to the byte.
     /// </summary>
-    private static List<LambdaFile> Ordered(List<LambdaFile> files, IReadOnlyList<StoredFile>? before)
+    private static List<VersionFile> Ordered(List<VersionFile> files, IReadOnlyList<StoredFile>? before)
     {
         var known = (before ?? []).Select((f, i) => (f.Name, i)).ToDictionary(x => x.Name, x => x.i, StringComparer.Ordinal);
 
@@ -303,6 +347,12 @@ public static class ProjectTree
                     .ThenBy(f => f.Name, StringComparer.Ordinal)
                     .ToList();
     }
+
+    /// <summary>
+    /// Whether content is text: UTF-8 without NUL characters - a byte order
+    /// mark included, which stays, so it is written back as it came.
+    /// </summary>
+    private static bool IsText(ReadOnlySpan<byte> content) => !content.Contains((byte)0) && System.Text.Unicode.Utf8.IsValid(content);
 
     /// <summary>
     /// Text where it is UTF-8 without NUL characters, kept as it is - a byte
@@ -333,8 +383,10 @@ public static class ProjectTree
 /// </summary>
 /// <param name="Entries">Every file of the tree</param>
 /// <param name="Files">The lambda's files in it</param>
-/// <param name="Contents">What the files hold that may not be kept yet, by their blob</param>
-public sealed record LaidTree(IReadOnlyList<StoredEntry> Entries, IReadOnlyList<StoredFile> Files, IReadOnlyDictionary<string, byte[]> Contents);
+/// <param name="Contents">What the platform's files hold, which may not be kept yet, by their blob</param>
+/// <param name="Own">The lambda's files, which may not be kept yet either, by their blob - read where they are needed</param>
+public sealed record LaidTree(IReadOnlyList<StoredEntry> Entries, IReadOnlyList<StoredFile> Files, IReadOnlyDictionary<string, byte[]> Contents,
+                              IReadOnlyDictionary<string, VersionFile> Own);
 
 /// <summary>
 /// The lambda a pushed tree holds.
@@ -344,7 +396,7 @@ public sealed record LaidTree(IReadOnlyList<StoredEntry> Entries, IReadOnlyList<
 /// <param name="Contents">What is kept for them besides the tree: the lambda.cs taken out of Project.cs</param>
 /// <param name="Project">Project.cs as pushed, to say where in it a problem the compiler found is</param>
 /// <param name="Complaint">Why the tree is no lambda</param>
-public sealed record ReadTree(IReadOnlyList<LambdaFile>? Files, IReadOnlyList<StoredFile> Stored, IReadOnlyDictionary<string, byte[]> Contents,
+public sealed record ReadTree(IReadOnlyList<VersionFile>? Files, IReadOnlyList<StoredFile> Stored, IReadOnlyDictionary<string, byte[]> Contents,
                                 string? Project, string? Complaint)
 {
 

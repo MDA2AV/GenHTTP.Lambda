@@ -273,7 +273,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var content = await meta.GetVersionAsync(await meta.RequirePrivateKeyAsync(publicKey), version);
 
-        return VersionResource.Describe(content);
+        return await VersionResource.DescribeAsync(content);
     }
 
     [ResourceMethod(Method.Put, "lambdas/:publicKey/tier")]

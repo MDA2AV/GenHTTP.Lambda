@@ -366,7 +366,10 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
         return _uses[(lambdaId, version)] = found;
     }
 
-    private static bool UsedIn(string? source) => source != null && LambdaSource.Parse(source).Any(f => f.IsCompiled && Uses(f.Code));
+    /// <summary>
+    /// Whether the C# of the files connects to the database, which is all of them that is read.
+    /// </summary>
+    private static bool UsedIn(IReadOnlyList<VersionFile>? files) => files != null && files.Any(f => f.IsCompiled && Uses(f.ReadText()));
 
     #endregion
 

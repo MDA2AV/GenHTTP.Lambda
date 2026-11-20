@@ -47,7 +47,7 @@ public interface IFeatureService
     /// The save of its files these were made from, to be refused as a conflict when the feature was saved
     /// again since - by somebody else, whose save would otherwise be lost without a trace
     /// </param>
-    ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, string code, VersionNote? note = null, int? after = null, CancellationToken cancellation = default);
+    ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, IReadOnlyList<VersionFile> files, VersionNote? note = null, int? after = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Puts the feature's files online at its own address, with its own copy

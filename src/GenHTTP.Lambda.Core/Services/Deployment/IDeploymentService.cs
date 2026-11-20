@@ -22,12 +22,15 @@ public interface IDeploymentService
 {
 
     /// <summary>
-    /// Compiles a snippet without running it, to tell the editor whether it would build.
+    /// Compiles the files of a lambda without running them, to tell whether they would build.
     /// </summary>
-    /// <param name="code">The code to be checked</param>
+    /// <remarks>
+    /// Reads the C# among them and nothing else.
+    /// </remarks>
+    /// <param name="files">The files to be checked</param>
     /// <param name="lambdaId">The lambda the code belongs to, if it is already stored</param>
     /// <param name="settings">What the lambda is compiled with, the standard settings if not given</param>
-    ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, BuildSettings? settings = null, CancellationToken cancellation = default);
+    ValueTask<CompilationOutcome> ValidateAsync(IReadOnlyList<VersionFile> files, long? lambdaId = null, BuildSettings? settings = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Compiles and prepares the given version so it is ready to serve requests.
@@ -44,14 +47,14 @@ public interface IDeploymentService
     ValueTask<IHandler> ResolveAsync(long lambdaId, int version, BuildSettings settings, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Compiles and prepares the given code as the preview of a feature.
+    /// Compiles and prepares the given files as the preview of a feature.
     /// </summary>
     /// <remarks>
     /// Like <see cref="ActivateAsync" />, what the preview served before goes
     /// on being served when this fails.
     /// </remarks>
     /// <param name="preview">Which deployment of the preview this is, so the next one is built again</param>
-    ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, BuildSettings settings,
+    ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, IReadOnlyList<VersionFile> files, BuildSettings settings,
                                                CancellationToken cancellation = default);
 
     /// <summary>

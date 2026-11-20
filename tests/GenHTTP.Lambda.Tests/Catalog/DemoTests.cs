@@ -47,7 +47,7 @@ public sealed class DemoTests
         {
             var files = DemoCatalog.FilesFor(demo);
 
-            Assert.IsEmpty(ContextPages.Missing(files), $"{demo.Id} has all three pages");
+            Assert.IsEmpty(ContextPages.Missing(VersionFile.FromSent(files)), $"{demo.Id} has all three pages");
             Assert.IsTrue(files.Any(f => f.Name == "tests/smoke.mjs"), $"{demo.Id} has a script its tests run");
 
             using var summary = await fixture.GetAsync($"/api/v1/lambdas/{demo.Key}/summary");

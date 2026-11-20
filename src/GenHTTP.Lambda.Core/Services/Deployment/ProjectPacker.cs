@@ -147,7 +147,7 @@ public static class ProjectPacker
     /// <param name="lambda">What is written into the head of Program.cs</param>
     /// <param name="files">Its files, the snippet first</param>
     /// <param name="database">A plain copy of its database, to carry along</param>
-    public static byte[] Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, string? database = null)
+    public static byte[] Pack(ExportedLambda lambda, IReadOnlyList<VersionFile> files, string? database = null)
     {
         using var buffer = new MemoryStream();
 
@@ -162,13 +162,13 @@ public static class ProjectPacker
     /// license it is published under.
     /// </summary>
     /// <remarks>
-    /// Apart from <see cref="Pack(ExportedLambda, IReadOnlyList{LambdaFile}, Stream, string?)" />
+    /// Apart from <see cref="Pack(ExportedLambda, IReadOnlyList{VersionFile}, Stream, string?)" />
     /// on purpose, and without a database to pass: the export is its owner's
     /// and takes the records along, a published source is everybody's and
     /// never holds data - not the database, not the workspace, not a secret's
     /// value. What cannot be handed in cannot be let out by mistake.
     /// </remarks>
-    public static void Publish(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, Stream target)
+    public static void Publish(ExportedLambda lambda, IReadOnlyList<VersionFile> files, Stream target)
     {
         if (lambda.License == null)
         {
@@ -180,14 +180,17 @@ public static class ProjectPacker
 
     /// <summary>
     /// Writes the lambda out as a zipped project, into the given stream as it
-    /// goes - so a database of a gigabyte is streamed, not held.
+    /// goes - so a database of a gigabyte is streamed, not held, and so is
+    /// every file, from where it is kept.
     /// </summary>
     /// <param name="database">A plain copy of its database, to carry along - its owner's export only, see <see cref="Publish" /></param>
-    public static void Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, Stream target, string? database = null)
+    public static void Pack(ExportedLambda lambda, IReadOnlyList<VersionFile> files, Stream target, string? database = null)
     {
         var name = Identifier(lambda.PublicKey);
 
-        var snippet = files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty;
+        var code = LambdaSource.Compiled(files);
+
+        var snippet = code.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty;
 
         var awaits = ProjectSnippet.Awaits(snippet);
 
@@ -195,8 +198,6 @@ public static class ProjectPacker
 
         // the folders at the top of the code, which its comment names where the platform knows what they hold
         var folders = files.Where(f => f.IsCode && f.Name.Contains('/')).Select(f => f.Name[..f.Name.IndexOf('/')]).Distinct().Order(StringComparer.Ordinal).ToList();
-
-        var code = files.Where(f => f.IsCompiled).ToList();
 
         // what the code talks to its database with, and whether it migrates it
         var data = database != null || code.Any(f => DatabaseService.Uses(f.Code) || f.Code.Contains("Sqlite", StringComparison.Ordinal));
@@ -216,7 +217,7 @@ public static class ProjectPacker
             // because the code that serves them names those folders
             foreach (var file in files.Where(f => f.Name != LambdaSource.EntryName))
             {
-                Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Bytes);
+                Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file);
             }
 
             Write(archive, $"{name}/Platform/Usings.cs", Usings(data, entities, evolve));
@@ -283,20 +284,23 @@ public static class ProjectPacker
     /// the source is published. AGENTS.md tells an agent how to work in it,
     /// and CLAUDE.md points the agent that reads that file instead to it.
     /// </remarks>
-    public static IReadOnlyList<ProjectFile> Repository(RepositoryProject project, IReadOnlyList<LambdaFile> files)
+    public static IReadOnlyList<ProjectFile> Repository(RepositoryProject project, IReadOnlyList<VersionFile> files)
     {
         var name = Identifier(project.PublicKey);
+
+        var snippet = files.FirstOrDefault(f => f.Name == LambdaSource.EntryName) is { Binary: false } entry ? entry.ReadText() : string.Empty;
 
         var result = new List<ProjectFile>
         {
             Text($"{name}.csproj", Csproj(true, true, true, true, awaitsAlways: true)),
             Text(ProjectPaths.Program, RepositoryProgram(project)),
-            Text(ProjectPaths.Snippet, ProjectSnippet.ForRepository(files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty), LambdaSource.EntryName)
+            Text(ProjectPaths.Snippet, ProjectSnippet.ForRepository(snippet), LambdaSource.EntryName)
         };
 
+        // the lambda's own as they are kept, which is what a commit holds
         foreach (var file in files.Where(f => f.Name != LambdaSource.EntryName))
         {
-            result.Add(new ProjectFile(ProjectPaths.Of(file.Name), file.Bytes, file.Name));
+            result.Add(new ProjectFile(ProjectPaths.Of(file.Name), null, file.Name, file));
         }
 
         result.Add(Text($"{ProjectPaths.Platform}Usings.cs", Usings(true, true, true)));
@@ -669,6 +673,17 @@ public static class ProjectPacker
         stream.Write(content);
     }
 
+    private static void Write(ZipArchive archive, string path, VersionFile file)
+    {
+        var entry = archive.CreateEntry(path, CompressionLevel.Optimal);
+
+        using var stream = entry.Open();
+
+        using var source = file.OpenRead();
+
+        source.CopyTo(stream);
+    }
+
     #endregion
 
 }
@@ -698,9 +713,10 @@ public sealed record ExportedLicense(SourceLicense License, string Holder, strin
 /// One file of the project a lambda's repository holds.
 /// </summary>
 /// <param name="Path">Where it is in the project</param>
-/// <param name="Content">What it holds</param>
+/// <param name="Content">What it holds, where the platform made it - its own files, and the snippet in its class</param>
 /// <param name="Name">The file of the lambda it is made from, or nothing for one the platform puts around it</param>
-public sealed record ProjectFile(string Path, byte[] Content, string? Name);
+/// <param name="File">The file of the lambda it is, as it is kept - for every one but the snippet</param>
+public sealed record ProjectFile(string Path, byte[]? Content, string? Name, VersionFile? File = null);
 
 /// <summary>
 /// What the project of a lambda's repository says about the lambda.

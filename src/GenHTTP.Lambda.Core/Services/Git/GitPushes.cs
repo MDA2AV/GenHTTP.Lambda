@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.Storage;
 
 using Microsoft.Extensions.Logging;
 
@@ -26,13 +27,18 @@ namespace GenHTTP.Lambda.Services.Git;
 /// platform puts around a lambda are not the lambda's to change (see
 /// <see cref="ProjectTree"/>).
 ///
+/// A file the lambda keeps already is not read: git names it by an id the
+/// store knows. What is new is handed on as the bytes the git module holds,
+/// and kept by the save that is allowed it - never turned into text, nor
+/// copied before then.
+///
 /// What happened is told back as the push goes, in the lines git shows after
 /// <c>remote:</c> - never with the editor key, which whoever pushed has, and
 /// whoever reads a build log of theirs should not. Options a push carries
 /// (<c>git push -o deploy</c>, <c>-o merge</c>) put what was pushed online.
 /// </remarks>
 public sealed class GitPushes(GitStore store, GitHistory history, IMetaService meta, IFeatureService features, ILimitsService limits,
-                                ILogger<GitPushes> logger)
+                                IStorageService storage, ILogger<GitPushes> logger)
 {
     private const string Deploy = "deploy";
 
@@ -177,7 +183,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         {
             var tree = commits.TreeOf(id);
 
-            var read = await ProjectTree.ReadAsync(tree, parent != null ? [parent] : [], blob => store.ReadBlob(lambda.Id, blob));
+            var read = await ReadAsync(lambda, tree, parent != null ? [parent] : []);
 
             if (read.Files == null)
             {
@@ -193,7 +199,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         // a version is only made of what compiles, as when a feature is merged
         var tip = steps[^1];
 
-        var check = await meta.CheckAsync(lambda.PrivateKey, LambdaSource.Serialize(tip.Read.Files!));
+        var check = await meta.CheckAsync(lambda.PrivateKey, tip.Read.Files!);
 
         if (!check.Success)
         {
@@ -214,7 +220,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             try
             {
-                version = await meta.SaveAsync(lambda.PrivateKey, LambdaSource.Serialize(step.Read.Files!), new VersionNote(specification, change, VersionOrigins.Git), after);
+                version = await meta.SaveAsync(lambda.PrivateKey, step.Read.Files!, new VersionNote(specification, change, VersionOrigins.Git), after);
             }
             catch (LambdaException e) when (saved.Count > 0)
             {
@@ -338,7 +344,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             var parents = revision.Commit.Parents.Select(p => commits.Stored(p)).OfType<StoredCommit>().ToList();
 
-            var mine = await ProjectTree.ReadAsync(tree, parents, blob => store.ReadBlob(lambda.Id, blob));
+            var mine = await ReadAsync(lambda, tree, parents);
 
             commits.Provide(revision.Commit.Id, tree, mine.Files != null ? mine.Stored : null);
 
@@ -356,7 +362,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             var known = commits.Stored(update.NewId);
 
             read = known?.Files != null
-                ? await ProjectTree.ReadAsync(commits.TreeOf(update.NewId), [known], blob => store.ReadBlob(lambda.Id, blob))
+                ? await ReadAsync(lambda, commits.TreeOf(update.NewId), [known])
                 : ReadTree.Refused("This commit holds no state of the lambda.");
         }
 
@@ -365,8 +371,6 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             Refuse(lambda, update, read.Complaint!);
             return;
         }
-
-        var code = LambdaSource.Serialize(read.Files);
 
         var (change, _) = Message(commits.Find(update.NewId)!);
 
@@ -383,7 +387,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         try
         {
-            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
+            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, read.Files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
                                               after: feature.Revision);
         }
         catch (LambdaException) when (started)
@@ -526,6 +530,22 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// The lambda a pushed tree holds - its files the lambda keeps already
+    /// found by their git ids, and not read.
+    /// </summary>
+    private async ValueTask<ReadTree> ReadAsync(GitLambda lambda, IReadOnlyList<GitFile> tree, IReadOnlyList<StoredCommit> parents)
+    {
+        var ids = tree.Where(f => f.Id != null && ProjectPaths.Classify(f.Path).Kind == ProjectPathKind.Lambda)
+                      .Select(f => f.Id!.Value.ToString())
+                      .Distinct(StringComparer.Ordinal)
+                      .ToList();
+
+        var kept = await storage.FindAsync(lambda.Id, ids);
+
+        return await ProjectTree.ReadAsync(tree, parents, blob => store.ReadBlob(lambda.Id, blob), kept);
+    }
 
     /// <summary>
     /// Says what is online instead of a version just made, and how it goes online.

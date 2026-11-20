@@ -409,15 +409,26 @@ internal sealed class LambdaFixture : IAsyncDisposable
     public static CodeRequest Code(string code) => new([new LambdaFile(LambdaSource.EntryName, code)]);
 
     /// <summary>
+    /// The files of a version made of nothing but the given snippet, as the services take them.
+    /// </summary>
+    public static IReadOnlyList<VersionFile> Snippet(string code) => [VersionFile.FromText(LambdaSource.EntryName, code)];
+
+    /// <summary>
     /// Stores the given code and puts it online, expecting it to build.
     /// </summary>
-    public async Task<DeploymentOutcomeResponse> DeployAsync(string privateKey, string? code = null)
-    {
-        if (code != null)
-        {
-            using var saved = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/versions", LambdaFixture.Version(code));
+    public Task<DeploymentOutcomeResponse> DeployAsync(string privateKey, string? code = null)
+        => DeployAsync(privateKey, code != null ? [new LambdaFile(LambdaSource.EntryName, code)] : null);
 
-            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
+    /// <summary>
+    /// Stores the given files and puts them online, expecting them to build.
+    /// </summary>
+    public async Task<DeploymentOutcomeResponse> DeployAsync(string privateKey, IReadOnlyList<LambdaFile>? files)
+    {
+        if (files != null)
+        {
+            using var saved = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/versions", new VersionRequest(files));
+
+            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.Content.ReadAsStringAsync());
         }
 
         using var response = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/deployment/start", new DeploymentRequest(null));

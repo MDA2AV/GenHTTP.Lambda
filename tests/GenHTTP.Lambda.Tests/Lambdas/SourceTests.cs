@@ -26,19 +26,12 @@ public sealed class SourceTests
     }
 
     [TestMethod]
-    public void OneFileIsStoredAsItself()
+    public void SeveralFilesKeptInOneEnvelopeAreRead()
     {
-        var stored = LambdaSource.Serialize([new LambdaFile(LambdaSource.EntryName, "return null;")]);
+        // as several files were kept before there was a store
+        const string stored = "{\"version\":2,\"files\":[{\"name\":\"lambda.cs\",\"code\":\"return new Greeter().Handler();\"},{\"name\":\"Greeter.cs\",\"code\":\"class Greeter { }\"}]}";
 
-        Assert.AreEqual("return null;", stored, "nothing should be able to tell it apart from what was stored before");
-    }
-
-    [TestMethod]
-    public void SeveralFilesSurviveTheRoundTrip()
-    {
-        LambdaFile[] written = [new(LambdaSource.EntryName, "return new Greeter().Handler();"), new("Greeter.cs", "class Greeter { }")];
-
-        var read = LambdaSource.Parse(LambdaSource.Serialize(written));
+        var read = LambdaSource.Parse(stored);
 
         Assert.HasCount(2, read);
         Assert.AreEqual("Greeter.cs", read[1].Name);
@@ -119,11 +112,6 @@ public sealed class SourceTests
 
         CollectionAssert.AreEqual(new[] { "lambda.cs", "store.cs" }, files.Where(f => f.IsCompiled).Select(f => f.Name).ToArray(),
                                   "and what was compiled is what is compiled");
-
-        var written = LambdaSource.Serialize(files);
-
-        StringAssert.StartsWith(written, "{\"version\":2,", "written again, it is written in today's layout");
-        Assert.IsTrue(LambdaSource.Same(stored.ReplaceLineEndings(string.Empty), written), "and is the same lambda");
     }
 
     [TestMethod]
@@ -143,14 +131,14 @@ public sealed class SourceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var code = LambdaSource.Serialize([
+        var files = VersionFile.FromSent([
             new LambdaFile(LambdaSource.EntryName,
                 "return Inline.Create().Get(() => Greeter.Greet(\"world\"));"),
             new LambdaFile("Greeter.cs",
                 "static class Greeter\n{\n    public static Welcome Greet(string who) => new Welcome($\"hello {who}\");\n}\n\npublic record Welcome(string Text);")
         ]);
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(files);
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => $"{d.File}:{d.Line} {d.Message}")));
     }
@@ -160,12 +148,12 @@ public sealed class SourceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var code = LambdaSource.Serialize([
+        var files = VersionFile.FromSent([
             new LambdaFile(LambdaSource.EntryName, "return Inline.Create().Get(() => Greeter.Greet());"),
             new LambdaFile("Greeter.cs", "static class Greeter\n{\n    public static string Greet() => nope;\n}")
         ]);
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(files);
 
         Assert.IsFalse(outcome.Success);
 
@@ -278,14 +266,12 @@ public sealed class SourceTests
 
         var lambda = await fixture.CreateLambdaAsync("shipper");
 
-        var code = LambdaSource.Serialize([
+        var deployment = await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             // deliberately not valid C#: a resource must never reach the compiler
             new LambdaFile("resources/app.css", "body { margin: 0 } /* if this compiled it would not */"),
             new LambdaFile("resources/index.html", "<!doctype html><title>shipped</title>")
         ]);
-
-        var deployment = await fixture.DeployAsync(lambda.PrivateKey, code);
 
         Assert.IsTrue(deployment.Success, string.Join("; ", deployment.Diagnostics.Select(d => d.Message)));
 
@@ -304,15 +290,15 @@ public sealed class SourceTests
 
         var lambda = await fixture.CreateLambdaAsync("forgetful");
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             new LambdaFile("resources/gone.css", "body { margin: 0 }")
-        ]));
+        ]);
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             new LambdaFile("resources/kept.css", "body { margin: 1px }")
-        ]));
+        ]);
 
         using var gone = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/gone.css");
         using var kept = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/kept.css");
@@ -328,18 +314,18 @@ public sealed class SourceTests
 
         var lambda = await fixture.CreateLambdaAsync("restyled");
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             new LambdaFile("resources/app.css", "body { color: red }"),
             new LambdaFile("docs/product.md", "# Red")
-        ]));
+        ]);
 
-        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+        await fixture.DeployAsync(lambda.PrivateKey, [
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             new LambdaFile("resources/app.css", "body { color: blue }"),
             new LambdaFile("docs/product.md", "# Blue"),
             new LambdaFile("tools/generate.mjs", "a tool's script, which is no part of the program")
-        ]));
+        ]);
 
         using var css = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/app.css");
 
@@ -359,14 +345,14 @@ public sealed class SourceTests
 
         // the name is banned as a type; as somebody's own helper it is theirs
         var outcome = await fixture.Deployments.ValidateAsync(
-            "static string File(string name) => name.Trim();\n\n"
-          + "return Inline.Create().Get(() => new Thing(File(\" x \")));\n\nrecord Thing(string Name);");
+            LambdaFixture.Snippet("static string File(string name) => name.Trim();\n\n"
+          + "return Inline.Create().Get(() => new Thing(File(\" x \")));\n\nrecord Thing(string Name);"));
 
         Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
 
         // and the type of that name is still out of reach
         var reaching = await fixture.Deployments.ValidateAsync(
-            "return Content.From(Resource.FromString(System.IO.File.ReadAllText(\"/etc/passwd\")));");
+            LambdaFixture.Snippet("return Content.From(Resource.FromString(System.IO.File.ReadAllText(\"/etc/passwd\")));"));
 
         Assert.IsFalse(reaching.Success, "declaring a helper must not open the door to the type it is named after");
     }
@@ -376,13 +362,13 @@ public sealed class SourceTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var code = LambdaSource.Serialize([
+        var files = VersionFile.FromSent([
             new LambdaFile(LambdaSource.EntryName, "return Inline.Create().Get(() => Sneaky.Read());"),
             // reflection is refused in the snippet; moving it must not help
             new LambdaFile("Sneaky.cs", "static class Sneaky\n{\n    public static string Read() => typeof(string).GetType().Name;\n}")
         ]);
 
-        var outcome = await fixture.Deployments.ValidateAsync(code);
+        var outcome = await fixture.Deployments.ValidateAsync(files);
 
         Assert.IsFalse(outcome.Success, "the guard has to look at the files the snippet is split into");
     }

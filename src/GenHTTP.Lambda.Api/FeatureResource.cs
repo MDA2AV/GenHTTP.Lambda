@@ -107,7 +107,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var found = await features.GetAsync(privateKey, feature);
 
-        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), folder));
+        return new FeatureContentResponse(Describe(found.Feature), await VersionResource.SentAsync(VersionResource.Below(found.Files, folder)));
     }
 
     [ResourceMethod(Method.Patch, "lambdas/:privateKey/features/:feature")]
@@ -164,7 +164,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     public async ValueTask<FeatureSavedResponse> PutFiles([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                           [Summary("Whether to put its preview online with what was saved")] bool? deploy,
                                                           FeatureFilesRequest request)
-        => await SaveAsync(privateKey, feature, request.Files, deploy, request.Specification, request.Change, request.Revision);
+        => await SaveAsync(privateKey, feature, VersionResource.FilesOf(request.Files), deploy, request.Specification, request.Change, request.Revision);
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/changes")]
     [Summary("Changes some files of a feature")]
@@ -184,7 +184,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var read = await features.GetAsync(privateKey, feature);
 
-        var files = LambdaChanges.Apply(LambdaSource.Parse(read.Code), request.Files, request.Remove, request.Edits);
+        var files = LambdaChanges.Apply(read.Files, request.Files, request.Remove, request.Edits);
 
         // made on top of what was read, and refused if something else was saved meanwhile
         return await SaveAsync(privateKey, feature, files, deploy, request.Specification, request.Change, read.Feature.Revision);
@@ -203,12 +203,12 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var found = await features.GetAsync(privateKey, feature);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code), laid);
+        var zip = await LambdaArchive.PackAsync(found.Files, laid, options.StagingDirectory);
 
         logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} layout {Layout}", found.Feature.Name, await meta.PublicKeyOfAsync(privateKey), laid);
 
         return request.Respond()
-                      .Content(zip, new ContentType("application/zip"))
+                      .Content(zip, new ContentType("application/zip"), (ulong)zip.Length)
                       .Header("Content-Disposition", $"attachment; filename=\"feature-{found.Feature.Key[..8]}{(laid == ArchiveLayout.Project ? "-project" : string.Empty)}.zip\"")
                       .Build();
     }
@@ -235,10 +235,10 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         // read depends on the tier - and a key that names nothing needs none
         var lambda = await meta.RequireAsync(privateKey);
 
-        var files = await VersionResource.UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid,
-                                                      LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code));
+        using var staged = await VersionResource.UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, (await features.GetAsync(privateKey, feature)).Files,
+                                                             options.StagingDirectory);
 
-        return await SaveAsync(privateKey, feature, files, deploy, specification, change);
+        return await SaveAsync(privateKey, feature, staged.Files, deploy, specification, change);
     }
 
     #endregion
@@ -394,14 +394,14 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
     #region Helpers
 
-    private async ValueTask<FeatureSavedResponse> SaveAsync(string privateKey, string feature, IReadOnlyList<LambdaFile>? files, bool? deploy,
+    private async ValueTask<FeatureSavedResponse> SaveAsync(string privateKey, string feature, IReadOnlyList<VersionFile> files, bool? deploy,
                                                             string? specification, string? change, int? after = null)
     {
-        var saved = await features.SaveAsync(privateKey, feature, VersionResource.Serialize(files), new VersionNote(specification, change), after);
+        var saved = await features.SaveAsync(privateKey, feature, files, new VersionNote(specification, change), after);
 
         var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, publicKey, files!.Count);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, publicKey, files.Count);
 
         FeaturePreviewResponse? preview = null;
 

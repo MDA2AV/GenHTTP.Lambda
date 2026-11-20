@@ -104,10 +104,10 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var entity = await RequireFeatureAsync(database, lambda.Id, feature, cancellation);
 
-        var code = storage.ReadFeature(lambda.Id, entity.Id)
-                ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
+        var files = storage.ReadFeature(lambda.Id, entity.Id)
+                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-        return new FeatureContent(Describe(entity, await NewestAsync(database, lambda.Id, cancellation)), code);
+        return new FeatureContent(Describe(entity, await NewestAsync(database, lambda.Id, cancellation)), files);
     }
 
     public async ValueTask<(long LambdaId, long FeatureId)> RequireAsync(string privateKey, string feature, bool editable, CancellationToken cancellation = default)
@@ -211,9 +211,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var from = draft.Base ?? newest;
 
-        var code = storage.Read(lambdaId, from);
+        var files = storage.Read(lambdaId, from);
 
-        if (code == null || !await database.Deployments.AnyAsync(d => d.LambdaId == lambdaId && d.Version == from, cancellation))
+        if (files == null || !await database.Deployments.AnyAsync(d => d.LambdaId == lambdaId && d.Version == from, cancellation))
         {
             throw LambdaException.NotFound($"Version {from} does not exist. The newest is version {newest}.");
         }
@@ -259,7 +259,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         try
         {
-            storage.WriteFeature(lambdaId, entity.Id, code);
+            // a manifest of what the version holds: nothing of it is copied
+            await storage.WriteFeatureAsync(lambdaId, entity.Id, files);
 
             await CopyDataAsync(lambdaId, entity.Id, await WorkspaceEnabledAsync(database, lambdaId, cancellation), cancellation);
         }
@@ -328,10 +329,30 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return Describe(entity, newest);
     }
 
-    public async ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, string code, VersionNote? note = null, int? after = null,
+    /// <remarks>
+    /// What the files hold that the lambda does not keep yet is kept before
+    /// the feature's turn is taken, so a save of the same feature does not
+    /// wait for it (see <see cref="_turns"/>); in the turn, the feature's
+    /// manifest is written.
+    /// </remarks>
+    public async ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, IReadOnlyList<VersionFile> files, VersionNote? note = null, int? after = null,
                                                   CancellationToken cancellation = default)
     {
-        var files = VersionInput.Validate(code);
+        VersionInput.Validate(files);
+
+        // refuses a demo, whose key is announced and which nobody may change,
+        // and a feature that is not there - before anything is kept for it
+        var (lambdaId, _) = await RequireAsync(privateKey, feature, true, cancellation);
+
+        // what a feature holds becomes a version, so it is held to what a
+        // version may hold from the start rather than refused when merged -
+        // and before anything is kept for it
+        if (await meta.GetTierAsync(lambdaId, cancellation) is { } tier)
+        {
+            VersionInput.ValidateAllowance(files, tier, limits);
+        }
+
+        var kept = await storage.KeepAsync(lambdaId, files, cancellation);
 
         var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature, cancellation);
 
@@ -347,11 +368,10 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                                          + "Read it again and make the change on top of what it holds now.");
         }
 
-        // what a feature holds becomes a version, so it is held to what a
-        // version may hold from the start rather than refused when merged
-        VersionInput.ValidateAllowance(files, lambda.Tier, limits);
+        // moved to another tier meanwhile, perhaps
+        VersionInput.ValidateAllowance(kept, lambda.Tier, limits);
 
-        storage.WriteFeature(lambda.Id, entity.Id, code);
+        await storage.WriteFeatureAsync(lambda.Id, entity.Id, kept);
 
         entity.Specification = VersionInput.Tidy(note?.Specification, VersionNote.MaxSpecification) ?? entity.Specification;
         entity.Change = VersionInput.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;
@@ -379,7 +399,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     {
         long lambdaId, featureId;
 
-        string publicKey, code;
+        string publicKey;
+
+        IReadOnlyList<VersionFile> files;
 
         int stamp, revision;
 
@@ -392,8 +414,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
             using var held = turn;
 
-            code = storage.ReadFeature(lambda.Id, entity.Id)
-                ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
+            files = storage.ReadFeature(lambda.Id, entity.Id)
+                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
             // built as the lambda is, so a preview may connect where the lambda may
             settings = new BuildSettings(await WorkspaceEnabledAsync(database, lambda.Id, cancellation),
@@ -414,12 +436,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                ? LambdaOutput.Enter(new OutputScope(publicKey, book, options.MaxOutputLines, lambdaId, featureId))
                : null)
         {
-            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, code, settings, cancellation);
+            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, files, settings, cancellation);
         }
 
         try
         {
-            return await PreviewedAsync(privateKey, feature, stamp, revision, code, outcome);
+            return await PreviewedAsync(privateKey, feature, stamp, revision, files, outcome);
         }
         catch (LambdaException)
         {
@@ -437,7 +459,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// was, or the next deployment would take its stamp for the build already
     /// there.
     /// </remarks>
-    private async ValueTask<FeatureDeployment> PreviewedAsync(string privateKey, string feature, int stamp, int revision, string code, CompilationOutcome outcome)
+    private async ValueTask<FeatureDeployment> PreviewedAsync(string privateKey, string feature, int stamp, int revision, IReadOnlyList<VersionFile> files,
+                                                              CompilationOutcome outcome)
     {
         var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
 
@@ -450,8 +473,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             try
             {
                 // what the preview serves from now on, until it is deployed again -
-                // a restart included - however much the feature changes meanwhile
-                storage.WritePreview(lambda.Id, entity.Id, code);
+                // a restart included - however much the feature changes meanwhile:
+                // a manifest of what the feature holds, nothing copied
+                await storage.WritePreviewAsync(lambda.Id, entity.Id, files);
 
                 var now = DateTime.UtcNow;
 
@@ -598,7 +622,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     public async ValueTask<FeatureMerge> MergeAsync(string privateKey, string feature, VersionNote? note = null, bool deploy = false,
                                                     CancellationToken cancellation = default)
     {
-        string code;
+        IReadOnlyList<VersionFile> files;
 
         string name;
 
@@ -618,10 +642,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 throw LambdaException.Conflict(Behind(entity, newest));
             }
 
-            code = storage.ReadFeature(lambda.Id, entity.Id)
-                ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
+            files = storage.ReadFeature(lambda.Id, entity.Id)
+                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-            if (LambdaSource.Same(code, storage.Read(lambda.Id, entity.BaseVersion)))
+            // told by what the manifests name, without reading what they hold
+            if (storage.Read(lambda.Id, entity.BaseVersion) is { } based && LambdaSource.Same(files, based))
             {
                 throw LambdaException.Invalid($"The feature '{entity.Name}' holds exactly what version {entity.BaseVersion} holds, so there is nothing to merge. Change it first, or delete it.");
             }
@@ -633,14 +658,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // a version is only made of what compiles: the feature is kept to be
         // fixed, rather than turned into a version nobody can put online
-        var check = await meta.CheckAsync(privateKey, code, cancellation);
+        var check = await meta.CheckAsync(privateKey, files, cancellation);
 
         if (!check.Success)
         {
             return new FeatureMerge(name, false, null, check.Diagnostics, null);
         }
 
-        var (version, lambdaId, featureId, origin) = await MergedAsync(privateKey, feature, note, code, revision);
+        var (version, lambdaId, featureId, origin) = await MergedAsync(privateKey, feature, note, files, revision);
 
         // the version is there from here on: what follows is seen through
         // however the caller fares, or a feature would stay behind that was merged
@@ -675,7 +700,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// feature left behind would be merged twice.
     /// </remarks>
     private async ValueTask<(LambdaVersionInfo Version, long LambdaId, long FeatureId, string Origin)> MergedAsync(string privateKey, string feature, VersionNote? note,
-                                                                                                                  string code, int revision)
+                                                                                                                  IReadOnlyList<VersionFile> files, int revision)
     {
         var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
 
@@ -695,8 +720,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                                      origin);
 
         // refused if a version was saved since the feature was based on its
-        // newest, by the same turn every save of the lambda takes
-        var version = await meta.SaveAsync(privateKey, code, merged, after: entity.BaseVersion);
+        // newest, by the same turn every save of the lambda takes - the
+        // feature's manifest made the version's, its content kept already
+        var version = await meta.SaveAsync(privateKey, files, merged, after: entity.BaseVersion);
 
         await ForgetAsync(database, lambda.Id, entity);
 

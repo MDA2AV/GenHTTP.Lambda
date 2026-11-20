@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
@@ -21,8 +22,10 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// deploys all day long does not grow without end.
 ///
 /// Takes no cancellation token: what it writes is part of a change already
-/// decided on, and pruning deletes files before the rows that name them are
-/// saved - stopped in between, rows would be left naming nothing.
+/// decided on, and pruning deletes the manifests of versions before the rows
+/// that name them are saved - stopped in between, rows would be left naming
+/// nothing. What a pruned version alone held is collected from the store
+/// later (see <see cref="IStorageService.CollectAsync"/>).
 /// </remarks>
 public sealed class LambdaHistory(IStorageService storage, ILimitsService limits, EditorAddresses editors)
 {
@@ -40,14 +43,16 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     #region Versions
 
     /// <summary>
-    /// Adds the code as the next version of the lambda, and saves.
+    /// Adds the files as the next version of the lambda, and saves.
     /// </summary>
     /// <remarks>
-    /// The code goes to storage and its row to the database; the versions
+    /// The files go to storage and the row to the database; the versions
     /// beyond what the lambda's tier keeps (<see cref="TierLimits.Versions"/>)
-    /// go from both.
+    /// go from both. Where their content was kept before the lambda's turn,
+    /// which a save with much to keep does, writing them is writing the
+    /// manifest of the version.
     /// </remarks>
-    public async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note)
+    public async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, IReadOnlyList<VersionFile> files, DateTime now, VersionNote note)
     {
         var version = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                     .MaxAsync(d => (int?)d.Version) + 1 ?? 1;
@@ -56,7 +61,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         var change = VersionInput.Tidy(note.Change, VersionNote.MaxChange);
 
-        storage.Write(lambda.Id, version, code);
+        await storage.WriteAsync(lambda.Id, version, files);
 
         database.Deployments.Add(new DeploymentEntity
         {

@@ -78,13 +78,13 @@ public static class TemplateCatalog
     public static bool Exists(string id) => Array.Exists(All, t => t.Id == id);
 
     /// <summary>
-    /// The files a lambda starts with, as the blob a version is stored as.
+    /// The files a lambda starts with, as a version is saved with them.
     /// </summary>
     /// <param name="id">What to start from, the empty lambda when nothing or nothing known is given</param>
     /// <param name="publicKey">The key the lambda will be hosted at</param>
     /// <param name="demo">Whether this is the demo itself rather than a copy of it</param>
-    public static string ForKey(string? id, string publicKey, bool demo = false)
-        => LambdaSource.Serialize(FilesFor(id, publicKey, demo));
+    public static IReadOnlyList<VersionFile> ForKey(string? id, string publicKey, bool demo = false)
+        => VersionFile.FromSent(FilesFor(id, publicKey, demo));
 
     /// <summary>
     /// The files a lambda starts with, the snippet first.

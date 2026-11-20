@@ -505,16 +505,72 @@ compiling again.
 **Lambdas saved before this layout** kept their served files at the top of a
 version and their documentation, tests and build folder in `.lambda/`
 (`docs/`, `tests/`, `build/`). Nothing on disk was rewritten: a version is
-read in the layout it was saved in, so the old ones are translated as they are
-read - `site/app.js` becomes `resources/site/app.js`, `.lambda/docs/product.md`
-becomes `docs/product.md`, `.lambda/build/package.json` becomes
-`build/package.json` - and saved in the new one when they are next saved (an
-envelope with `"version": 2`, `LambdaSource.Parse`). C# that was in `.lambda/`
+read in the layout it was saved in and translated as it is read
+(`LambdaSource.Parse`) - `site/app.js` becomes `resources/site/app.js`,
+`.lambda/docs/product.md` becomes `docs/product.md`,
+`.lambda/build/package.json` becomes `build/package.json` - which is how it is
+moved into the store as the platform starts (see
+[How a version is kept](#how-a-version-is-kept)). C# that was in `.lambda/`
 was never compiled and would be now, so it keeps what it holds under a name
 that is not: `.lambda/tests/Smoke.cs` becomes `tests/Smoke.cs.txt`. A
-feature's files are read the same way. In git, a lambda's history keeps the commits its clones already
-have; the move is a commit of its own on top of each (see
-[Working with git](#working-with-git)).
+feature's files are read the same way. In git, a lambda's history keeps the
+commits its clones already have; the move is a commit of its own on top of
+each (see [Working with git](#working-with-git)).
+
+### How a version is kept
+
+A version is a manifest: `/data/code/{lambda}/v{n}.manifest.json`, an entry
+per file whatever the files weigh, naming them in their order - each with how
+large it is, whether it is text, and the content it holds by its SHA-256. The content
+is kept once per lambda, as its bytes, below `/data/code/{lambda}/blobs/`,
+however many versions, features and previews hold it: a version that changes
+one file adds one file, and starting a feature, deploying its preview and
+merging it write a manifest and copy nothing. A feature's files and what its
+preview was deployed with are manifests of the same kind, `files.manifest.json`
+and `preview.manifest.json` below `/data/features/{lambda}/{feature}`.
+
+What is known of a piece of content without reading it is a row of `blobs` in
+the platform's records: its size, its length as text, and the ids git gives
+it, SHA-1, which git names objects by today, and SHA-256, that of git's object
+format to come. A push that brings a file the lambda keeps already is not
+read, and a commit is laid out without hashing what it holds. How git names
+content is git's concern: the store names it by its own hash. A row that is
+lost is made again from the content the next time it is kept.
+
+A file is read where it is needed and nowhere else. Compiling and checking
+read the C#; what the overview says of a version, which secrets its code reads
+and whether it uses the database are read off its C# and its documentation;
+what a version comes to, against its tier's allowance, is counted from the
+manifest. Deploying copies the resources, file by file and by the file system,
+into the folder they are served from. A zip or an export is packed from the
+store into a file beside it, `/data/staging`, and sent from there; an archive
+that is sent is written there as it arrives and unpacked into a file per file,
+which the store moves in rather than copies. What answers with the files
+themselves reads only those it answers with - `GET …/versions/{n}?folder=docs/`
+the documentation, `read_lambda` what fits into its answer. So what the
+resources of a version weigh is no memory the server needs to save, check,
+compile, deploy or describe it.
+
+A save keeps the content the lambda does not have yet before it takes the
+lambda's turn, and in the turn writes the manifest - content that is large is
+hashed and written away from the reactor. What no manifest names any more - a
+version pruned, a feature saved over or deleted, a save refused after its
+content was kept - is removed by the maintenance (every 15 minutes, for the
+lambdas whose manifests changed, and once for every lambda after a start),
+except what was written or named in the last hour, which a save may be about
+to name.
+
+**Versions saved before the store** were one file each holding every file
+whole - `v{n}.cs`, text as it was and anything else in base64 - and so were a
+feature's `files.json` and `preview.json`. As the platform starts, before it
+serves anything, it moves each into the store once (`StoreMigration`): reads
+it, keeps its files and writes the manifest beside it. Nothing of before is
+rewritten or removed - a version never changes - so an old version takes its
+room twice until it is pruned, and a feature's file of before goes with its
+next save, as it always went. One that cannot be moved is said in the log and
+read whole, as it was, and is tried again on the next start. A release from
+before the store reads a manifest as if it were code: going back to one after
+updating leaves the versions saved since unusable.
 
 ### What it is built from
 
@@ -1394,8 +1450,9 @@ version in. The commits the platform makes are made when the repository is
 read, not when a version is saved, so saving stays what it was and a lambda
 nobody clones costs nothing; each is made once from what it stands for - the
 files, the time it was saved, its change - and kept below
-`/data/git/{lambda}` with the files it holds, by the id git gives them, so it
-is the same commit for everybody who reads it later, a newer platform
+`/data/git/{lambda}` with the files it holds, by the id git gives them -
+copied from the lambda's store, whose rows know that id, rather than read - so
+it is the same commit for everybody who reads it later, a newer platform
 included. A commit whose code did not change keeps the `Project.cs` of the
 one before it, so a class somebody pushed in a way of their own is not
 written over by a save in the editor. The published source is the same
@@ -1625,8 +1682,19 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   `BrandChecks` says what a name and a logo may be, `Monogram` draws the first
   letter of a name for an installation named without a logo (see
   [Branding](#branding)).
-- **Storage** (`Services/Storage`) - the code itself, on the file system, one
-  file per version. Never in the database.
+- **Storage** (`Services/Storage`) - the files of the versions, the features
+  and their previews, on the file system (see [How a version is kept](#how-a-version-is-kept)).
+  `FileSystemStorageService` (`IStorageService`) reads and writes the
+  manifests, remembers whose may name less than before and has their stores
+  collected by the maintenance; `ContentStore` keeps the content once per
+  lambda, by its SHA-256, with a row of `blobs` each saying what it is and the
+  ids git gives it, and writes a manifest once everything it names is there;
+  `StoreMigration` moves what was kept before the store into it as the
+  platform starts; `ContentReads` counts what is read of what is kept, which
+  the tests hold the paths that need no resource to. A file is handed from
+  one service to another as a `VersionFile` - its name, its size, whether it
+  is text, and where its content is - and read only by whoever needs it.
+  Never in the database but for the rows.
 - **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on
   and off by its owner. Only the choice is stored: a lambda without a row for a
   kind has its default, so a kind added to `DataKinds` needs no migration to
@@ -1667,10 +1735,12 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   See [Integrations](#integrations).
 - **Features** (`Services/Features`) - changes worked on beside a lambda. A
   row per feature says what it is based on and whether its preview is online;
-  its files (`files.json`), what its preview serves (`preview.json`), its copy
-  of the workspace and its preview's resources live below
+  the manifests of its files and of what its preview was deployed with, its
+  copy of the workspace and its preview's resources live below
   `/data/features/{lambda}/{feature}`, so deleting a feature is deleting a
-  folder. Merging goes through Meta, under the same lock every save takes.
+  folder - what its files hold is in its lambda's store, and goes once no
+  manifest names it. Merging goes through Meta, under the same lock every save
+  takes, and makes the feature's manifest a version's.
 - **Source** (`Services/Source`) - whether the owner published the code of a
   lambda and under which license, and its stars (`sources`); `SourceCache`
   packs a version into the project a visitor reads and downloads, once, below
@@ -2340,18 +2410,19 @@ version may come to, its code and its resources together, is a
 [limit](#limits) of the lambda's tier. How many files there are is not
 limited, and neither is the number of C# files.
 
-Budget the disk for production. A version is kept whole, its files as
-text or base64 in JSON, so each version saved at the limit takes up to half as
-much again on disk - 184 MB for 128 MB of pictures - and fifty of them are
-kept by default: at the defaults, a lambda in production that is saved over and over
-at its limit can come to around 9 GB of history.
-
-Budget the memory too. A version is read and written whole: with the 128 MB
-production allows, saving one took the server to 2.3 GB and deploying it
-to 2.8 GB. Even the 32 MB of a sandbox lambda took a server idling at 350 MB to
-950 MB to save, and anybody can create one. Set what a version may
-come to, for every tier, in the panel's **Limits** to what the machine can
-carry until resources are stored apart from the versions.
+On disk a version takes what it changed: what its files hold is kept once per
+lambda (see [How a version is kept](#how-a-version-is-kept)), so fifty versions
+of a lambda that ships 128 MB of pictures and changes its code take little
+more than one. In memory its resources take nothing to save, check, compile,
+deploy or describe it - they are kept, copied out to be served and packed into
+zips without being held - which leaves what a request carries: a version sent
+as JSON, its pictures in base64 in it, is held while it is read, and a push
+while the git module unpacks it. Measured with 120 MB of pictures in a server
+held to 3 GB: saving them as JSON took about 430 MB above what it idled at,
+while putting them online, changing the code, describing the version, and
+starting, previewing and merging a draft of it took nothing to speak of. A zip
+or an export took about 150 MB while it was packed, a clone about 80 MB. Before
+the store, the same steps ran out of those 3 GB with 32 MB of pictures.
 
 ### More than one hostname
 

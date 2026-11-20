@@ -12,12 +12,16 @@ using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
 
+using Microsoft.Data.Sqlite;
+
 namespace GenHTTP.Lambda.Tests.Lambdas;
 
 /// <summary>
 /// A lambda kept before the files it served were its resources and what was
-/// written about it was at the top of its code: read, run, changed and
-/// cloned in today's layout, with nothing on the disk rewritten.
+/// written about it was at the top of its code - and before there was a
+/// store, as one file holding all of it: moved into the store as the
+/// platform starts, read, run, changed and cloned in today's layout, with
+/// nothing on the disk rewritten.
 /// </summary>
 [TestClass]
 public sealed class LayoutMigrationTests
@@ -64,11 +68,35 @@ public sealed class LayoutMigrationTests
     [TestMethod]
     public async Task ALambdaKeptInTheFirstLayoutRunsAsItDid()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
-        var lambda = await fixture.CreateLambdaAsync("veteran");
+        try
+        {
+            await KeptBeforeRunsAsItDidAsync(directory);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
 
-        await StoreAsync(fixture, lambda, FirstLayout("<h1>still here</h1>"));
+    private static async Task KeptBeforeRunsAsItDidAsync(string directory)
+    {
+        LambdaResponse lambda;
+
+        await using (var before = await LambdaFixture.CreateAsync(o => o with { DataDirectory = directory }))
+        {
+            lambda = await before.CreateLambdaAsync("veteran");
+
+            await StoreAsync(before, lambda, FirstLayout("<h1>still here</h1>"));
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        // started again over what was kept, as an installation is updated
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataDirectory = directory });
+
+        Assert.IsTrue(File.Exists(await ManifestFileAsync(fixture, lambda, 2)), "moved into the store as the platform started");
 
         using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/data/database"))
         {
@@ -114,32 +142,94 @@ public sealed class LayoutMigrationTests
 
         Assert.AreEqual("<h1>still here, brighter</h1>", await fixture.CallAsync("http://veteran.localhost/"));
 
-        var stored = await File.ReadAllTextAsync(await VersionFileAsync(fixture, lambda, 3));
+        var stored = await File.ReadAllTextAsync(await ManifestFileAsync(fixture, lambda, 3));
 
-        StringAssert.StartsWith(stored, "{\"version\":2,", "what is saved now is saved in today's layout");
-        StringAssert.StartsWith(await File.ReadAllTextAsync(await VersionFileAsync(fixture, lambda, 2)), "{\"version\":1,", "and what was saved then is left as it was");
+        StringAssert.StartsWith(stored, "{\"version\":3,", "what is saved now is a manifest over the store");
+        Assert.IsFalse(File.Exists(await VersionFileAsync(fixture, lambda, 3)), "and nothing else");
+
+        StringAssert.StartsWith(await File.ReadAllTextAsync(await VersionFileAsync(fixture, lambda, 2)), "{\"version\":1,", "what was saved then is left as it was");
+    }
+
+    [TestMethod]
+    public async Task AVersionKeptBeforeThatWasNotMovedIsReadWhole()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("straggler");
+
+        // as one that failed to move as the platform started
+        await StoreAsync(fixture, lambda, FirstLayout("<h1>read as it was</h1>"));
+
+        var files = (await fixture.VersionAsync(lambda, 2)).Files;
+
+        Assert.AreEqual("<h1>read as it was</h1>", files.Single(f => f.Name == "resources/web/index.html").Code);
+        Assert.AreEqual(Product, files.Single(f => f.Name == "docs/product.md").Code);
+
+        using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/data/database"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, on.StatusCode);
+        }
+
+        var deployed = await fixture.DeployAsync(lambda.PrivateKey);
+
+        Assert.IsTrue(deployed.Success, string.Join("; ", deployed.Diagnostics.Select(d => d.Message)));
+
+        Assert.AreEqual("<h1>read as it was</h1>", await fixture.CallAsync("http://straggler.localhost/"));
     }
 
     [TestMethod]
     public async Task AFeatureKeptInTheFirstLayoutIsReadInTodays()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
-        var lambda = await fixture.CreateLambdaAsync("drafter");
+        try
+        {
+            LambdaResponse lambda;
 
-        var feature = await fixture.CreateFeatureAsync(lambda, "Old draft");
+            FeatureResponse feature;
 
-        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
+            string folder;
 
-        var directory = Directory.GetDirectories(Path.Combine(fixture.Options.FeatureDirectory, id.ToString())).Single();
+            await using (var before = await LambdaFixture.CreateAsync(o => o with { DataDirectory = directory }))
+            {
+                lambda = await before.CreateLambdaAsync("drafter");
 
-        await File.WriteAllTextAsync(Path.Combine(directory, "files.json"), FirstLayout("<h1>a draft of then</h1>"));
+                feature = await before.CreateFeatureAsync(lambda, "Old draft");
 
-        var files = (await fixture.FeatureAsync(lambda, feature.Key)).Files.Select(f => f.Name).ToList();
+                var id = (await before.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
-        CollectionAssert.Contains(files, "resources/web/index.html");
-        CollectionAssert.Contains(files, "docs/product.md");
-        CollectionAssert.DoesNotContain(files, "web/index.html");
+                folder = Directory.GetDirectories(Path.Combine(before.Options.FeatureDirectory, id.ToString())).Single();
+
+                // as a feature was kept before there was a store
+                File.Delete(Path.Combine(folder, "files.manifest.json"));
+
+                await File.WriteAllTextAsync(Path.Combine(folder, "files.json"), FirstLayout("<h1>a draft of then</h1>"));
+            }
+
+            SqliteConnection.ClearAllPools();
+
+            await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataDirectory = directory });
+
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "files.manifest.json")), "moved into the store as the platform started");
+
+            var files = (await fixture.FeatureAsync(lambda, feature.Key)).Files;
+
+            CollectionAssert.Contains(files.Select(f => f.Name).ToList(), "resources/web/index.html");
+            CollectionAssert.Contains(files.Select(f => f.Name).ToList(), "docs/product.md");
+            CollectionAssert.DoesNotContain(files.Select(f => f.Name).ToList(), "web/index.html");
+
+            Assert.AreEqual("<h1>a draft of then</h1>", files.Single(f => f.Name == "resources/web/index.html").Code);
+
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "files.json")), "the file of before is left until the feature is saved again");
+
+            await fixture.PutFeatureAsync(lambda, feature.Key, "Saves the draft again", [.. files]);
+
+            Assert.IsFalse(File.Exists(Path.Combine(folder, "files.json")), "as it was replaced by every save before");
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [TestMethod]
@@ -236,17 +326,29 @@ public sealed class LayoutMigrationTests
 
     /// <summary>
     /// Stores a version as it was stored before: saved through the API to be
-    /// a version, then its file put back as the first layout wrote it.
+    /// a version, then its manifest taken away and its file put back as the
+    /// first layout wrote it, which held every file whole.
     /// </summary>
     private static async Task StoreAsync(LambdaFixture fixture, LambdaResponse lambda, string stored)
     {
         await fixture.SaveAsync(lambda, "Adds a page", LambdaSource.Parse(stored).ToArray());
 
+        File.Delete(await ManifestFileAsync(fixture, lambda, 2));
+
         await File.WriteAllTextAsync(await VersionFileAsync(fixture, lambda, 2), stored);
     }
 
+    /// <summary>
+    /// Where a version was kept before there was a store.
+    /// </summary>
     private static async Task<string> VersionFileAsync(LambdaFixture fixture, LambdaResponse lambda, int version)
         => Path.Combine(fixture.Options.CodeDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.ToString()!, $"v{version}.cs");
+
+    /// <summary>
+    /// Where a version is kept now: its manifest.
+    /// </summary>
+    private static async Task<string> ManifestFileAsync(LambdaFixture fixture, LambdaResponse lambda, int version)
+        => Path.Combine(fixture.Options.CodeDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.ToString()!, $"v{version}.manifest.json");
 
     /// <summary>
     /// A commit kept as it was made before there was more than one layout:

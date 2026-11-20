@@ -11,7 +11,7 @@ import { Card, Notice, Reading, Tile, Tiles, actionButton, bytes, plural, share,
 
 /** What each part of the data directory is, as the operator reads it. */
 const PARTS: Record<string, { label: string; note: string }> = {
-  versions: { label: 'Versions', note: 'The code and resources of every version kept' },
+  versions: { label: 'Versions', note: 'The code and resources of every version kept, each file once per lambda - the drafts’ files among them' },
   drafts: { label: 'Drafts', note: 'Features being worked on, each with a copy of the data' },
   databases: { label: 'Databases', note: 'The records of the lambdas' },
   workspaces: { label: 'Workspaces', note: 'The files the lambdas saved' },
@@ -20,6 +20,7 @@ const PARTS: Record<string, { label: string; note: string }> = {
   sources: { label: 'Published sources', note: 'Versions packed for /source - made again when missing' },
   compiled: { label: 'Compiled lambdas', note: 'What they were compiled to - made again when missing' },
   resources: { label: 'Unpacked resources', note: 'What they serve, unpacked - made again when missing' },
+  staging: { label: 'Staging', note: 'Archives on their way in or out - emptied as the server starts' },
   platform: { label: 'The platform’s database', note: 'The lambdas, their versions and settings, the secrets' },
   analytics: { label: 'Analytics', note: 'What was counted of the visits, for a year' },
   locations: { label: 'Address locations', note: 'Where an address is, for the log and the analytics - downloaded again when missing' },
