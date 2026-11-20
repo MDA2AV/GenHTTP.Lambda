@@ -31,7 +31,7 @@ import {
 
 /*
  * A run of the agent of this installation, drawn the same wherever it works:
- * a change in the Change section of the editor, and a new website on /build.
+ * a change in the Change section of the editor, and a new app on /build.
  *
  * What was asked at the top, where it has got to and for how long while it
  * runs, what it did - in its own words, as it did it - and how it ended. The

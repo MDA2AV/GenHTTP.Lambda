@@ -1,12 +1,12 @@
 import type { KitMessages } from '../en';
 
 export const buildBox: KitMessages['buildBox'] = {
-  placeholder: 'Chcę stronę internetową, która…',
+  placeholder: 'Chcę aplikację, która…',
   password: 'hasło',
   unlimited:
-    'Ten model wymaga hasła, a wtedy działa bez limitu czasu: pracuje, aż twoja strona będzie gotowa, a nie tylko dopóki nie upłynie czas.',
+    'Ten model wymaga hasła, a wtedy działa bez limitu czasu: pracuje, aż twoja aplikacja będzie gotowa, a nie tylko dopóki nie upłynie czas.',
   ideas: [
-    'stronę dla naszego klubu, na której członkowie zapisują się na wydarzenia',
+    'aplikację dla naszego klubu, w której członkowie zapisują się na wydarzenia',
     'listę zapisów na naszą imprezę składkową, żeby nikt nie przyniósł tego samego dania',
     'księgę gości na nasze wesele',
     'ankietę, w której ludzie głosują i widzą wyniki',
@@ -14,24 +14,24 @@ export const buildBox: KitMessages['buildBox'] = {
     'stronę urodzinową, na której znajomi zostawiają życzenia',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Przed twoją jest jeszcze jedna strona – potem twoja kolej.' : `Stron przed twoją: ${waiting}.`,
+    waiting === 1 ? 'Przed twoją jest jeszcze jedna aplikacja – potem twoja kolej.' : `Aplikacji przed twoją: ${waiting}.`,
   starting: 'Zaczynamy…',
-  online: 'Twoja strona jest online',
-  notOnline: 'Twoja strona powstała, ale nie trafiła do sieci.',
-  open: 'Otwórz swoją stronę',
+  online: 'Twoja aplikacja jest online',
+  notOnline: 'Twoja aplikacja powstała, ale nie trafiła do sieci.',
+  open: 'Otwórz swoją aplikację',
   steps: {
     guide: 'Przygotowania',
     examples: 'Przeglądanie przykładów',
-    create: 'Wybieranie adresu twojej strony',
-    write: 'Pisanie twojej strony',
-    improve: 'Ulepszanie twojej strony',
+    create: 'Wybieranie adresu twojej aplikacji',
+    write: 'Pisanie twojej aplikacji',
+    improve: 'Ulepszanie twojej aplikacji',
     check: 'Szukanie błędów',
     online: 'Publikowanie online',
     trying: 'Wypróbowywanie',
-    looking: 'Przeglądanie twojej strony',
+    looking: 'Przeglądanie twojej aplikacji',
     forRecords: 'Przygotowywanie miejsca na wpisy',
     forKeys: 'Przygotowywanie miejsca na klucze i hasła',
-    forFiles: 'Przygotowywanie miejsca na to, co strona zapisze',
+    forFiles: 'Przygotowywanie miejsca na to, co aplikacja zapisze',
     records: 'Przeglądanie wpisów',
     keys: 'Sprawdzanie, jakich kluczy i haseł potrzebuje',
     addFile: 'Dodawanie pliku',
@@ -41,7 +41,7 @@ export const buildBox: KitMessages['buildBox'] = {
   },
   further: 'Twój link do edytora',
   keep:
-    'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej strony z innego urządzenia i nikt go nie odzyska – my też nie.',
+    'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej aplikacji z innego urządzenia i nikt go nie odzyska – my też nie.',
   copyLink: 'Kopiuj link do edytora',
   lifetime: (offline, removed) =>
     `Utrzymujemy ją online, dopóki jest używana: po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Możesz ją znów udostępnić tutaj albo w jej edytorze.`,
@@ -52,8 +52,6 @@ export const buildBox: KitMessages['buildBox'] = {
   profiles: {
     enterprise: {
       placeholder: 'Potrzebujemy aplikacji, która…',
-      unlimited:
-        'Ten model wymaga hasła, a wtedy działa bez limitu czasu: pracuje, aż twoja aplikacja będzie gotowa, a nie tylko dopóki nie upłynie czas.',
       ideas: [
         'formularz wniosku o urlop, zatwierdzany przez przełożonego',
         'kalendarz rezerwacji naszych sal konferencyjnych',
@@ -62,17 +60,6 @@ export const buildBox: KitMessages['buildBox'] = {
         'listę otwartych zgłoszeń do pomocy technicznej i osób, które się nimi zajmują',
         'formularz opinii o naszych szkoleniach',
       ],
-      ahead: (waiting) => (waiting === 1 ? 'Przed twoją jest jeszcze jedna aplikacja – potem twoja kolej.' : `Aplikacji przed twoją: ${waiting}.`),
-      online: 'Twoja aplikacja jest online',
-      notOnline: 'Twoja aplikacja powstała, ale nie trafiła do sieci.',
-      open: 'Otwórz swoją aplikację',
-      steps: {
-        create: 'Wybieranie adresu twojej aplikacji',
-        write: 'Pisanie twojej aplikacji',
-        improve: 'Ulepszanie twojej aplikacji',
-        looking: 'Przeglądanie twojej aplikacji',
-      },
-      keep: 'Zachowaj ten link w bezpiecznym miejscu. To jedyna droga do twojej aplikacji z innego urządzenia i nikt go nie odzyska – także osoby, które prowadzą tę stronę.',
     },
   },
 };

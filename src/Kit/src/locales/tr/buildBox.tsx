@@ -1,12 +1,12 @@
 import type { KitMessages } from '../en';
 
 export const buildBox: KitMessages['buildBox'] = {
-  placeholder: 'Şöyle bir web sitesi istiyorum…',
+  placeholder: 'Şöyle bir uygulama istiyorum…',
   password: 'şifre',
   unlimited:
-    'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, web siteniz bitene kadar devam eder.',
+    'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, uygulamanız bitene kadar devam eder.',
   ideas: [
-    'üyelerin etkinliklere kaydolabildiği bir kulüp sitesi',
+    'üyelerin etkinliklere kaydolabildiği bir kulüp uygulaması',
     'kimse aynı yemeği getirmesin diye bir piknik listesi',
     'düğünümüz için bir anı defteri',
     'insanların oy verip sonuçları gördüğü bir anket',
@@ -14,21 +14,21 @@ export const buildBox: KitMessages['buildBox'] = {
     'arkadaşların iyi dileklerini yazdığı bir doğum günü sayfası',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Sizinkinden önce bir web sitesi var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} web sitesi var.`,
+    waiting === 1 ? 'Sizinkinden önce bir uygulama var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} uygulama var.`,
   starting: 'Başlıyor…',
-  online: 'Web siteniz yayında',
-  notOnline: 'Web siteniz oluşturuldu, ancak yayına alınmadı.',
-  open: 'Web sitesini aç',
+  online: 'Uygulamanız yayında',
+  notOnline: 'Uygulamanız oluşturuldu, ancak yayına alınmadı.',
+  open: 'Uygulamayı aç',
   steps: {
     guide: 'Hazırlanıyor',
     examples: 'Örneklere bakılıyor',
-    create: 'Web siteniz için bir adres seçiliyor',
-    write: 'Web siteniz yazılıyor',
-    improve: 'Web siteniz iyileştiriliyor',
+    create: 'Uygulamanız için bir adres seçiliyor',
+    write: 'Uygulamanız yazılıyor',
+    improve: 'Uygulamanız iyileştiriliyor',
     check: 'Hatalar kontrol ediliyor',
     online: 'Yayına alınıyor',
     trying: 'Deneniyor',
-    looking: 'Web sitenize bakılıyor',
+    looking: 'Uygulamanıza bakılıyor',
     forRecords: 'Kayıtlar için yer hazırlanıyor',
     forKeys: 'Anahtarlar ve parolalar için yer hazırlanıyor',
     forFiles: 'Kaydedecekleri için yer hazırlanıyor',
@@ -41,7 +41,7 @@ export const buildBox: KitMessages['buildBox'] = {
   },
   further: 'Editör linkiniz',
   keep:
-    'Bu linki güvenli bir yerde saklayın. Web sitenize başka bir cihazdan girmenin tek yolu bu ve kaybolursa biz de kurtaramayız.',
+    'Bu linki güvenli bir yerde saklayın. Uygulamanıza başka bir cihazdan girmenin tek yolu bu ve kaybolursa biz de kurtaramayız.',
   copyLink: 'Editör linkini kopyala',
   lifetime: (offline, removed) =>
     `Kullanıldığı sürece yayında tutarız: ${offline} gün boyunca ziyaret veya değişiklik olmazsa yayından kaldırılır, ${removed} gün sonra da silinir. Yeniden yayına buradan ya da editöründen alabilirsiniz.`,
@@ -52,8 +52,6 @@ export const buildBox: KitMessages['buildBox'] = {
   profiles: {
     enterprise: {
       placeholder: 'Şöyle bir uygulamaya ihtiyacımız var…',
-      unlimited:
-        'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, uygulamanız bitene kadar devam eder.',
       ideas: [
         'izin talep etmek için, ekip lideri tarafından onaylanan bir form',
         'toplantı odalarımız için bir rezervasyon takvimi',
@@ -62,17 +60,6 @@ export const buildBox: KitMessages['buildBox'] = {
         'açık destek taleplerinin ve her birinden sorumlu kişinin listesi',
         'eğitimlerimiz için bir geri bildirim formu',
       ],
-      ahead: (waiting) => (waiting === 1 ? 'Sizinkinden önce bir uygulama var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} uygulama var.`),
-      online: 'Uygulamanız yayında',
-      notOnline: 'Uygulamanız oluşturuldu, ancak yayına alınmadı.',
-      open: 'Uygulamayı aç',
-      steps: {
-        create: 'Uygulamanız için bir adres seçiliyor',
-        write: 'Uygulamanız yazılıyor',
-        improve: 'Uygulamanız iyileştiriliyor',
-        looking: 'Uygulamanıza bakılıyor',
-      },
-      keep: 'Bu linki güvenli bir yerde saklayın. Uygulamanıza başka bir cihazdan girmenin tek yolu bu ve kaybolursa bu siteyi işletenler de dahil kimse kurtaramaz.',
     },
   },
 };

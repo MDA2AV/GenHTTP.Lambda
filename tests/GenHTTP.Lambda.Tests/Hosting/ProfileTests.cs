@@ -184,6 +184,22 @@ public sealed class ProfileTests
     }
 
     [TestMethod]
+    public async Task AnOrganizationsAppsCarryNoLinkBack()
+    {
+        await using var fixture = await CommunityAsync();
+
+        Assert.Contains(">Made with GenHTTP Lambda</a>", Guide.Section(await Guide.ReadAsync(fixture), "backlink"), "asked for at home, as on the cloud");
+
+        await ChangeAsync(fixture, new { profile = "enterprise" });
+
+        var backlink = Guide.Section(await Guide.ReadAsync(fixture), "backlink");
+
+        Assert.Contains("asks for none", backlink);
+        Assert.Contains("take out one a page you change has", backlink, "what an earlier profile asked for goes with the next change");
+        Assert.DoesNotContain("<a href", backlink, "nothing to link to");
+    }
+
+    [TestMethod]
     public async Task AnOrganizationsGuideStillFitsIntoOneToolResult()
     {
         // the longest sentence, on the community edition, with terms as the cloud's budget is measured

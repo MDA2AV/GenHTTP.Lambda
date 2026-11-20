@@ -1,12 +1,12 @@
 import type { KitMessages } from '../en';
 
 export const buildBox: KitMessages['buildBox'] = {
-  placeholder: '이런 홈페이지를 원해요…',
+  placeholder: '이런 앱이 필요해요…',
   password: '비밀번호',
   unlimited:
-    '이 모델은 비밀번호가 필요하며, 시간 제한 없이 실행돼요. 시간이 다 되어 멈추지 않고 웹사이트가 완성될 때까지 계속 작업해요.',
+    '이 모델은 비밀번호가 필요하며, 시간 제한 없이 실행돼요. 시간이 다 되어 멈추지 않고 앱이 완성될 때까지 계속 작업해요.',
   ideas: [
-    '회원들이 행사에 신청할 수 있는 동호회 홈페이지',
+    '회원들이 행사에 신청할 수 있는 동호회 앱',
     '음식이 겹치지 않게 각자 가져올 메뉴를 적는 포틀럭 신청표',
     '결혼식 방명록',
     '사람들이 투표하고 결과를 보는 설문',
@@ -14,21 +14,21 @@ export const buildBox: KitMessages['buildBox'] = {
     '친구들이 축하 메시지를 남기는 생일 페이지',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? '앞에 홈페이지 하나가 있어요. 다음이 고객님 차례예요.' : `앞에 홈페이지 ${waiting}개가 있어요.`,
+    waiting === 1 ? '앞에 앱 하나가 있어요. 다음이 고객님 차례예요.' : `앞에 앱 ${waiting}개가 있어요.`,
   starting: '시작하는 중…',
-  online: '홈페이지가 온라인에 올라갔어요',
-  notOnline: '홈페이지는 만들어졌지만 온라인에 올라가지 않았어요.',
-  open: '홈페이지 열기',
+  online: '앱이 온라인에 올라갔어요',
+  notOnline: '앱은 만들어졌지만 온라인에 올라가지 않았어요.',
+  open: '앱 열기',
   steps: {
     guide: '준비하고 있어요',
     examples: '예시를 살펴보고 있어요',
-    create: '홈페이지 주소를 정하고 있어요',
-    write: '홈페이지를 만들고 있어요',
-    improve: '홈페이지를 다듬고 있어요',
+    create: '앱 주소를 정하고 있어요',
+    write: '앱을 만들고 있어요',
+    improve: '앱을 다듬고 있어요',
     check: '잘못된 곳이 없는지 확인하고 있어요',
     online: '온라인에 올리고 있어요',
     trying: '직접 써 보고 있어요',
-    looking: '홈페이지를 살펴보고 있어요',
+    looking: '앱을 살펴보고 있어요',
     forRecords: '기록을 저장할 곳을 마련하고 있어요',
     forKeys: '키와 비밀번호를 둘 곳을 마련하고 있어요',
     forFiles: '앱이 저장할 곳을 마련하고 있어요',
@@ -40,7 +40,7 @@ export const buildBox: KitMessages['buildBox'] = {
     services: '다른 서비스 사용을 요청하고 있어요',
   },
   further: '내 에디터 링크',
-  keep: '이 링크는 안전한 곳에 보관하세요. 다른 기기에서 내 웹사이트에 들어올 수 있는 유일한 방법이고, 잃어버리면 저희도 되찾아 드릴 수 없어요.',
+  keep: '이 링크는 안전한 곳에 보관하세요. 다른 기기에서 내 앱에 들어올 수 있는 유일한 방법이고, 잃어버리면 저희도 되찾아 드릴 수 없어요.',
   copyLink: '에디터 링크 복사',
   lifetime: (offline, removed) =>
     `사용되는 동안에는 계속 온라인으로 유지해요. ${offline}일 동안 방문이나 변경이 없으면 오프라인이 되고, ${removed}일이 지나면 삭제돼요. 여기서나 에디터에서 다시 온라인으로 전환할 수 있어요.`,
@@ -51,8 +51,6 @@ export const buildBox: KitMessages['buildBox'] = {
   profiles: {
     enterprise: {
       placeholder: '이런 앱이 필요해요…',
-      unlimited:
-        '이 모델은 비밀번호가 필요하며, 시간 제한 없이 실행돼요. 시간이 다 되어 멈추지 않고 앱이 완성될 때까지 계속 작업해요.',
       ideas: [
         '팀장이 승인하는 휴가 신청 양식',
         '회의실 예약 캘린더',
@@ -61,17 +59,6 @@ export const buildBox: KitMessages['buildBox'] = {
         '처리 중인 지원 요청과 담당자 목록',
         '교육 세션 피드백 양식',
       ],
-      ahead: (waiting) => (waiting === 1 ? '앞에 앱 하나가 있어요. 다음이 고객님 차례예요.' : `앞에 앱 ${waiting}개가 있어요.`),
-      online: '앱이 온라인에 올라갔어요',
-      notOnline: '앱은 만들어졌지만 온라인에 올라가지 않았어요.',
-      open: '앱 열기',
-      steps: {
-        create: '앱 주소를 정하고 있어요',
-        write: '앱을 만들고 있어요',
-        improve: '앱을 다듬고 있어요',
-        looking: '앱을 살펴보고 있어요',
-      },
-      keep: '이 링크는 안전한 곳에 보관하세요. 다른 기기에서 내 앱에 들어올 수 있는 유일한 방법이고, 잃어버리면 이 사이트를 운영하는 분들도 되찾아 드릴 수 없어요.',
     },
   },
 };

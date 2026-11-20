@@ -1,4 +1,4 @@
-import { DISCORD, REPOSITORY, useInstallation } from '../installation';
+import { DISCORD, REPOSITORY, useInstallation, useProjectLinks } from '../installation';
 import { useLanguage, useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { ReportAbuse } from './ReportAbuse';
@@ -26,6 +26,7 @@ export function Footer() {
   const said = useT().shell;
   const language = useLanguage();
   const installation = useInstallation();
+  const project = useProjectLinks();
 
   return (
     <footer className="relative z-10 mx-auto w-full max-w-4xl px-5 pb-10">
@@ -60,14 +61,18 @@ export function Footer() {
           </a>
         )}
 
-        <a href={DISCORD} target="_blank" rel="noreferrer" className={LINK}>
-          Discord
-        </a>
+        {/* what every installation runs, whoever runs it - but an organization's */}
+        {project && (
+          <>
+            <a href={DISCORD} target="_blank" rel="noreferrer" className={LINK}>
+              Discord
+            </a>
 
-        {/* what every installation runs, whoever runs it */}
-        <a href={REPOSITORY} target="_blank" rel="noreferrer" className={LINK}>
-          {said.source}
-        </a>
+            <a href={REPOSITORY} target="_blank" rel="noreferrer" className={LINK}>
+              {said.source}
+            </a>
+          </>
+        )}
 
         {/* the header carries this on anything wider than a phone */}
         <Link to="/admin" className={`${LINK} sm:hidden`}>

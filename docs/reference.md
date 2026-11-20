@@ -2634,8 +2634,11 @@ it with the next change. On a lambda with a domain of its own the line is
 plain text. It is the user's to refuse: the agent says that it added
 it, leaves it out or takes it out when asked, and notes in `decisions.md` that
 it was not wanted, so the next agent does not put it back. A change does not
-add one to a lambda that has none. The instructions say so in a line,
-`platform_guide` under `backlink`, and the build agent's brief the same.
+add one to a lambda that has none. An installation for an organization
+(`enterprise`, see [Who it is for](#who-it-is-for)) asks for none: its
+`backlink` says so, and agents add none and take out the line of a page they
+change. The instructions say so in a line, `platform_guide` under `backlink`,
+and the build agent's brief the same.
 
 `analytics` answers what the owner sees in the editor's Analytics section -
 the totals, the days and each breakdown - over `days`, at most what the tier
@@ -3145,15 +3148,17 @@ What it changes:
   says its own way under `profiles` - only the sentences that differ - and
   the kit's catalogs hand every page the words of the installation's profile
   (`profile.ts`), so no component asks which it is. Today only `enterprise`
-  has words of its own: the menu's way to `/build` and the ideas and the
-  placeholder of the box there, which call what is built an app rather than
-  a website; the requests to
-  copy on the community's `/ship`; and the examples in the editor's Change
-  box, in the fields of a new draft and in the showcase's title and
-  description. `home` reads as genhttp.dev does.
+  has words of its own: the ideas and the placeholder of the box on
+  `/build`; the requests to copy on the community's `/ship`; and the
+  examples in the editor's Change box, in the fields of a new draft and in
+  the showcase's title and description. `home` reads as genhttp.dev does.
+  What is built is an app on every installation: the menu says "Create an
+  app", and the box speaks of one.
 - **Prerendered for each.** The community site is prerendered once more for
   every profile it names, as GenHTTP Lambda and as a brand, keeping only the
-  pages that differ (`profiles` in `prerender.json`); `#site-facts` says which
+  pages that differ (`profiles` in `prerender.json` - every page for
+  enterprise, whose footer differs); a visitor is sent the one page asked
+  for, and neither `prerender.json` nor `pages.json` is served; `#site-facts` says which
   profile a page was rendered for, so the browser draws the same words. A
   build that names no profiles - genhttp.dev's - is the same for every
   profile, and a profile that a build naming some has nothing for is sent
@@ -3163,6 +3168,12 @@ What it changes:
   are for - for an organization, tools for colleagues: plain and businesslike,
   keeping no more about people than the work needs. The build agent's brief
   sends it there first.
+- **The link back.** An organization's installation asks for no "Made with"
+  line: the guide's `backlink` says so, and agents add none and take out the
+  line of a page they change (see [For agents](#for-agents)).
+- **The platform's project.** An organization's pages link to neither
+  GenHTTP Lambda's source on GitHub nor its Discord - not in the bar, the
+  footer or the front page (`useProjectLinks` in the kit).
 - **The usage report** says which (`configuration.profile`).
 
 ### Branding

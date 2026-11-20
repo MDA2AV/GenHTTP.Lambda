@@ -18,7 +18,7 @@ import { sorted, useWorkspace, type KnownApp } from './store';
  *
  * A conversation is about one app, which this browser knows by its editor
  * key (see store). A new one starts with the box in the middle of the page,
- * under what the site says about building a website; once built, the app
+ * under what the site says about building an app; once built, the app
  * joins the list and its conversation goes on - a question, a setting, a
  * change, each a message.
  *

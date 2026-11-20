@@ -1,12 +1,12 @@
 import type { KitMessages } from '../en';
 
 export const buildBox: KitMessages['buildBox'] = {
-  placeholder: 'Ik wil een website die…',
+  placeholder: 'Ik wil een app die…',
   password: 'wachtwoord',
   unlimited:
-    'Dit model heeft het wachtwoord nodig en werkt dan zonder tijdslimiet: het gaat door tot je website klaar is, in plaats van tot de klok afloopt.',
+    'Dit model heeft het wachtwoord nodig en werkt dan zonder tijdslimiet: het gaat door tot je app klaar is, in plaats van tot de klok afloopt.',
   ideas: [
-    'een website voor onze vereniging waar leden zich voor activiteiten aanmelden',
+    'een app voor onze vereniging waar leden zich voor activiteiten aanmelden',
     'een inschrijflijst voor onze buurtborrel, zodat niet iedereen hetzelfde hapje meeneemt',
     'een gastenboek voor onze bruiloft',
     'een poll waarin mensen stemmen en de uitslag zien',
@@ -14,24 +14,24 @@ export const buildBox: KitMessages['buildBox'] = {
     'een verjaardagspagina waar vrienden hun felicitaties achterlaten',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Er is nog één website voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} websites voor de jouwe.`,
+    waiting === 1 ? 'Er is nog één app voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} apps voor de jouwe.`,
   starting: 'Starten…',
-  online: 'Je website staat online',
-  notOnline: 'Je website is gemaakt, maar staat niet online.',
-  open: 'Je website openen',
+  online: 'Je app staat online',
+  notOnline: 'Je app is gemaakt, maar staat niet online.',
+  open: 'Je app openen',
   steps: {
     guide: 'Voorbereiden',
     examples: 'Voorbeelden bekijken',
-    create: 'Een adres voor je website kiezen',
-    write: 'Je website schrijven',
-    improve: 'Je website verbeteren',
+    create: 'Een adres voor je app kiezen',
+    write: 'Je app schrijven',
+    improve: 'Je app verbeteren',
     check: 'Controleren op fouten',
     online: 'Online zetten',
     trying: 'Uitproberen',
-    looking: 'Je website bekijken',
+    looking: 'Je app bekijken',
     forRecords: 'Ruimte maken voor de items',
     forKeys: 'Ruimte maken voor sleutels en wachtwoorden',
-    forFiles: 'Ruimte maken voor wat de website opslaat',
+    forFiles: 'Ruimte maken voor wat de app opslaat',
     records: 'De items bekijken',
     keys: 'Nagaan welke sleutels en wachtwoorden nodig zijn',
     addFile: 'Een bestand toevoegen',
@@ -41,7 +41,7 @@ export const buildBox: KitMessages['buildBox'] = {
   },
   further: 'Je editorlink',
   keep:
-    'Bewaar deze link op een veilige plek. Het is de enige weg naar je website vanaf een ander apparaat, en hij is niet te herstellen, ook niet door ons.',
+    'Bewaar deze link op een veilige plek. Het is de enige weg naar je app vanaf een ander apparaat, en hij is niet te herstellen, ook niet door ons.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
     `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Je kunt hem hier weer online zetten, of in de editor.`,
@@ -52,8 +52,6 @@ export const buildBox: KitMessages['buildBox'] = {
   profiles: {
     enterprise: {
       placeholder: 'We hebben een app nodig die…',
-      unlimited:
-        'Dit model heeft het wachtwoord nodig en werkt dan zonder tijdslimiet: het gaat door tot je app klaar is, in plaats van tot de klok afloopt.',
       ideas: [
         'een formulier om verlof aan te vragen, goedgekeurd door de teamleider',
         'een reserveringskalender voor onze vergaderruimtes',
@@ -62,17 +60,6 @@ export const buildBox: KitMessages['buildBox'] = {
         'een lijst met openstaande supportverzoeken en wie ze behandelt',
         'een feedbackformulier voor onze trainingen',
       ],
-      ahead: (waiting) => (waiting === 1 ? 'Er is nog één app voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} apps voor de jouwe.`),
-      online: 'Je app staat online',
-      notOnline: 'Je app is gemaakt, maar staat niet online.',
-      open: 'Je app openen',
-      steps: {
-        create: 'Een adres voor je app kiezen',
-        write: 'Je app schrijven',
-        improve: 'Je app verbeteren',
-        looking: 'Je app bekijken',
-      },
-      keep: 'Bewaar deze link op een veilige plek. Het is de enige weg naar je app vanaf een ander apparaat, en hij is niet te herstellen, ook niet door de mensen die deze site beheren.',
     },
   },
 };

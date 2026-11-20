@@ -257,7 +257,10 @@ the link; with your next change to the page, a line written without
 `rel="nofollow"` is given it, and one that names this platform otherwise is
 given this name. Say that you added it; leave it out or take it out when
 the user does not want it, and note that in `docs/decisions.md`. Do not add
-one to a lambda that has none unless the user asks.
+one to a lambda that has none unless the user asks. Where `platform_guide`
+says under `backlink` that this installation asks for none - one an
+organization runs for its people does not - add none, and take out the line
+of a page you change.
 
 ## Beyond git
 

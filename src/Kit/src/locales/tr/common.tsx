@@ -2,7 +2,7 @@ import type { KitMessages } from '../en';
 
 export const shell: KitMessages['shell'] = {
   main: 'Ana menü',
-  build: 'Web sitesi oluştur',
+  build: 'Uygulama oluştur',
   ship: 'Yayınla',
   showcase: 'Vitrin',
   admin: 'Yönetim',
@@ -18,11 +18,6 @@ export const shell: KitMessages['shell'] = {
   imprint: 'Künye',
   writeCode: 'Kodu kendiniz yazın',
   contact: 'İletişim',
-  profiles: {
-    enterprise: {
-      build: 'Uygulama oluştur',
-    },
-  },
 };
 
 export const common: KitMessages['common'] = {

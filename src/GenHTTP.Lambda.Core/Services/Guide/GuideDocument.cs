@@ -289,14 +289,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## backlink
 
-            We ask - a request, not a rule - for a small line at the foot of the pages a lambda shows its visitors: "Made with {{made}}", in the page's language, so people find where an app was made.
-
-            - Without a domain of its own (no domainUrl): {{link}}
-            - One line, small muted type fitting the design; the name is the whole link - no keywords, badge, script or hidden text.
-            - With a domain of its own the line is plain text; one that links is made plain text with your next change.
-            - A line naming this platform otherwise is given this name with your next change to the page.
-            - With a new lambda that has pages people visit - not an API, a widget in another site, a full-screen page. Changing a lambda, keep its line, and add none it lacks unless asked.
-            - Say that you added it. If the user does not want it, leave it out or remove it, and note that in docs/decisions.md so it is not put back.
+            {{Backlink(profile, made, link)}}
 
             ## limits
 
@@ -350,6 +343,28 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
         InstallationProfile.Cloud => "Who it is for: the public. Lambdas here are mostly websites and small apps anybody may open - a club's, an event's, a game, a shop - often meant to be found and shared.",
         InstallationProfile.Enterprise => "Who it is for: an organization and its people. Lambdas here are mostly tools for work - forms, lists, bookings, approvals, dashboards - used by colleagues rather than the public: plain and businesslike in looks and words, keeping no more about people than the work needs.",
         _ => "Who it is for: whoever runs it, their household and their friends. Lambdas here are mostly apps for a few people who know each other - personal in tone, rarely meant to be found by strangers."
+    };
+
+    /// <summary>
+    /// What the guide asks of the "Made with" line: a small link back to the
+    /// installation - or, where it is an organization's, none, since its
+    /// lambdas are its own tools rather than sites to be found by.
+    /// </summary>
+    private static string Backlink(InstallationProfile profile, string made, string link) => profile switch
+    {
+        InstallationProfile.Enterprise => $"""
+            This installation asks for none: its lambdas are an organization's tools. Put no "Made with {made}" line at the foot of a page, and take out one a page you change has.
+            """,
+        _ => $"""
+            We ask - a request, not a rule - for a small line at the foot of the pages a lambda shows its visitors: "Made with {made}", in the page's language, so people find where an app was made.
+
+            - Without a domain of its own (no domainUrl): {link}
+            - One line, small muted type fitting the design; the name is the whole link - no keywords, badge, script or hidden text.
+            - With a domain of its own the line is plain text; one that links is made plain text with your next change.
+            - A line naming this platform otherwise is given this name with your next change to the page.
+            - With a new lambda that has pages people visit - not an API, a widget in another site, a full-screen page. Changing a lambda, keep its line, and add none it lacks unless asked.
+            - Say that you added it. If the user does not want it, leave it out or remove it, and note that in docs/decisions.md so it is not put back.
+            """
     };
 
     /// <summary>

@@ -2,7 +2,7 @@ import type { KitMessages } from '../en';
 
 export const shell: KitMessages['shell'] = {
   main: 'Hoofdmenu',
-  build: 'Website maken',
+  build: 'App maken',
   ship: 'Publiceren',
   showcase: 'Showcase',
   admin: 'Admin',
@@ -18,11 +18,6 @@ export const shell: KitMessages['shell'] = {
   imprint: 'Colofon',
   writeCode: 'Schrijf de code zelf',
   contact: 'Contact',
-  profiles: {
-    enterprise: {
-      build: 'Een app bouwen',
-    },
-  },
 };
 
 export const common: KitMessages['common'] = {

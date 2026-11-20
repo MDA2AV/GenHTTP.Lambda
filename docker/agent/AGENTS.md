@@ -270,7 +270,9 @@ they ask. When you change a lambda, keep the line it has - giving a link
 without `rel="nofollow"` the attribute, and one that names this platform
 otherwise its name - and do not add one it lacks. When
 the owner asks for it to go, take it out and note in `docs/decisions.md` that
-they did not want it.
+they did not want it. Where `platform_guide` says under `backlink` that this
+installation asks for none - one an organization runs for its people does
+not - add none, and take out the line of a page you change.
 
 ## What not to build
 

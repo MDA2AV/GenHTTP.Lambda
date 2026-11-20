@@ -6,7 +6,7 @@ import {
   IconLock, IconStar,
 } from '@genhttp-lambda/kit/components/Icons';
 import { Link } from '@genhttp-lambda/kit/i18n/links';
-import { REPOSITORY } from '@genhttp-lambda/kit/installation';
+import { REPOSITORY, useProjectLinks } from '@genhttp-lambda/kit/installation';
 import { usePublicPage } from '@genhttp-lambda/kit/meta';
 import { askPlatform } from '@genhttp-lambda/kit/site';
 
@@ -25,13 +25,16 @@ const FEATURE_ICONS = [IconGlobe, IconDatabase, IconFolder, IconKey, IconDraft, 
  * deciding whether to run it. So it says what it does in a screen, leads to
  * the two ways to build - the workspace (/build), where there is an agent
  * behind it, and one's own agent over MCP (/ship) - and then what every app
- * gets, how it runs and where to look next.
+ * gets, how it runs and where to look next. One an organization runs for
+ * its people leaves out the platform's source: colleagues come for their
+ * tools, not for the platform.
  */
 export function Landing() {
   usePublicPage('/');
 
   const said = useT().landing;
   const brand = useBrand();
+  const project = useProjectLinks();
 
   // whether the box has an agent behind it; until the server says, it is
   // offered, so the page is rendered with it for whoever reads it unscripted
@@ -125,10 +128,12 @@ export function Landing() {
             ))}
           </dl>
 
-          <a href={REPOSITORY} target="_blank" rel="noreferrer" className="btn-ghost mt-8 inline-flex">
-            <IconGitHub className="h-4 w-4" />
-            {said.repository}
-          </a>
+          {project && (
+            <a href={REPOSITORY} target="_blank" rel="noreferrer" className="btn-ghost mt-8 inline-flex">
+              <IconGitHub className="h-4 w-4" />
+              {said.repository}
+            </a>
+          )}
         </div>
       </section>
 
@@ -143,7 +148,7 @@ export function Landing() {
             <Card to="/api/v1/scalar/" icon={<IconLayers className="h-5 w-5" />} {...said.around.api} />
             <Card to="/source" icon={<IconBranch className="h-5 w-5" />} {...said.around.sources} />
             <Card to="/admin" icon={<IconLock className="h-5 w-5" />} {...said.around.admin} />
-            <Card href={REFERENCE} icon={<IconBook className="h-5 w-5" />} {...said.around.reference} />
+            {project && <Card href={REFERENCE} icon={<IconBook className="h-5 w-5" />} {...said.around.reference} />}
           </div>
         </div>
       </section>

@@ -11,7 +11,7 @@ import { pend, pendingOf, remember, saidIn, useWorkspace, type KnownApp, type Tu
 /**
  * A new app: the first message, before there is anything to talk about.
  *
- * Before anything is asked, this is the page that creates a website - what
+ * Before anything is asked, this is the page that creates an app - what
  * the site says about it (intro), the box in the middle of it, ideas to start
  * from, and what the site answers for whoever wants to know first (after) -
  * all in the markup as it is prerendered, for whoever finds the page by

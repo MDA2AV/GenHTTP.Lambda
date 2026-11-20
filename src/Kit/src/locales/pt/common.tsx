@@ -2,7 +2,7 @@ import type { KitMessages } from '../en';
 
 export const shell: KitMessages['shell'] = {
   main: 'Principal',
-  build: 'Criar site',
+  build: 'Criar app',
   ship: 'Publicar',
   showcase: 'Vitrine',
   admin: 'Admin',
@@ -18,11 +18,6 @@ export const shell: KitMessages['shell'] = {
   imprint: 'Aviso legal',
   writeCode: 'Escrever o código você mesmo',
   contact: 'Contato',
-  profiles: {
-    enterprise: {
-      build: 'Criar um app',
-    },
-  },
 };
 
 export const common: KitMessages['common'] = {

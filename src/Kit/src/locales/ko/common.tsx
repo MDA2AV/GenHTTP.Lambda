@@ -2,7 +2,7 @@ import type { KitMessages } from '../en';
 
 export const shell: KitMessages['shell'] = {
   main: '주 메뉴',
-  build: '홈페이지 만들기',
+  build: '앱 만들기',
   ship: '게시하기',
   showcase: '쇼케이스',
   admin: '관리자',
@@ -18,11 +18,6 @@ export const shell: KitMessages['shell'] = {
   imprint: '법적 고지',
   writeCode: '코드 직접 작성하기',
   contact: '문의',
-  profiles: {
-    enterprise: {
-      build: '앱 만들기',
-    },
-  },
 };
 
 export const common: KitMessages['common'] = {
