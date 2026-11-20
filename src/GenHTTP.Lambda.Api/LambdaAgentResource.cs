@@ -74,7 +74,9 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
              handed to the agent as context and are not logged. The agent keeps nothing between messages.
              """)]
     [Response(ResponseStatus.Accepted, "The change was taken on.")]
-    [Response(ResponseStatus.BadRequest, "The prompt says too little, or there is no such model.")]
+    [Response(ResponseStatus.BadRequest, "The prompt says too little, or the model or the effort is not one offered here.")]
+    [Response(ResponseStatus.Forbidden, "The model asked for needs the installation's password, and this is not it - or the lambda is a demo.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "A change of this lambda is under way already. Wait for it, or stop it first.")]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature to go on with, or this installation takes no changes from here.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
@@ -89,11 +91,13 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
         var feature = body?.Feature is { Length: > 0 } key ? (await features.GetAsync(privateKey, key)).Feature.Key : null;
 
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
-                                             body?.Model, body?.Password, body?.Language, feature, body?.History, request.Client.Address);
+                                             body?.Model, body?.Effort, body?.Password, body?.Language, feature, body?.History,
+                                             request.Client.Address);
 
         // logged in full, as the prompts of the build page are - the message
         // only: what was said before was logged when it was asked
-        logger.LogInformation("Started change {Change} of lambda {Lambda} model {Model} prompt {Prompt}", state.Job?.Id, current.PublicKey, body?.Model ?? "default", body?.Prompt?.Trim());
+        logger.LogInformation("Started change {Change} of lambda {Lambda} model {Model} effort {Effort} prompt {Prompt}",
+                              state.Job?.Id, current.PublicKey, state.Job?.Model, state.Job?.Effort, body?.Prompt?.Trim());
 
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }

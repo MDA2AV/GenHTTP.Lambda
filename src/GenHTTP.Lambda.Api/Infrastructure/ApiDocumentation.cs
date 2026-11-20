@@ -72,6 +72,8 @@ public static class ApiDocumentation
 
     public const string Guide = "Guide";
 
+    public const string BuildAgent = "Build agent";
+
     public const string Branding = "Branding";
 
     public const string Telemetry = "Telemetry";
@@ -89,7 +91,7 @@ public static class ApiDocumentation
         ("How it is doing", [Monitoring, Analytics]),
         ("Sharing it", [Domain, Showcase, OpenSource]),
         ("The build agent", [Builds, Changes]),
-        ("Operating the installation", [Administration, Guide, Branding, Telemetry, ServerLog])
+        ("Operating the installation", [Administration, Guide, BuildAgent, Branding, Telemetry, ServerLog])
     ];
 
     #endregion

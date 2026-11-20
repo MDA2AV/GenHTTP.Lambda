@@ -379,13 +379,17 @@ public sealed class AdminTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
-        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(BuildBox: false));
+        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(OptimizeDatabases: false));
 
         Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
 
         using var settings = await Send(fixture, HttpMethod.Get, "/api/v1/admin/settings", Token);
 
-        Assert.IsTrue((await settings.GetContentAsync<SettingsModel>()).BuildBox, "nothing was changed");
+        Assert.IsTrue((await settings.GetContentAsync<SettingsModel>()).OptimizeDatabases, "nothing was changed");
+
+        using var agent = await Send(fixture, HttpMethod.Put, "/api/v1/admin/agent", "not-the-token", new AgentSettingsRequest(Builds: false));
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, agent.StatusCode, "nor what the build agent offers");
     }
 
     #region Helpers

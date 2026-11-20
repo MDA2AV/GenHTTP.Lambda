@@ -15,12 +15,17 @@
 # The CLI version is pinned deliberately. The tool allowlist is enforced by
 # the CLI, but a handful of built-in tools are available whatever the
 # allowlist says - messaging other sessions on the machine was one of them -
-# so they are named in a denylist as well, and a denylist is only correct for
-# the version it was written against. Upgrading means re-running
-# verify-tools.sh and reading what it prints before changing this number.
+# so builds load no built-in tool at all (--tools "") and name them in a
+# denylist as well, and a denylist is only correct for the version it was
+# written against. Upgrading means re-running verify-tools.sh and reading
+# what it prints before changing this number.
+#
+# 2.1.329 is the first pinned that knows Fable 5.2, Sonnet 5.5 and Haiku 5.5:
+# a version that does not know a model may ask for it with settings the
+# model refuses.
 FROM node:22-slim
 
-ARG CLAUDE_VERSION=2.1.280
+ARG CLAUDE_VERSION=2.1.329
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
@@ -40,7 +45,9 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_VERSION} \
 # nothing here runs as root
 RUN useradd --create-home --uid 1002 builder
 
+# the version is said in the runner's health, which the panel shows
 ENV CLAUDE_CONFIG_DIR=/home/builder/.claude \
+    AGENT_CLI_VERSION=${CLAUDE_VERSION} \
     HOME=/home/builder \
     XDG_RUNTIME_DIR=/home/builder/run \
     NODE_ENV=production

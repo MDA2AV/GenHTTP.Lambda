@@ -2,13 +2,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 import { absoluteAddress } from '../address';
 import { api, ApiError, isActive, type AgentState, type ChangeJob, type Feature, type LambdaSummary } from '../api';
+import { AgentChoice, useAgentChoice } from '../components/AgentChoice';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconDots, IconExternal, IconKey, IconSpinner } from '../components/Icons';
 import { tagOf, useLanguage, useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { useOrigin } from '../site';
 import { Switch } from '../ui/ui';
-import { Composer, ModelChoice } from './Composer';
+import { Composer } from './Composer';
 import { Asked, BuildAnswer, ChangeAnswer, type AppHand, type Following } from './Turns';
 import { activeState, describe, forget, keepTurn, saidIn, touch, type KnownApp, type Turn } from './store';
 
@@ -75,8 +76,7 @@ export function AppChat({
 
   const [prompt, setPrompt] = useState('');
   const [online, setOnline] = useState(rememberedOnline);
-  const [model, setModel] = useState<'opus' | 'fable'>('opus');
-  const [password, setPassword] = useState('');
+  const choice = useAgentChoice(agent?.offer);
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -248,7 +248,7 @@ export function AppChat({
   const offered = agent?.available ?? true;
   const spent = agent != null && agent.available && agent.left <= 0;
   const wanted = prompt.trim();
-  const ready = wanted.length >= 3 && !sending && !running && !spent && offered && !blocked && !gone && (model === 'opus' || password.length > 0);
+  const ready = wanted.length >= 3 && !sending && !running && !spent && offered && !blocked && !gone && choice.ready;
 
   async function send() {
     if (!ready) return;
@@ -265,8 +265,7 @@ export function AppChat({
       const state = await api.agent.start(key, {
         prompt: wanted,
         deploy: online,
-        model: model === 'opus' ? undefined : model,
-        password: model === 'opus' ? undefined : password,
+        ...choice.request,
         language,
         history,
         feature: target && features.some((feature) => feature.key === target.key) ? target.key : undefined,
@@ -497,7 +496,7 @@ export function AppChat({
                     <span id="workspace-online">{said.goOnline}</span>
                   </span>
 
-                  {agent?.secondModel && <ModelChoice model={model} onModel={setModel} password={password} onPassword={setPassword} />}
+                  <AgentChoice choice={choice} />
 
                   {agent?.available && (
                     <span className={`ml-auto tabular-nums ${spent ? 'text-amber-600 dark:text-amber-400' : ''}`}>

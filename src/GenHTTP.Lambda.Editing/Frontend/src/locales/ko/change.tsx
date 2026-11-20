@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: '새 초안',
   full: (limit) =>
     `이 람다에는 이미 초안이 ${limit}개 열려 있어서 더 만들 수 없어요. 이어서 작업할 초안을 고르거나, 먼저 하나를 온라인으로 전환하거나 삭제하세요.`,
-  password: '비밀번호',
-  fable: 'Fable은 시간을 들여 작업해요. 시간 제한도 단계 제한도 없고, 대기열도 따로 써요.',
+  unlimited: '비밀번호를 입력하면 시간 제한도 단계 제한도 없이, 전용 경로에서 충분히 시간을 들여 작업해요.',
   left: (left, perDay) => `오늘 ${perDay}번 중 ${left}번 남음`,
   leftTitle: '만들기 페이지와 이 섹션이 하루 사용 횟수를 함께 써요.',
   noneLeft: (time) => `오늘 쓸 수 있는 횟수를 다 썼어요. ${time}부터 다시 쓸 수 있어요.`,

@@ -18,8 +18,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Nieuw concept',
   full: (limit) =>
     `Er zijn al ${limit} concepten, en meer mag niet. Kies er een om mee verder te gaan, of zet er eerst een online of verwijder er een.`,
-  password: 'Wachtwoord',
-  fable: 'Fable neemt er de tijd voor: geen tijdslimiet, geen limiet op het aantal stappen, en een eigen wachtrij.',
+  unlimited: 'Met het wachtwoord neemt de agent de tijd: geen klok en geen limiet op het aantal stappen, op een eigen baan.',
   left: (left, perDay) => `Vandaag nog ${left} van ${perDay}`,
   leftTitle: 'De bouwpagina en dit onderdeel delen één daglimiet.',
   noneLeft: (time) => `Dat was de laatste voor vandaag. Vanaf ${time} kan het weer.`,

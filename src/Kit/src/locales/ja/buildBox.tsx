@@ -3,7 +3,8 @@ import type { KitMessages } from '../en';
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'こんなホームページがほしい…',
   password: 'パスワード',
-  fable: 'Fableは試験運用中のため、パスワードが必要です。時間制限がないので、途中で打ち切られず、完成するまで作り続けます。',
+  unlimited:
+    'このモデルにはパスワードが必要です。パスワードを使うと時間の制限なく動き、制限時間が来るまでではなく、ウェブサイトが完成するまで作業を続けます。',
   ideas: [
     '会員がイベントに申し込めるサークルのホームページ',
     '料理がかぶらないようにする、持ち寄りパーティーの参加表',

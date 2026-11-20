@@ -537,7 +537,10 @@ export interface ChangeJob {
   prompt: string;
   /** Whether it was asked to merge the change and put it online. */
   deploy: boolean;
+  /** The model it is made on, by its name in the offer. */
   model: string;
+  /** The effort it is made at; absent from a runner from before efforts were chosen. */
+  effort?: string | null;
   /** The feature it was asked to go on with; absent when it starts one of its own. */
   feature?: string | null;
   /** The version online when it was asked for. */
@@ -559,10 +562,29 @@ export interface AgentState {
   /** Builds and changes one address may ask for in a day. */
   perDay: number;
   left: number;
-  /** Whether a second model is offered, behind a password. */
-  secondModel: boolean;
+  /** The models and efforts a change may be asked for on. */
+  offer: AgentOffer;
   /** The change under way, or the last one while the agent remembers it (an hour). */
   job?: ChangeJob | null;
+}
+
+/** One model the agent may be asked for, as the operator offers it. */
+export interface OfferedModel {
+  /** What it is asked for by: opus, sonnet, haiku or fable. */
+  name: string;
+  /** What to call it, with its version: Opus 5.5. */
+  label: string;
+  /** Whether it needs the installation's password - and, with it, runs without a clock. */
+  password: boolean;
+}
+
+/** The models and efforts the agent may be asked for, and what a job starts on where nobody chooses. */
+export interface AgentOffer {
+  models: OfferedModel[];
+  model: string;
+  /** The least first: low, medium, high, xhigh, max. */
+  efforts: string[];
+  effort: string;
 }
 
 export interface ChangeRequest {
@@ -570,6 +592,7 @@ export interface ChangeRequest {
   /** Merge it and put it online once it works, rather than leave it in its feature to be tried. */
   deploy: boolean;
   model?: string;
+  effort?: string;
   password?: string;
   /** The language of the control center, for the agent to fall back on. */
   language?: string;
@@ -628,8 +651,8 @@ export interface Platform {
   retentionDays: number;
   imports: string[];
   completions: Completion[];
-  /** Whether the box on /build has an agent behind it. */
-  build: { available: boolean; perDay: number; secondModel: boolean };
+  /** Whether the box on /build has an agent behind it, and on which models and efforts. */
+  build: { available: boolean; perDay: number; offer: AgentOffer };
   /** Where a lambda answers, with {key} where its public key goes: https://{key}.genhttp.run/. See address.ts. */
   lambdaUrl: string;
   /** The tier a new lambda starts in. */
@@ -1384,12 +1407,57 @@ export interface OwnSource {
 
 /** What the operator can switch on or off in the panel. */
 export interface AdminSettings {
-  /** Whether /build offers its text box, where there is an agent. */
-  buildBox: boolean;
-  /** Whether the Change section of the editor offers its text box, where there is an agent. */
-  changeBox: boolean;
   /** Whether the platform optimizes the databases itself, each in its quiet hours. */
   optimizeDatabases: boolean;
+}
+
+/** Who may have a model of the build agent: everybody, whoever knows the password, or nobody. */
+export type ModelAccess = 'open' | 'password' | 'off';
+
+/** What the runner of the build agent says of itself. */
+export interface AgentRunner {
+  reachable: boolean;
+  /** subscription (a token of a Claude subscription) or api-key; absent where it has neither. */
+  signsInWith?: string | null;
+  /** Which model of Anthropic's each model runs as, by name. */
+  models?: Record<string, string> | null;
+  efforts?: string[] | null;
+  /** The version of Claude Code its builds run. */
+  cli?: string | null;
+  running: number;
+  queued: number;
+}
+
+/** What the operator decided about the build agent, and how its runner is. */
+export interface AdminAgentSettings {
+  /** Whether /build builds new apps, where there is an agent. */
+  builds: boolean;
+  /** Whether owners may ask the agent about their apps, where there is an agent. */
+  changes: boolean;
+  /** Every model the platform knows, in the order the pages list them. */
+  models: { name: string; label: string; access: ModelAccess; offered: boolean }[];
+  model: string;
+  /** Every effort, the least first. */
+  efforts: { name: string; offered: boolean }[];
+  effort: string;
+  /** Whether the installation has a password for the models behind one. */
+  passwordSet: boolean;
+  /** How many builds and changes one address may ask for in a day - a limit, set under Limits. */
+  perDay: number;
+  /** Where the runner listens; absent without one. */
+  url?: string | null;
+  /** What the runner says of itself; absent without one, and in the answer to a change. */
+  runner?: AgentRunner | null;
+}
+
+/** What the operator decides about the build agent; what is left out stays as it is. */
+export interface AdminAgentChange {
+  builds?: boolean;
+  changes?: boolean;
+  models?: { name: string; access: ModelAccess }[];
+  model?: string;
+  efforts?: string[];
+  effort?: string;
 }
 
 /**
@@ -1620,8 +1688,11 @@ export const api = {
 
   /** The text box on /build, and the agent behind it. Whether there is one is in `platform`. */
   builds: {
-    start: (prompt: string, model?: string, password?: string) =>
-      request<{ id: string; queued: number; left?: number | null }>('/builds', send({ prompt, model, password })),
+    start: (prompt: string, choice: { model?: string; effort?: string; password?: string } = {}) =>
+      request<{ id: string; queued: number; left?: number | null; model?: string | null; effort?: string | null }>(
+        '/builds',
+        send({ prompt, ...choice }),
+      ),
     progress: (id: string) =>
       request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number; seconds: number; limit?: number | null }>(`/builds/${id}`),
   },
@@ -1696,6 +1767,12 @@ export const api = {
 
     saveSettings: (token: string, settings: AdminSettings) =>
       request<AdminSettings>('/admin/settings', withToken(token, { method: 'PUT', body: JSON.stringify(settings) })),
+
+    /** Whether the build agent builds and changes apps here, and on which models and efforts. */
+    agent: (token: string) => request<AdminAgentSettings>('/admin/agent', withToken(token)),
+
+    saveAgent: (token: string, change: AdminAgentChange) =>
+      request<AdminAgentSettings>('/admin/agent', withToken(token, { method: 'PUT', body: JSON.stringify(change) })),
 
     limits: (token: string) => request<AdminLimits>('/admin/limits', withToken(token)),
 

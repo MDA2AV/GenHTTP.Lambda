@@ -30,6 +30,10 @@ services:
       # the build agent, where it runs (see the agent profile below)
       LAMBDA_AGENT_URL: ${LAMBDA_AGENT_URL:-}
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      # the password for the models the panel puts behind one (Fable, unless
+      # you decide otherwise in the panel's Build agent section); unset, those
+      # are not offered
+      LAMBDA_AGENT_PASSWORD: ${LAMBDA_AGENT_PASSWORD:-}
       # the daily usage report (see Telemetry in the README); false sends none
       LAMBDA_USAGE_REPORTS: ${LAMBDA_USAGE_REPORTS:-true}
     volumes:
@@ -53,8 +57,14 @@ services:
       AGENT_BUILD_NETWORK: genhttp-build-net
       AGENT_MCP_URL: http://lambda:8080/mcp
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_PUBLIC_URL:-http://localhost:8080}
-      # a token of your Claude subscription: claude setup-token
+      # what the builds sign in to Anthropic with - one of the two:
+      # a token of your Claude subscription (claude setup-token), or an API
+      # key of your organization's account, billed by the token. Where both
+      # are set the token wins. The key has a name of its own here, so an
+      # ANTHROPIC_API_KEY exported in the shell you start this from is not
+      # picked up by accident.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${LAMBDA_AGENT_API_KEY:-}
       HTTPS_PROXY: http://egress-proxy:3128
       HTTP_PROXY: http://egress-proxy:3128
       NO_PROXY: lambda,localhost,127.0.0.1

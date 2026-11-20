@@ -86,6 +86,7 @@ public sealed class AgentClient : IDisposable
     /// <summary>
     /// Hands the runner a build.
     /// </summary>
+    /// <param name="choice">The model and effort it runs on, and whether it runs without a clock</param>
     /// <returns>
     /// The build it took, or nothing where it took one but answered with
     /// nothing that could be read
@@ -93,9 +94,9 @@ public sealed class AgentClient : IDisposable
     /// <exception cref="ProviderException">
     /// It did not take the build: it refused, or it could not be reached
     /// </exception>
-    public ValueTask<BuildStarted?> StartBuildAsync(string prompt, string model)
+    public ValueTask<BuildStarted?> StartBuildAsync(string prompt, AgentChoice choice)
         // no key travels with it: this endpoint only ever creates
-        => StartAsync<BuildStarted>(new { prompt, model },
+        => StartAsync<BuildStarted>(new { prompt, model = choice.ModelName, effort = choice.EffortName, unbounded = choice.Unbounded },
                                     "The build agent would not take that.",
                                     "The build agent is not answering. Try again in a moment.");
 
@@ -148,6 +149,7 @@ public sealed class AgentClient : IDisposable
     /// <param name="deploy">Whether to merge the change and put it online once it works</param>
     /// <param name="language">The language of the control center, for the agent to fall back on</param>
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
+    /// <param name="choice">The model and effort it runs on, and whether it runs without a clock</param>
     /// <param name="history">The conversation the message was sent with, cut to size</param>
     /// <returns>
     /// The change it took, or nothing where it took one but answered with
@@ -157,12 +159,14 @@ public sealed class AgentClient : IDisposable
     /// It did not take the change: it refused, or it could not be reached
     /// </exception>
     public ValueTask<ChangeProgress?> StartChangeAsync(long lambda, string privateKey, int? before, string prompt, bool deploy,
-                                                       string model, string? language, string? feature,
+                                                       AgentChoice choice, string? language, string? feature,
                                                        IReadOnlyList<ConversationTurn>? history)
         => StartAsync<ChangeProgress>(new
                                       {
                                           prompt,
-                                          model,
+                                          model = choice.ModelName,
+                                          effort = choice.EffortName,
+                                          unbounded = choice.Unbounded,
                                           key = privateKey,
                                           lambda = lambda.ToString(CultureInfo.InvariantCulture),
                                           deploy,
@@ -220,6 +224,70 @@ public sealed class AgentClient : IDisposable
         catch (HttpRequestException)
         {
             throw new ProviderException(ResponseStatus.ServiceUnavailable, "The agent is not answering.");
+        }
+    }
+
+    #endregion
+
+    #region Health
+
+    /// <summary>How long the panel waits for the runner to say how it is.</summary>
+    private static readonly TimeSpan HealthTimeout = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// What the runner says of itself: what its builds sign in with, which
+    /// identifier each model runs as, and its queue.
+    /// </summary>
+    /// <remarks>
+    /// Only the panel asks, so a runner that does not answer within a few
+    /// seconds is said to be unreachable rather than held against the page.
+    /// A runner from before the models were chosen in the panel answers with
+    /// a list of names rather than a map, and without what it signs in with.
+    /// </remarks>
+    public async ValueTask<AgentRunner> HealthAsync(CancellationToken cancellation = default)
+    {
+        var client = Http();
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+
+        timeout.CancelAfter(HealthTimeout);
+
+        try
+        {
+            using var response = await client.GetAsync("health", timeout.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new AgentRunner(false);
+            }
+
+            var body = await ReadNodeAsync(response);
+
+            var models = body?["models"] is JsonObject map
+                ? map.Where(m => m.Value is JsonValue).ToDictionary(m => m.Key, m => m.Value!.ToString())
+                : null;
+
+            var efforts = body?["efforts"] is JsonArray list
+                ? list.OfType<JsonValue>().Select(e => e.ToString()).ToList()
+                : null;
+
+            static int Count(JsonNode? lane, string field)
+                => lane?[field] is JsonValue value && value.TryGetValue<int>(out var number) ? number
+                 : lane?[field] is JsonValue flag && flag.TryGetValue<bool>(out var on) && on ? 1 : 0;
+
+            return new AgentRunner(
+                true,
+                body?["auth"] is JsonValue auth && auth.TryGetValue<string>(out var signsIn) ? signsIn : null,
+                models,
+                efforts,
+                body?["cli"] is JsonValue cli && cli.TryGetValue<string>(out var version) ? version : null,
+                Count(body?["quick"], "running") + Count(body?["long"], "running"),
+                Count(body?["quick"], "queued") + Count(body?["long"], "queued")
+            );
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellation.IsCancellationRequested)
+        {
+            return new AgentRunner(false);
         }
     }
 

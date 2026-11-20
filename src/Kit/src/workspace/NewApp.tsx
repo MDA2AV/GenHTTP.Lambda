@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { api, ApiError, type AgentStep, type BuildResult } from '../api';
+import { api, ApiError, type AgentOffer, type AgentStep, type BuildResult } from '../api';
+import { AgentChoice, useAgentChoice } from '../components/AgentChoice';
 import { useT } from '../i18n';
 import { Link } from '../i18n/links';
-import { Composer, ModelChoice } from './Composer';
+import { Composer } from './Composer';
 import { Asked, BuildAnswer, type Following } from './Turns';
 import { pend, pendingOf, remember, saidIn, useWorkspace, type KnownApp, type Turn } from './store';
 
@@ -26,7 +27,7 @@ export function NewApp({
   intro,
   after,
   offered,
-  secondModel,
+  offer,
   onBuilt,
   onLeft,
   allowance,
@@ -35,7 +36,8 @@ export function NewApp({
   after?: ReactNode;
   /** Whether building is offered here; until the server has said, it is. */
   offered: boolean;
-  secondModel: boolean;
+  /** The models and efforts the operator offers; nothing until the server has said. */
+  offer: AgentOffer | null;
   /** Called with the app once it is built and remembered. */
   onBuilt: (app: KnownApp) => void;
   /** How many builds and changes this caller has left today, as the build's start said. */
@@ -51,8 +53,7 @@ export function NewApp({
   const [prompt, setPrompt] = useState('');
   const [turn, setTurn] = useState<Turn | null>(null);
   const [following, setFollowing] = useState<Following | null>(null);
-  const [model, setModel] = useState<'opus' | 'fable'>('opus');
-  const [password, setPassword] = useState('');
+  const choice = useAgentChoice(offer);
   const [sending, setSending] = useState(false);
 
   const field = useRef<HTMLTextAreaElement>(null);
@@ -151,10 +152,10 @@ export function NewApp({
     setSending(true);
 
     try {
-      const started = await api.builds.start(asked, model === 'opus' ? undefined : model, model === 'opus' ? undefined : password);
+      const started = await api.builds.start(asked, choice.request);
       const at = Date.now();
 
-      pend({ id: started.id, prompt: asked, at, model });
+      pend({ id: started.id, prompt: asked, at, model: started.model ?? choice.model });
 
       if (started.left != null) {
         onLeft(started.left);
@@ -177,7 +178,7 @@ export function NewApp({
     }
   }
 
-  const ready = prompt.trim().length >= 3 && !sending && (model === 'opus' || password.length > 0);
+  const ready = prompt.trim().length >= 3 && !sending && choice.ready;
   const running = turn?.state === 'queued' || turn?.state === 'running';
 
   const again = () => {
@@ -188,10 +189,12 @@ export function NewApp({
     window.requestAnimationFrame(() => field.current?.focus());
   };
 
+  const choosing = (offer?.models.length ?? 0) > 1 || (offer?.efforts.length ?? 0) > 1;
+
   const footer =
-    secondModel || allowance ? (
+    choosing || allowance ? (
       <>
-        {secondModel && <ModelChoice model={model} onModel={setModel} password={password} onPassword={setPassword} />}
+        <AgentChoice choice={choice} />
         {allowance && <span className="ml-auto tabular-nums">{words.left(allowance.left, allowance.perDay)}</span>}
       </>
     ) : undefined;
@@ -219,7 +222,7 @@ export function NewApp({
                 footer={footer}
               />
 
-              {model === 'fable' && <p className="mt-2 px-1 text-xs text-slate-500">{said.fable}</p>}
+              {choice.guarded && <p className="mt-2 px-1 text-xs text-slate-500">{said.unlimited}</p>}
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 {said.ideas.map((idea) => (

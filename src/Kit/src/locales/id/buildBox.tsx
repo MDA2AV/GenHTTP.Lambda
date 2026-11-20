@@ -3,8 +3,8 @@ import type { KitMessages } from '../en';
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Saya ingin website yang…',
   password: 'kata sandi',
-  fable:
-    'Fable masih dalam uji coba, jadi dilindungi kata sandi. Fable berjalan tanpa batas waktu. Ia terus bekerja sampai situs web Anda selesai, bukan sampai waktunya habis.',
+  unlimited:
+    'Model ini memerlukan kata sandi, lalu berjalan tanpa batas waktu: terus bekerja sampai situs web Anda selesai, bukan sampai waktunya habis.',
   ideas: [
     'website untuk komunitas kami tempat anggota mendaftar acara',
     'daftar bawaan untuk acara makan bersama kami, supaya tidak ada yang membawa masakan yang sama',

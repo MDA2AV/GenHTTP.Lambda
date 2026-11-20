@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Services.Branding;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Integrations;
@@ -31,7 +32,7 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// </remarks>
 public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, IDatabaseVault databaseVault, IWorkspaceVault workspaces,
                                 ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, IBrandingService branding, ServerRegistry server,
-                                IIntegrationService integrations, LambdaOptions options)
+                                IIntegrationService integrations, IBuildService builds, LambdaOptions options)
 {
 
     /// <summary>
@@ -300,13 +301,14 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     private UsageConfiguration DescribeConfiguration()
     {
         var site = settings.Get();
+        var agent = builds.GetSettings();
 
         return new UsageConfiguration(
             options.Addressing.ToString(),
             options.HostingUrl != null,
             !string.IsNullOrWhiteSpace(options.AgentUrl),
-            site.BuildBox,
-            site.ChangeBox,
+            agent.Builds,
+            agent.Changes,
             options.Administrable,
             !string.IsNullOrWhiteSpace(options.Terms),
             !string.IsNullOrWhiteSpace(options.Contact),

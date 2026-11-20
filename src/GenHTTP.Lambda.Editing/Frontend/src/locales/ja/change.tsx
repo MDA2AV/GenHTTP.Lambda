@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: '新しい下書き',
   full: (limit) =>
     `下書きがすでに${limit}個あり、これ以上は作れません。続きを進める下書きを選ぶか、先にどれかを公開するか破棄してください。`,
-  password: 'パスワード',
-  fable: 'Fableはじっくり時間をかけて作業します。時間制限もステップ数の上限もなく、順番待ちの列も別です。',
+  unlimited: 'パスワードを使うと、時間をかけて取り組みます。時間の制限も作業の回数の制限もなく、専用の枠で動きます。',
   left: (left, perDay) => `今日の残り：${left}／${perDay}回`,
   leftTitle: '1日に使える回数は、「作る」ページとこのセクションで共通です。',
   noneLeft: (time) => `今日の分はこれで終わりです。${time}からまた使えます。`,

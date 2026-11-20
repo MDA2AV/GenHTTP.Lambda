@@ -65,7 +65,9 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             Development = ReadBool("LAMBDA_DEVELOPMENT", defaults.Development),
             AgentUrl = ReadOptional("LAMBDA_AGENT_URL"),
             AgentToken = ReadOptional("LAMBDA_AGENT_TOKEN"),
-            AgentFablePassword = ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
+            // named after the one model it was for, and still read where the
+            // installation set it before models were put behind it in the panel
+            AgentPassword = ReadOptional("LAMBDA_AGENT_PASSWORD") ?? ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
             SourceCacheBytes = ReadLong("LAMBDA_SOURCE_CACHE_BYTES", defaults.SourceCacheBytes),

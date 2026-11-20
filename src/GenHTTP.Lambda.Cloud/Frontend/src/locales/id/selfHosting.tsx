@@ -51,7 +51,7 @@ export const selfHosting: Messages['selfHosting'] = {
     ['Domain sendiri', 'Untuk aplikasi Premium', 'Untuk aplikasi apa pun yang Anda pindahkan ke produksi'],
     ['Aplikasi yang tidak dipakai', `Dimatikan setelah ${offline} hari tanpa kunjungan atau perubahan, kecuali Premium`, 'Sesuai pengaturan Anda'],
     ['Batasan dan aturan', 'Dari kami, beserta ketentuan layanan kami', 'Dari Anda, diatur di panel admin'],
-    ['Agen pembuat', 'Termasuk, dengan sejumlah pembuatan per hari', 'Opsional, dengan langganan Claude Anda sendiri'],
+    ['Agen pembuat', 'Termasuk, dengan sejumlah pembuatan per hari', 'Opsional, dengan langganan Claude atau kunci API Anda sendiri'],
     ['Laporan penggunaan', 'Tidak ada', 'Sekali sehari: versi, mesin, opsi, dan jumlah aplikasi - tidak pernah isi aplikasi atau data orang. Bisa Anda matikan.'],
   ],
 

@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Draf baru',
   full: (limit) =>
     `Sudah ada ${limit} draf, dan itu batas maksimalnya. Pilih satu untuk dilanjutkan, atau jadikan online atau buang satu dulu.`,
-  password: 'Kata sandi',
-  fable: 'Fable bekerja lebih santai: tanpa batas waktu, tanpa batas langkah, dan dengan antreannya sendiri.',
+  unlimited: 'Dengan kata sandi, agen mengambil waktunya: tanpa batas waktu dan tanpa batas langkah, di jalur tersendiri.',
   left: (left, perDay) => `Sisa ${left} dari ${perDay} hari ini`,
   leftTitle: 'Halaman Buat dan bagian ini memakai jatah harian yang sama.',
   noneLeft: (time) => `Itu jatah terakhir untuk hari ini. Jatah baru tersedia mulai pukul ${time}.`,

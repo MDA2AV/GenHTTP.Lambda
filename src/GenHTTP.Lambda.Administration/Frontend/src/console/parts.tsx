@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { IconAlert, IconCheck, IconChevronDown, IconChevronRight, IconInfo, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { IconAlert, IconCheck, IconChevronDown, IconChevronRight, IconExternal, IconInfo, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { Switch } from '@genhttp-lambda/kit/ui/ui';
 
 /*
  * The parts every section of the panel is built from, and the one rule they
@@ -294,6 +295,48 @@ export function Choices({ label, options, chosen, onChange }: {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A setting: what it is, what it does as it stands, how it fared lately, and
+ * the switch that is what it is.
+ */
+export function Setting({ id, title, on, saving, onToggle, link, status, children }: {
+  id: string;
+  title: string;
+  on: boolean;
+  saving: boolean;
+  onToggle: () => void;
+  link?: string;
+  /** What the setting came to lately, under what it does. */
+  status?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="surface flex items-start gap-4 p-4">
+      <div className="min-w-0 flex-1">
+        <p id={id} className="text-[15px] font-medium">{title}</p>
+        <p className="mt-1 text-[13px] text-slate-500">
+          {children}
+          {link && (
+            <>
+              {' '}
+              {/* a page of the site, which is a bundle of its own: loaded, not routed to */}
+              <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-600 hover:underline dark:text-accent-400">
+                Open it
+                <IconExternal className="h-3 w-3" />
+              </a>
+            </>
+          )}
+        </p>
+        {status && <p className="mt-2 text-xs text-slate-500">{status}</p>}
+      </div>
+
+      {saving && <IconSpinner />}
+
+      <Switch on={on} onToggle={onToggle} labelledBy={id} />
     </div>
   );
 }

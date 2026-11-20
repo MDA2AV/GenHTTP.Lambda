@@ -19,8 +19,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Una nuova bozza',
   full: (limit) =>
     `Ci sono già ${limit} bozze, il massimo consentito. Scegline una da portare avanti, oppure prima mettine online una o eliminane una.`,
-  password: 'Password',
-  fable: 'Fable se la prende comoda: niente limiti di tempo né di passaggi, e una coda tutta sua.',
+  unlimited: 'Con la password si prende il suo tempo: senza orologio e senza limite di passaggi, in una corsia tutta sua.',
   left: (left, perDay) => `${left === 1 ? 'Ne resta' : 'Ne restano'} ${left} su ${perDay} per oggi`,
   leftTitle: 'La pagina di creazione e questa sezione condividono lo stesso limite giornaliero.',
   noneLeft: (time) => `Era l’ultima per oggi. Puoi chiederne altre dalle ${time}.`,

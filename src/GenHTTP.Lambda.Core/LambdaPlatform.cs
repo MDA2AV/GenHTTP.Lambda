@@ -140,8 +140,11 @@ public sealed class LambdaPlatform : IAsyncDisposable
         }
 
         // what the pages and the serving read from memory: the operator's
-        // switches, and what every page is branded with, its logo among the files
+        // switches - the site's and the build agent's, with the models it
+        // offers - and what every page is branded with, its logo among the files
         await Services.GetRequiredService<SettingsService>().LoadAsync(cancellation);
+
+        await Services.GetRequiredService<AgentSettingsStore>().LoadAsync(cancellation);
 
         await Services.GetRequiredService<GuideService>().LoadAsync(cancellation);
 
@@ -264,6 +267,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
         services.AddSingleton<AgentClient>();
+        services.AddSingleton<AgentSettingsStore>();
         services.AddSingleton<BuildAllowance>();
         services.AddSingleton<ModelGate>();
         services.AddSingleton<IBuildService, BuildService>();

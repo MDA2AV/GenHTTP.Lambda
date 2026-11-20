@@ -40,9 +40,10 @@ public sealed record LambdaOptions
     /// </summary>
     /// <remarks>
     /// Empty by default and deliberately: the agent spends a Claude
-    /// subscription on whatever a stranger types, so an installation has to
-    /// opt into that rather than inherit it. Clearing this is also the kill
-    /// switch - the text box stops being offered the moment it is unset.
+    /// subscription or an API key on whatever a stranger types, so an
+    /// installation has to opt into that rather than inherit it. Clearing
+    /// this is also the kill switch - the text box stops being offered the
+    /// moment it is unset.
     /// </remarks>
     public string? AgentUrl { get; init; }
 
@@ -50,15 +51,18 @@ public sealed record LambdaOptions
     public string? AgentToken { get; init; }
 
     /// <summary>
-    /// The password for the second model the build page offers.
+    /// The password for the models of the build agent the operator put
+    /// behind one.
     /// </summary>
     /// <remarks>
-    /// Unset, the second model is not offered and asking for it is refused, so
-    /// an installation that has not chosen a password does not quietly have an
-    /// unguarded one. There is deliberately no default: a password with a
-    /// default is a password everybody knows.
+    /// Which models those are is the operator's, in the panel; the password
+    /// is the installation's, kept with its other secrets rather than in its
+    /// records. Unset, a model behind it is not offered and asking for one is
+    /// refused, so an installation that has not chosen a password does not
+    /// quietly have an unguarded model. There is deliberately no default: a
+    /// password with a default is a password everybody knows.
     /// </remarks>
-    public string? AgentFablePassword { get; init; }
+    public string? AgentPassword { get; init; }
 
     /// <summary>How many builds one address may ask for in a day.</summary>
     /// <remarks>

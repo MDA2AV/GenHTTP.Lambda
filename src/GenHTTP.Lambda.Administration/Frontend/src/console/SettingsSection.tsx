@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { ApiError, refusedToken, api, type AdminSettings, type OptimizationOverview } from '@genhttp-lambda/kit/api';
-import { IconExternal, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
+import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
-import { Ago, Section, Switch } from '@genhttp-lambda/kit/ui/ui';
+import { Ago, Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
-import { bytes, plural } from './parts';
+import { bytes, plural, Setting } from './parts';
 
 /** What the operator can switch on or off without restarting the host. */
 export function SettingsSection({ access }: { access: Access }) {
@@ -62,7 +62,7 @@ export function SettingsSection({ access }: { access: Access }) {
   }
 
   return (
-    <Section title="Settings" hint="Applies at once - to the next page anybody opens, the next run of the platform's jobs. No restart needed.">
+    <Section title="Settings" hint="Applies at once - to the next run of the platform's jobs. No restart needed. Whether the build agent builds and changes apps is under Build agent.">
       {settings === null ? (
         error !== null ? (
           <p className="text-sm text-red-500">{error}</p>
@@ -73,32 +73,6 @@ export function SettingsSection({ access }: { access: Access }) {
         )
       ) : (
         <div className="space-y-3">
-          <Setting
-            id="build-switch"
-            title="Build new apps in the workspace on /build"
-            on={settings.buildBox}
-            saving={saving === 'buildBox'}
-            onToggle={() => toggle('buildBox', (on) =>
-              on ? 'New apps are built again.' : 'No new apps are built; the workspace leads to connecting an agent.')}
-          >
-            {settings.buildBox
-              ? 'Visitors describe what they want and the agent of this installation creates it, as long as there is one.'
-              : 'The workspace only leads to connecting an agent of one’s own over MCP. Nothing new is built from here.'}
-          </Setting>
-
-          <Setting
-            id="change-switch"
-            title="Let owners ask the agent about their apps"
-            on={settings.changeBox}
-            saving={saving === 'changeBox'}
-            onToggle={() => toggle('changeBox', (on) =>
-              on ? 'Owners can ask the agent again.' : 'Owners can no longer ask the agent; the workspace and the Change section explain how to connect one.')}
-          >
-            {settings.changeBox
-              ? 'In the workspace on /build and the Change section of the editor, owners ask questions about an app, change its settings or say what should be different, and the agent of this installation does it, as long as there is one.'
-              : 'The workspace and the Change section only explain how to connect an agent of one’s own over MCP.'}
-          </Setting>
-
           <Setting
             id="optimization-switch"
             title="Optimize the databases in their quiet hours"
@@ -115,44 +89,6 @@ export function SettingsSection({ access }: { access: Access }) {
         </div>
       )}
     </Section>
-  );
-}
-
-function Setting({ id, title, on, saving, onToggle, link, status, children }: {
-  id: string;
-  title: string;
-  on: boolean;
-  saving: boolean;
-  onToggle: () => void;
-  link?: string;
-  /** What the setting came to lately, under what it does. */
-  status?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="surface flex items-start gap-4 p-4">
-      <div className="min-w-0 flex-1">
-        <p id={id} className="text-[15px] font-medium">{title}</p>
-        <p className="mt-1 text-[13px] text-slate-500">
-          {children}
-          {link && (
-            <>
-              {' '}
-              {/* a page of the site, which is a bundle of its own: loaded, not routed to */}
-              <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-600 hover:underline dark:text-accent-400">
-                Open it
-                <IconExternal className="h-3 w-3" />
-              </a>
-            </>
-          )}
-        </p>
-        {status && <p className="mt-2 text-xs text-slate-500">{status}</p>}
-      </div>
-
-      {saving && <IconSpinner />}
-
-      <Switch on={on} onToggle={onToggle} labelledBy={id} />
-    </div>
   );
 }
 

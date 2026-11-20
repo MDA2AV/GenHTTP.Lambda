@@ -93,8 +93,11 @@ services:
       # no Change section in the editor.
       LAMBDA_AGENT_URL: http://agent:8401
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
-      # unset, the second model is not offered at all - there is no default
-      # password, because a password in a tracked file is not one
+      # the password for the models the panel puts behind one (Fable, unless
+      # the operator decides otherwise); unset, those are not offered at all -
+      # there is no default password, because a password in a tracked file is
+      # not one. The old name is still read, for an .env from before.
+      LAMBDA_AGENT_PASSWORD: ${LAMBDA_AGENT_PASSWORD:-}
       LAMBDA_AGENT_FABLE_PASSWORD: ${LAMBDA_AGENT_FABLE_PASSWORD:-}
       # A dump of the process when it dies of something it could not catch.
       #
@@ -185,8 +188,11 @@ services:
       AGENT_BUILD_CPUS: ${LAMBDA_AGENT_BUILD_CPUS:-1.5}
       AGENT_BUILD_PIDS: ${LAMBDA_AGENT_BUILD_PIDS:-256}
       AGENT_MCP_URL: ${LAMBDA_AGENT_MCP_URL:-https://genhttp.dev/mcp}
+      # what each model the panel offers runs as; AGENT_MODEL is Opus's
       AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-5-5}
-      AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-1}
+      AGENT_SONNET_MODEL: ${LAMBDA_AGENT_SONNET_MODEL:-claude-sonnet-5-5}
+      AGENT_HAIKU_MODEL: ${LAMBDA_AGENT_HAIKU_MODEL:-claude-haiku-5-5}
+      AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-2}
       AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-60}
       AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-600}
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}
@@ -195,11 +201,13 @@ services:
       # "claude setup-token" and put into .env by set-token.sh beside this
       # file. It does not refresh, so nothing rotates it away from under them.
       #
-      # There is deliberately no API key here. Builds run on the subscription
-      # and only on the subscription; a key would spend per run against a
-      # different account with nothing on screen saying so. The build
-      # container clears the variable outright rather than merely not
-      # forwarding it - see builder.mjs.
+      # There is deliberately no API key here, although the runner takes one
+      # (ANTHROPIC_API_KEY, for an installation billed by the token).
+      # genhttp.dev builds on the subscription and only on the subscription;
+      # a key would spend per run against a different account with nothing on
+      # screen saying so. Where both reach the runner the token wins, and the
+      # build container clears the other variable outright rather than merely
+      # not forwarding it - see builder.mjs.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
       # everything it says to the model goes through the proxy, because it has
       # no other way out

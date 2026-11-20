@@ -541,21 +541,20 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     {
         var current = settings.Get();
 
-        return new SettingsModel(current.BuildBox, current.ChangeBox, current.OptimizeDatabases);
+        return new SettingsModel(current.OptimizeDatabases);
     }
 
     [ResourceMethod(Method.Put, "settings")]
     [Summary("Replaces the settings")]
-    [Remarks("All of them. They apply to the next page anybody opens.")]
+    [Remarks("All of them. They apply to the next run of the platform's jobs. Whether the build agent builds and changes apps is `PUT /admin/agent`.")]
     [return: Summary("The settings, as they were saved")]
     public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
     {
-        var saved = await settings.SaveAsync(new SiteSettings(body.BuildBox, body.ChangeBox, body.OptimizeDatabases));
+        var saved = await settings.SaveAsync(new SiteSettings(body.OptimizeDatabases));
 
-        logger.LogInformation("Updated settings buildBox {BuildBox} changeBox {ChangeBox} optimizeDatabases {OptimizeDatabases} by operator",
-                              saved.BuildBox, saved.ChangeBox, saved.OptimizeDatabases);
+        logger.LogInformation("Updated settings optimizeDatabases {OptimizeDatabases} by operator", saved.OptimizeDatabases);
 
-        return new SettingsModel(saved.BuildBox, saved.ChangeBox, saved.OptimizeDatabases);
+        return new SettingsModel(saved.OptimizeDatabases);
     }
 
     #endregion

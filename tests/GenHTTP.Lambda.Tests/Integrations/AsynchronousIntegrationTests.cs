@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Integrations.Databases;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -300,6 +301,7 @@ public sealed class AsynchronousIntegrationTests
         var features = services.GetRequiredService<IFeatureService>();
         var settings = services.GetRequiredService<ISettingsService>();
         var limits = services.GetRequiredService<ILimitsService>();
+        var builds = services.GetRequiredService<IBuildService>();
 
         Assert.AreEqual("records", AtOnce(meta.GetAsync(lambda.PrivateKey), "a lambda is read")!.PublicKey);
 
@@ -317,8 +319,11 @@ public sealed class AsynchronousIntegrationTests
 
         Assert.IsTrue(AtOnce(meta.ListAsync(new LambdaQuery()), "the panel lists the lambdas").Matched > 0);
 
-        Assert.IsFalse(AtOnce(settings.SaveAsync(new SiteSettings(BuildBox: false, ChangeBox: true)), "a switch of the operator's is written").BuildBox);
-        Assert.IsFalse(settings.Get().BuildBox, "and read from memory");
+        Assert.IsFalse(AtOnce(settings.SaveAsync(new SiteSettings(OptimizeDatabases: false)), "a switch of the operator's is written").OptimizeDatabases);
+        Assert.IsFalse(settings.Get().OptimizeDatabases, "and read from memory");
+
+        Assert.IsFalse(AtOnce(builds.SaveSettingsAsync(builds.GetSettings() with { Builds = false }), "what the build agent offers is written").Builds);
+        Assert.IsFalse(builds.GetSettings().Builds, "and read from memory");
 
         AtOnce(limits.SaveAsync(limits.Get()), "the limits are written");
 

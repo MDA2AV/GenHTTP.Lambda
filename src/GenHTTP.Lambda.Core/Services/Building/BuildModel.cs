@@ -9,7 +9,11 @@ public sealed record BuildStarted(
     [Summary("How many builds are waiting ahead of it")]
     int Queued,
     [Summary("How many builds and changes this caller has left today, this one counted")]
-    int? Left = null
+    int? Left = null,
+    [Summary("The model it runs on, by its name in `build.offer.models` of `GET /system`")]
+    string? Model = null,
+    [Summary("The effort it runs at, by its name in `build.offer.efforts` of `GET /system`")]
+    string? Effort = null
 );
 
 [Summary("How a build is getting on.")]
@@ -162,7 +166,7 @@ public sealed record ChangeProgress(
     string Prompt,
     [Summary("Whether it was asked to merge the change and put it online")]
     bool Deploy,
-    [Summary("Which of the offered models is making it")]
+    [Summary("Which of the offered models is making it, by its name")]
     string Model,
     [Summary("The version that was online when it was asked for")]
     int? Before,
@@ -177,7 +181,9 @@ public sealed record ChangeProgress(
     [Summary("How long it may run, in seconds; absent when there is no clock on it")]
     int? Limit,
     [Summary("The key of the feature it was asked to go on with; absent when it starts one of its own")]
-    string? Feature = null
+    string? Feature = null,
+    [Summary("The effort it is made at, by its name")]
+    string? Effort = null
 );
 
 [Summary("Whether a change can be asked for, and the change under way or the last one.")]
@@ -188,8 +194,58 @@ public sealed record AgentState(
     int PerDay,
     [Summary("How many of those this caller has left today")]
     int Left,
-    [Summary("Whether a second model is on offer, behind a password")]
-    bool SecondModel,
+    [Summary("The models and efforts a change may be asked for on, as the operator offers them")]
+    AgentOffer Offer,
     [Summary("The change under way, or the last one, while the agent still remembers it")]
     ChangeProgress? Job
+);
+
+/// <remarks>
+/// What a page offers in its two lists, and what it starts on. Never which
+/// identifier a model runs as, which is the runner's, nor the password,
+/// only whether a model needs it.
+/// </remarks>
+[Summary("The models and efforts the build agent may be asked for, as the operator of the installation offers them.")]
+public sealed record AgentOffer(
+    [Summary("The models on offer, in the order to list them")]
+    IReadOnlyList<OfferedModel> Models,
+    [Summary("The model a job runs on where none is asked for, by its name: offered to everybody")]
+    string Model,
+    [Summary("The efforts on offer, the least first: `low`, `medium`, `high`, `xhigh` or `max`")]
+    IReadOnlyList<string> Efforts,
+    [Summary("The effort a job runs at where none is asked for")]
+    string Effort
+);
+
+[Summary("One model the build agent may be asked for.")]
+public sealed record OfferedModel(
+    [Summary("What to ask for it by: `opus`, `sonnet`, `haiku` or `fable`")]
+    string Name,
+    [Summary("What to call it, with its version: `Opus 5.5`")]
+    string Label,
+    [Summary("Whether it needs the installation's password - and, with it, runs without a clock and without a limit on its steps")]
+    bool Password
+);
+
+/// <remarks>
+/// Read from the runner's health, which it answers without the queue
+/// noticing: what it signs in with and which identifier each model runs as
+/// are its own environment, which only the panel shows.
+/// </remarks>
+[Summary("What the runner of the build agent says of itself.")]
+public sealed record AgentRunner(
+    [Summary("Whether it answered")]
+    bool Reachable,
+    [Summary("What its builds sign in to Anthropic with: `subscription` (a token of a Claude subscription) or `api-key`; absent where it has neither, and every job would fail to sign in")]
+    string? SignsInWith = null,
+    [Summary("Which model of Anthropic's each model runs as, by name")]
+    IReadOnlyDictionary<string, string>? Models = null,
+    [Summary("The efforts it takes")]
+    IReadOnlyList<string>? Efforts = null,
+    [Summary("The version of Claude Code its builds run, where it says")]
+    string? Cli = null,
+    [Summary("How many jobs run now, of at most two: one on the clock and one without")]
+    int Running = 0,
+    [Summary("How many jobs wait")]
+    int Queued = 0
 );

@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Um rascunho novo',
   full: (limit) =>
     `Já existem ${limit} rascunhos, o máximo permitido. Escolha um para continuar, ou coloque um no ar ou descarte um antes.`,
-  password: 'Senha',
-  fable: 'O Fable não tem pressa: sem limite de tempo nem de passos, numa fila só dele.',
+  unlimited: 'Com a senha, o agente leva o tempo que precisar: sem relógio e sem limite de passos, em uma fila própria.',
   left: (left, perDay) => (left === 1 ? `Resta 1 de ${perDay} hoje` : `Restam ${left} de ${perDay} hoje`),
   leftTitle: 'A página Criar e esta seção usam o mesmo limite diário.',
   noneLeft: (time) =>

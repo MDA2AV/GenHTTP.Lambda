@@ -57,7 +57,11 @@ public static class ApiLayout
             // the guide agents read, and the operator's section of it - on
             // every installation that has an operator
             var admin = Layout.Create()
-                              .Add("guide", Resource<GuideResource>(mode).Add(AdminAuthentication.Create(options)));
+                              .Add("guide", Resource<GuideResource>(mode).Add(AdminAuthentication.Create(options)))
+                              // whether the build agent builds and changes apps,
+                              // and on which models - there with or without one,
+                              // so it is decided before the agent is set up
+                              .Add("agent", Resource<AgentSettingsResource>(mode).Add(AdminAuthentication.Create(options)));
 
             // the installation's name and logo, where its host lets the
             // operator give it some - and not there at all where it does not

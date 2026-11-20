@@ -51,7 +51,7 @@ export const selfHosting: Messages['selfHosting'] = {
     ['Un dominio proprio', 'Per le app Premium', 'Per qualsiasi app che sposti in produzione'],
     ['App che nessuno usa', `Offline dopo ${offline} giorni senza una visita o una modifica, tranne le Premium`, 'Come lo imposti tu'],
     ['Limiti e regole', 'Nostri, e le nostre condizioni di servizio', 'Tuoi, impostati nel pannello di amministrazione'],
-    ['L’agente di creazione', 'Incluso, con un certo numero di creazioni al giorno', 'Facoltativo, con il tuo abbonamento Claude'],
+    ['L’agente di creazione', 'Incluso, con un certo numero di creazioni al giorno', 'Facoltativo, con il tuo abbonamento Claude o la tua chiave API'],
     ['Report di utilizzo', 'Nessuno', 'Una volta al giorno: la versione, la macchina, le opzioni e i conteggi sulle app, mai un’app o una persona. Puoi disattivarlo.'],
   ],
 
