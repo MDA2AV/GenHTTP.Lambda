@@ -118,4 +118,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Bu taslak artık yok',
   missingText: 'Yayına alındı ya da silindi. Ona ne olduğunu sürümlerde görebilirsiniz.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Onay adımı',
+      wantedPlaceholder: 'İsteğe bağlı. Ekip lideri her talebi geçerli sayılmadan önce onaylasın.',
+      whatPlaceholder: 'Ekip lideri için bir onay adımı ekler',
+    },
+  },
 };

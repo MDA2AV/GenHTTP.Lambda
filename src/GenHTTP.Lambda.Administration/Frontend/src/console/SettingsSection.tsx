@@ -1,20 +1,39 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { ApiError, refusedToken, api, type AdminSettings, type OptimizationOverview } from '@genhttp-lambda/kit/api';
+import { ApiError, refusedToken, api, type AdminSettings, type AdminSettingsChange, type OptimizationOverview } from '@genhttp-lambda/kit/api';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Ago, Section } from '@genhttp-lambda/kit/ui/ui';
 import type { Access } from './context';
 import { bytes, plural, Setting } from './parts';
 
-/** What the operator can switch on or off without restarting the host. */
+/**
+ * Who each profile is for, and what the pages and agents make of it - in the
+ * order they are offered.
+ */
+const PROFILES: Record<string, { label: string; says: string }> = {
+  cloud: {
+    label: 'Cloud',
+    says: 'A public platform anybody builds on. Examples: a club, a guestbook, a quiz night.',
+  },
+  home: {
+    label: 'Home',
+    says: 'For you, your household and friends. Examples: a club, a guestbook, a quiz night.',
+  },
+  enterprise: {
+    label: 'Enterprise',
+    says: 'For an organization and its people. Examples: time off, room bookings, onboarding; what is built is called an app.',
+  },
+};
+
+/** What the operator can switch on or off, and choose, without restarting the host. */
 export function SettingsSection({ access }: { access: Access }) {
   const { token, deny } = access;
 
   const toast = useToast();
 
   const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const [saving, setSaving] = useState<keyof AdminSettings | null>(null);
+  const [saving, setSaving] = useState<keyof AdminSettingsChange | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // how the databases fared lately, beside the switch that decides whether
@@ -39,17 +58,17 @@ export function SettingsSection({ access }: { access: Access }) {
       .catch(() => undefined);
   }, [token, fail]);
 
-  async function toggle(key: keyof AdminSettings, said: (on: boolean) => string) {
+  async function save(change: AdminSettingsChange, said: (saved: AdminSettings) => string) {
     if (settings === null || saving !== null) return;
 
-    setSaving(key);
+    setSaving(Object.keys(change)[0] as keyof AdminSettingsChange);
 
     try {
-      const saved = await api.admin.saveSettings(token, { ...settings, [key]: !settings[key] });
+      const saved = await api.admin.saveSettings(token, change);
 
       setSettings(saved);
 
-      toast(said(saved[key]), 'success');
+      toast(said(saved), 'success');
     } catch (problem) {
       if (refusedToken(problem)) {
         deny();
@@ -62,7 +81,7 @@ export function SettingsSection({ access }: { access: Access }) {
   }
 
   return (
-    <Section title="Settings" hint="Applies at once - to the next run of the platform's jobs. No restart needed. Whether the build agent builds and changes apps is under Build agent.">
+    <Section title="Settings" hint="Applies at once - to the next page served and the next run of the platform's jobs. No restart needed. Whether the build agent builds and changes apps is under Build agent.">
       {settings === null ? (
         error !== null ? (
           <p className="text-sm text-red-500">{error}</p>
@@ -73,13 +92,39 @@ export function SettingsSection({ access }: { access: Access }) {
         )
       ) : (
         <div className="space-y-3">
+          {/* only where the host lets the operator choose: genhttp.dev is the cloud */}
+          {settings.profiles.length > 1 && (
+            <Setting
+              id="profile-choice"
+              title="Who it is for"
+              saving={saving === 'profile'}
+              field={
+                <select
+                  aria-labelledby="profile-choice"
+                  value={settings.profile}
+                  disabled={saving !== null}
+                  onChange={(event) => void save({ profile: event.target.value }, (saved) =>
+                    `Who it is for: ${PROFILES[saved.profile]?.label ?? saved.profile}, from the next page served.`)}
+                  className="field w-auto py-1.5 text-[13px] disabled:opacity-60"
+                >
+                  {settings.profiles.map((profile) => (
+                    <option key={profile} value={profile}>{PROFILES[profile]?.label ?? profile}</option>
+                  ))}
+                </select>
+              }
+            >
+              {PROFILES[settings.profile]?.says}{' '}
+              It changes the examples and words of the pages and what agents read about the apps they build here (platform_guide) - nothing the platform allows, refuses or keeps.
+            </Setting>
+          )}
+
           <Setting
             id="optimization-switch"
             title="Optimize the databases in their quiet hours"
             on={settings.optimizeDatabases}
             saving={saving === 'optimizeDatabases'}
-            onToggle={() => toggle('optimizeDatabases', (on) =>
-              on ? 'The databases are optimized again, each in its quiet hours.' : 'The platform leaves the databases to their own tools.')}
+            onToggle={() => void save({ optimizeDatabases: !settings.optimizeDatabases }, (saved) =>
+              saved.optimizeDatabases ? 'The databases are optimized again, each in its quiet hours.' : 'The platform leaves the databases to their own tools.')}
             status={settings.optimizeDatabases && optimization ? <Optimized overview={optimization} /> : undefined}
           >
             {settings.optimizeDatabases

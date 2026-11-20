@@ -119,4 +119,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Dit concept bestaat niet meer',
   missingText: 'Het is online gezet of verwijderd. In de versies zie je wat ermee gebeurd is.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Goedkeuringsstap',
+      wantedPlaceholder: 'Optioneel. Laat de teamleider elke aanvraag goedkeuren voordat die meetelt.',
+      whatPlaceholder: 'Voegt een goedkeuringsstap voor de teamleider toe',
+    },
+  },
 };

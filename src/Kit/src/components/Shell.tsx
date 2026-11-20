@@ -7,7 +7,7 @@ import { IconClose, IconGitHub, IconLock, IconMenu, IconMoon, IconSun } from './
 import { LanguageMenu, LanguageSwitch } from './LanguageSwitch';
 import { useT } from '../i18n';
 import { NavLink } from '../i18n/links';
-import { REPOSITORY } from '../installation';
+import { REPOSITORY, useProjectLinks } from '../installation';
 import type { Theme } from '../theme';
 
 /**
@@ -67,6 +67,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed, links = 
   const [moved, setMoved] = useState(false);
 
   const t = useT();
+  const project = useProjectLinks();
 
   useEffect(() => {
     const onScroll = () => setMoved(window.scrollY > 8);
@@ -108,19 +109,22 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed, links = 
 
           {/*
             the platform is open source wherever it runs, so every bar says
-            where: here once the bar has room to spare beside the links of the
+            where - but an organization's, whose colleagues come for their
+            tools: here once the bar has room to spare beside the links of the
             longest languages, in the menu below that, and in the footer always
           */}
-          <a
-            href={REPOSITORY}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-ghost hidden !px-2 xl:inline-flex"
-            aria-label={t.shell.sourceOnGitHub}
-            title={t.shell.sourceOnGitHub}
-          >
-            <IconGitHub />
-          </a>
+          {project && (
+            <a
+              href={REPOSITORY}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost hidden !px-2 xl:inline-flex"
+              aria-label={t.shell.sourceOnGitHub}
+              title={t.shell.sourceOnGitHub}
+            >
+              <IconGitHub />
+            </a>
+          )}
 
           <button
             type="button"
@@ -160,6 +164,7 @@ function Menu({ theme, themeLabel, onToggleTheme, links }: MenuProps) {
   const host = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
   const t = useT();
+  const project = useProjectLinks();
 
   // going somewhere is the end of choosing where to go
   useEffect(() => setOpen(false), [pathname]);
@@ -220,15 +225,17 @@ function Menu({ theme, themeLabel, onToggleTheme, links }: MenuProps) {
               </NavLink>
             ))}
 
-          <a
-            href={REPOSITORY}
-            target="_blank"
-            rel="noreferrer"
-            className="flex w-full items-center gap-2 px-5 py-3 text-[15px] font-medium text-grey-800 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-ink-850"
-          >
-            <IconGitHub />
-            {t.shell.source}
-          </a>
+          {project && (
+            <a
+              href={REPOSITORY}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center gap-2 px-5 py-3 text-[15px] font-medium text-grey-800 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-ink-850"
+            >
+              <IconGitHub />
+              {t.shell.source}
+            </a>
+          )}
 
           <div className="mx-5 my-2 border-t border-grey-200 sm:hidden dark:border-ink-800" />
 

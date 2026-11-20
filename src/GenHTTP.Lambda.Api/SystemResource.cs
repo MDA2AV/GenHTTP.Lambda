@@ -21,7 +21,7 @@ namespace GenHTTP.Lambda.Api;
 [Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
 [Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
 public sealed class SystemResource(ILimitsService limits, IBuildService builds, ILambdaAddresses addresses, IBrandingService branding,
-                                    IDatabaseProvider database, LambdaOptions options)
+                                    ISettingsService settings, IDatabaseProvider database, LambdaOptions options)
 {
 
     [ResourceMethod]
@@ -30,8 +30,9 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
              Its terms, which creating a lambda accepts where it has any; the tier a new lambda starts in and what every tier
              lets a lambda have (`defaultTier`, `tiers`), with what the installation calls each; what a new lambda can start
              from; whether the build agent is on offer, and on which models and efforts; where a lambda answers (`lambdaUrl`); who runs it, as far as its
-             pages have to say so (`operator`); how it presents itself on them (`brand`); and what the editor suggests while
-             code is written - the namespaces a lambda has imported and the types and snippets it may use.
+             pages have to say so (`operator`); how it presents itself on them (`brand`) and whom it speaks to (`profile`); and
+             what the editor suggests while code is written - the namespaces a lambda has imported and the types and snippets
+             it may use.
              """)]
     [return: Summary("The terms, limits, starters and vocabulary of this installation")]
     public PlatformResponse Get()
@@ -51,7 +52,8 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage),
             TierDescription.Of(limits, current.DefaultTier),
             [.. limits.TiersWhere(p => p.Assignable).Select(t => TierDescription.Of(limits, t))],
-            BrandResponse.Of(branding)
+            BrandResponse.Of(branding),
+            InstallationProfiles.NameOf(settings.Get().Profile)
         );
     }
 

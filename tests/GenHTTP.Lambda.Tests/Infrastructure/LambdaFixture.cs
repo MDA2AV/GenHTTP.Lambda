@@ -152,8 +152,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// Creates and starts the community edition: put together the way its
     /// host does, with the lambdas below /lambda/, a name and a logo its
-    /// operator may give it, and none of what only the cloud says about
-    /// itself - no terms, no contact, no legal pages.
+    /// operator may give it, a home installation they may say is an
+    /// organization's, and none of what only the cloud says about itself - no
+    /// terms, no contact, no legal pages.
     /// </summary>
     /// <param name="database">The database it keeps its data in, where a test chooses one: SQLite otherwise, as on an installation</param>
     /// <param name="files">What it keeps its files in, where a test chooses that: local directories otherwise</param>
@@ -172,7 +173,11 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         var options = edition == Edition.Cloud
                     ? CloudInstallation.Of(new LambdaOptions { DataDirectory = root })
-                    : new LambdaOptions { DataDirectory = root, Addressing = LambdaAddressing.Paths, Branding = true };
+                    : new LambdaOptions
+                    {
+                        DataDirectory = root, Addressing = LambdaAddressing.Paths, Branding = true,
+                        Profile = InstallationProfile.Home, Profiles = [InstallationProfile.Home, InstallationProfile.Enterprise]
+                    };
 
         if (configure != null)
         {

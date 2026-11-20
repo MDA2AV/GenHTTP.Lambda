@@ -48,4 +48,12 @@ export const ship: Messages['ship'] = {
       <>Evet: demolardan birinden başlayarak {create('kodu kendiniz yazın')}. Bir uygulama, bu sunucuda derlenen bir C# GenHTTP handler’ıdır.</>,
     ],
   ],
+  profiles: {
+    enterprise: {
+      asks: [
+        'Çalışanların izin talep edebildiği bir form oluştur; ekip lideri her talebi onaylayabileceği bir sayfadan görsün.',
+        'Bu uygulamayı burada yayınla ve linkini bana gönder.',
+      ],
+    },
+  },
 };

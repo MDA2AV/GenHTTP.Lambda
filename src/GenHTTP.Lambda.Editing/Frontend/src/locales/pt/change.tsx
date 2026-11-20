@@ -141,4 +141,9 @@ export const change: EditorMessages['change'] = {
   own: 'Ou use o seu próprio agente',
   ownText:
     'Qualquer agente que fale MCP também pode mudar este app: conecte-o ao endereço abaixo, dê a ele o link de edição e diga o que deve ser diferente. Não tem limite diário nem de tempo.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Adicione uma coluna para o departamento, ordene a lista por data, …',
+    },
+  },
 };

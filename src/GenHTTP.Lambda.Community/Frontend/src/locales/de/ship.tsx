@@ -48,4 +48,12 @@ export const ship: Messages['ship'] = {
       <>Ja: {create('Schreiben Sie den Code selbst')}, ausgehend von einer der Demos. Eine App ist ein C#-GenHTTP-Handler, der auf diesem Server kompiliert wird.</>,
     ],
   ],
+  profiles: {
+    enterprise: {
+      asks: [
+        'Bau ein Formular für Urlaubsanträge, mit einer Seite, auf der die Teamleitung jeden Antrag freigibt.',
+        'Veröffentliche diese App hier und schick mir den Link.',
+      ],
+    },
+  },
 };

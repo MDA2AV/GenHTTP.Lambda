@@ -16,4 +16,15 @@ export const build = {
       Or {ship('connect your own agent')}, or {create('write the code yourself')}.
     </>
   ),
+
+  /**
+   * The same page on an installation an organization runs for its people (its
+   * operator chose "enterprise"), for colleagues who do not write code.
+   */
+  profiles: {
+    enterprise: {
+      intro:
+        'Tell the agent in your own words what you need. It builds the app, puts it online here and keeps it in your list - to ask about and change later, in the same way.',
+    },
+  },
 };

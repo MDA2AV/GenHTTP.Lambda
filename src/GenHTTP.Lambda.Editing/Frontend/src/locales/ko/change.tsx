@@ -146,4 +146,9 @@ export const change: EditorMessages['change'] = {
   own: '내 에이전트 쓰기',
   ownText:
     'MCP를 지원하는 에이전트라면 이 앱도 수정할 수 있어요. 아래 주소에 연결하고 에디터 링크를 준 다음 무엇을 바꿀지 말해 주세요. 하루 한도도, 시간 제한도 없어요.',
+  profiles: {
+    enterprise: {
+      placeholder: '예: 부서 열을 추가해 줘, 목록을 날짜순으로 정렬해 줘, …',
+    },
+  },
 };

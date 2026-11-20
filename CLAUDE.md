@@ -174,7 +174,10 @@ together the GenHTTP way, and there are two hosts - two editions:
   page and `/self-hosting`, and the community's front page, whose
   Reference card leads to `docs/reference.md` where the guide's card was.
   `/build` and `/ship` have the footer's link only: the one speaks to people
-  who do not write code, the other is a guide and nothing else.
+  who do not write code, the other is a guide and nothing else. **Not on an
+  enterprise installation - decided by the owner**: neither GitHub nor
+  Discord is linked there, in the bar, the footer or the front page
+  (`useProjectLinks`); its colleagues come for their tools.
 - **By path, the "Made with" line is a plain link** - a link within the same
   site, as it was before the subdomains - and nofollow at subdomains; the
   guide says whichever holds (`platform_guide`, `backlink`).
@@ -209,6 +212,59 @@ together the GenHTTP way, and there are two hosts - two editions:
   description, the MCP server and the export. The usage report says whether
   an installation is branded (`branded`, decided by the owner), never as
   what.
+- **Who an installation is for - asked for by the owner**, since the
+  community edition read like private stuff in a company: a profile
+  (`InstallationProfile`) - `cloud`, a public platform; `home`, somebody and
+  the people around them; `enterprise`, an organization and its people -
+  which the pages and the guide for agents speak to. **Chosen in the panel,
+  home by default on the community edition and fixed cloud on genhttp.dev -
+  decided by the owner**: the host says which there may be
+  (`LambdaOptions.Profile`, `Profiles`), as it does the branding, and the
+  operator chooses under **Settings** (`/admin/settings`, a row `profile`).
+  **The community edition offers home and enterprise, never cloud - decided
+  by the owner.** **Used where it clearly fits, never as a switch spread
+  through the code - decided by the owner** ("avoid spaghetti code and too
+  many ifs").
+  - **Words, steering and the platform's own links, nothing else** - chosen
+    with it, open to change. No limit, tier, default, rule of connectivity,
+    block or decline depends on it, and `PURPOSE` frames the request as data
+    alike for every profile. A new use keeps to that.
+  - **The words are the catalogs'**: a section says what a profile says its
+    own way under `profiles` - only what differs - and the kit's catalogs
+    hand every page the words of the installation's profile (`profile.ts`,
+    `wordsFor`), so no component asks which it is. Only `enterprise` has
+    words of its own: the ideas and the placeholder on `/build` and its
+    intro on the community site, the asks on the community's `/ship`, and
+    the examples in the editor's Change box, new draft and showcase. `home`
+    says what the cloud says.
+  - **The community's front page addresses an enterprise installation's
+    colleagues, not its operator - decided by the owner**: people who do
+    not write code, come to have their tools built (`EnterpriseLanding`,
+    chosen in `Landing` by the profile): what they can build, how it goes,
+    what they ask first, in the simple view's words. The menu, with `/build`
+    and `/ship`, stays as it is (the owner's words). Home keeps the page for
+    whoever runs it. Its tab title stays the one `pages.json` gives `/`,
+    which knows no profiles.
+  - **What is built is an app, on every installation - decided by the
+    owner**: the menu says "Create an app" and the build box speaks of an
+    app, where both said website. The cloud's own `/build` page is written
+    for search and says what people search for (see The words each page is
+    found by).
+  - **Prerendered for each profile** the community site names, as the
+    platform and as a brand, keeping the pages that differ - every page for
+    enterprise, since the footer does; `#site-facts` says which profile a
+    page was rendered for, and a visitor is sent that one page, never the
+    file of them (a bundle serves neither `prerender.json` nor
+    `pages.json`). The editor asks `/system`.
+  - **The guide's introduction says whom the apps are for**, a sentence per
+    profile; the build agent's brief points there. The MCP instructions,
+    fixed when the endpoint starts, leave it to the guide.
+  - **No "Made with" line on an enterprise installation, and no link to the
+    platform's GitHub or Discord - decided by the owner** (see The link back,
+    and Every page links to the platform's source).
+  - **The usage report says which (`configuration.profile`) - decided by the
+    owner**, a choice like `branded`, never whose an installation is.
+  - Left as they were: the demos and the front pages.
 - **The community edition sends a usage report once a day - decided by the
   owner** (`Services/UsageReports`), on by default and switched off with
   `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
@@ -440,7 +496,9 @@ page has words of its own, so they do not compete:
   stays out of the title.
 - `/build` - **create a website with AI**, free, **no sign-up**, in the word
   each language uses for a website (ホームページ, 홈페이지, página web …);
-  searches for an "app" mostly mean a phone app.
+  searches for an "app" mostly mean a phone app. That is the cloud's page -
+  its title, H1 and copy; the menu and the build box, which every
+  installation shares, say app (see Who an installation is for).
 - `/ship` - **host a vibe-coded app**, publish it from Claude Code, Codex or
   Cursor, from **localhost**, with a database and multiplayer built in. "Ship"
   is nobody's search word, and "publish an app" means the app stores, so the
@@ -1019,6 +1077,11 @@ same.
   out or takes it out when asked, and notes in `decisions.md` that it was not
   wanted, so the next agent does not put it back. A change does not add one to
   a lambda that has none.
+- **None on an enterprise installation - decided by the owner.** Its lambdas
+  are an organization's tools, not sites to be found by: the guide's
+  `backlink` asks for none there, and the agent adds none and takes out the
+  line of a page it changes. The MCP instructions, fixed when the endpoint
+  starts, say that the guide says whether one is asked for.
 - **The name and nothing else** as the link's words: no keywords, no badge, no
   script, nothing hidden.
 - The platform never writes it into a lambda, and nothing checks for it.
@@ -1949,6 +2012,9 @@ with `LAMBDA_ENGINE=Kestrel`.
   every other catalog is typed as it, so a missing string fails the frontend
   build. A new language is added in both places, in every catalog, in every
   table of pages and in the social images.
+- **What a profile says its own way** is a section's `profiles`
+  (`profiles: { enterprise: { … } }`), only the sentences that differ, with a
+  doc comment saying for whom; it is translated like any other sentence.
 - The editor's words are a file per section and language
   (`src/GenHTTP.Lambda.Editing/Frontend/src/locales/<language>/`), named
   after its key, and an `index.ts` that puts them together - so a change to
@@ -1964,8 +2030,8 @@ with `LAMBDA_ENGINE=Kestrel`.
 |---|---|---|
 | de | formal - *Sie* | factual and precise, no marketing jokes |
 | fr | formal - *vous* | |
-| it | informal - *tu* everywhere except `/build`, which is formal (*Lei*) | the no-code page is the only one that addresses non-developers |
-| es | informal - *tú* everywhere except `/build`, which is formal (*usted*) | as Italian |
+| it | informal - *tu* everywhere except `/build` and an enterprise installation's front page, which are formal (*Lei*) | the pages that address non-developers |
+| es | informal - *tú* everywhere except `/build` and an enterprise installation's front page, which are formal (*usted*) | as Italian |
 | nl | informal - *je* | |
 | pl | informal - *ty* | |
 | pt | *você* (Brazil) | no colloquialisms |

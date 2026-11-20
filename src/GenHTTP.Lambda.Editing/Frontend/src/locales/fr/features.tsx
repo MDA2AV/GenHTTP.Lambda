@@ -122,4 +122,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Ce brouillon n’existe plus',
   missingText: 'Il a été mis en ligne ou supprimé. Les versions montrent ce qu’il est devenu.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Étape d’approbation',
+      wantedPlaceholder: 'Facultatif. Laisser le chef d’équipe approuver chaque demande avant qu’elle ne compte.',
+      whatPlaceholder: 'Ajoute une étape d’approbation pour le chef d’équipe',
+    },
+  },
 };

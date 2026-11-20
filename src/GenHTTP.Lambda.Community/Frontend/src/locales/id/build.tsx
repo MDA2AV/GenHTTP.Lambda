@@ -9,4 +9,10 @@ export const build: Messages['build'] = {
       Atau {ship('hubungkan agen Anda sendiri')}, atau {create('tulis kodenya sendiri')}.
     </>
   ),
+  profiles: {
+    enterprise: {
+      intro:
+        'Sampaikan kepada agen dengan kata-kata Anda sendiri apa yang Anda butuhkan. Agen membangun aplikasinya, menjadikannya online di sini, dan menyimpannya dalam daftar Anda - untuk ditanyakan dan diubah nanti, dengan cara yang sama.',
+    },
+  },
 };

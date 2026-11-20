@@ -119,4 +119,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Questa bozza non c’è più',
   missingText: 'È stata messa online o scartata. Le versioni mostrano che fine ha fatto.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Passaggio di approvazione',
+      wantedPlaceholder: 'Facoltativo. Fai approvare ogni richiesta al responsabile prima che venga conteggiata.',
+      whatPlaceholder: 'Aggiunge un passaggio di approvazione per il responsabile',
+    },
+  },
 };

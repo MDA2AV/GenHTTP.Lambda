@@ -154,4 +154,9 @@ export const change: EditorMessages['change'] = {
   own: 'Of gebruik je eigen agent',
   ownText:
     'Elke agent die MCP spreekt, kan deze app ook aanpassen: koppel hem aan het adres hieronder, geef hem de editorlink en vertel wat er anders moet. Hij heeft geen daglimiet en geen tijdslimiet.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Voeg een kolom voor de afdeling toe, sorteer de lijst op datum, …',
+    },
+  },
 };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useProfile } from './profile';
 import { askPlatform } from './site';
 
 /** Where GenHTTP's community talks - the project's, whoever runs an installation. */
@@ -10,6 +11,16 @@ export const DISCORD = 'https://discord.gg/PRkwKrnrB4';
  * which every installation runs, so every installation links to it.
  */
 export const REPOSITORY = 'https://github.com/MDA2AV/GenHTTP.Lambda';
+
+/**
+ * Whether the pages link to the platform's project - its source on GitHub
+ * and its community on Discord: on every installation but one an
+ * organization runs for its people (see profile.ts), whose colleagues come
+ * to build their tools rather than to find the platform.
+ */
+export function useProjectLinks(): boolean {
+  return useProfile() !== 'enterprise';
+}
 
 /**
  * Who runs this installation, as far as a page has to say so: where to write

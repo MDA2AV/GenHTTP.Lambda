@@ -9,4 +9,10 @@ export const build: Messages['build'] = {
       Oppure {ship('colleghi il suo agente')}, oppure {create('scriva il codice da sé')}.
     </>
   ),
+  profiles: {
+    enterprise: {
+      intro:
+        'Dica all’agente con parole Sue che cosa Le serve. L’agente realizza l’app, la mette online qui e la tiene nel Suo elenco, così potrà farle domande e modificarla in seguito allo stesso modo.',
+    },
+  },
 };

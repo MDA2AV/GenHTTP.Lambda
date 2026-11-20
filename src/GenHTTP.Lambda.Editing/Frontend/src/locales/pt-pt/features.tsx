@@ -119,4 +119,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Este rascunho já não existe',
   missingText: 'Foi posto online ou eliminado. As versões mostram o que aconteceu com ele.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Passo de aprovação',
+      wantedPlaceholder: 'Opcional. O chefe de equipa aprova cada pedido antes de este contar.',
+      whatPlaceholder: 'Adiciona um passo de aprovação para o chefe de equipa',
+    },
+  },
 };

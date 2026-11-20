@@ -120,4 +120,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Tego szkicu już nie ma',
   missingText: 'Został udostępniony albo odrzucony. W wersjach widać, co się z nim stało.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Krok zatwierdzania',
+      wantedPlaceholder: 'Opcjonalnie. Niech przełożony zatwierdza każdy wniosek, zanim zostanie uwzględniony.',
+      whatPlaceholder: 'Dodaje krok zatwierdzania przez przełożonego',
+    },
+  },
 };

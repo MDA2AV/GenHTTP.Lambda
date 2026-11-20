@@ -117,4 +117,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'この下書きはもうありません',
   missingText: '公開されたか、破棄されました。どうなったかは「バージョン」で確認できます。',
+  profiles: {
+    enterprise: {
+      namePlaceholder: '承認ステップ',
+      wantedPlaceholder: '任意。チームリーダーが承認してから、各申請が有効になるようにする。',
+      whatPlaceholder: 'チームリーダーによる承認ステップを追加',
+    },
+  },
 };

@@ -19,7 +19,7 @@ These, and nothing else:
 
 | tool | what it does |
 | --- | --- |
-| `platform_guide` | how lambdas work here, and the rules of this installation's operator - read it first when building |
+| `platform_guide` | how lambdas work here, whom the apps built here are for, and the rules of this installation's operator - read it first when building |
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key - building only, with `view: "Simple"` |
 | `read_lambda` | the status, what is written about it, the recent history, the open features and the files of a lambda - read it first when changing |
@@ -231,7 +231,9 @@ instead of the feature's copy. `platform_guide` says more under `paths`.
 ## When it is meant to be found
 
 Much of what is built here is a website somebody wants people to find - in a
-search engine, in an AI agent's answer, or as a link sent around. Give every
+search engine, in an AI agent's answer, or as a link sent around - though on
+an installation run for an organization it is mostly a tool for colleagues:
+`platform_guide` says at its top whom this one is for. Give every
 public page a `<title>` (what it is, then whose), a
 `<meta name="description">` of a sentence or two in the words a visitor would
 search for, `<html lang>` in the language of the page, and an icon: an SVG
@@ -268,7 +270,9 @@ they ask. When you change a lambda, keep the line it has - giving a link
 without `rel="nofollow"` the attribute, and one that names this platform
 otherwise its name - and do not add one it lacks. When
 the owner asks for it to go, take it out and note in `docs/decisions.md` that
-they did not want it.
+they did not want it. Where `platform_guide` says under `backlink` that this
+installation asks for none - one an organization runs for its people does
+not - add none, and take out the line of a page you change.
 
 ## What not to build
 

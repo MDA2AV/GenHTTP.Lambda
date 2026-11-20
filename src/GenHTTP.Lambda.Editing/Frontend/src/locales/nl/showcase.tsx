@@ -49,4 +49,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Bestand kiezen',
   keepSaved: 'Opgeslagen afbeelding houden',
   clear: 'Wissen',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Vergaderruimte reserveren',
+      descriptionPlaceholder: 'Collega’s reserveren een ruimte voor een tijdvak en zien in één oogopslag welke ruimtes vandaag nog vrij zijn.',
+    },
+  },
 };

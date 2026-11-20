@@ -206,7 +206,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | a new app, built from the workspace on `/build` |
-| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent (`build`: whether it is offered, and the models and efforts it offers), where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), and how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them) |
+| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent (`build`: whether it is offered, and the models and efforts it offers), where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them), and whom it is for (`profile`: `cloud`, `home` or `enterprise`, see [Who it is for](#who-it-is-for)) |
 | `GET /system/logo`                                    | the picture beside the installation's name, where its operator branded it, see [Branding](#branding) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation; `/admin/branding` only where the installation may be branded |
 
@@ -1496,9 +1496,15 @@ A host's `Program.cs` is the whole composition. The community edition's:
 // LAMBDA_DATABASE=postgresql
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
-// whoever runs it may give it a name and a logo of their own, in the panel
+// whoever runs it may give it a name and a logo of their own, in the panel,
+// and say whom it is for: themselves (home) or an organization (enterprise)
 await using var platform = await LambdaPlatform.Create()
-                                               .Options(settings.Platform with { Branding = true })
+                                               .Options(settings.Platform with
+                                               {
+                                                   Branding = true,
+                                                   Profile = InstallationProfile.Home,
+                                                   Profiles = [InstallationProfile.Home, InstallationProfile.Enterprise]
+                                               })
                                                .Database(CommunityDatabase.Of(settings.Database))
                                                .BuildAsync();
 
@@ -1519,9 +1525,9 @@ return await LambdaServer.Create(platform)
 The cloud's reads the environment with the lambdas at subdomains, no usage
 report and SQLite alone (`LambdaSettings.FromEnvironment()`, which refuses
 `LAMBDA_DATABASE=postgresql` there), adds what is its own to the options
-(`CloudInstallation.Of(settings.Platform)`) - but not the branding,
-genhttp.dev being GenHTTP Lambda - and has `Website` where this has
-`LandingPage`.
+(`CloudInstallation.Of(settings.Platform)`, which makes it the cloud) - but
+not the branding nor a choice of profile, genhttp.dev being GenHTTP Lambda -
+and has `Website` where this has `LandingPage`.
 
 `LambdaPlatform.Create().Options(...).BuildAsync()` builds the integrations,
 migrates the platform's records and its analytics through the database
@@ -1596,8 +1602,10 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   removes a lambda with everything that hangs on it, and `LambdaDescriber`
   maps the DTOs. `LambdaGuard` (who may change a lambda - not a demo) and
   `VersionInput` (what a version may hold) are rules other services apply too.
-- **Settings** (`Services/Settings`) - the panel's switches and the limits,
-  and what each tier means. `TierPolicies` maps a tier to a `TierPolicy` -
+- **Settings** (`Services/Settings`) - the panel's switches, whom the
+  installation is for (`SiteSettings.Profile`, among what its host offers,
+  see [Who it is for](#who-it-is-for)) and the limits, and what each tier
+  means. `TierPolicies` maps a tier to a `TierPolicy` -
   what a version and the data may come to, the days of analytics shown,
   whether it connects by default, has domains of its own, expires when unused,
   is the installation's own or read only, and its label - from what the
@@ -2152,7 +2160,8 @@ line, and not `LAMBDA_PUBLIC_URL` - the tests check that a report holds none
 of the keys of the lambdas it counts, nor the installation's address. Whether
 its operator branded it is a switch (`configuration.branded`), never the name
 or the logo, and so is whether the platform optimizes the databases
-(`configuration.optimizeDatabases`); what keeps its data is named (`configuration.database`, `files`,
+(`configuration.optimizeDatabases`); whom it is for is its profile
+(`configuration.profile`: `home` or `enterprise`), never whose it is; what keeps its data is named (`configuration.database`, `files`,
 `secrets`: `sqlite` or `postgresql`, `local`, `database`), never where it is. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
@@ -2625,8 +2634,11 @@ it with the next change. On a lambda with a domain of its own the line is
 plain text. It is the user's to refuse: the agent says that it added
 it, leaves it out or takes it out when asked, and notes in `decisions.md` that
 it was not wanted, so the next agent does not put it back. A change does not
-add one to a lambda that has none. The instructions say so in a line,
-`platform_guide` under `backlink`, and the build agent's brief the same.
+add one to a lambda that has none. An installation for an organization
+(`enterprise`, see [Who it is for](#who-it-is-for)) asks for none: its
+`backlink` says so, and agents add none and take out the line of a page they
+change. The instructions say so in a line, `platform_guide` under `backlink`,
+and the build agent's brief the same.
 
 `analytics` answers what the owner sees in the editor's Analytics section -
 the totals, the days and each breakdown - over `days`, at most what the tier
@@ -2735,7 +2747,7 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Platform      | **Branding**, **Guide**, **Build agent**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); whether the build agent builds and changes apps, on which models and efforts, which need the password, and what its runner says of itself (see [The build agent](#the-build-agent)); what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
+| Platform      | **Branding**, **Guide**, **Build agent**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); whether the build agent builds and changes apps, on which models and efforts, which need the password, and what its runner says of itself (see [The build agent](#the-build-agent)); whom the installation is for, where its host lets the operator choose (see [Who it is for](#who-it-is-for)), and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
@@ -3100,6 +3112,73 @@ subscription does not include, or one a key has no access to - ends as the
 CLI ends it, with an error rather than a closing note: the build or the change
 fails with the CLI's words in `detail`, rather than being taken for an answer
 or a run that ran out of time.
+
+### Who it is for
+
+An installation says whom it is for - its **profile**: `cloud`, a public
+platform anybody builds on (genhttp.dev); `home`, somebody, their household
+and their friends; or `enterprise`, an organization and its people. It changes
+how the installation speaks and nothing else: the examples its pages offer and
+a few of their words, whether they link to GenHTTP Lambda's project, and what
+agents read about the apps built here in `platform_guide`. No limit, tier, rule of connectivity, block or refusal
+depends on it; those stay the operator's in their sections. An installation
+run for a team that wants every app kept starts new lambdas in production
+under **Limits** as well.
+
+Which profiles there may be is its host's to decide: `LambdaOptions.Profile`
+is the one it has until the operator chooses, `LambdaOptions.Profiles` those
+they may choose among. The community edition is `home` and offers `home` and
+`enterprise` under **Settings** in the panel; genhttp.dev is `cloud` and
+offers none. There is no environment variable: like the limits, it is changed
+while the server runs, and applies from the next page served and the next
+guide an agent reads. It is a row of `settings` (`profile`), read once as the
+platform starts and held in memory, and read only where the host offers a
+choice - so a copy of a community installation's data brings nothing of it to
+the cloud.
+
+| Route                 | What it does                                                                                     |
+|-----------------------|--------------------------------------------------------------------------------------------------|
+| `GET /admin/settings` | `profile`, and `profiles`: those the operator may choose among - none where the host decided      |
+| `PUT /admin/settings` | `{ "profile": "enterprise" }`; what the body leaves out stays as it is, and a profile the host does not offer is refused (400) |
+| `GET /system`         | public: `profile`                                                                                |
+
+What it changes:
+
+- **The words of the pages.** A section of a catalog says what a profile
+  says its own way under `profiles` - only the sentences that differ - and
+  the kit's catalogs hand every page the words of the installation's profile
+  (`profile.ts`), so no component asks which it is. Today only `enterprise`
+  has words of its own: the ideas and the placeholder of the box on
+  `/build`; the requests to copy on the community's `/ship`; and the
+  examples in the editor's Change box, in the fields of a new draft and in
+  the showcase's title and description. `home` reads as genhttp.dev does.
+- **The front page.** The community's addresses an enterprise installation's
+  colleagues rather than whoever runs it: what people build there, how it
+  goes and what they ask first, in the words of the editor's simple view.
+  The menu is the same.
+  What is built is an app on every installation: the menu says "Create an
+  app", and the box speaks of one.
+- **Prerendered for each.** The community site is prerendered once more for
+  every profile it names, as GenHTTP Lambda and as a brand, keeping only the
+  pages that differ (`profiles` in `prerender.json` - every page for
+  enterprise, whose footer differs); a visitor is sent the one page asked
+  for, and neither `prerender.json` nor `pages.json` is served; `#site-facts` says which
+  profile a page was rendered for, so the browser draws the same words. A
+  build that names no profiles - genhttp.dev's - is the same for every
+  profile, and a profile that a build naming some has nothing for is sent
+  without content, for the browser to draw. The editor, which is not
+  prerendered, asks `GET /system`.
+- **The guide.** Its introduction says in a sentence whom the apps built here
+  are for - for an organization, tools for colleagues: plain and businesslike,
+  keeping no more about people than the work needs. The build agent's brief
+  sends it there first.
+- **The link back.** An organization's installation asks for no "Made with"
+  line: the guide's `backlink` says so, and agents add none and take out the
+  line of a page they change (see [For agents](#for-agents)).
+- **The platform's project.** An organization's pages link to neither
+  GenHTTP Lambda's source on GitHub nor its Discord - not in the bar, the
+  footer or the front page (`useProjectLinks` in the kit).
+- **The usage report** says which (`configuration.profile`).
 
 ### Branding
 

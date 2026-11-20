@@ -119,4 +119,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Diesen Entwurf gibt es nicht mehr',
   missingText: 'Er wurde online gestellt oder verworfen. Die Versionen zeigen, was aus ihm geworden ist.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Freigabeschritt',
+      wantedPlaceholder: 'Optional. Die Teamleitung gibt jeden Antrag frei, bevor er zählt.',
+      whatPlaceholder: 'Fügt einen Freigabeschritt für die Teamleitung hinzu',
+    },
+  },
 };

@@ -31,8 +31,15 @@ const rendered = Object.entries(pages)
 const result = await prerender(rendered);
 
 // the pages as GenHTTP Lambda shows them, and as a branded installation does
-// where the site may be branded (see the kit's brand.ts)
-const renderings = [['', result], ...(result.branded ? [[' branded', result.branded]] : [])];
+// where the site may be branded (see the kit's brand.ts) - and those that
+// differ in the words of each profile the site names (see the kit's profile.ts)
+const profiles = Object.entries(result.profiles ?? {});
+
+const renderings = [
+  ['', result],
+  ...(result.branded ? [[' branded', result.branded]] : []),
+  ...profiles.flatMap(([profile, own]) => [[` ${profile}`, own], ...(own.branded ? [[` ${profile} branded`, own.branded]] : [])]),
+];
 
 for (const [variant, { pages, showcase }] of renderings) {
   for (const [path, markup] of Object.entries(pages)) {
@@ -53,10 +60,10 @@ for (const [variant, { pages, showcase }] of renderings) {
 
 // a branded page names its brand, which the server fills in - or it would
 // show the platform's mark under somebody else's name
-if (result.branded) {
-  for (const [path, markup] of Object.entries(result.branded.pages)) {
+for (const [variant, branded] of [['', result.branded], ...profiles.map(([profile, own]) => [` ${profile}`, own.branded])]) {
+  for (const [path, markup] of Object.entries(branded?.pages ?? {})) {
     if (!markup.includes('__LAMBDA_BRAND_NAME__')) {
-      throw new Error(`The branded page at ${path} does not name its brand`);
+      throw new Error(`The branded page at ${path}${variant} does not name its brand`);
     }
   }
 }
@@ -65,6 +72,9 @@ writeFileSync(path.join(output, 'prerender.json'), JSON.stringify(result));
 
 rmSync(path.join(site, '.prerender'), { recursive: true, force: true });
 
+const differ = profiles.map(([profile, own]) => `${profile} ${Object.keys(own.pages).length}`).join(', ');
+
 console.log(
-  `prerendered ${Object.keys(result.pages).length} pages and the showcase in ${Object.keys(result.showcase).length} languages${result.branded ? ', and again for a brand' : ''}`,
+  `prerendered ${Object.keys(result.pages).length} pages and the showcase in ${Object.keys(result.showcase).length} languages`
+    + `${result.branded ? ', and again for a brand' : ''}${differ ? `; pages of their own by profile: ${differ}` : ''}`,
 );

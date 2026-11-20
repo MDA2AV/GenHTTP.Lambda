@@ -47,4 +47,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'ファイルを選ぶ',
   keepSaved: '保存済みの画像のままにする',
   clear: 'クリア',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: '会議室の予約',
+      descriptionPlaceholder: '同僚が時間帯を指定して会議室を予約でき、今日まだ空いている会議室がひと目でわかります。',
+    },
+  },
 };

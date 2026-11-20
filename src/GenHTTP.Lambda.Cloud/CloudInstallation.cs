@@ -4,8 +4,9 @@ namespace GenHTTP.Lambda.Cloud;
 
 /// <summary>
 /// What genhttp.dev is as an installation, beside what its environment says:
-/// its terms, whom to write to, where its legal pages are, where a visitor
-/// has an app built, and what its tiers are called.
+/// its terms, whom to write to, where its legal pages are, what its tiers are
+/// called, and that it is the cloud - a public platform, which its operator
+/// does not choose otherwise.
 /// </summary>
 /// <remarks>
 /// The installation's own, rather than the platform's: they describe how this
@@ -32,7 +33,9 @@ public static class CloudInstallation
         AbuseContact = options.AbuseContact ?? "abuse@genhttp.dev",
         LegalPages = true,
         Sandbox = options.Sandbox with { Label = "Free" },
-        Production = options.Production with { Label = "Premium" }
+        Production = options.Production with { Label = "Premium" },
+        Profile = InstallationProfile.Cloud,
+        Profiles = []
     };
 
     /// <summary>

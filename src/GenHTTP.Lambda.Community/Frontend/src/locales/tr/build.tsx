@@ -9,4 +9,10 @@ export const build: Messages['build'] = {
       Ya da {ship('kendi ajanınızı bağlayın')}, ya da {create('kodu kendiniz yazın')}.
     </>
   ),
+  profiles: {
+    enterprise: {
+      intro:
+        'Ajana ne istediğinizi kendi sözlerinizle anlatın. Uygulamayı o oluşturur, burada yayına alır ve listenizde tutar; daha sonra aynı şekilde hakkında soru sorabilir ve onu değiştirebilirsiniz.',
+    },
+  },
 };

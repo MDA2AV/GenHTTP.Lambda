@@ -150,4 +150,9 @@ export const change: EditorMessages['change'] = {
   own: 'Ya da kendi ajanınızı kullanın',
   ownText:
     'MCP destekleyen her ajan bu uygulamayı da değiştirebilir: onu aşağıdaki adrese bağlayın, editör linkini verin ve neyin farklı olması gerektiğini söyleyin. Günlük sınırı ve süre sınırı yoktur.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Departman için bir sütun ekle, listeyi tarihe göre sırala, …',
+    },
+  },
 };

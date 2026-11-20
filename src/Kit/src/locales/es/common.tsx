@@ -2,7 +2,7 @@ import type { KitMessages } from '../en';
 
 export const shell: KitMessages['shell'] = {
   main: 'Navegación principal',
-  build: 'Crear una web',
+  build: 'Crear una app',
   ship: 'Publicar',
   showcase: 'Galería',
   admin: 'Admin',

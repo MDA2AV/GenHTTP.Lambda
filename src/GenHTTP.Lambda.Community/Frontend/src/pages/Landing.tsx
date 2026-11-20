@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { isOwn, useBrand } from '@genhttp-lambda/kit/brand';
 import {
@@ -8,9 +8,11 @@ import {
 import { Link } from '@genhttp-lambda/kit/i18n/links';
 import { REPOSITORY } from '@genhttp-lambda/kit/installation';
 import { usePublicPage } from '@genhttp-lambda/kit/meta';
-import { askPlatform } from '@genhttp-lambda/kit/site';
+import { useProfile } from '@genhttp-lambda/kit/profile';
 
 import { useT } from '../i18n';
+import { EnterpriseLanding } from './EnterpriseLanding';
+import { Aurora, Heading, useBuildOffered } from './parts';
 
 /** What whoever runs an installation reads: its configuration, its operations, every route. */
 const REFERENCE = `${REPOSITORY}/blob/main/docs/reference.md`;
@@ -19,7 +21,19 @@ const REFERENCE = `${REPOSITORY}/blob/main/docs/reference.md`;
 const FEATURE_ICONS = [IconGlobe, IconDatabase, IconFolder, IconKey, IconDraft, IconBranch, IconEye, IconCode];
 
 /**
- * The front page of an installation somebody runs for themselves.
+ * The front page of an installation somebody runs for themselves - or, where
+ * an organization runs it for its people, the page its colleagues are
+ * addressed on (see EnterpriseLanding): they come to have their tools built,
+ * not to run the platform. The menu is the same on both.
+ */
+export function Landing() {
+  usePublicPage('/');
+
+  return useProfile() === 'enterprise' ? <EnterpriseLanding /> : <OperatorLanding />;
+}
+
+/**
+ * The front page for whoever runs the installation, or is deciding to.
  *
  * Nothing on it is selling: whoever opens it has the platform already, or is
  * deciding whether to run it. So it says what it does in a screen, leads to
@@ -27,29 +41,14 @@ const FEATURE_ICONS = [IconGlobe, IconDatabase, IconFolder, IconKey, IconDraft, 
  * behind it, and one's own agent over MCP (/ship) - and then what every app
  * gets, how it runs and where to look next.
  */
-export function Landing() {
-  usePublicPage('/');
-
+function OperatorLanding() {
   const said = useT().landing;
   const brand = useBrand();
-
-  // whether the box has an agent behind it; until the server says, it is
-  // offered, so the page is rendered with it for whoever reads it unscripted
-  const [available, setAvailable] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    askPlatform()
-      .then((platform) => setAvailable(platform.build.available))
-      .catch(() => setAvailable(false));
-  }, []);
+  const available = useBuildOffered();
 
   return (
     <div className="relative w-full">
-      <div className="aurora-field" aria-hidden="true">
-        <div className="aurora aurora-a" />
-        <div className="aurora aurora-b" />
-        <div className="aurora-clearing" />
-      </div>
+      <Aurora />
 
       <section className="relative z-10 px-5 pb-20 pt-16 sm:pt-24">
         <div className="mx-auto w-full max-w-4xl text-center">
@@ -148,15 +147,6 @@ export function Landing() {
         </div>
       </section>
     </div>
-  );
-}
-
-function Heading({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
-  return (
-    <h2 className="flex items-center gap-2.5 text-2xl font-light tracking-tight">
-      {icon && <span className="text-accent-600 dark:text-accent-400">{icon}</span>}
-      {children}
-    </h2>
   );
 }
 

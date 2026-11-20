@@ -49,4 +49,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Pilih file',
   keepSaved: 'Pakai yang tersimpan',
   clear: 'Kosongkan',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Pemesanan ruang rapat',
+      descriptionPlaceholder: 'Rekan kerja memesan ruang rapat untuk waktu tertentu dan langsung melihat ruang mana yang masih kosong hari ini.',
+    },
+  },
 };

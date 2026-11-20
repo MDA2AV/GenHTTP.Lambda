@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Branding;
@@ -299,6 +300,26 @@ public sealed class UsageReportTests
         var optimized = collector.Reports.Select(r => JsonDocument.Parse(r.Body).RootElement.GetProperty("configuration").GetProperty("optimizeDatabases").GetBoolean()).ToList();
 
         CollectionAssert.AreEqual(new[] { true, false }, optimized, "on as it comes, and off once the operator leaves the databases to their own tools");
+    }
+
+    [TestMethod]
+    public async Task AReportSaysWhomTheInstallationIsForButNotWhose()
+    {
+        await using var collector = FakeCollector.Start();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { UsageReportUrl = collector.Url });
+
+        await Reports(fixture).SendAsync();
+
+        var settings = fixture.Platform.Services.GetRequiredService<ISettingsService>();
+
+        await settings.SaveAsync(settings.Get() with { Profile = InstallationProfile.Enterprise });
+
+        await Reports(fixture).SendAsync();
+
+        var profiles = collector.Reports.Select(r => JsonDocument.Parse(r.Body).RootElement.GetProperty("configuration").GetProperty("profile").GetString()).ToList();
+
+        CollectionAssert.AreEqual(new[] { "home", "enterprise" }, profiles, "a home installation as it comes, and an organization's once its operator says so");
     }
 
     private static IUsageReportService Reports(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IUsageReportService>();

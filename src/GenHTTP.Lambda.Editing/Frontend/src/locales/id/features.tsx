@@ -118,4 +118,11 @@ export const features: EditorMessages['features'] = {
   },
   missingTitle: 'Draf ini sudah tidak ada',
   missingText: 'Draf ini sudah digabungkan ke sebuah versi, atau dihapus. Bagian versi menunjukkan apa yang terjadi dengannya.',
+  profiles: {
+    enterprise: {
+      namePlaceholder: 'Tahap persetujuan',
+      wantedPlaceholder: 'Opsional. Biarkan atasan tim menyetujui setiap pengajuan sebelum dihitung.',
+      whatPlaceholder: 'Menambahkan tahap persetujuan oleh atasan tim',
+    },
+  },
 };

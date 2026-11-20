@@ -319,8 +319,9 @@ the request.
 
 How to work:
 
-1. Call platform_guide first. It tells you what this platform is and what the
-   rules are - with its operator's own at the end, where they wrote some.
+1. Call platform_guide first. It tells you what this platform is, who the
+   apps built on it are for and what the rules are - with its operator's own
+   at the end, where they wrote some.
 2. Call create_lambda with acceptTerms true and view "Simple". Pick a short,
    readable public key that suits what they asked for. The simple view opens
    their editor on the app and a box to ask for changes, rather than on code

@@ -123,8 +123,16 @@ public sealed class Bundle
     /// The files of the bundle, without falling back to the index page - none
     /// where it was not built, which a server without a frontend serves as well.
     /// </summary>
+    /// <remarks>
+    /// Not the server's own: the table of pages and the prerendered pages are
+    /// read here and handed out a page at a time, never whole - the latter
+    /// is every page in every language as every brand and profile shows it,
+    /// megabytes nobody's browser asks for.
+    /// </remarks>
     public IResourceTree Files()
-        => System.IO.Directory.Exists(Directory) ? ResourceTree.FromDirectory(Directory).Build() : VirtualTree.Create().Build();
+        => System.IO.Directory.Exists(Directory)
+               ? new ServedTree(ResourceTree.FromDirectory(Directory).Build(), [Path.GetFileName(PageFile), Path.GetFileName(PrerenderFile)])
+               : VirtualTree.Create().Build();
 
     /// <summary>
     /// The bundle's scripts and styles, routed before its pages so a request
@@ -203,5 +211,26 @@ public sealed class Bundle
         """;
 
     #endregion
+
+}
+
+/// <summary>
+/// The files of a bundle as they are served: all but those at its root that
+/// only the server reads.
+/// </summary>
+internal sealed class ServedTree(IResourceTree files, IReadOnlyCollection<string> hidden) : IResourceTree
+{
+
+    public DateTime? Modified => files.Modified;
+
+    public ValueTask<IResourceNode?> TryGetNodeAsync(PathSegment segment) => files.TryGetNodeAsync(segment);
+
+    public ValueTask<IReadOnlyCollection<IResourceNode>> GetNodes() => files.GetNodes();
+
+    public ValueTask<IResource?> TryGetResourceAsync(PathSegment segment)
+        => hidden.Contains(segment.Decode()) ? new((IResource?)null) : files.TryGetResourceAsync(segment);
+
+    public async ValueTask<IReadOnlyCollection<IResource>> GetResources()
+        => [.. (await files.GetResources()).Where(r => !hidden.Contains(r.Name ?? string.Empty))];
 
 }

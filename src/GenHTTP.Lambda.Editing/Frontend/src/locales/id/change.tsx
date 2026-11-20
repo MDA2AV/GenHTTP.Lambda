@@ -152,4 +152,9 @@ export const change: EditorMessages['change'] = {
   own: 'Atau pakai agen Anda sendiri',
   ownText:
     'Agen apa pun yang mendukung MCP juga bisa mengubah aplikasi ini: hubungkan ke alamat di bawah, berikan link editor, dan sampaikan apa yang perlu diganti. Tanpa batas harian dan tanpa batas waktu.',
+  profiles: {
+    enterprise: {
+      placeholder: 'Tambahkan kolom departemen, urutkan daftar berdasarkan tanggal, …',
+    },
+  },
 };

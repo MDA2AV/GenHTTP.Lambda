@@ -50,4 +50,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Wybierz plik',
   keepSaved: 'Zostaw zapisany',
   clear: 'Wyczyść',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Rezerwacja sal konferencyjnych',
+      descriptionPlaceholder: 'Współpracownicy rezerwują salę na wybrany termin i od razu widzą, które sale są dziś jeszcze wolne.',
+    },
+  },
 };

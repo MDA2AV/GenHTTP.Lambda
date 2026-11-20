@@ -41,8 +41,8 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// </para>
 /// <para>
 /// What differs per installation is filled in: its addresses, what it is
-/// called, the tiers' labels and limits, whether lambdas answer by path, its
-/// terms and its operator's section - and what its integrations add to the
+/// called, whom it is for, the tiers' labels and limits, whether lambdas
+/// answer by path, its terms and its operator's section - and what its integrations add to the
 /// sections of what they keep (database, workspace, secrets), at the end of
 /// each. The code they teach is the same everywhere: a lambda names none of
 /// them.
@@ -59,12 +59,13 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
     /// Every heading of the platform's own guide, which the operator's section
     /// may not be called: a pointer to it would find two.
     /// </summary>
-    public IReadOnlySet<string> Headings => _headings ??= Read(Write("", "", null));
+    public IReadOnlySet<string> Headings => _headings ??= Read(Write("", "", null, InstallationProfile.Home));
 
     /// <param name="origin">The address the agent called, used where the installation names no public one</param>
     /// <param name="made">What this platform is called - GenHTTP Lambda, or what its operator named it</param>
     /// <param name="section">What the operator wrote for the agents of this installation, if anything</param>
-    public string Write(string origin, string made, GuideSection? section)
+    /// <param name="profile">Who the installation is for, which the apps built here are written for</param>
+    public string Write(string origin, string made, GuideSection? section, InstallationProfile profile)
     {
         var home = Home(origin);
         var address = addresses.Of("{publicKey}");
@@ -110,6 +111,8 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             record Greeting(string Text); // routes cannot return anonymous types
             ```
+
+            {{Audience(profile)}}
 
             ## lifecycle
 
@@ -286,14 +289,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## backlink
 
-            We ask - a request, not a rule - for a small line at the foot of the pages a lambda shows its visitors: "Made with {{made}}", in the page's language, so people find where an app was made.
-
-            - Without a domain of its own (no domainUrl): {{link}}
-            - One line, small muted type fitting the design; the name is the whole link - no keywords, badge, script or hidden text.
-            - With a domain of its own the line is plain text; one that links is made plain text with your next change.
-            - A line naming this platform otherwise is given this name with your next change to the page.
-            - With a new lambda that has pages people visit - not an API, a widget in another site, a full-screen page. Changing a lambda, keep its line, and add none it lacks unless asked.
-            - Say that you added it. If the user does not want it, leave it out or remove it, and note that in docs/decisions.md so it is not put back.
+            {{Backlink(profile, made, link)}}
 
             ## limits
 
@@ -336,6 +332,40 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Who the apps built here are for, which decides more of what an agent
+    /// writes than any rule: how a page looks and speaks, whether it is meant
+    /// to be found, what it keeps about people.
+    /// </summary>
+    private static string Audience(InstallationProfile profile) => profile switch
+    {
+        InstallationProfile.Cloud => "Who it is for: the public. Lambdas here are mostly websites and small apps anybody may open - a club's, an event's, a game, a shop - often meant to be found and shared.",
+        InstallationProfile.Enterprise => "Who it is for: an organization and its people. Lambdas here are mostly tools for work - forms, lists, bookings, approvals, dashboards - used by colleagues rather than the public: plain and businesslike in looks and words, keeping no more about people than the work needs.",
+        _ => "Who it is for: whoever runs it, their household and their friends. Lambdas here are mostly apps for a few people who know each other - personal in tone, rarely meant to be found by strangers."
+    };
+
+    /// <summary>
+    /// What the guide asks of the "Made with" line: a small link back to the
+    /// installation - or, where it is an organization's, none, since its
+    /// lambdas are its own tools rather than sites to be found by.
+    /// </summary>
+    private static string Backlink(InstallationProfile profile, string made, string link) => profile switch
+    {
+        InstallationProfile.Enterprise => $"""
+            This installation asks for none: its lambdas are an organization's tools. Put no "Made with {made}" line at the foot of a page, and take out one a page you change has.
+            """,
+        _ => $"""
+            We ask - a request, not a rule - for a small line at the foot of the pages a lambda shows its visitors: "Made with {made}", in the page's language, so people find where an app was made.
+
+            - Without a domain of its own (no domainUrl): {link}
+            - One line, small muted type fitting the design; the name is the whole link - no keywords, badge, script or hidden text.
+            - With a domain of its own the line is plain text; one that links is made plain text with your next change.
+            - A line naming this platform otherwise is given this name with your next change to the page.
+            - With a new lambda that has pages people visit - not an API, a widget in another site, a full-screen page. Changing a lambda, keep its line, and add none it lacks unless asked.
+            - Say that you added it. If the user does not want it, leave it out or remove it, and note that in docs/decisions.md so it is not put back.
+            """
+    };
 
     /// <summary>
     /// What an integration adds to the end of its section, as lines of it -

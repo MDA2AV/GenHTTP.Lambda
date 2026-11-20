@@ -49,4 +49,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Scegli un file',
   keepSaved: 'Tieni quella salvata',
   clear: 'Rimuovi',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Prenotazione sale riunioni',
+      descriptionPlaceholder: 'I colleghi prenotano una sala per una fascia oraria e vedono a colpo d’occhio quali sale sono ancora libere oggi.',
+    },
+  },
 };

@@ -93,10 +93,11 @@ public sealed record UsageServer(string? Engine, [property: JsonPropertyName("ge
 /// <param name="Files">What keeps the lambdas' files: <c>local</c></param>
 /// <param name="Secrets">What keeps their secrets: <c>database</c>, sealed in the platform's own</param>
 /// <param name="OptimizeDatabases">Whether the platform optimizes the databases itself, in their quiet hours, or its operator left them to their own tools</param>
+/// <param name="Profile">Who it is for, as its operator chose it: <c>home</c> or <c>enterprise</c> - never whose it is</param>
 public sealed record UsageConfiguration(string Addressing, bool HostingDomain, bool BuildAgent, bool BuildBox, bool ChangeBox, bool AdminPanel,
                                         bool Terms, bool Contact, bool AbuseContact, bool LegalPages, int McpOrigins, bool ClientAddresses,
                                         bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development, bool Branded,
-                                        string Database, string Files, string Secrets, bool OptimizeDatabases);
+                                        string Database, string Files, string Secrets, bool OptimizeDatabases, string Profile);
 
 /// <remarks>
 /// None of the counts includes the demos, which every installation has.

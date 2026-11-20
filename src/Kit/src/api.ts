@@ -661,6 +661,8 @@ export interface Platform {
   tiers: TierPolicy[];
   /** How the installation presents itself on its pages (see brand.ts), and whether its operator may change that here. */
   brand: { name: string; logo?: string; changeable: boolean };
+  /** Who the installation is for - cloud, home or enterprise - which the pages speak to (see profile.ts). */
+  profile: string;
 }
 
 export interface TelemetrySample {
@@ -1405,11 +1407,18 @@ export interface OwnSource {
   maxAuthor: number;
 }
 
-/** What the operator can switch on or off in the panel. */
+/** What the operator can switch on or off, and choose, in the panel. */
 export interface AdminSettings {
   /** Whether the platform optimizes the databases itself, each in its quiet hours. */
   optimizeDatabases: boolean;
+  /** Who the installation is for: cloud, home or enterprise. */
+  profile: string;
+  /** The profiles the operator may choose among; none where the host decided. */
+  profiles: string[];
 }
+
+/** What the operator changes in the settings: what is left out stays as it is. */
+export type AdminSettingsChange = Partial<Pick<AdminSettings, 'optimizeDatabases' | 'profile'>>;
 
 /** Who may have a model of the build agent: everybody, whoever knows the password, or nobody. */
 export type ModelAccess = 'open' | 'password' | 'off';
@@ -1765,8 +1774,8 @@ export const api = {
 
     settings: (token: string) => request<AdminSettings>('/admin/settings', withToken(token)),
 
-    saveSettings: (token: string, settings: AdminSettings) =>
-      request<AdminSettings>('/admin/settings', withToken(token, { method: 'PUT', body: JSON.stringify(settings) })),
+    saveSettings: (token: string, change: AdminSettingsChange) =>
+      request<AdminSettings>('/admin/settings', withToken(token, { method: 'PUT', body: JSON.stringify(change) })),
 
     /** Whether the build agent builds and changes apps here, and on which models and efforts. */
     agent: (token: string) => request<AdminAgentSettings>('/admin/agent', withToken(token)),

@@ -49,4 +49,10 @@ export const showcase: EditorMessages['showcase'] = {
   choose: 'Dosya seç',
   keepSaved: 'Kaydedileni koru',
   clear: 'Temizle',
+  profiles: {
+    enterprise: {
+      titlePlaceholder: 'Toplantı odası rezervasyonu',
+      descriptionPlaceholder: 'Çalışma arkadaşları belirli bir saat dilimi için oda ayırır ve bugün hangi odaların boş olduğunu tek bakışta görür.',
+    },
+  },
 };
