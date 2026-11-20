@@ -62,7 +62,11 @@ Settings before (their rows kept, `build-box` and `change-box`).
 - The default model is everybody's, without the password, and at least one
   effort is offered with the default among them; a save that breaks either
   is refused. A model or an effort not offered is refused before the agent
-  is asked and before the allowance is spent.
+  is asked and before the allowance is spent. Chosen with it, open to
+  change: every effort is offered at first (`AgentSettings.Default`), on
+  every model and on the clock everybody's runs on - so on an installation
+  open to strangers the operator decides in the panel whether `xhigh` and
+  `max` should be theirs.
 - **A subscription token or an API key - asked for by the owner**
   ("enterprise would rather use an API key"): `CLAUDE_CODE_OAUTH_TOKEN` or
   `ANTHROPIC_API_KEY` on the runner. Exactly one goes into a build and the

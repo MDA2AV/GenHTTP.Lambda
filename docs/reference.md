@@ -3095,6 +3095,12 @@ three seconds to answer: where it listens, whether it answers, what its
 builds sign in with - the kind, never the credential - the identifier each
 model runs as, the version of Claude Code its builds run and its queue.
 
+Offer only what the credential runs. A job on a model it cannot run - one a
+subscription does not include, or one a key has no access to - ends as the
+CLI ends it, with an error rather than a closing note: the build or the change
+fails with the CLI's words in `detail`, rather than being taken for an answer
+or a run that ran out of time.
+
 ### Branding
 
 Whoever runs the community edition may give it a name and a logo of their

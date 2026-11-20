@@ -878,6 +878,10 @@ async function run(job) {
   // how the CLI said the run ended: error_max_turns is a run that used up its
   // steps, which is worth telling apart from one that simply failed
   let ending = '';
+
+  // what the CLI said where the run ended in an error - the API refused the
+  // model, a limit was reached - which is the CLI's words, not the agent's
+  let failure = '';
   let buffer = '';
 
   child.stderr.on('data', d => { stderr = clip(stderr + d, 4000); });
@@ -1003,11 +1007,22 @@ async function run(job) {
       if (event.type === 'result') {
         ending = String(event.subtype ?? '');
 
-        if (event.subtype === 'success') {
+        /*
+         * A run that ended in an error says so as a "success" with is_error,
+         * and its result is the error - which, taken for the closing note,
+         * came back as the agent's answer to a question, or as a build that
+         * merely ran out of time. Now that people choose the model, one the
+         * credential cannot run is the likeliest way there.
+         */
+        if (event.subtype === 'success' && event.is_error !== true) {
           concluded = true;
           if (typeof event.result === 'string' && event.result.trim()) closing = event.result.trim();
-        } else if (!summary) {
-          summary = String(event.result ?? '').trim();
+        } else {
+          const said = String(event.result ?? '').trim();
+
+          // one that used up its steps is told apart by its subtype instead
+          if (event.is_error === true && event.subtype !== 'error_max_turns' && said) failure = said;
+          if (!summary) summary = said;
         }
       }
     }
@@ -1027,6 +1042,11 @@ async function run(job) {
 
   if (last?.kind === 'say' && closing && closing.includes(last.text.replace(/…$/, ''))) job.steps.pop();
 
+  // the CLI writes an error as a message too, which is no line of the agent's
+  const said = job.steps[job.steps.length - 1];
+
+  if (failure && said?.kind === 'say' && failure.includes(said.text.replace(/…$/, ''))) job.steps.pop();
+
   /*
    * Why it wrote nothing matters. A build that cannot sign in dies in a
    * second or two having done nothing at all, and telling that person to
@@ -1035,7 +1055,7 @@ async function run(job) {
    * page, for the twelve hours the token was stale.
    */
   const unauthorised = /authenticat|oauth|401|revoked|invalid api key|credit balance/i
-    .test(`${summary} ${stderr}`);
+    .test(`${summary} ${failure} ${stderr}`);
 
   // said in the closing note, which only a run that concluded has
   const refusal = declined(closing);
@@ -1044,7 +1064,7 @@ async function run(job) {
     // cut short by the clock, or by the number of steps it may take
     const cut = expired ? 'timeout' : ending === 'error_max_turns' ? 'turns' : undefined;
 
-    settle(job, { wrote, saved, online, compiles, feature, started, settings: [...settings], summary: refusal ?? closing, stderr, unauthorised, cut, refusal });
+    settle(job, { wrote, saved, online, compiles, feature, started, settings: [...settings], summary: refusal ?? closing, stderr, failure, unauthorised, cut, refusal });
     return;
   }
 
@@ -1082,9 +1102,11 @@ async function run(job) {
       error: unauthorised
         ? 'The builder could not sign in, so nothing ran. That is this server’s credentials '
         + 'rather than anything about what you asked for.'
-        : 'It ran out of time before it wrote anything. Try asking for something smaller, or '
-        + 'ask again - it gets further some runs than others.',
-      detail: clip(summary || stderr, 400),
+        : failure
+          ? 'The builder stopped with an error before it wrote anything.'
+          : 'It ran out of time before it wrote anything. Try asking for something smaller, or '
+          + 'ask again - it gets further some runs than others.',
+      detail: clip(failure || summary || stderr, 400),
       publicKey: created?.publicKey,
       privateKey: created?.privateKey
     };
@@ -1130,7 +1152,7 @@ async function run(job) {
  * the error strings here are for the log and for a client that has no words
  * of its own.
  */
-function settle(job, { wrote, saved, online, compiles, feature, started, settings, summary, stderr, unauthorised, cut, refusal }) {
+function settle(job, { wrote, saved, online, compiles, feature, started, settings, summary, stderr, failure, unauthorised, cut, refusal }) {
   const facts = {
     version: saved ?? undefined,
     online: online ?? undefined,
@@ -1182,9 +1204,11 @@ function settle(job, { wrote, saved, online, compiles, feature, started, setting
         ? 'It ran out of time before it changed anything.'
         : cut === 'turns'
           ? 'It used up its steps before it changed anything.'
-          : 'Nothing was changed.',
+          : failure
+            ? 'It stopped with an error before it changed anything.'
+            : 'Nothing was changed.',
       summary: summary ? clip(summary, 1200) : undefined,
-      detail: summary ? undefined : clip(stderr, 400) || undefined
+      detail: summary ? undefined : clip(failure || stderr, 400) || undefined
     };
     return;
   }
