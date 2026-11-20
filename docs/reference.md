@@ -1586,7 +1586,7 @@ report and SQLite alone (`LambdaSettings.FromEnvironment()`, which refuses
 not the branding nor a choice of profile, genhttp.dev being GenHTTP Lambda -
 and has `Website` where this has `LandingPage`.
 
-`LambdaPlatform.Create().Options(...).BuildAsync()` builds the integrations,
+`LambdaPlatform.Create().Options(...).BuildAsync()` builds and prepares the integrations,
 migrates the platform's records and its analytics through the database
 integration, builds the services into one container and reads what every
 request and page needs before the first request - the limits, the operator's
