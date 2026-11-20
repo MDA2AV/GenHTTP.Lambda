@@ -10,9 +10,9 @@ namespace GenHTTP.Lambda.Configuration;
 /// It changes how the installation speaks, not what it does: the examples its
 /// pages offer, the words they use where an organization would say them
 /// otherwise, whether they link to GenHTTP Lambda's project, and what agents
-/// are told about the apps built here (<c>platform_guide</c>). Nothing the platform allows, refuses, keeps or
-/// limits depends on it - those are the tiers', the limits' and the
-/// operator's switches.
+/// are told about the apps built here (<c>platform_guide</c>). Nothing the
+/// platform allows, refuses, keeps or limits depends on it - those are the
+/// tiers', the limits' and the operator's switches.
 ///
 /// The host decides which there may be (<see cref="LambdaOptions.Profile"/>,
 /// <see cref="LambdaOptions.Profiles"/>): genhttp.dev is the cloud, and the
