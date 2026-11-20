@@ -884,7 +884,7 @@ nothing it keeps is about the databases.
   three in a row; known once every hour was counted, over a day, with a
   request an hour on average - an hour never counted is not a quiet one.
 - **Shown in the panel - decided by the owner**: its **Quiet hours** section
-  (Misc) for the installation, on the operator's clock. **A lambda's page
+  (Platform) for the installation, on the operator's clock. **A lambda's page
   shows when it is used, not when it is quiet - decided by the owner**: its
   typical day with the hours it is busy singled out ("When it is used"),
   since that is what anybody looking at an app wants to know, and its quiet
@@ -1152,11 +1152,11 @@ how it shows them did.
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
   (Server, Storage, Log); **Platform** (Branding - where the host lets the
-  operator brand the installation - Guide, Settings, Limits, Integrations:
-  the owner moved Settings, Integrations and then Branding there, in that
-  order, and the Configuration group went with them); **Misc** (Usage
-  report, Quiet hours) - the last two the owner's ask. A new section joins
-  the group it belongs to, and a group left empty is not shown. A mark beside a
+  operator brand the installation - Guide, Settings, Limits, Integrations,
+  Quiet hours, Usage report) - the owner's ask: Settings, Integrations,
+  Branding, Quiet hours and the Usage report moved there, the usage report
+  last, and the Configuration and Misc groups went with them. A new section
+  joins the group it belongs to, and a group left empty is not shown. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
 - **What is shown and what is done are kept apart - asked for by the owner.**

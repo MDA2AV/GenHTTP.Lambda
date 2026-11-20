@@ -109,7 +109,7 @@ export function SettingsSection({ access }: { access: Access }) {
             status={settings.optimizeDatabases && optimization ? <Optimized overview={optimization} /> : undefined}
           >
             {settings.optimizeDatabases
-              ? 'The platform’s records and every lambda’s database, each at most once a day in its quiet hours (Misc), and a lambda’s only where it was visited since. SQLite: PRAGMA optimize, VACUUM where a quarter of a file is free, a checkpoint of the journal. PostgreSQL: VACUUM (ANALYZE) of every table.'
+              ? 'The platform’s records and every lambda’s database, each at most once a day in its quiet hours (see Quiet hours), and a lambda’s only where it was visited since. SQLite: PRAGMA optimize, VACUUM where a quarter of a file is free, a checkpoint of the journal. PostgreSQL: VACUUM (ANALYZE) of every table.'
               : 'Nothing is done to the databases: they are left to their own tools, such as a PostgreSQL server’s own maintenance.'}
           </Setting>
         </div>

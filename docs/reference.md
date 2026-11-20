@@ -2190,7 +2190,7 @@ in the hour before a restart is lost, an hour the server was down counts as
 one nobody asked for anything in, and a weekend is not told from a weekday.
 
 The installation's are at `GET /api/v1/admin/quiet-hours` and in the panel's
-**Quiet hours** section (Misc), drawn on the operator's clock, in the time
+**Quiet hours** section (Platform), drawn on the operator's clock, in the time
 zone of their browser. A lambda's typical day is `typicalDay` of `GET
 /api/v1/admin/lambdas/{publicKey}`, and its page shows it the other way
 round, as **When it is used**: the hours it is busy - every hour with at
@@ -2718,8 +2718,7 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Platform      | **Branding**, **Guide**, **Settings**, **Limits**, **Integrations** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); the site's switches and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; and what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)) |
-| Misc          | **Usage report**, **Quiet hours** | what the installation reports about itself once a day (see [Usage reports](#usage-reports)); and when it is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)) |
+| Platform      | **Branding**, **Guide**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); the site's switches and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
