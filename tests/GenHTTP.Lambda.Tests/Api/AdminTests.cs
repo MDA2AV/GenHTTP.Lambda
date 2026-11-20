@@ -59,7 +59,7 @@ public sealed class AdminTests
 
         foreach (var path in new[] { "/api/v1/admin/lambdas?page=1", "/api/v1/admin/lambdas?state=online&uses=database,drafts&view=full&created=7&sort=visited",
                                      "/api/v1/admin/overview", "/api/v1/admin/storage", "/api/v1/telemetry?minutes=5", "/api/v1/telemetry/lambdas",
-                                     "/api/v1/logs?level=info" })
+                                     "/api/v1/logs?level=info", "/api/v1/admin/quiet-hours", "/api/v1/admin/optimization" })
         {
             using var response = await fixture.GetAsOperatorAsync(path);
 

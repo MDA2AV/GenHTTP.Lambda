@@ -15,6 +15,8 @@ using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Optimization;
+using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Showcase;
@@ -58,7 +60,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                    IAddressBlocks blocks, IConnectivityService connectivity, IUsageReportService usageReports, IIntegrationService integrations,
                                    ICensusService census, IShowcaseService showcases, ISourceService sources, IFeatureService features,
                                    IWorkspaceService workspace, ISecretService secrets, IDataService data, ILogBook book,
-                                   ILambdaAddresses addresses, LambdaOptions options, ILogger<AdminResource> logger)
+                                   ILambdaAddresses addresses, IQuietHoursService quietHours, IOptimizationService optimization, LambdaOptions options,
+                                   ILogger<AdminResource> logger)
 {
     private readonly LambdaSummaries _summaries = new(meta, workspace, secrets, data, telemetry, book, limits, connectivity);
 
@@ -538,7 +541,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     {
         var current = settings.Get();
 
-        return new SettingsModel(current.BuildBox, current.ChangeBox);
+        return new SettingsModel(current.BuildBox, current.ChangeBox, current.OptimizeDatabases);
     }
 
     [ResourceMethod(Method.Put, "settings")]
@@ -547,12 +550,46 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [return: Summary("The settings, as they were saved")]
     public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
     {
-        var saved = await settings.SaveAsync(new SiteSettings(body.BuildBox, body.ChangeBox));
+        var saved = await settings.SaveAsync(new SiteSettings(body.BuildBox, body.ChangeBox, body.OptimizeDatabases));
 
-        logger.LogInformation("Updated settings buildBox {BuildBox} changeBox {ChangeBox} by operator", saved.BuildBox, saved.ChangeBox);
+        logger.LogInformation("Updated settings buildBox {BuildBox} changeBox {ChangeBox} optimizeDatabases {OptimizeDatabases} by operator",
+                              saved.BuildBox, saved.ChangeBox, saved.OptimizeDatabases);
 
-        return new SettingsModel(saved.BuildBox, saved.ChangeBox);
+        return new SettingsModel(saved.BuildBox, saved.ChangeBox, saved.OptimizeDatabases);
     }
+
+    #endregion
+
+    #region Keeping the databases in shape
+
+    [ResourceMethod("optimization")]
+    [Summary("Reads how the databases are kept in shape")]
+    [Remarks("""
+             Whether the platform optimizes the databases itself (`optimizeDatabases` among the settings), what the last
+             optimization of its own records and analytics did, and how many lambdas' databases were optimized in the last day.
+             Each database is optimized at most once a day, in its quiet hours (see `GET /admin/quiet-hours`): a lambda's in its
+             own where enough was counted to tell them, else in the installation's - and only where it was visited since it was
+             last optimized. Drafts' copies are not. What is done is the database's own upkeep - on SQLite `PRAGMA optimize`, a
+             `VACUUM` where a good part of a file is free and the file is small enough, and a checkpoint of its journal; on
+             PostgreSQL `VACUUM (ANALYZE)` of every table.
+             """)]
+    [return: Summary("How the databases are kept in shape")]
+    public async ValueTask<OptimizationOverview> GetOptimization() => await optimization.OverviewAsync(DateTime.UtcNow);
+
+    #endregion
+
+    #region Quiet hours
+
+    [ResourceMethod("quiet-hours")]
+    [Summary("Reads when the installation is usually quiet")]
+    [Remarks("""
+             How many requests the server answers in each hour of a typical day, in UTC, and its quietest three hours - an
+             indication for work that can wait, such as optimizing the databases, not a measurement. Counted in memory as requests
+             are answered and written down hourly, an average in which a week ago counts half as much as today; until every hour
+             of the day was counted at least once, `known` is false. A lambda's own are part of `GET /admin/lambdas/{publicKey}`.
+             """)]
+    [return: Summary("The installation's typical day")]
+    public async ValueTask<TypicalDay> GetQuietHours() => await quietHours.OfInstallationAsync(DateTime.UtcNow);
 
     #endregion
 
@@ -690,7 +727,9 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             AdminLambdaUses.Of(await meta.GetUsesAsync(privateKey)),
             await showcases.GetAsync(privateKey) is { } entry ? ShowcaseResponse.Of(entry, addresses) : null,
             await sources.GetAsync(privateKey) is { } source ? SourceSettingsResponse.Of(source) : null,
-            [.. (await features.ListAsync(privateKey)).OrderByDescending(f => f.Modified).Select(FeatureResource.Describe)]
+            [.. (await features.ListAsync(privateKey)).OrderByDescending(f => f.Modified).Select(FeatureResource.Describe)],
+            await quietHours.OfLambdaAsync(id, now),
+            await optimization.OfLambdaAsync(id)
         );
     }
 

@@ -176,6 +176,67 @@ public interface IDatabaseProvider : IIntegration
 
     #endregion
 
+    #region Keeping it in shape
+
+    /// <summary>
+    /// Keeps one of the platform's stores in shape, as its database is kept
+    /// in shape: the statistics its planner reads brought up to date, and
+    /// room it no longer uses given back where that is cheap to do.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Asked for by the platform once it decided the store is due - at a quiet
+    /// hour, on a background job, never while a request waits for it - so a
+    /// provider may take what the work takes, and may hold up writers to the
+    /// store for a moment. What is in the store is never changed, only how it
+    /// is kept.
+    /// </para>
+    /// <para>
+    /// What is worth doing, and whether a step is too costly for a store as it
+    /// is now, is the provider's to judge: it knows its database. Whether a
+    /// store is optimized at all, and when, is not.
+    /// </para>
+    /// </remarks>
+    ValueTask<DatabaseOptimization> OptimizeAsync(DatabaseStore store, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Keeps the database of a lambda, or a feature's copy of it, in shape -
+    /// as <see cref="OptimizeAsync(DatabaseStore, CancellationToken)"/> does a
+    /// store - or does nothing where there is none.
+    /// </summary>
+    /// <remarks>
+    /// A database that is not there is not made by it: one switched off while
+    /// the platform decided to optimize it stays gone.
+    /// </remarks>
+    ValueTask<DatabaseOptimization> OptimizeAsync(DataScope scope, CancellationToken cancellation = default);
+
+    #endregion
+
+}
+
+/// <summary>
+/// What optimizing a database did.
+/// </summary>
+/// <param name="Before">The room it took before, in bytes, as the provider measures the room of a database</param>
+/// <param name="After">The room it takes now</param>
+/// <param name="Steps">
+/// What was done, as the operator would recognize it in the database's own
+/// terms - the statements run, such as <c>PRAGMA optimize</c> or
+/// <c>VACUUM (ANALYZE)</c> - in the order they ran; nothing where there was no
+/// database
+/// </param>
+/// <param name="Skipped">
+/// What was considered and left out, and why - such as a rebuild a database is
+/// too large for - so the operator is not left wondering
+/// </param>
+public sealed record DatabaseOptimization(long Before, long After, IReadOnlyList<string> Steps, IReadOnlyList<string> Skipped)
+{
+
+    /// <summary>
+    /// The answer for a database that is not there.
+    /// </summary>
+    public static readonly DatabaseOptimization None = new(0, 0, [], []);
+
 }
 
 /// <summary>

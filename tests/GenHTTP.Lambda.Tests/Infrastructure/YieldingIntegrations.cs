@@ -196,6 +196,18 @@ internal static class YieldingIntegrations
             return await inner.NaturalOrderAsync(connection, table, cancellation);
         }
 
+        public async ValueTask<DatabaseOptimization> OptimizeAsync(DatabaseStore store, CancellationToken cancellation = default)
+        {
+            await counter.DatabaseAsync();
+            return await inner.OptimizeAsync(store, cancellation);
+        }
+
+        public async ValueTask<DatabaseOptimization> OptimizeAsync(DataScope scope, CancellationToken cancellation = default)
+        {
+            await counter.DatabaseAsync();
+            return await inner.OptimizeAsync(scope, cancellation);
+        }
+
     }
 
     /// <summary>

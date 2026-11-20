@@ -39,6 +39,10 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<BrandingPictureEntity> BrandingPictures => Set<BrandingPictureEntity>();
 
+    public DbSet<QuietHoursEntity> QuietHours => Set<QuietHoursEntity>();
+
+    public DbSet<DatabaseOptimizationEntity> DatabaseOptimizations => Set<DatabaseOptimizationEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -312,6 +316,35 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         pictures.Property(p => p.Type).HasColumnName("type");
         pictures.Property(p => p.Content).HasColumnName("content");
         pictures.Property(p => p.Updated).HasColumnName("updated");
+
+        // keyed by the lambda, or 0 for the installation as a whole - a key
+        // that is given rather than made, which EF would otherwise take 0 for
+        var quiet = builder.Entity<QuietHoursEntity>();
+
+        quiet.ToTable("quiet_hours");
+
+        quiet.HasKey(q => q.LambdaId);
+
+        quiet.Property(q => q.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        quiet.Property(q => q.Hours).HasColumnName("hours");
+        quiet.Property(q => q.Covered).HasColumnName("covered");
+        quiet.Property(q => q.Since).HasColumnName("since");
+        quiet.Property(q => q.Updated).HasColumnName("updated");
+
+        var optimizations = builder.Entity<DatabaseOptimizationEntity>();
+
+        optimizations.ToTable("database_optimizations");
+
+        optimizations.HasKey(o => o.LambdaId);
+
+        optimizations.Property(o => o.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        optimizations.Property(o => o.Optimized).HasColumnName("optimized");
+        optimizations.Property(o => o.Millis).HasColumnName("millis");
+        optimizations.Property(o => o.SizeBefore).HasColumnName("size_before");
+        optimizations.Property(o => o.SizeAfter).HasColumnName("size_after");
+        optimizations.Property(o => o.Steps).HasColumnName("steps");
+        optimizations.Property(o => o.Skipped).HasColumnName("skipped");
+        optimizations.Property(o => o.Failure).HasColumnName("failure");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

@@ -1683,6 +1683,16 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   `CrawlerRanges`, kept current by `CrawlerJob` - `DailyVisitors` who, and
   `AnalyticsStore` keeps `analytics.db` - `IAnalyticsStore` for Meta, which
   forgets a deleted lambda's rows.
+- **Quiet hours** (`Services/QuietHours`) - when the installation and each
+  lambda are usually quiet (see [Quiet hours](#quiet-hours)).
+  `QuietHoursConcern` counts every request into `HourlyCounts`, without a
+  lock, `QuietHoursJob` has `QuietHoursService` write the counts down hourly,
+  and `QuietProfile` is the typical day a row keeps and what is read off it.
+- **Optimization** (`Services/Optimization`) - keeping the databases in shape
+  (see [Optimizing the databases](#optimizing-the-databases)).
+  `OptimizationService` decides which database is due, asks the database
+  integration and writes down what each came to; `OptimizationSchedule` says
+  when a database is due and whether now is its hour, from the quiet hours.
 - **Building** (`Services/Building`) - the jobs of the build agent: builds
   asked for on `/build` and changes asked for in the editor's Change section.
   `BuildService` decides what may be asked for and in which order that is
@@ -1893,6 +1903,18 @@ accepts. What a database integration adds for code written before
 the compiler only on that database, and the client library of every other
 database is kept from it.
 
+**Keeping a database in shape is the database's to know; when, the
+platform's.** A database integration optimizes a store or a lambda's
+database as that database is kept in shape (`IDatabaseProvider.OptimizeAsync`)
+and says what it did, in its own terms (`DatabaseOptimization`: the room
+before and after, the statements run, what it left out and why). Whether a
+database is optimized at all, which and when is decided by the platform (see
+[Optimizing the databases](#optimizing-the-databases)), which asks only from
+its background job. SQLite runs `PRAGMA optimize`, rebuilds a file with
+`VACUUM` where that gives enough back at a bearable cost, and truncates the
+journal; PostgreSQL runs `VACUUM (ANALYZE, SKIP_LOCKED)` on every table, as
+the role that owns it. Neither makes a database that is not there.
+
 **What agents are told.** An integration may add lines to the end of the
 guide's section of its kind (`IIntegration.Guide`): SQLite says what it
 refuses and how a full database answers, PostgreSQL that names fold to lower
@@ -1917,7 +1939,9 @@ that references `GenHTTP.Lambda.Integrations`, offer a builder
 (`IIntegrationBuilder<T>`), and have a host hand it to the platform's builder.
 Await what the infrastructure is asked; where it answers at once, return
 completed tasks rather than hop - an installation on Ioxide keeps its
-reactors that way. A database speaking a new dialect also needs the
+reactors that way. A database integration keeps its databases in shape when
+it is asked (`OptimizeAsync`), and may answer that it did nothing where its
+database looks after itself. A database speaking a new dialect also needs the
 platform's schema written in it, and a value of `DatabaseDialect` (see above). A files integration that keeps nothing on the local disk -
 object storage, say - is what the contract is shaped for: a lambda reaches its
 files only through the platform, and nothing hands it a path.
@@ -2129,6 +2153,102 @@ Startup says it once: `Usage reports are on: …`.
 The panel's **Usage report** section (`GET /api/v1/admin/usage-report`) shows
 whether reports are on, where they go, how the last one fared, and the last
 report exactly as it was sent.
+
+## Quiet hours
+
+When the installation, and each lambda, is usually quiet: an indication that
+work which can wait is planned by - today the optimization of the databases
+(see below), and whatever else can wait later. It decides nothing itself
+(`IQuietHoursService`); whoever plans work asks it.
+
+Every request the server answers is counted by the hour of the day, in UTC,
+it was answered in, and every request a lambda answered - not its drafts'
+previews - for that lambda as well, from the visit the request was. That is
+a concern at the root of the host beside the telemetry (`QuietHoursConcern`),
+and all it costs a request is two increments of a fixed array, without a
+lock (`HourlyCounts`); nothing is written while a request is served.
+
+Once an hour a job (`QuietHoursJob`) folds what was counted into a typical
+day for the installation and for every lambda that was visited, in one write
+to the platform's records (`quiet_hours`, V28, V3 on PostgreSQL): 24 numbers,
+the requests of each hour of the day, as an average in which a week ago
+counts half as much as today. Every number shrinks with time the same way, so
+a lambda nobody visits keeps the shape of its day and costs no write, and a
+burst that happened once fades within a few weeks. What is read is put right
+for what the numbers alone get wrong - each hour is read as it was when it
+was last added to, and against how often it was counted (`QuietProfile`) - so
+the figures are requests on a typical day from the first day on.
+
+The quiet hours are the quietest three hours in a row, which may go past
+midnight. They are known once every hour of the day was counted at least
+once - the installation's row keeps which were (`covered`), and a lambda's
+hours counted are the installation's - over a day at the least, with a
+request an hour on average; until then `known` is false and nothing should be
+planned by them. It is an indication, not a measurement: what was counted
+in the hour before a restart is lost, an hour the server was down counts as
+one nobody asked for anything in, and a weekend is not told from a weekday.
+
+The installation's are at `GET /api/v1/admin/quiet-hours` and in the panel's
+**Quiet hours** section (Misc), a lambda's in `quietHours` of `GET
+/api/v1/admin/lambdas/{publicKey}` and on its page - drawn on the operator's
+clock, in the time zone of their browser.
+
+## Optimizing the databases
+
+The platform keeps the databases in shape itself: its own records and
+analytics, and the database of every lambda that keeps one - not the copies
+the drafts work on, which go when a draft is merged. A job looks every
+quarter of an hour (`OptimizationJob`, `IOptimizationService`) for what is
+due; how a database is kept in shape is its integration's
+(`IDatabaseProvider.OptimizeAsync`, see [Integrations](#integrations)).
+
+- **When.** Each database at most once a day (20 hours apart, so a quiet
+  stretch that comes a little earlier is not missed), in its quiet hours: a
+  lambda's own where they are known, else the installation's, which are also
+  when the platform's own are optimized. Where the installation's are not
+  known yet - its first day - from 03:00 to 06:00 on the server's clock. Not
+  in the first ten minutes after the server started, which go to serving and
+  warming up the lambdas.
+- **Which.** A lambda's database only where it is switched on and the lambda
+  was visited since it was last optimized (`last_seen`, written by the
+  maintenance): nothing else writes to it, so one nobody uses stays as it was
+  left. The longest unoptimized first, one database at a time; a run that has
+  optimized for five minutes leaves the rest to the next, a quarter of an
+  hour later and still in the quiet hours.
+- **On SQLite.** `PRAGMA optimize = 0x10002`, with `PRAGMA analysis_limit =
+  1000`, which takes the statistics the planner reads where they are missing
+  or stale. `VACUUM` where a quarter of the file and a megabyte at the least
+  are free pages - the room deleted records left, which counts against the
+  lambda's data until the file is rebuilt - unless the file is larger than
+  256 MB (a rebuild holds the write lock, and a lambda's connections wait ten
+  seconds for it), the volume has no room for SQLite's copy in its temporary
+  directory (`SQLITE_TMPDIR`, `TMPDIR`, then `/var/tmp`) or for twice the
+  file beside it (the rewritten pages go through the journal), or a table has
+  neither an `INTEGER PRIMARY KEY` nor an index, whose rows a rebuild would
+  number anew. Then `PRAGMA wal_checkpoint(TRUNCATE)`, which gives the room
+  the journal grew to back. Over a connection of its own that never makes a
+  file; a step a writer keeps from running is skipped rather than failed.
+- **On PostgreSQL.** `VACUUM (ANALYZE, SKIP_LOCKED)` of every table, one
+  statement each: the platform's as the user the installation connects as, a
+  lambda's as its role, which owns its tables, over a connection that is not
+  pooled. A table somebody holds a lock on is skipped, with PostgreSQL's
+  warning passed on. Not `VACUUM FULL`, which locks out every reader.
+- **What is kept.** A row per database (`database_optimizations`, V28, V3 on
+  PostgreSQL; `lambda_id` 0 for the platform's own): when, how long, the room
+  before and after, what was done and what was left out and why, and why it
+  failed - written once per run, since every write to the platform's records
+  makes what is held in memory about the lambdas stale. A database that failed
+  is tried again the next day. One line per run is logged at information
+  level (`Optimized databases count …`), and a warning per failure.
+- **Switched off** under **Settings** in the panel (`optimizeDatabases`,
+  stored as `database-optimization`) - for an operator whose database is
+  looked after by its own tools, such as a PostgreSQL server with
+  maintenance of its own. On by default.
+
+`GET /api/v1/admin/optimization` says whether it is on, what the last
+optimization of the platform's own did, and how many lambdas' databases were
+optimized in the last day, what they gave back and how many failed; a
+lambda's last is `optimization` in `GET /api/v1/admin/lambdas/{publicKey}`.
 
 ## TLS
 
@@ -2594,16 +2714,17 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Configuration | **Settings**, **Branding**, **Integrations** | the site's switches; the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); and what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)) |
-| Platform      | **Limits**, **Guide** | what a lambda may have in its tier and for every lambda, and the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)) |
-| Misc          | **Usage report**      | what the installation reports about itself once a day (see [Usage reports](#usage-reports)) |
+| Configuration | **Branding**          | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the group is not shown where it does not |
+| Platform      | **Guide**, **Settings**, **Limits**, **Integrations** | the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); the site's switches and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; and what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)) |
+| Misc          | **Usage report**, **Quiet hours** | what the installation reports about itself once a day (see [Usage reports](#usage-reports)); and when it is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
 which features it uses (its database, workspace and secrets with what they
 hold, analytics, showcase entry, published source, domain, connectivity,
-drafts and view), what it keeps against its allowances, its versions,
-deployments, lifetime and the addresses it was changed from - so the editor
+drafts and view), what it keeps against its allowances and what optimizing
+its database last did, its quiet hours, its versions, deployments, lifetime
+and the addresses it was changed from - so the editor
 is opened to read or change the code, not to find out how a lambda is set
 up. What the operator decides about it is in a **Manage** card beside that:
 whether it is online, its tier, its domain, its connectivity, a block, and
@@ -2625,6 +2746,8 @@ The routes the panel draws its dashboards from:
 | `GET /admin/lambdas`                     | a page of lambdas (`search`, `tier`, `state`, `uses`, `view`, `created`, `sort`, `page`), each with which features it uses; the demos are left out unless `tier=Demo` or `demos=true` asks for them, so every count of the overview leads to a list of as many |
 | `GET /admin/lambdas/{publicKey}`         | one lambda in full: the owner's summary, what it uses, its showcase entry, published source and drafts beside its versions and deployments |
 | `GET /admin/integrations`                | what keeps the database, the files and the secrets: each one's name, the assembly it is in, and where it keeps what it keeps - never a password, a key or a connection string |
+| `GET /admin/quiet-hours`                 | the installation's typical day: the requests of each hour in UTC, the quietest three, and whether enough was counted to know them |
+| `GET /admin/optimization`                | whether the platform optimizes the databases, what the last optimization of its own records did, and the lambdas' databases optimized in the last day |
 
 The counts are the platform's database, read as they are asked for
 (`ICensusService`, `LambdaTally`); the workspace counts as switched on unless

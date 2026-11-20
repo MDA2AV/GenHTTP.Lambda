@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Optimization;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -446,6 +447,53 @@ public sealed class PostgreSqlTests
         using var tasks = await fixture.GetAsync("/lambda/tasks/tasks/?search=MILK");
 
         Assert.AreEqual(HttpStatusCode.OK, tasks.StatusCode, await tasks.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>
+    /// Keeping a database in shape is vacuuming and analyzing its tables
+    /// there: the platform's as the user the installation connects as, a
+    /// lambda's as the role that owns them - which may, whoever else may not.
+    /// </summary>
+    [TestMethod]
+    public async Task TheDatabasesAreVacuumedAndAnalyzed()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel, database.Integration);
+
+        var lambda = await fixture.CreateLambdaAsync("tended");
+
+        await NeutralNotes.SaveAsync(fixture, lambda.PrivateKey);
+
+        await NeutralNotes.ServedAsync(fixture, "/lambda/tended/add?text=first");
+
+        await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+
+        var optimization = fixture.Platform.Services.GetRequiredService<IOptimizationService>();
+
+        // in the hours used while the quiet hours are not known yet
+        var quiet = TimeZoneInfo.ConvertTimeToUtc(DateTime.Now.Date.AddDays(1).AddHours(4), TimeZoneInfo.Local);
+
+        await optimization.RunAsync(quiet);
+
+        var platform = (await optimization.OverviewAsync(quiet)).Platform;
+
+        Assert.IsNotNull(platform);
+        Assert.IsNull(platform.Failure, platform.Failure);
+        Assert.IsTrue(platform.Steps.Any(s => s.StartsWith("records: VACUUM (ANALYZE, SKIP_LOCKED) of ")), string.Join(" | ", platform.Steps));
+        Assert.IsTrue(platform.Steps.Any(s => s.StartsWith("analytics: VACUUM (ANALYZE, SKIP_LOCKED) of ")), string.Join(" | ", platform.Steps));
+
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
+
+        var own = await optimization.OfLambdaAsync(id);
+
+        Assert.IsNotNull(own);
+        Assert.IsNull(own.Failure, own.Failure);
+        Assert.IsEmpty(own.Skipped, "no table it was not allowed to vacuum: " + string.Join(" | ", own.Skipped));
+        Assert.IsTrue(own.Steps.Any(s => s.StartsWith("VACUUM (ANALYZE, SKIP_LOCKED) of ")), string.Join(" | ", own.Steps));
+        Assert.IsGreaterThan(0L, own.After, "measured as its schema");
+
+        Assert.AreEqual("1", await NeutralNotes.ServedAsync(fixture, "/lambda/tended/count"), "and it holds what it held");
     }
 
 }

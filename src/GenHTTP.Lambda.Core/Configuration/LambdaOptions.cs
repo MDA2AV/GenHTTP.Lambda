@@ -336,6 +336,18 @@ public sealed record LambdaOptions
     public TimeSpan AnalyticsInterval { get; init; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// How often the requests counted towards the quiet hours are written
+    /// down. What was counted since is lost when the server stops.
+    /// </summary>
+    public TimeSpan QuietHoursInterval { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How often the databases are looked at for whether one is due to be
+    /// optimized - each is at most once a day, in its quiet hours.
+    /// </summary>
+    public TimeSpan OptimizationInterval { get; init; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
     /// Whether the list of crawlers and the addresses Google, Bing, OpenAI,
     /// Apple and Perplexity crawl from are fetched, to tell crawlers from people
     /// and confirm the crawlers that say whose they are. Off, the list of the

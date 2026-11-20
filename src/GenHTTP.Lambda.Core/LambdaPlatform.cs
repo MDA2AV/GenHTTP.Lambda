@@ -25,7 +25,9 @@ using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Optimization;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Showcase;
@@ -287,6 +289,11 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<VisitorClassifier>();
         services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
+        services.AddSingleton<HourlyCounts>();
+        services.AddSingleton<IQuietHoursService, QuietHoursService>();
+
+        services.AddSingleton<IOptimizationService, OptimizationService>();
+
         /*
          * The concerns that need nothing but services, resolved per request
          * from the scope the outermost concern of the host opens. Singletons,
@@ -295,6 +302,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
          */
         services.AddSingleton<CallerConcern>();
         services.AddSingleton<TelemetryConcern>();
+        services.AddSingleton<QuietHoursConcern>();
         services.AddSingleton<ThrottleConcern>();
         services.AddSingleton<LambdaOutputConcern>();
         services.AddSingleton<LambdaVisitConcern>();
@@ -310,6 +318,8 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
         services.AddSingleton<IBackgroundJob, UsageReportJob>();
         services.AddSingleton<IBackgroundJob, StorageCensusJob>();
+        services.AddSingleton<IBackgroundJob, QuietHoursJob>();
+        services.AddSingleton<IBackgroundJob, OptimizationJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();

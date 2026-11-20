@@ -360,6 +360,23 @@ internal sealed class LambdaFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Sends what only the operator may send, with the token of <see cref="WithPanel"/>.
+    /// </summary>
+    public async Task<HttpResponseMessage> SendAsOperatorAsync(HttpMethod method, string path, object? payload = null)
+    {
+        using var request = Host.GetRequest(path, method);
+
+        request.Headers.Add("X-Admin-Token", OperatorToken);
+
+        if (payload != null)
+        {
+            request.Content = JsonContent.Create(payload, options: Json);
+        }
+
+        return await Host.GetResponseAsync(request);
+    }
+
+    /// <summary>
     /// Moves a lambda to a tier, which only an administrator can do.
     /// </summary>
     public async Task ChangeTierAsync(string privateKey, LambdaTier tier) => await Meta.ChangeTierAsync(privateKey, tier);

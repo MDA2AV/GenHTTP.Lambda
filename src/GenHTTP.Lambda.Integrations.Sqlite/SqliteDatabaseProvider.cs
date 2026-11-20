@@ -7,6 +7,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using SQLitePCL;
+
 namespace GenHTTP.Lambda.Integrations.Sqlite;
 
 /// <summary>
@@ -361,6 +363,278 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
 
     #endregion
 
+    #region Keeping it in shape
+
+    /// <summary>
+    /// The largest file that is rebuilt: a rebuild holds the database's write
+    /// lock until it is done, and the connections of a lambda wait ten
+    /// seconds for it before they give up.
+    /// </summary>
+    private const long MostRebuilt = 256L * 1024 * 1024;
+
+    /// <summary>
+    /// The share of a file that has to be free pages before it is rebuilt.
+    /// </summary>
+    private const double LeastFreeShare = 0.25;
+
+    /// <summary>
+    /// What a rebuild has to give back at the least to be worth one.
+    /// </summary>
+    private const long LeastFreed = 1024 * 1024;
+
+    public ValueTask<DatabaseOptimization> OptimizeAsync(DatabaseStore store, CancellationToken cancellation = default)
+        => ValueTask.FromResult(Optimize(StoreFile(store), cancellation));
+
+    public ValueTask<DatabaseOptimization> OptimizeAsync(DataScope scope, CancellationToken cancellation = default)
+    {
+        var file = PathOf(scope);
+
+        return ValueTask.FromResult(File.Exists(file) ? Optimize(file, cancellation) : DatabaseOptimization.None);
+    }
+
+    /// <summary>
+    /// Brings the statistics of a file up to date, rebuilds it where a good
+    /// part of it is free pages, and gives the journal its room back.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>PRAGMA optimize</c> analyzes the tables whose statistics are missing
+    /// or have gone stale since they were taken - all of them, since this is a
+    /// connection of its own that ran no query (<c>0x10002</c>) - within a
+    /// bounded number of rows each, which is what SQLite recommends doing
+    /// regularly. Cheap where nothing changed.
+    /// </para>
+    /// <para>
+    /// <c>VACUUM</c> rewrites the file without the pages that rows deleted
+    /// left free, which is what gives a lambda back the room its data counts
+    /// against. It is only done where it gives back a quarter of the file and
+    /// a megabyte at the least, and left out where it costs too much: past
+    /// <see cref="MostRebuilt"/>; where the volume has no room for the copy
+    /// SQLite writes into its temporary directory and for the journal the
+    /// rewritten pages go through; and where a table has neither an
+    /// <c>INTEGER PRIMARY KEY</c> nor an index - SQLite numbers the rows of
+    /// such a table anew as it rebuilds it, and an app may have kept the old
+    /// numbers.
+    /// </para>
+    /// <para>
+    /// A journal in write-ahead mode keeps the room it once grew to, which
+    /// counts against the lambda too, and a rebuild grows it to the size of
+    /// the file; the truncating checkpoint gives it back once no reader holds
+    /// on to it.
+    /// </para>
+    /// <para>
+    /// Over a connection of its own, unguarded - it is the platform's doing,
+    /// not the lambda's - that never makes a file. A writer holding the lock
+    /// is waited for a few seconds, and a step it keeps from running is
+    /// skipped rather than failed. Cancelling interrupts the statement that
+    /// runs.
+    /// </para>
+    /// </remarks>
+    private DatabaseOptimization Optimize(string file, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+
+        var before = Length(file) + Length(file + "-wal");
+
+        var steps = new List<string>();
+        var skipped = new List<string>();
+
+        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = file,
+            Mode = SqliteOpenMode.ReadWrite,
+            DefaultTimeout = 5,
+            Pooling = false
+        }.ToString());
+
+        connection.Open();
+
+        using var interruption = cancellation.Register(static state => raw.sqlite3_interrupt(((SqliteConnection)state!).Handle!), connection);
+
+        Execute(connection, "PRAGMA analysis_limit = 1000");
+
+        Run(connection, "PRAGMA optimize = 0x10002", steps, skipped, cancellation);
+
+        if (Rebuilding(connection, file) is (var rebuild, var reason))
+        {
+            if (rebuild)
+            {
+                Run(connection, "VACUUM", steps, skipped, cancellation);
+            }
+            else
+            {
+                skipped.Add($"VACUUM: {reason}");
+            }
+        }
+
+        if (Length(file + "-wal") > 0)
+        {
+            Checkpoint(connection, steps, skipped, cancellation);
+        }
+
+        return new DatabaseOptimization(before, Length(file) + Length(file + "-wal"), steps, skipped);
+    }
+
+    /// <summary>
+    /// Whether the file is to be rebuilt - or nothing where it would give back
+    /// too little to be considered.
+    /// </summary>
+    private static (bool Rebuild, string? Reason)? Rebuilding(SqliteConnection connection, string file)
+    {
+        var pages = Number(connection, "PRAGMA page_count");
+        var free = Number(connection, "PRAGMA freelist_count");
+        var size = Number(connection, "PRAGMA page_size");
+
+        if (pages <= 0 || free < pages * LeastFreeShare || free * size < LeastFreed)
+        {
+            return null;
+        }
+
+        var length = Length(file);
+
+        if (length > MostRebuilt)
+        {
+            return (false, $"the file is larger than {MostRebuilt / (1024 * 1024)} MB");
+        }
+
+        if (Renumbered(connection) is { } table)
+        {
+            return (false, $"it would number the rows of \"{table}\" anew, which has no INTEGER PRIMARY KEY and no index");
+        }
+
+        if (Free(Path.GetDirectoryName(Path.GetFullPath(file))!) < 2 * length || Free(TemporaryDirectory()) < length)
+        {
+            return (false, "there is not enough free space for the copy");
+        }
+
+        return (true, null);
+    }
+
+    /// <summary>
+    /// A table whose rows a rebuild would number anew: a table with row ids
+    /// that has neither an <c>INTEGER PRIMARY KEY</c>, which keeps the id
+    /// itself, nor an index, which makes SQLite carry the ids over.
+    /// </summary>
+    private static string? Renumbered(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText = """
+            SELECT t.name FROM pragma_table_list AS t
+            WHERE t.schema = 'main' AND t.type = 'table' AND t.wr = 0 AND t.name NOT LIKE 'sqlite\_%' ESCAPE '\'
+              AND NOT EXISTS (SELECT 1 FROM pragma_index_list(t.name))
+              AND NOT ((SELECT COUNT(*) FROM pragma_table_info(t.name) WHERE pk > 0) = 1
+                       AND EXISTS (SELECT 1 FROM pragma_table_info(t.name) WHERE pk = 1 AND upper(type) = 'INTEGER'))
+            ORDER BY t.name
+            LIMIT 1
+            """;
+
+        return command.ExecuteScalar() as string;
+    }
+
+    /// <summary>
+    /// Gives the journal its room back, where no reader keeps it from being.
+    /// </summary>
+    private static void Checkpoint(SqliteConnection connection, List<string> steps, List<string> skipped, CancellationToken cancellation)
+    {
+        const string checkpoint = "PRAGMA wal_checkpoint(TRUNCATE)";
+
+        try
+        {
+            using var command = connection.CreateCommand();
+
+            command.CommandText = checkpoint;
+
+            using var reader = command.ExecuteReader();
+
+            // the first column says whether a reader or a writer kept it from
+            // finishing, which is not an error
+            if (reader.Read() && reader.GetInt64(0) != 0)
+            {
+                skipped.Add($"{checkpoint}: the database was in use");
+                return;
+            }
+
+            steps.Add(checkpoint);
+        }
+        catch (SqliteException e) when (Interrupted(e, cancellation) || Busy(e))
+        {
+            cancellation.ThrowIfCancellationRequested();
+
+            skipped.Add($"{checkpoint}: the database was in use");
+        }
+    }
+
+    /// <summary>
+    /// Runs a step, and says it was skipped where another connection kept it
+    /// from running.
+    /// </summary>
+    private static void Run(SqliteConnection connection, string sql, List<string> steps, List<string> skipped, CancellationToken cancellation)
+    {
+        try
+        {
+            Execute(connection, sql);
+
+            steps.Add(sql);
+        }
+        catch (SqliteException e) when (Interrupted(e, cancellation) || Busy(e))
+        {
+            cancellation.ThrowIfCancellationRequested();
+
+            skipped.Add($"{sql}: the database was in use");
+        }
+    }
+
+    private static bool Busy(SqliteException e) => e.SqliteErrorCode is raw.SQLITE_BUSY or raw.SQLITE_LOCKED;
+
+    private static bool Interrupted(SqliteException e, CancellationToken cancellation)
+        => e.SqliteErrorCode == raw.SQLITE_INTERRUPT && cancellation.IsCancellationRequested;
+
+    private static long Number(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText = sql;
+
+        return command.ExecuteScalar() is long value ? value : 0;
+    }
+
+    /// <summary>
+    /// The directory SQLite writes the copy of a rebuild to, found the way
+    /// SQLite finds it.
+    /// </summary>
+    /// <remarks>
+    /// On Unix the first of <c>SQLITE_TMPDIR</c>, <c>TMPDIR</c>,
+    /// <c>/var/tmp</c>, <c>/usr/tmp</c> and <c>/tmp</c> there is - not the
+    /// data directory, so a volume of its own may be full while the data's is
+    /// not.
+    /// </remarks>
+    private static string TemporaryDirectory()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Path.GetTempPath();
+        }
+
+        string?[] candidates = [Environment.GetEnvironmentVariable("SQLITE_TMPDIR"), Environment.GetEnvironmentVariable("TMPDIR"), "/var/tmp", "/usr/tmp", "/tmp"];
+
+        return candidates.FirstOrDefault(c => !string.IsNullOrEmpty(c) && Directory.Exists(c)) ?? ".";
+    }
+
+    private static long Free(string directory)
+    {
+        try
+        {
+            return new DriveInfo(Path.GetFullPath(directory)).AvailableFreeSpace;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return 0;
+        }
+    }
+
+    #endregion
+
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKind.Database, "SQLite",
@@ -386,11 +660,22 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// </summary>
     private string FileOf(DataScope scope)
     {
+        var file = PathOf(scope);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+
+        return file;
+    }
+
+    /// <summary>
+    /// Where the database of a lambda, or a feature's copy of it, is kept,
+    /// whether or not it is there.
+    /// </summary>
+    private string PathOf(DataScope scope)
+    {
         var directory = scope.FeatureId is { } feature
             ? Path.Combine(dataDirectory, "features", scope.LambdaId.ToString(), feature.ToString())
             : Path.Combine(dataDirectory, "databases", scope.LambdaId.ToString());
-
-        Directory.CreateDirectory(directory);
 
         return Path.Combine(directory, DatabaseName);
     }

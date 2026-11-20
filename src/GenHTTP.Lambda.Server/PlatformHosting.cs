@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Hosting;
+using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Telemetry;
 
 using GenHTTP.Modules.DependencyInjection;
@@ -44,6 +45,12 @@ public static class PlatformHosting
                .Development(platform.Options.Development)
                .Add(services.GetRequiredService<ServerRegistry>().Capture())
                .Add(Dependent.Concern<TelemetryConcern>())
+               /*
+                * Beside the telemetry, so it counts what that counts: every
+                * request answered, by the hour of the day, and the lambda's
+                * from the visit made further in - for the quiet hours.
+                */
+               .Add(Dependent.Concern<QuietHoursConcern>())
                /*
                 * The upgrade to the secure endpoint covers a lambda's own
                 * domain as well: it redirects to the host that was asked for,
