@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Branding;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -278,6 +279,26 @@ public sealed class UsageReportTests
 
         CollectionAssert.AreEqual(new[] { false, true }, branded, "a switch, as every other option is sent");
         Assert.DoesNotContain("Tidewell", collector.Reports.Last().Body, "never the name it was given, nor its logo");
+    }
+
+    [TestMethod]
+    public async Task AReportSaysWhetherTheDatabasesAreOptimized()
+    {
+        await using var collector = FakeCollector.Start();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => o with { UsageReportUrl = collector.Url });
+
+        await Reports(fixture).SendAsync();
+
+        var settings = fixture.Platform.Services.GetRequiredService<ISettingsService>();
+
+        await settings.SaveAsync(settings.Get() with { OptimizeDatabases = false });
+
+        await Reports(fixture).SendAsync();
+
+        var optimized = collector.Reports.Select(r => JsonDocument.Parse(r.Body).RootElement.GetProperty("configuration").GetProperty("optimizeDatabases").GetBoolean()).ToList();
+
+        CollectionAssert.AreEqual(new[] { true, false }, optimized, "on as it comes, and off once the operator leaves the databases to their own tools");
     }
 
     private static IUsageReportService Reports(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IUsageReportService>();

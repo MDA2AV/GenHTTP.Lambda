@@ -408,6 +408,165 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
 
     #endregion
 
+    #region Keeping it in shape
+
+    /// <remarks>
+    /// As the user the installation connects as, which made the store's
+    /// tables and owns them.
+    /// </remarks>
+    public async ValueTask<DatabaseOptimization> OptimizeAsync(DatabaseStore store, CancellationToken cancellation = default)
+    {
+        var schema = PostgreSqlNames.Schema(store);
+
+        await using var connection = await _platform.OpenConnectionAsync(cancellation);
+
+        var before = await SizeAsync(schema, cancellation);
+
+        var (steps, skipped) = await VacuumAsync(connection, schema, cancellation);
+
+        return new DatabaseOptimization(before, await SizeAsync(schema, cancellation), steps, skipped);
+    }
+
+    /// <remarks>
+    /// As the role of the lambda, which owns the tables it made - whoever else
+    /// may vacuum them depends on how the installation's user was set up - over
+    /// a connection of its own that is not pooled, so walking every lambda
+    /// leaves no connection open behind it, and that may write, since vacuuming
+    /// is refused to a connection that only reads.
+    /// </remarks>
+    public async ValueTask<DatabaseOptimization> OptimizeAsync(DataScope scope, CancellationToken cancellation = default)
+    {
+        var schema = PostgreSqlNames.Schema(scope);
+
+        if (!await SchemaExistsAsync(schema, cancellation))
+        {
+            return DatabaseOptimization.None;
+        }
+
+        var role = await PrepareAsync(scope.LambdaId, cancellation);
+
+        var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString)
+        {
+            Username = role,
+            Password = _passwords[scope.LambdaId],
+            SearchPath = schema,
+            Pooling = false
+        };
+
+        await using var opened = new NpgsqlConnection(connection.ConnectionString);
+
+        await opened.OpenAsync(cancellation);
+
+        var before = await SizeAsync(schema, cancellation);
+
+        var (steps, skipped) = await VacuumAsync(opened, schema, cancellation);
+
+        return new DatabaseOptimization(before, await SizeOfAsync(scope, cancellation), steps, skipped);
+    }
+
+    /// <summary>
+    /// Vacuums and analyzes every table of a schema the connected user owns,
+    /// one statement each.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>VACUUM</c> marks the room of rows that were deleted or replaced as
+    /// free for the table's next rows, and <c>ANALYZE</c> takes the statistics
+    /// the planner reads - what autovacuum does too, when it gets round to it.
+    /// Neither takes a lock that keeps the lambda from reading or writing, and
+    /// a table somebody holds a lock on is skipped rather than waited for
+    /// (<c>SKIP_LOCKED</c>), which PostgreSQL says as a warning: those are
+    /// passed on as what was skipped.
+    /// </para>
+    /// <para>
+    /// Not <c>VACUUM FULL</c>, which would give the room back to the disk, but
+    /// rewrites each table under a lock that holds up every reader - a
+    /// database's administrator does that knowingly, if at all.
+    /// </para>
+    /// <para>
+    /// One table per statement, named: a <c>VACUUM</c> without a table goes
+    /// over the whole database, and it cannot run inside a transaction, which
+    /// several statements in one command would be.
+    /// </para>
+    /// </remarks>
+    private static async ValueTask<(List<string> Steps, List<string> Skipped)> VacuumAsync(NpgsqlConnection connection, string schema, CancellationToken cancellation)
+    {
+        var tables = new List<string>();
+
+        var others = 0;
+
+        await using (var command = new NpgsqlCommand("""
+                         SELECT c.relname, c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+                         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                         WHERE n.nspname = @schema AND c.relkind IN ('r', 'm')
+                         ORDER BY c.relname
+                         """, connection))
+        {
+            Parameter(command, "@schema", schema);
+
+            await using var reader = await command.ExecuteReaderAsync(cancellation);
+
+            while (await reader.ReadAsync(cancellation))
+            {
+                if (reader.GetBoolean(1))
+                {
+                    tables.Add(reader.GetString(0));
+                }
+                else
+                {
+                    others++;
+                }
+            }
+        }
+
+        var steps = new List<string>();
+
+        // a table made by another role is not this one's to vacuum, and
+        // PostgreSQL would only warn about it - said here instead
+        var skipped = others == 0 ? new List<string>() : [others == 1 ? "VACUUM: 1 table is owned by another role" : $"VACUUM: {others} tables are owned by another role"];
+
+        if (tables.Count == 0)
+        {
+            return (steps, skipped);
+        }
+
+        void Warned(object? sender, NpgsqlNoticeEventArgs e)
+        {
+            // the severity as PostgreSQL names it, whatever language it speaks
+            if (e.Notice.InvariantSeverity is "WARNING")
+            {
+                skipped.Add(e.Notice.MessageText);
+            }
+        }
+
+        connection.Notice += Warned;
+
+        try
+        {
+            foreach (var table in tables)
+            {
+                await using var vacuum = new NpgsqlCommand($"VACUUM (ANALYZE, SKIP_LOCKED) {PostgreSqlNames.Quote(schema)}.{PostgreSqlNames.Quote(table)}", connection)
+                {
+                    // as long as the table takes, which is what the background
+                    // is for; stopping the platform cancels it
+                    CommandTimeout = 0
+                };
+
+                await vacuum.ExecuteNonQueryAsync(cancellation);
+            }
+        }
+        finally
+        {
+            connection.Notice -= Warned;
+        }
+
+        steps.Add(tables.Count == 1 ? "VACUUM (ANALYZE, SKIP_LOCKED) of 1 table" : $"VACUUM (ANALYZE, SKIP_LOCKED) of {tables.Count} tables");
+
+        return (steps, skipped);
+    }
+
+    #endregion
+
     #region Describing it
 
     public IntegrationInfo Describe() => new(IntegrationKind.Database, "PostgreSQL",

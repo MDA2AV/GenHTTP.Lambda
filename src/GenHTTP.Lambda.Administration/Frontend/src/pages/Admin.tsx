@@ -16,6 +16,7 @@ import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LimitsSection } from '../console/LimitsSection';
 import { LogSection } from '../console/LogSection';
+import { QuietHoursSection } from '../console/QuietHoursSection';
 import { ServerSection } from '../console/ServerSection';
 import { SettingsSection } from '../console/SettingsSection';
 import { StatisticsSection } from '../console/StatisticsSection';
@@ -26,7 +27,7 @@ import { askPlatform } from '@genhttp-lambda/kit/site';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
 type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding'
-  | 'integrations' | 'usage' | 'guide';
+  | 'integrations' | 'usage' | 'quiet' | 'guide';
 
 /*
  * The sections in groups, as the editor has them, because a dozen in one
@@ -35,13 +36,13 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * the lambdas - counted, and every one of them. Then what keeps the
  * installation safe from what runs on it: the lambdas that ask to connect
  * out, and the addresses refused. Then how the machine is doing: the
- * process, the room on its volume, and what it logs. Then how the operator
- * set the installation up: the site's switches, the name and logo it shows -
- * where its host lets them give it some - and what it keeps its data in, as
- * its host chose. Then what the platform
- * holds the lambdas to and tells the agents that build them: the limits,
- * and the guide with the operator's own rules in it. Last, what fits no
- * group: the report the installation sends about itself.
+ * process, the room on its volume, and what it logs. Last, the platform
+ * itself: the name and logo its pages show, where its host lets the operator
+ * give it some; the guide agents read first with the operator's own rules in
+ * it; the switches of the site and of what the platform does by itself; what
+ * it holds the lambdas to; what it keeps its data in, as its host chose; when
+ * it is usually quiet; and, last, the report it sends about itself. A group a
+ * host leaves with nothing in it is not shown.
  */
 const GROUPS: { id: string; label: string | null; sections: { id: SectionId; label: string; note: string }[] }[] = [
   { id: 'start', label: null, sections: [
@@ -60,16 +61,13 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
     { id: 'storage', label: 'Storage', note: 'The room left, and what takes it' },
     { id: 'log', label: 'Log', note: 'What the server and the lambdas are printing, live' },
   ] },
-  { id: 'configuration', label: 'Configuration', sections: [
-    { id: 'settings', label: 'Settings', note: 'What the site offers, switched without a restart' },
-    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
-    { id: 'integrations', label: 'Integrations', note: 'What the database, the files and the secrets are kept in' },
-  ] },
   { id: 'platform', label: 'Platform', sections: [
-    { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
+    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
     { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
-  ] },
-  { id: 'misc', label: 'Misc', sections: [
+    { id: 'settings', label: 'Settings', note: 'What the site offers and the platform does by itself, switched without a restart' },
+    { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
+    { id: 'integrations', label: 'Integrations', note: 'What the database, the files and the secrets are kept in' },
+    { id: 'quiet', label: 'Quiet hours', note: 'When the installation is usually quiet, by the hour of a typical day' },
     { id: 'usage', label: 'Usage report', note: 'What the installation reports about itself once a day' },
   ] },
 ];
@@ -171,7 +169,7 @@ export function Admin({ theme }: { theme: Theme }) {
     entries: group.sections
       .filter((item) => item.id !== 'branding' || brandable)
       .map((item) => ({ id: item.id, to: pathOf(item.id), label: item.label, ...mark(item.id, overview) })),
-  }));
+  })).filter((group) => group.entries.length > 0);
 
   const opening = (entry: NavEntry) => {
     if (entry.id === section && !detail) {
@@ -249,6 +247,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <IntegrationsSection access={access} />
           ) : section === 'usage' ? (
             <UsageReportSection access={access} />
+          ) : section === 'quiet' ? (
+            <QuietHoursSection access={access} />
           ) : section === 'guide' ? (
             <GuideSection access={access} />
           ) : (

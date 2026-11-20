@@ -4,6 +4,8 @@ using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Integrations;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Optimization;
+using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -127,7 +129,11 @@ public sealed record AdminLambdaDetail(
     [Summary("How its code is published at `/source`, where its owner ever published it; `published` says whether it is now")]
     SourceSettingsResponse? Source = null,
     [Summary("Its features (drafts), the most recently changed first")]
-    IReadOnlyList<FeatureResponse>? Features = null
+    IReadOnlyList<FeatureResponse>? Features = null,
+    [Summary("How busy it is on a typical day by the hour, from the requests it answered - not its drafts' previews")]
+    TypicalDay? TypicalDay = null,
+    [Summary("What the last optimization of its database did; absent before the first, and where it keeps none")]
+    OptimizationRecord? Optimization = null
 );
 
 [Summary("That the operator blocked a lambda, and why.")]
@@ -215,7 +221,9 @@ public sealed record SettingsModel(
     [Summary("Whether the site offers the text box that has the agent build an app, where there is an agent")]
     bool BuildBox = true,
     [Summary("Whether the Change section of the editor offers its text box, where there is an agent")]
-    bool ChangeBox = true
+    bool ChangeBox = true,
+    [Summary("Whether the platform optimizes the databases itself - its own records and analytics, and every lambda's - each at most once a day, in its quiet hours (see `GET /admin/optimization`)")]
+    bool OptimizeDatabases = true
 );
 
 [Summary("The installation's daily usage report: whether it is sent, where to, how the last one fared and what it said.")]

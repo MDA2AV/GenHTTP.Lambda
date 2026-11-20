@@ -974,6 +974,10 @@ export interface AdminLambdaDetail {
   source?: SourceSettings | null;
   /** Its features (drafts), the most recently changed first. */
   features?: Feature[] | null;
+  /** How busy it is on a typical day by the hour. */
+  typicalDay?: TypicalDay | null;
+  /** What the last optimization of its database did. */
+  optimization?: OptimizationRecord | null;
 }
 
 /** The lambdas of the installation, counted - the demos apart and in nothing else. */
@@ -1384,6 +1388,58 @@ export interface AdminSettings {
   buildBox: boolean;
   /** Whether the Change section of the editor offers its text box, where there is an agent. */
   changeBox: boolean;
+  /** Whether the platform optimizes the databases itself, each in its quiet hours. */
+  optimizeDatabases: boolean;
+}
+
+/**
+ * How busy the installation, or a lambda, is on a typical day by the hour -
+ * an indication, not a measurement.
+ */
+export interface TypicalDay {
+  /** Whether enough was counted to tell the hours apart. */
+  known: boolean;
+  /** The requests of each hour of a typical day in UTC, from midnight on: 24 numbers. */
+  hours: number[];
+  /** The first hour of the quietest stretch, in UTC. */
+  quietFrom: number;
+  /** How many hours the quietest stretch is. */
+  quietLength: number;
+  /** What share of a typical day's requests falls into it, from 0 to 1. */
+  quietShare: number;
+  /** When counting began; absent before anything was counted. */
+  since?: string | null;
+  /** When what was counted was last written down. */
+  updated?: string | null;
+}
+
+/** What keeping a database in shape last did. */
+export interface OptimizationRecord {
+  optimized: string;
+  millis: number;
+  /** The room it took before, in bytes. */
+  before: number;
+  after: number;
+  /** What was done, as the database calls it. */
+  steps: string[];
+  /** What was left out, and why. */
+  skipped: string[];
+  failure?: string | null;
+}
+
+/** Whether the platform keeps the databases in shape, and how that went lately. */
+export interface OptimizationOverview {
+  enabled: boolean;
+  /** The platform's own records and analytics, the last time. */
+  platform?: OptimizationRecord | null;
+  /** Lambdas' databases optimized in the last day, how many of them failed, and what they gave back. */
+  lambdas: number;
+  failed: number;
+  freed: number;
+  /** When a lambda's database was last optimized. */
+  last?: string | null;
+  /** The hour of the day in UTC a database whose quiet hours are not known is optimized from, for three hours. */
+  fallbackFrom: number;
 }
 
 /** The name and the logo the operator gave the installation, which its pages show in place of GenHTTP Lambda's. */
@@ -1647,6 +1703,10 @@ export const api = {
       request<AdminLimits>('/admin/limits', withToken(token, { method: 'PUT', body: JSON.stringify(limits) })),
 
     usageReport: (token: string) => request<UsageReportStatus>('/admin/usage-report', withToken(token)),
+
+    quietHours: (token: string) => request<TypicalDay>('/admin/quiet-hours', withToken(token)),
+
+    optimization: (token: string) => request<OptimizationOverview>('/admin/optimization', withToken(token)),
 
     integrations: (token: string) => request<Integration[]>('/admin/integrations', withToken(token)),
 

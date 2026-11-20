@@ -4,6 +4,8 @@ using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Hosting;
+using GenHTTP.Lambda.Services.Optimization;
+using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Storage;
@@ -27,7 +29,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
                                   IDatabaseVault databaseVault, IWorkspaceVault workspaces, IShowcaseService showcases, IDomainRegistry domains, IStorageService storage,
-                                  IAnalyticsStore analytics)
+                                  IAnalyticsStore analytics, IQuietHoursService quietHours, IOptimizationService optimization)
 {
 
     public async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda)
@@ -75,6 +77,12 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
 
         // what its owner counted of its visitors goes with it
         await analytics.ForgetAsync(lambda.Id);
+
+        // and what the platform counted and did for itself, whose rows refer
+        // to no lambda, since the installation's are none
+        await quietHours.ForgetAsync(lambda.Id);
+
+        await optimization.ForgetAsync(lambda.Id);
     }
 
 }

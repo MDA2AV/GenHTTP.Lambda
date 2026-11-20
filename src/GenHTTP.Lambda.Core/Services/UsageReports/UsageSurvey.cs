@@ -322,7 +322,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             branding.Current.Own,
             Integration(IntegrationKind.Database),
             Integration(IntegrationKind.Files),
-            Integration(IntegrationKind.Secrets)
+            Integration(IntegrationKind.Secrets),
+            site.OptimizeDatabases
         );
     }
 

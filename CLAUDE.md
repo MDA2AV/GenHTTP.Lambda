@@ -862,6 +862,75 @@ section.
   the tool's description, the privacy page and the cloud's front page (See
   who visits) - keep them the same.
 
+### Quiet hours
+
+**Asked for by the owner:** the platform knows when the installation, and
+each lambda, is usually quiet, so work that can wait is done then - the
+optimization of the databases first, and whatever else later. **Independent
+of what uses it - decided by the owner** ("quiet hour information can be
+useful for other stuff later"): `IQuietHoursService` decides nothing, and
+nothing it keeps is about the databases.
+
+- **Light, and an indication rather than a measurement - decided by the
+  owner** ("do not collect too much data and do not introduce locks on the
+  hot path"; "it must not be 100% precise"). A request costs two increments
+  of a fixed array, without a lock (`QuietHoursConcern`, `HourlyCounts`): the
+  installation's, and the lambda's from the visit - not a preview's, which is
+  the installation's load and not the lambda's visitors. What is kept is a
+  typical day of 24 numbers per lambda visited and for the installation, a
+  week ago counting half as much as today (`QuietProfile`), written hourly in
+  one write (`QuietHoursJob`); one nobody visits costs nothing. Chosen with
+  it, open to change: hours of the day in UTC, no weekdays; the quietest
+  three in a row; known once every hour was counted, over a day, with a
+  request an hour on average - an hour never counted is not a quiet one.
+- **Shown in the panel - decided by the owner**: its **Quiet hours** section
+  (Platform) for the installation, on the operator's clock. **A lambda's page
+  shows when it is used, not when it is quiet - decided by the owner**: its
+  typical day with the hours it is busy singled out ("When it is used"),
+  since that is what anybody looking at an app wants to know, and its quiet
+  hours are maintenance's business. Chosen with it, open to change: busy is
+  every hour with at least half the requests of its busiest, said as ranges
+  of the operator's clock with the busiest hour. Nothing about it is shown to
+  owners or in the editor.
+
+### Optimizing the databases
+
+**Asked for by the owner:** the platform optimizes the databases now and
+then in the background - its own records and analytics, and every lambda's
+database; **not the drafts' copies - decided by the owner** ("we can skip
+features").
+
+- **The platform decides, the integration does - decided by the owner** ("the
+  logic should live in the platform and not in the integration, the
+  integration just provides the way of doing so"). Whether, which and when
+  are `OptimizationService`'s and `OptimizationSchedule`'s; how is
+  `IDatabaseProvider.OptimizeAsync`, which says what it did in its own terms
+  (`DatabaseOptimization`). What a step costs a database as it is now - a
+  rebuild of a file too large for one - is the integration's to judge: it
+  knows its database.
+- **In the quiet hours** - a lambda's own where known, else the
+  installation's, which are the platform's own too; 03:00 to 06:00 on the
+  server's clock while nothing is known, and never in the minutes after a
+  start. Chosen with it, open to change: each at most once a day, a lambda's
+  only where it was visited since, one database at a time, a run's work
+  bounded.
+- **Switched off by the operator - decided by the owner**, under Settings
+  (`optimizeDatabases`): "DB engineers might want to do the optimization
+  themselves in postgres". On by default. **The usage report says which -
+  decided by the owner** (`configuration.optimizeDatabases`), as it does the
+  site's other switches.
+- **Never anything that changes what a database holds.** SQLite's `VACUUM`
+  numbers anew the rows of a table with neither an `INTEGER PRIMARY KEY` nor
+  an index, so a file with one is not rebuilt; `VACUUM FULL` locks out
+  PostgreSQL's readers and is not run. A database that is not there is not
+  made by optimizing it.
+- What each came to is kept per database (`database_optimizations`),
+  written once per run, since a write to the platform's records makes the
+  caches stale. The panel shows it where the switch is - the platform's own
+  and a count of the lambdas' - and **not on a lambda's page - decided by the
+  owner**: nobody looking at an app cares when its database was optimized.
+  The API still answers it (`optimization` of a lambda).
+
 ### Pushing, not polling
 
 Agents are told never to poll: a page does not fetch on a timer to see
@@ -1082,10 +1151,12 @@ how it shows them did.
 - **Sections in groups, as the editor has them** (the kit's `Navigation`):
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Configuration** (Settings, Branding - where the
-  host lets the operator brand the installation - Integrations); **Platform** (Limits,
-  Guide); **Misc** (Usage report) - the last three the owner's ask. A new
-  section joins the group it belongs to. A mark beside a
+  (Server, Storage, Log); **Platform** (Branding - where the host lets the
+  operator brand the installation - Guide, Settings, Limits, Integrations,
+  Quiet hours, Usage report) - the owner's ask: Settings, Integrations,
+  Branding, Quiet hours and the Usage report moved there, the usage report
+  last, and the Configuration and Misc groups went with them. A new section
+  joins the group it belongs to, and a group left empty is not shown. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.
 - **What is shown and what is done are kept apart - asked for by the owner.**
@@ -1527,7 +1598,7 @@ integrations (yet - the owner's words: "not for now").
   end of the section of its kind - what SQLite refuses, what PostgreSQL folds
   and copies. What it adds counts against the guide's 24 KB like the rest.
 - **The operator sees which are used - asked for by the owner, on both
-  editions**: the panel's **Integrations** section (group Configuration, read
+  editions**: the panel's **Integrations** section (group Platform, read
   only, cards) over `GET /admin/integrations`, from what each says of itself
   (`Describe`) - never a password, a key or a connection string. **Terse,
   and each named by its assembly - asked for by the owner**, who found the

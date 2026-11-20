@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { ApiError, api, isDemo, type AdminLambdaDetail, type LambdaFile } from '@genhttp-lambda/kit/api';
+import { ApiError, api, isDemo, type AdminLambdaDetail, type LambdaFile, type TypicalDay } from '@genhttp-lambda/kit/api';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconChevronLeft, IconExternal, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
@@ -13,7 +13,8 @@ import { clock, ending, millis, origin, percent, span } from '@genhttp-lambda/ki
 import { BlockAction } from './BlockControl';
 import { ConnectivityAction } from './ConnectivityControl';
 import type { Access } from './context';
-import { Action, Actions, Card, Fact, Facts, Notice, Reading, Tile, Tiles, actionButton, bytes, count, plural } from './parts';
+import { Action, Actions, Card, Fact, Facts, Notice, Reading, Tile, Tiles, actionButton, bytes, count, plural, share } from './parts';
+import { DayChart, counted, describe, total, zone } from './day';
 import { FEATURES, connectivityWord } from './uses';
 
 type Busy = 'deploy' | 'undeploy' | 'tier' | 'domain' | 'remove' | null;
@@ -366,6 +367,19 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
                   ))}
                 </tbody>
               </table>
+            )}
+          </Card>
+
+          <Card title="When it is used" hint={`Its requests on a typical day, by the hour on your clock (${zone()}) - its drafts' previews left out.`}>
+            {detail.typicalDay && counted(detail.typicalDay) ? (
+              <>
+                <DayChart day={detail.typicalDay} dark={dark} label="Requests it answers on a typical day" stretch="busy" height={130} />
+                <p className="mt-2 text-xs text-slate-500">
+                  {detail.typicalDay.known ? <Used day={detail.typicalDay} /> : 'Too few requests yet to tell when it is busy.'}
+                </p>
+              </>
+            ) : (
+              <p className="text-[13px] text-slate-500">No requests counted yet.</p>
             )}
           </Card>
 
@@ -770,6 +784,22 @@ function Notices({ detail, dataBytes }: { detail: AdminLambdaDetail; dataBytes: 
   }
 
   return notices.length === 0 ? null : <div className="mt-5 space-y-2">{notices}</div>;
+}
+
+/**
+ * When an app is used, in a line: the hours it is busy - every hour with at
+ * least half the requests of its busiest - the share of its requests they
+ * hold, its busiest hour and how many requests a day comes to.
+ */
+function Used({ day }: { day: TypicalDay }) {
+  const busy = describe(day, 'busy');
+
+  return (
+    <>
+      {busy.allDay ? 'Used around the clock' : <>Busy {busy.ranges}, with {share(busy.share, 1)} of its requests</>}
+      {' · '}busiest {busy.peak} · about {count(Math.round(total(day)))} requests a day · counted since <Ago at={day.since!} />
+    </>
+  );
 }
 
 /** A feature the lambda may use: whether it does, and what of it. */
