@@ -51,7 +51,7 @@ export const selfHosting: Messages['selfHosting'] = {
     ['Kendi alan adı', 'Premium uygulamalar için', 'Production’a taşıdığınız her uygulama için'],
     ['Kimsenin kullanmadığı uygulamalar', `Ziyaret ya da değişiklik olmadan ${offline} gün geçince yayından kalkar, Premium değilse`, 'Sizin ayarladığınız gibi'],
     ['Sınırlar ve kurallar', 'Bizimkiler ve kullanım koşullarımız', 'Sizinkiler, yönetim panelinde ayarlanır'],
-    ['Yapı ajanı', 'Dahil, günde belirli sayıda yapı', 'İsteğe bağlı, kendi Claude aboneliğinizle'],
+    ['Yapı ajanı', 'Dahil, günde belirli sayıda yapı', 'İsteğe bağlı, kendi Claude aboneliğiniz ya da API anahtarınızla'],
     ['Kullanım raporları', 'Yok', 'Günde bir kez: sürüm, makine, seçenekler ve uygulamaların sayıları - asla bir uygulama ya da kişi değil. Kapatabilirsiniz.'],
   ],
 

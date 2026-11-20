@@ -18,24 +18,27 @@ namespace GenHTTP.Lambda.Api.Model;
 public sealed record BuildRequest(
     [Summary("What to build, in the words of whoever wants it, in any language - at least three characters, cut past 2000")]
     string? Prompt,
-    [Summary("Which of the offered models builds it: left out or `opus` for the default one, `fable` for the second, where one is offered")]
+    [Summary("Which of the offered models builds it, by its name in `build.offer.models` of `GET /system`; left out, the default one (`build.offer.model`)")]
     string? Model = null,
-    [Summary("The password for the second model")]
-    string? Password = null
+    [Summary("The installation's password, for a model that needs it (`password` of the model)")]
+    string? Password = null,
+    [Summary("Which of the offered efforts it runs at, as `build.offer.efforts` names them; left out, the default one (`build.offer.effort`)")]
+    string? Effort = null
 );
 
-/// <param name="SecondModel">
-/// Said, but never which one: the page needs to know whether to offer the
-/// choice, not what the answer is.
+/// <param name="Offer">
+/// Which models need the password is said, but never the password, nor
+/// which identifier a model runs as: the page needs to know what to offer,
+/// not what the runner does with it.
 /// </param>
-[Summary("Whether this installation builds things, and how often it lets one caller.")]
+[Summary("Whether this installation builds things, how often it lets one caller, and on which models.")]
 public sealed record BuildAvailability(
     [Summary("Whether builds can be asked for: there is an agent, and the operator has not switched building off")]
     bool Available,
     [Summary("How many builds and changes one address may ask for in a day")]
     int PerDay,
-    [Summary("Whether a second model is on offer, behind a password")]
-    bool SecondModel
+    [Summary("The models and efforts a build or a change may be asked for, as the operator offers them")]
+    AgentOffer Offer
 );
 
 [Summary("What should be different about a lambda.")]
@@ -44,14 +47,16 @@ public sealed record ChangeRequest(
     string? Prompt,
     [Summary("Whether to merge the change and put it online once it works (the default), rather than leave it in its feature for the owner to try first")]
     bool Deploy = true,
-    [Summary("Which of the offered models makes it: left out or `opus` for the default one, `fable` for the second, where one is offered")]
+    [Summary("Which of the offered models makes it, by its name in `offer.models` of `GET …/agent`; left out, the default one")]
     string? Model = null,
-    [Summary("The password for the second model")]
+    [Summary("The installation's password, for a model that needs it (`password` of the model)")]
     string? Password = null,
     [Summary("The language of whoever asks, as a code like `de` or `pt-pt`, for the agent to answer in where the prompt does not tell")]
     string? Language = null,
     [Summary("The key of a feature to go on with; left out, the agent starts a new one")]
     string? Feature = null,
     [Summary("The conversation so far, oldest first, as the page keeps it - the agent is handed the newest turns that fit, each cut, to understand the message by")]
-    IReadOnlyList<ConversationTurn>? History = null
+    IReadOnlyList<ConversationTurn>? History = null,
+    [Summary("Which of the offered efforts it runs at, as `offer.efforts` of `GET …/agent` names them; left out, the default one")]
+    string? Effort = null
 );

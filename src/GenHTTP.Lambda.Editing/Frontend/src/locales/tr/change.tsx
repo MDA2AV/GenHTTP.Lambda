@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Yeni bir taslak',
   full: (limit) =>
     `Zaten ${limit} taslak var, olabilecek en fazla sayı bu. Devam etmek için birini seçin ya da önce birini yayına alın veya silin.`,
-  password: 'Şifre',
-  fable: 'Fable acele etmez: süre ya da adım sınırı yoktur, üstelik kendine ait ayrı bir sırası vardır.',
+  unlimited: 'Şifreyle acele etmez: süre sınırı da adım sınırı da yoktur, ayrı bir kuyrukta çalışır.',
   left: (left, perDay) => `Bugün kalan: ${left} / ${perDay}`,
   leftTitle: 'Oluşturma sayfası ve bu bölüm aynı günlük hakkı paylaşır.',
   noneLeft: (time) => `Bugünkü son hakkınızı kullandınız. Saat ${time} itibarıyla yeni değişiklik isteyebilirsiniz.`,

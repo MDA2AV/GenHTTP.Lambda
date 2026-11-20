@@ -216,12 +216,12 @@ public sealed record LambdaOverviewResponse(
     DateTime? DeployedUntil
 );
 
+/// <remarks>
+/// The switches of the build agent were here until its models could be
+/// chosen; they are <c>/admin/agent</c> now, beside them.
+/// </remarks>
 [Summary("What the operator can switch on or off for the whole installation.")]
 public sealed record SettingsModel(
-    [Summary("Whether the site offers the text box that has the agent build an app, where there is an agent")]
-    bool BuildBox = true,
-    [Summary("Whether the Change section of the editor offers its text box, where there is an agent")]
-    bool ChangeBox = true,
     [Summary("Whether the platform optimizes the databases itself - its own records and analytics, and every lambda's - each at most once a day, in its quiet hours (see `GET /admin/optimization`)")]
     bool OptimizeDatabases = true
 );

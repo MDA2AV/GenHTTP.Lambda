@@ -20,8 +20,8 @@ export const change = {
   newFeature: 'A new draft',
   full: (limit: number) =>
     `There are ${limit} drafts already, which is all there may be. Pick one to go on with, or put one online or discard it first.`,
-  password: 'Password',
-  fable: 'Fable takes its time: no clock and no step limit, in a lane of its own.',
+  /** Under the box, while a model that only runs with the installation's password is chosen. */
+  unlimited: 'With the password it takes its time: no clock and no step limit, in a lane of its own.',
   left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
   leftTitle: 'The build page and this section share one allowance a day.',
   noneLeft: (time: string) => `That was the last one for today. There are more from ${time}.`,

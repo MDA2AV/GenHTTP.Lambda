@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { absoluteAddress } from '@genhttp-lambda/kit/address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '@genhttp-lambda/kit/api';
 import { RunHeader, RunLog, RunOutcome, RunProgress, type Tone } from '@genhttp-lambda/kit/components/AgentRun';
+import { AgentChoice, useAgentChoice, useChoiceLabel } from '@genhttp-lambda/kit/components/AgentChoice';
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconAlert, IconDraft, IconEye, IconExternal, IconPlay, IconSpark, IconSpinner, IconStop } from '@genhttp-lambda/kit/components/Icons';
@@ -267,15 +268,14 @@ function Composer({
   const where = features.some((f) => f.key === picked) ? picked : '';
   const limit = control.summary?.limits.features ?? Infinity;
   const full = features.length >= limit;
-  const [model, setModel] = useState<'opus' | 'fable'>('opus');
-  const [password, setPassword] = useState('');
+  const choice = useAgentChoice(state.offer);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const spent = state.left <= 0;
   const wanted = prompt.trim();
   const room = where !== '' || !full;
-  const ready = wanted.length >= 3 && !sending && !spent && room && (model === 'opus' || password.length > 0);
+  const ready = wanted.length >= 3 && !sending && !spent && room && choice.ready;
 
   // the box grows with what is in it, up to a point, and the page scrolls after that
   useLayoutEffect(() => {
@@ -310,8 +310,7 @@ function Composer({
     const refused = await control.agent.start({
       prompt: wanted,
       deploy: online,
-      model: model === 'opus' ? undefined : model,
-      password: model === 'opus' ? undefined : password,
+      ...choice.request,
       language,
       feature: where || undefined,
     });
@@ -388,40 +387,7 @@ function Composer({
             </span>
           </div>
 
-          {state.secondModel && (
-            <div className="flex items-center gap-1.5">
-              {(
-                [
-                  ['opus', 'Opus 5.5'],
-                  ['fable', 'Fable 5.1'],
-                ] as const
-              ).map(([id, name]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setModel(id)}
-                  aria-pressed={model === id}
-                  className={`rounded-full border px-2.5 py-0.5 text-xs ${
-                    model === id
-                      ? 'border-accent-500 bg-accent-500/10 text-accent-700 dark:border-accent-400 dark:text-accent-400'
-                      : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-ink-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {name}
-                </button>
-              ))}
-              {model === 'fable' && (
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={said.password}
-                  autoComplete="off"
-                  className="field !w-28 !py-0.5 text-xs"
-                />
-              )}
-            </div>
-          )}
+          <AgentChoice choice={choice} className="text-slate-600 dark:text-slate-400" />
 
           <span className="ml-auto flex items-center gap-3">
             <Allowance state={state} />
@@ -437,7 +403,7 @@ function Composer({
 
       <p className="mt-2 text-xs text-slate-500">
         {control.simple ? (online ? plain.askOnline : plain.askDraft) : online ? said.goOnlineOn : said.goOnlineOff}
-        {model === 'fable' && ` ${said.fable}`}
+        {choice.guarded && ` ${said.unlimited}`}
       </p>
 
       {!room && (
@@ -482,6 +448,7 @@ function Composer({
 function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
   const said = useEditorT().change;
   const shared = useShared();
+  const ranOn = useChoiceLabel();
   const running = isActive(job);
   const given = job.feature ? control.features.find((f) => f.key === job.feature) : undefined;
   const [stopping, setStopping] = useState(false);
@@ -505,7 +472,7 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
           <>
             {given && `${said.inFeature(given.name)} · `}
             {job.deploy ? said.goesOnline : said.review}
-            {job.model === 'fable' && ' · Fable 5.1'}
+            {` · ${ranOn(control.agent.state?.offer, job.model, job.effort)}`}
             {!running && job.seconds > 0 && ` · ${said.took(span(job.seconds, shared))}`}
           </>
         }

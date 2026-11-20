@@ -5,6 +5,7 @@ import { useAdminToken } from '../admin';
 import { ApiError, api, refusedToken, type AdminOverview } from '@genhttp-lambda/kit/api';
 import { IconLock, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { PhoneNav, SideNav, type NavEntry, type NavGroup } from '@genhttp-lambda/kit/components/Navigation';
+import { AgentSection } from '../console/AgentSection';
 import { BlocksSection } from '../console/BlocksSection';
 import { BrandingSection } from '../console/BrandingSection';
 import { diskState, type Access } from '../console/context';
@@ -27,7 +28,7 @@ import { askPlatform } from '@genhttp-lambda/kit/site';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
 type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding'
-  | 'integrations' | 'usage' | 'quiet' | 'guide';
+  | 'integrations' | 'usage' | 'quiet' | 'guide' | 'agent';
 
 /*
  * The sections in groups, as the editor has them, because a dozen in one
@@ -39,7 +40,8 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * process, the room on its volume, and what it logs. Last, the platform
  * itself: the name and logo its pages show, where its host lets the operator
  * give it some; the guide agents read first with the operator's own rules in
- * it; the switches of the site and of what the platform does by itself; what
+ * it; the build agent - whether it builds and changes apps, and on which
+ * models; the switches of what the platform does by itself; what
  * it holds the lambdas to; what it keeps its data in, as its host chose; when
  * it is usually quiet; and, last, the report it sends about itself. A group a
  * host leaves with nothing in it is not shown.
@@ -64,7 +66,8 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
   { id: 'platform', label: 'Platform', sections: [
     { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
     { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
-    { id: 'settings', label: 'Settings', note: 'What the site offers and the platform does by itself, switched without a restart' },
+    { id: 'agent', label: 'Build agent', note: 'Whether it builds and changes apps here, on which models and efforts' },
+    { id: 'settings', label: 'Settings', note: 'What the platform does by itself, switched without a restart' },
     { id: 'limits', label: 'Limits', note: 'What a lambda may have in its tier, and for every lambda' },
     { id: 'integrations', label: 'Integrations', note: 'What the database, the files and the secrets are kept in' },
     { id: 'quiet', label: 'Quiet hours', note: 'When the installation is usually quiet, by the hour of a typical day' },
@@ -237,6 +240,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <StorageSection access={access} />
           ) : section === 'log' ? (
             <LogSection access={access} />
+          ) : section === 'agent' ? (
+            <AgentSection access={access} />
           ) : section === 'settings' ? (
             <SettingsSection access={access} />
           ) : section === 'limits' ? (

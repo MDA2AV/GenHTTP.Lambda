@@ -37,6 +37,49 @@ show the agent's sentence. Ordinary applications - ones that call public APIs,
 keep data, have accounts, or merely sound alarming - are not declined. Keep
 `PURPOSE`, `AGENTS.md` ("What not to build") and the README saying the same.
 
+### Models, efforts and what the builds sign in with
+
+**Asked for by the owner:** the build agent runs on a model and at an
+effort chosen from two lists - dropdowns, not switches - under the box on
+`/build`, in the workspace and in the editor's Change section (one kit
+component, `components/AgentChoice.tsx`): Opus 5.5 by default at high
+effort, Sonnet 5.5 and Haiku 5.5 beside it, and Fable 5.2 (5.1 before)
+behind a password. **The operator decides in the panel's Build agent
+section** which models and efforts are offered, which models need the
+password and what a job runs on where nobody chose - and, there with them,
+whether the agent builds and changes apps at all, which were switches of
+Settings before (their rows kept, `build-box` and `change-box`).
+
+- **The password stays the installation's, an environment variable** -
+  chosen with it, open to change: `LAMBDA_AGENT_PASSWORD`, the old
+  `LAMBDA_AGENT_FABLE_PASSWORD` still read. The panel says whether there is
+  one, never what it is. A model behind it while there is none is offered
+  to nobody, never to everybody.
+- **A model behind the password runs unbounded**, as Fable did: no clock, no
+  step limit, a lane of its own. Kept from before, open to change. The
+  server decides it and tells the runner (`unbounded`), only for a job whose
+  password it checked; the runner never infers it from a model's name.
+- The default model is everybody's, without the password, and at least one
+  effort is offered with the default among them; a save that breaks either
+  is refused. A model or an effort not offered is refused before the agent
+  is asked and before the allowance is spent.
+- **A subscription token or an API key - asked for by the owner**
+  ("enterprise would rather use an API key"): `CLAUDE_CODE_OAUTH_TOKEN` or
+  `ANTHROPIC_API_KEY` on the runner. Exactly one goes into a build and the
+  other is set empty there. With both, the token wins and the runner says so
+  as it starts - chosen with it: the key is billed by the token, and one
+  exported by accident must not take over unseen. genhttp.dev stays on its
+  subscription.
+- The labels the pages show (`AgentCatalog`) name the versions the runner
+  runs by default; which identifier each model runs as is the runner's
+  (`AGENT_MODEL` for Opus, `AGENT_SONNET_MODEL`, `AGENT_HAIKU_MODEL`,
+  `AGENT_FABLE_MODEL`), shown in the panel beside them.
+- **The CLI was moved to a version that knows the models** (2.1.329): one
+  that does not may ask for a model with settings it refuses. Builds load no
+  built-in tool (`--tools ""`) as well as naming them in the denylist, and
+  `verify-tools.sh` reads what a build loaded from the CLI's own first line
+  rather than asking the model. Run it after every change of the version.
+
 ## What this is
 
 A platform on which somebody describes an app - or an agent writes a C# snippet
@@ -348,10 +391,10 @@ said, with what came of it underneath.
   (`…/agent/start`) carrying the newest turns as `history`, which the server
   cuts (`AgentInput.History`) and the brief hands over as context, never as
   instructions; only the message is logged. So the operator's switches -
-  building (`BuildBox`), asking about an app (`ChangeBox`, the Change section
-  as well) - the daily allowance, one change of a lambda at a time, the demo
-  and blocked guards all hold unchanged, and each message costs one of the
-  day's.
+  building, asking about an app (the Change section as well) - the models
+  and efforts offered, the daily allowance, one change of a lambda at a time,
+  the demo and blocked guards all hold unchanged, and each message costs one
+  of the day's.
 - **A question is answered, a setting changed, only a change makes a draft.**
   The brief has the agent tell them apart: a question is answered from the
   tools (`analytics`, `read_database`, `read_logs`, `read_lambda`) and starts
@@ -1161,10 +1204,12 @@ how it shows them did.
   the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
   lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
   (Server, Storage, Log); **Platform** (Branding - where the host lets the
-  operator brand the installation - Guide, Settings, Limits, Integrations,
-  Quiet hours, Usage report) - the owner's ask: Settings, Integrations,
-  Branding, Quiet hours and the Usage report moved there, the usage report
-  last, and the Configuration and Misc groups went with them. A new section
+  operator brand the installation - Guide, Build agent, Settings, Limits,
+  Integrations, Quiet hours, Usage report) - the owner's ask: Settings,
+  Integrations, Branding, Quiet hours and the Usage report moved there, the
+  usage report last, and the Configuration and Misc groups went with them;
+  Build agent, the owner's ask too, took the switches for building and
+  asking out of Settings. A new section
   joins the group it belongs to, and a group left empty is not shown. A mark beside a
   section says what waits there, read from `GET /admin/overview` as the
   operator moves around the panel - never on a timer.

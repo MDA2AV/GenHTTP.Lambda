@@ -29,7 +29,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
     [Remarks("""
              Its terms, which creating a lambda accepts where it has any; the tier a new lambda starts in and what every tier
              lets a lambda have (`defaultTier`, `tiers`), with what the installation calls each; what a new lambda can start
-             from; whether the build agent is on offer; where a lambda answers (`lambdaUrl`); who runs it, as far as its
+             from; whether the build agent is on offer, and on which models and efforts; where a lambda answers (`lambdaUrl`); who runs it, as far as its
              pages have to say so (`operator`); how it presents itself on them (`brand`); and what the editor suggests while
              code is written - the namespaces a lambda has imported and the types and snippets it may use.
              """)]
@@ -46,7 +46,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             (int)current.RemovedAfter.TotalDays,
             ModuleCatalog.ImportsFor(database.Binding),
             CompletionCatalog.Items,
-            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
+            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.Offer()),
             addresses.Template,
             new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage),
             TierDescription.Of(limits, current.DefaultTier),

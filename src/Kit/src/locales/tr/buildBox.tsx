@@ -3,8 +3,8 @@ import type { KitMessages } from '../en';
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Şöyle bir web sitesi istiyorum…',
   password: 'şifre',
-  fable:
-    'Fable deneme sürecinde şifreyle korunuyor. Süre sınırı olmadan çalışır: süre dolunca değil, web siteniz bitince durur.',
+  unlimited:
+    'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, web siteniz bitene kadar devam eder.',
   ideas: [
     'üyelerin etkinliklere kaydolabildiği bir kulüp sitesi',
     'kimse aynı yemeği getirmesin diye bir piknik listesi',

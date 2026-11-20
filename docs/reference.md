@@ -206,7 +206,7 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | a new app, built from the workspace on `/build` |
-| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent, where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), and how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them) |
+| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent (`build`: whether it is offered, and the models and efforts it offers), where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), and how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them) |
 | `GET /system/logo`                                    | the picture beside the installation's name, where its operator branded it, see [Branding](#branding) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation; `/admin/branding` only where the installation may be branded |
 
@@ -1011,7 +1011,8 @@ online. The full view of this section shows every tool by name.
 
 It shares the queue and the daily allowance of `/build`, one change of a
 lambda runs at a time, and it can be stopped - whatever it saved stays, in its
-feature or as a version. A change runs without `create_lambda`, and its editor key travels in
+feature or as a version. It runs on the model and at the effort the owner
+chose, of those the operator offers (see [The build agent](#the-build-agent)). A change runs without `create_lambda`, and its editor key travels in
 the brief inside the build container, never in a log line.
 
 Not every message is a change. The agent first works out what it was asked:
@@ -1066,7 +1067,8 @@ questions people ask first.
   joins the list and its conversation goes on from the build.
 - **Every message after is a change** (`POST /lambdas/:privateKey/agent/start`)
   with the newest turns of the conversation as `history`, so the operator's
-  switches (the build box for new apps, the change box for the rest), the daily
+  switches (building new apps, and asking about the rest), the models and
+  efforts offered (see [The build agent](#the-build-agent)), the daily
   allowance and one change at a time hold as everywhere else. A change asked for
   in the editor's Change section shows up in the conversation too.
 - **The list is kept in the browser** - local storage, on every installation
@@ -1699,8 +1701,9 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   checked, and leaves the rest to units of their own: `AgentClient` is the
   only thing that talks to the agent's runner and holds the shared secret,
   `BuildAllowance` counts the jobs of each address per day, `ModelGate` says
-  who may have the second model, and `AgentInput` checks the prompt and the
-  language a page sends.
+  which model and effort a job runs on and who may have the models behind the
+  password, `AgentSettingsStore` keeps what the operator decided about them,
+  and `AgentInput` checks the prompt and the language a page sends.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached - one handler for what a
@@ -2012,7 +2015,7 @@ variable (see [Branding](#branding)).
 | `LAMBDA_ABUSE_CONTACT`              | -                | where a lambda that does harm is reported; without, the pages offer no way to report one |
 | `LAMBDA_AGENT_URL`                  | -                | where the build agent listens; without, nothing is built from a request and its text boxes are not offered |
 | `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask |
-| `LAMBDA_AGENT_FABLE_PASSWORD`       | -                | the password for the second model the build page offers; without, it is not offered |
+| `LAMBDA_AGENT_PASSWORD`             | -                | the password for the models of the build agent the panel puts behind one (Fable, at first); without, those are not offered. `LAMBDA_AGENT_FABLE_PASSWORD`, its name before, is still read (see [The build agent](#the-build-agent)) |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -2090,7 +2093,18 @@ sudo ln -sf "$PWD/deploy/cloud/deploy.sh" /usr/local/bin/genhttp-deploy
 
 The builds sign in with a token of the subscription, made with
 `claude setup-token`; `sudo deploy/cloud/set-token.sh` writes it into `.env`
-and restarts the agent on it.
+and restarts the agent on it. The runner takes an API key instead
+(`ANTHROPIC_API_KEY`, see [The build agent](#the-build-agent)); genhttp.dev
+passes none.
+
+The agent's image pins the version of Claude Code its builds run
+(`CLAUDE_VERSION` in `docker/agent/Dockerfile`). A build loads no built-in
+tool of the CLI (`--tools ""`) and names them in a denylist as well, which is
+only known to hold for the version it was checked against: after changing the
+version, `docker/agent/verify-tools.sh` starts the CLI in the agent's
+container with the flags and lists of a build, prints the tools it loaded -
+read from the first line it writes, before it asks the model anything - and
+fails on any that is not one of the platform's MCP tools.
 
 ## Telemetry
 
@@ -2721,7 +2735,7 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Platform      | **Branding**, **Guide**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); the site's switches and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
+| Platform      | **Branding**, **Guide**, **Build agent**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); whether the build agent builds and changes apps, on which models and efforts, which need the password, and what its runner says of itself (see [The build agent](#the-build-agent)); what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
@@ -2753,6 +2767,7 @@ The routes the panel draws its dashboards from:
 | `GET /admin/integrations`                | what keeps the database, the files and the secrets: each one's name, the assembly it is in, and where it keeps what it keeps - never a password, a key or a connection string |
 | `GET /admin/quiet-hours`                 | the installation's typical day: the requests of each hour in UTC, the quietest three, and whether enough was counted to know them |
 | `GET /admin/optimization`                | whether the platform optimizes the databases, what the last optimization of its own records did, and the lambdas' databases optimized in the last day |
+| `GET / PUT /admin/agent`                 | whether the build agent builds and changes apps, the models and efforts offered and the defaults, whether there is a password, and what the runner says of itself (see [The build agent](#the-build-agent)) |
 
 The counts are the platform's database, read as they are asked for
 (`ICensusService`, `LambdaTally`); the workspace counts as switched on unless
@@ -3000,6 +3015,85 @@ installation has an admin token: a copy of another installation's data hands
 no agent rules nobody here could see or take away. The rules reach agents
 through `platform_guide` only - not the MCP instructions, which are fixed when
 the endpoint starts, nor the `AGENTS.md` of a lambda's repository.
+
+### The build agent
+
+Where the installation runs the build agent (`LAMBDA_AGENT_URL`), the panel's
+**Build agent** section (`GET / PUT /admin/agent`) decides what it does here
+and on what. Each switch and list is saved as it changes, and applies to the
+next job asked for; a job under way runs on as it was asked for.
+
+- **Whether it builds and changes apps**: building new apps on `/build`, and
+  owners asking it about theirs - in the workspace and the editor's Change
+  section. Off, each page leads to connecting an agent of one's own instead.
+  Both were under **Settings** until the models could be chosen, and are kept
+  in the same rows (`build-box`, `change-box`), so a choice made then holds.
+- **Which models people may choose**, each for everybody, for whoever knows
+  the installation's password, or for nobody: Opus 5.5, Sonnet 5.5 and Haiku
+  5.5 for everybody and Fable 5.2 behind the password, until the operator
+  decides otherwise.
+- **Which efforts** - how much the model thinks and how many steps it takes:
+  `low`, `medium`, `high`, `xhigh` and `max`, all of them at first - and what
+  a job runs on where nobody chose, Opus at `high` at first. The default model
+  is everybody's, without the password, and at least one effort is offered,
+  the default among them; a change that breaks either is refused with 400 and
+  changes nothing.
+
+They are rows of the `settings` table (`agent.model.opus` = `open`,
+`password` or `off`, `agent.default-model`, `agent.efforts`,
+`agent.default-effort`), read as the platform starts and held in memory; a
+missing row is the default above. A change is logged as `Updated agent
+settings builds true changes true models opus:open,sonnet:open,haiku:open,fable:password
+model opus efforts low,medium,high,xhigh,max effort high by operator`.
+
+The pages offer what was decided. `GET /system` (`build.offer`) and the
+Change section's `GET /lambdas/:privateKey/agent` (`offer`) list the models
+offered, each with its label and whether it needs the password, the efforts,
+and the defaults; `/build`, the workspace and the Change section draw them as
+two lists under the box (`components/AgentChoice.tsx` in the kit) and a field
+for the password where the model chosen needs it. A list with nothing to
+choose from is left out. The browser remembers the model and the effort last
+chosen, never the password. A build or a change names them (`model`,
+`effort`; left out, the defaults), and one the operator does not offer is
+refused with 400, a wrong password with 403 - before the agent is asked and
+before the allowance is spent. A started build says what it runs on
+(`model`, `effort`), and so does a change (`job.model`, `job.effort`), which
+the Change section shows beside the request; both are logged with the
+prompt.
+
+**The password** is the installation's: `LAMBDA_AGENT_PASSWORD` - and
+`LAMBDA_AGENT_FABLE_PASSWORD`, which is still read, from when it unlocked
+Fable alone. The panel says whether there is one, never what it is, and
+without one a model behind it is offered to nobody rather than to everybody.
+A job on a model behind it runs without the clock and the limit on its steps,
+in a lane of its own beside the one everybody shares. The server tells the
+runner so (`unbounded`), and only for a job whose password it checked, so a
+model taken from behind the password runs on the clock like every other.
+
+**The runner** maps each model to an identifier of Anthropic's -
+`AGENT_MODEL` for Opus (named before there was a choice), `AGENT_SONNET_MODEL`,
+`AGENT_HAIKU_MODEL` and `AGENT_FABLE_MODEL`, `claude-opus-5-5`,
+`claude-sonnet-5-5`, `claude-haiku-5-5` and `claude-fable-5-2` by default,
+which the labels name - and hands the CLI the effort (`--effort`). It signs
+its builds in with one of two:
+
+| Variable of the runner      | What it is                                                    |
+|-----------------------------|---------------------------------------------------------------|
+| `CLAUDE_CODE_OAUTH_TOKEN`   | a token of a Claude subscription, made with `claude setup-token` |
+| `ANTHROPIC_API_KEY`         | an API key of an organization's account at Anthropic, billed by the token |
+
+Exactly one goes into a build, and the other is set empty there rather than
+left to the CLI's order of precedence. Where both are set the token wins, and
+the runner says so as it starts: the key is the one spent by the token, and a
+key that reached its environment by accident - exported in the shell a
+deploy ran from - should not take over every build unseen. `samples/community`
+passes the key as `LAMBDA_AGENT_API_KEY` for the same reason, so a shell's own
+`ANTHROPIC_API_KEY` is not picked up. genhttp.dev builds on its subscription.
+
+The section shows what the runner says of itself, from its health, asked with
+three seconds to answer: where it listens, whether it answers, what its
+builds sign in with - the kind, never the credential - the identifier each
+model runs as, the version of Claude Code its builds run and its queue.
 
 ### Branding
 

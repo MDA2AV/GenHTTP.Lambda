@@ -20,8 +20,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Un nouveau brouillon',
   full: (limit) =>
     `Cette lambda a déjà ${count(limit, 'brouillon en cours', 'brouillons en cours')}, le maximum possible. Choisissez-en un à poursuivre, ou commencez par en mettre un en ligne ou en supprimer un.`,
-  password: 'Mot de passe',
-  fable: 'Fable prend son temps : ni chrono ni limite d’étapes, et une file rien que pour lui.',
+  unlimited: 'Avec le mot de passe, il prend son temps : ni minuterie ni limite d’étapes, dans une file à part.',
   left: (left, perDay) => `Il en reste ${left} sur ${perDay} aujourd’hui`,
   leftTitle: 'La page de création et cette section partagent la même limite quotidienne.',
   noneLeft: (time) => `C’était la dernière demande du jour. Les suivantes seront possibles à partir de ${time}.`,

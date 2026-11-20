@@ -22,10 +22,12 @@ entries."*
 
 ## With the build agent
 
-The box on the front page builds an app from a sentence once the build agent
-runs. It needs a Claude subscription and Docker on this machine. In `.env`:
+The box on `/build` builds an app from a sentence once the build agent runs.
+It needs a Claude subscription or an API key, and Docker on this machine. In
+`.env`:
 
-1. `CLAUDE_CODE_OAUTH_TOKEN` - a token made with `claude setup-token`;
+1. `CLAUDE_CODE_OAUTH_TOKEN` - a token made with `claude setup-token`; or
+   `LAMBDA_AGENT_API_KEY` - an API key of your organization's account;
 2. `LAMBDA_AGENT_TOKEN` - any long random string: `openssl rand -hex 32`;
 3. `LAMBDA_AGENT_URL=http://agent:8401` - uncomment it;
 4. `DOCKER_GID` - the group of the docker socket: `getent group docker | cut -d: -f3`.
@@ -35,7 +37,8 @@ docker compose --profile agent up -d
 ```
 
 Every build runs in a container of its own, which reaches this server and
-Anthropic and nothing else, and is thrown away when it ends.
+Anthropic and nothing else, and is thrown away when it ends. Which models and
+efforts people may choose is set in the panel, under **Build agent**.
 
 ## With PostgreSQL
 

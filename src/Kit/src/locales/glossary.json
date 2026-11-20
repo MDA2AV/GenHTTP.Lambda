@@ -170,6 +170,16 @@
       "id": "Free, Premium", "de": "Free, Premium", "es": "Free, Premium", "fr": "Free, Premium", "it": "Free, Premium", "nl": "Free, Premium", "pl": "Free, Premium", "pt": "Free, Premium", "pt-pt": "Free, Premium", "tr": "Free, Premium", "ja": "Free、Premium", "ko": "Free, Premium"
     },
     {
+      "en": "model",
+      "note": "the AI model the build agent runs on, chosen in a list; their names - Opus, Sonnet, Haiku, Fable, with a version - stay as written",
+      "id": "model", "de": "Modell", "es": "modelo", "fr": "modèle", "it": "modello", "nl": "model", "pl": "model", "pt": "modelo", "pt-pt": "modelo", "tr": "model", "ja": "モデル", "ko": "모델"
+    },
+    {
+      "en": "effort",
+      "note": "how much the build agent thinks and how many steps it takes over a request, chosen in a list beside the model; the levels are Low, Medium, High, Extra high and Maximum - short words, like a setting",
+      "id": "upaya", "de": "Aufwand", "es": "esfuerzo", "fr": "effort", "it": "impegno", "nl": "inspanning", "pl": "wysiłek", "pt": "esforço", "pt-pt": "esforço", "tr": "efor", "ja": "思考レベル", "ko": "사고 수준"
+    },
+    {
       "en": "{platform}",
       "keep": true,
       "note": "the installation's name, filled in as a page is shown - GenHTTP Lambda, or the name its operator gave it; keep the placeholder, and write the sentence so it reads right with any name: no article, case ending or particle attached to it"

@@ -46,6 +46,9 @@ public sealed class FakeAgent : IAsyncDisposable
     /// <summary>When set, a new job is refused with this status, as a full queue is.</summary>
     public HttpStatusCode? Refuse { get; set; }
 
+    /// <summary>What its health says the builds sign in with, as the runner says it.</summary>
+    public string? SignsInWith { get; set; } = "subscription";
+
     public static FakeAgent Start()
     {
         // a port nobody has, found by asking for any
@@ -163,13 +166,14 @@ public sealed class FakeAgent : IAsyncDisposable
                 ["state"] = "queued",
                 ["prompt"] = body["prompt"]?.GetValue<string>(),
                 ["deploy"] = body["deploy"]?.GetValue<bool>() ?? true,
-                ["model"] = "opus",
+                ["model"] = body["model"]?.GetValue<string>() ?? "opus",
+                ["effort"] = body["effort"]?.GetValue<string>() ?? "high",
                 ["before"] = body["before"]?.DeepClone(),
                 ["feature"] = body["feature"]?.DeepClone(),
                 ["steps"] = new JsonArray(),
                 ["waiting"] = 1,
                 ["seconds"] = 0,
-                ["limit"] = 600
+                ["limit"] = body["unbounded"]?.GetValue<bool>() == true ? null : 600
             };
 
             _jobs[id] = job;
@@ -183,6 +187,28 @@ public sealed class FakeAgent : IAsyncDisposable
             answer["queued"] = 1;
 
             await SendAsync(context, HttpStatusCode.Accepted, answer);
+            return;
+        }
+
+        if (request.HttpMethod == "GET" && path == "/health")
+        {
+            await SendAsync(context, HttpStatusCode.OK, new JsonObject
+            {
+                ["ok"] = true,
+                ["auth"] = SignsInWith,
+                ["models"] = new JsonObject
+                {
+                    ["opus"] = "claude-opus-5-5",
+                    ["sonnet"] = "claude-sonnet-5-5",
+                    ["haiku"] = "claude-haiku-5-5",
+                    ["fable"] = "claude-fable-5-2"
+                },
+                ["efforts"] = new JsonArray("low", "medium", "high", "xhigh", "max"),
+                ["cli"] = "2.1.329",
+                ["quick"] = new JsonObject { ["running"] = !_jobs.IsEmpty, ["queued"] = 0 },
+                ["long"] = new JsonObject { ["running"] = false, ["queued"] = 0 }
+            });
+
             return;
         }
 

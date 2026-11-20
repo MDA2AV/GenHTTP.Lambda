@@ -18,8 +18,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Nowy szkic',
   full: (limit) =>
     `Masz już ${counted(limit, 'szkic', 'szkice', 'szkiców')} – więcej być nie może. Wybierz jeden, żeby nad nim pracować dalej, albo najpierw któryś udostępnij lub usuń.`,
-  password: 'Hasło',
-  fable: 'Fable się nie spieszy: bez limitu czasu i kroków, we własnej kolejce.',
+  unlimited: 'Z hasłem agent pracuje bez pośpiechu: bez limitu czasu i kroków, w osobnej kolejce.',
   left: (left, perDay) => `Pozostało dziś: ${left} z ${perDay}`,
   leftTitle: 'Strona budowania i ta sekcja mają jeden wspólny dzienny limit.',
   noneLeft: (time) => `To była ostatnia zmiana na dziś. Kolejne będą dostępne od ${time}.`,

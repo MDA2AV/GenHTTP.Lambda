@@ -90,6 +90,16 @@ export const workspace: KitMessages['workspace'] = {
   goOnlineOn: '변경이 잘 되는 즉시 온라인으로 전환돼요.',
   goOnlineOff: '변경은 초안으로 남겨 두니, 먼저 써 볼 수 있어요.',
   model: '모델',
+  withPassword: (model) => `${model} (비밀번호)`,
+  effort: '사고 수준',
+  efforts: {
+    low: '낮음',
+    medium: '보통',
+    high: '높음',
+    xhigh: '매우 높음',
+    max: '최대',
+  },
+  ranOn: (model, effort) => `${model}, 사고 수준: ${effort}`,
   left: (left, perDay) => `오늘 ${perDay}회 중 ${left}회 남았어요`,
   noneLeft: (time) => `오늘은 여기까지예요. ${time}부터 다시 요청할 수 있어요.`,
   /** Where the operator of the site switched building off, or there is no agent. */

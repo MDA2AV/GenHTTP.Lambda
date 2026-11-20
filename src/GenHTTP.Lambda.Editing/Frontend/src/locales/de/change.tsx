@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Neuer Entwurf',
   full: (limit) =>
     `Es gibt bereits ${limit} Entwürfe – mehr sind nicht erlaubt. Wählen Sie einen, um daran weiterzuarbeiten, oder stellen Sie zuerst einen online oder verwerfen Sie ihn.`,
-  password: 'Passwort',
-  fable: 'Fable lässt sich Zeit: ohne Zeitlimit, ohne Schrittlimit und in einer eigenen Warteschlange.',
+  unlimited: 'Mit dem Passwort nimmt sich der Agent Zeit: ohne Zeitlimit, ohne Schrittlimit und in einer eigenen Warteschlange.',
   left: (left, perDay) => `Heute noch ${left} von ${perDay}`,
   leftTitle: 'Die Build-Seite und dieser Bereich teilen sich ein Tageslimit.',
   noneLeft: (time) => `Das war die letzte Änderung für heute. Ab ${time} Uhr geht es weiter.`,

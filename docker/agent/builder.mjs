@@ -71,7 +71,6 @@ printf '%s' "$AGENT_GUIDE" > /work/AGENTS.md
 printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s"}}}' "$AGENT_MCP" > /work/mcp.json
 exec claude -p "$AGENT_BRIEF" --append-system-prompt "$AGENT_PURPOSE" --mcp-config /work/mcp.json "$@"`;
 const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
-const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5-5';
 
 /*
  * Which models a caller may ask for, by short name.
@@ -80,27 +79,61 @@ const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5-5';
  * box on the public internet: handing whatever it says to --model would let a
  * visitor pick anything the account can reach, including something far more
  * expensive than what is on offer. The short names are all the outside world
- * ever sees, and the identifiers stay in here.
+ * ever sees, and the identifiers stay in here. Which of them a caller may
+ * have is the server's to decide - its operator chooses in the panel - so
+ * this only says what each name runs as. AGENT_MODEL is Opus's, named before
+ * there was more than one to choose from.
  */
 const MODELS = {
-  opus: MODEL,
-  fable: process.env.AGENT_FABLE_MODEL ?? 'claude-fable-5-1'
+  opus: process.env.AGENT_MODEL ?? 'claude-opus-5-5',
+  sonnet: process.env.AGENT_SONNET_MODEL ?? 'claude-sonnet-5-5',
+  haiku: process.env.AGENT_HAIKU_MODEL ?? 'claude-haiku-5-5',
+  fable: process.env.AGENT_FABLE_MODEL ?? 'claude-fable-5-2'
 };
+
+/*
+ * The efforts a job may run at, as the CLI takes them, and what one runs at
+ * that names none - a server from before they were chosen.
+ */
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+const EFFORT = EFFORTS.includes(process.env.AGENT_EFFORT) ? process.env.AGENT_EFFORT : 'high';
 const MAX_TURNS = Number(process.env.AGENT_MAX_TURNS ?? 60);
 const TIMEOUT = Number(process.env.AGENT_TIMEOUT_SECONDS ?? 600) * 1000;
 const ORIGIN = process.env.AGENT_PUBLIC_ORIGIN ?? 'https://genhttp.dev';
 const TOKEN = process.env.AGENT_TOKEN ?? '';
 
 /*
+ * What the builds sign in to Anthropic with: a token of a Claude subscription,
+ * made with "claude setup-token", or an API key, billed by the token - which
+ * is what an organization with an account at Anthropic rather than seats
+ * has.
+ *
+ * Exactly one goes into a build, and the other is set empty there rather than
+ * left to the CLI's own order of precedence. Where both are set the token
+ * wins, and it is said once on startup: the key is the one that is spent by
+ * the token, and a key that reached this environment by accident - exported
+ * in a shell a deploy ran from - would otherwise take over every build
+ * without anything on screen saying so.
+ */
+const OAUTH_TOKEN = (process.env.CLAUDE_CODE_OAUTH_TOKEN ?? '').trim();
+const API_KEY = (process.env.ANTHROPIC_API_KEY ?? '').trim();
+const AUTH = OAUTH_TOKEN ? 'subscription' : API_KEY ? 'api-key' : null;
+
+const CREDENTIALS = AUTH === 'api-key'
+  ? ['-e', 'ANTHROPIC_API_KEY', '-e', 'CLAUDE_CODE_OAUTH_TOKEN=']
+  : ['-e', 'CLAUDE_CODE_OAUTH_TOKEN', '-e', 'ANTHROPIC_API_KEY='];
+
+/*
  * The tools the agent may use, and the tools it may not.
  *
  * The allowlist is the capability: everything the platform's MCP offers and
- * nothing else. The denylist exists because an allowlist alone was measured
- * not to be enough - with only the MCP tools allowed, SendMessage and
- * TaskCreate still ran, and a test agent used SendMessage to talk to another
- * Claude session on the same machine. These are the ones that got through on
- * the pinned version; verify-tools.sh is how you find out whether a new
- * version has more.
+ * nothing else. Built-in tools are not even loaded (--tools "" below), and
+ * the denylist names them all the same, because an allowlist alone was
+ * measured not to be enough - with only the MCP tools allowed, SendMessage
+ * and TaskCreate still ran, and a test agent used SendMessage to talk to
+ * another Claude session on the same machine. Either wall alone left only the
+ * platform's tools on 2.1.329; verify-tools.sh is how you find out whether a
+ * new version has more.
  */
 const ALLOW = [
   'mcp__genhttp__platform_guide', 'mcp__genhttp__list_demos',
@@ -143,7 +176,7 @@ const DENY = [
   'CronCreate', 'CronList', 'CronDelete', 'DesignSync',
   'EnterWorktree', 'ExitWorktree', 'EnterPlanMode', 'ExitPlanMode',
   'ScheduleWakeup', 'SendUserFile', 'AskUserQuestion', 'EndConversation',
-  'Skill', 'ToolSearch', 'ReportFindings', 'Workflow'
+  'Skill', 'ToolSearch', 'ReportFindings', 'Workflow', 'Task', 'SendFeedback'
 ];
 
 /*
@@ -587,6 +620,10 @@ const latest = new Map();
  * long as it felt like running. They get a lane of their own instead: at most
  * one of each kind at once, and neither waits on the other. Builds and
  * changes share both, first come first served.
+ *
+ * Which job that is, the server says (unbounded): it is the one that checked
+ * the password, for whichever model its operator put behind it. A job that
+ * does not say so runs on the clock, whatever model it asked for.
  */
 const lanes = {
   quick: { queue: [], running: false },
@@ -594,7 +631,7 @@ const lanes = {
 };
 
 /** Whether a job runs without a clock or a turn limit. */
-const unbounded = job => job.model === 'fable';
+const unbounded = job => job.unbounded === true;
 
 const laneOf = job => (unbounded(job) ? lanes.long : lanes.quick);
 
@@ -611,6 +648,8 @@ function enqueue(order) {
     state: 'queued',
     prompt: order.prompt,
     model: order.model,
+    effort: order.effort,
+    unbounded: order.unbounded,
     key: order.key,
     lambda: order.lambda,
     deploy: order.deploy,
@@ -729,7 +768,8 @@ async function run(job) {
   // the MCP server it is allowed to talk to, and the only one:
   // --strict-mcp-config means nothing from a settings file can add another
   const args = [
-    '--model', MODELS[job.model] ?? MODEL,
+    '--model', MODELS[job.model] ?? MODELS.opus,
+    '--effort', job.effort ?? EFFORT,
     '--strict-mcp-config',
     '--permission-mode', 'dontAsk',
     // left off entirely rather than set high: there is no value that means
@@ -737,6 +777,8 @@ async function run(job) {
     ...(free ? [] : ['--max-turns', String(MAX_TURNS)]),
     '--output-format', 'stream-json',
     '--verbose',
+    // no built-in tool at all - the files, the shell, the web - only the MCP
+    '--tools', '',
     '--allowedTools', ...(job.kind === 'change' ? CHANGE_ALLOW : ALLOW),
     '--disallowedTools', ...DENY
   ];
@@ -759,17 +801,12 @@ async function run(job) {
     '--tmpfs', '/work:rw,size=64m,mode=0700,uid=1002,gid=1002',
     '--workdir', '/work',
     '-e', 'AGENT_BRIEF', '-e', 'AGENT_PURPOSE', '-e', 'AGENT_GUIDE', '-e', 'AGENT_MCP',
-    '-e', 'CLAUDE_CODE_OAUTH_TOKEN',
     /*
-     * Emptied rather than passed through.
-     *
-     * Builds run on the subscription and only on the subscription. An API key
-     * reaching a build container would be spent per run against a different
-     * account without anything saying so, and the one place it could come
-     * from is an environment nobody meant to export it into - so the variable
-     * is set empty here, which is stronger than not forwarding it.
+     * What it signs in with, and nothing else: the one credential AUTH chose,
+     * and the other set empty rather than left out, which is stronger than
+     * not forwarding it - see AUTH above.
      */
-    '-e', 'ANTHROPIC_API_KEY=',
+    ...CREDENTIALS,
     '-e', 'HTTPS_PROXY', '-e', 'HTTP_PROXY', '-e', 'NO_PROXY',
     '--entrypoint', 'sh',
     BUILD_IMAGE,
@@ -1183,6 +1220,7 @@ function record(job) {
     id: job.id.slice(0, 8),
     kind: job.kind,
     model: job.model || 'opus',
+    effort: job.effort ?? EFFORT,
     unbounded: unbounded(job) || undefined,
     lambda: job.lambda,
     seconds,
@@ -1419,7 +1457,7 @@ function progress(job) {
     // what a change was asked for is only ever read back by whoever holds
     // the key it was started with; a build's page still has it in its box
     ...(job.kind === 'change'
-      ? { prompt: job.prompt, deploy: job.deploy, model: job.model || 'opus', before: job.before ?? null, feature: job.feature ?? null }
+      ? { prompt: job.prompt, deploy: job.deploy, model: job.model || 'opus', effort: job.effort ?? EFFORT, before: job.before ?? null, feature: job.feature ?? null }
       : {})
   };
 }
@@ -1495,9 +1533,14 @@ createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://agent');
 
   if (req.method === 'GET' && url.pathname === '/health') {
+    // for the panel: what the builds sign in with - the kind, never the
+    // credential - which identifier each model runs as, and the queue
     return send(res, 200, {
       ok: true,
-      models: Object.keys(MODELS),
+      auth: AUTH,
+      models: MODELS,
+      efforts: EFFORTS,
+      cli: process.env.AGENT_CLI_VERSION || undefined,
       quick: { running: lanes.quick.running, queued: lanes.quick.queue.length },
       long: { running: lanes.long.running, queued: lanes.long.queue.length }
     });
@@ -1518,6 +1561,12 @@ createServer(async (req, res) => {
 
     if (model && !Object.hasOwn(MODELS, model)) {
       return send(res, 400, { error: 'There is no such model here.' });
+    }
+
+    const effort = String(body.effort ?? '').trim();
+
+    if (effort && !EFFORTS.includes(effort)) {
+      return send(res, 400, { error: 'There is no such effort here.' });
     }
 
     // a key makes it a change of the lambda it opens, filed under the tag the
@@ -1552,6 +1601,9 @@ createServer(async (req, res) => {
     const job = enqueue({
       prompt: clip(prompt, 2000),
       model,
+      effort: effort || undefined,
+      // the server checked the password for it; nothing else runs unbounded
+      unbounded: body.unbounded === true,
       key: key || undefined,
       lambda: key ? lambda : undefined,
       deploy: body.deploy !== false,
@@ -1600,11 +1652,19 @@ createServer(async (req, res) => {
 
   return send(res, 404, { error: 'No such thing.' });
 }).listen(PORT, () => {
-  console.log(`build agent listening on ${PORT}, model ${MODEL}, mcp ${MCP_URL}`);
+  const signing = AUTH === 'subscription' ? 'a subscription token' : AUTH === 'api-key' ? 'an API key' : 'nothing';
+
+  console.log(`build agent listening on ${PORT}, signing in with ${signing}, models ${Object.values(MODELS).join(', ')}, mcp ${MCP_URL}`);
 
   // every build would fail to sign in, so it is said once here rather than
   // found out from the first person who asks for something
-  if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-    console.warn('CLAUDE_CODE_OAUTH_TOKEN is not set, so no build can sign in: make one with "claude setup-token"');
+  if (!AUTH) {
+    console.warn('Neither CLAUDE_CODE_OAUTH_TOKEN nor ANTHROPIC_API_KEY is set, so no build can sign in: '
+      + 'make a token of a Claude subscription with "claude setup-token", or give an API key');
+  }
+
+  if (OAUTH_TOKEN && API_KEY) {
+    console.warn('Both CLAUDE_CODE_OAUTH_TOKEN and ANTHROPIC_API_KEY are set: builds sign in with the subscription token, '
+      + 'and the API key is not used - unset the token to build on the key');
   }
 });

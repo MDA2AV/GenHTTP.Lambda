@@ -94,7 +94,22 @@ export const workspace = {
   goOnline: 'Put changes online right away',
   goOnlineOn: 'A change goes online as soon as it works.',
   goOnlineOff: 'A change is left in a draft, for you to try first.',
+  /** Beside the list of the models the agent can run on - Opus, Sonnet, Haiku, Fable. */
   model: 'Model',
+  /** A model in that list that only runs with the site's password. */
+  withPassword: (model: string) => `${model} (password)`,
+  /** Beside the list of how much the agent thinks and how many steps it takes over a request. */
+  effort: 'Effort',
+  /** The efforts in that list, the least first. */
+  efforts: {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    xhigh: 'Extra high',
+    max: 'Maximum',
+  },
+  /** What a request ran on, beside it: the model with its version, and one of the efforts above. */
+  ranOn: (model: string, effort: string) => `${model}, effort: ${effort}`,
   left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
   noneLeft: (time: string) => `That is all for today. You can ask again from ${time}.`,
   /** Where the operator of the site switched building off, or there is no agent. */

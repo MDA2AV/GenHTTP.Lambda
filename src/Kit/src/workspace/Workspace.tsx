@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
+import type { Platform } from '../api';
 import { Footer } from '../components/Footer';
 import { IconClose, IconMenu, IconPlus } from '../components/Icons';
 import { useT } from '../i18n';
@@ -44,12 +45,12 @@ export function Workspace({ intro, after }: { intro: ReactNode; after?: ReactNod
 
   // whether the box has an agent behind it; until the server says, it is
   // offered, so the page is rendered with it for whoever reads it unscripted
-  const [build, setBuild] = useState<{ available: boolean; secondModel: boolean; perDay: number } | null>(null);
+  const [build, setBuild] = useState<Platform['build'] | null>(null);
 
   useEffect(() => {
     askPlatform()
       .then((platform) => setBuild(platform.build))
-      .catch(() => setBuild({ available: false, secondModel: false, perDay: 0 }));
+      .catch(() => setBuild({ available: false, perDay: 0, offer: { models: [], model: '', efforts: [], effort: '' } }));
   }, []);
 
   // choosing where to go is the end of the list on a phone
@@ -135,7 +136,7 @@ export function Workspace({ intro, after }: { intro: ReactNode; after?: ReactNod
               </>
             }
             offered={build?.available ?? true}
-            secondModel={build?.secondModel ?? false}
+            offer={build?.offer ?? null}
             onBuilt={open}
             allowance={left}
             onLeft={(left) => setLeft((was) => ({ left, perDay: was?.perDay ?? build?.perDay ?? left }))}

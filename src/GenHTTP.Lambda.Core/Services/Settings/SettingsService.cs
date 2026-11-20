@@ -9,16 +9,15 @@ namespace GenHTTP.Lambda.Services.Settings;
 /// What the operator can switch on or off without restarting the host.
 /// </summary>
 /// <remarks>
-/// Read on every page view by the header, so the values are read once as the
-/// platform starts (<see cref="LoadAsync"/>), held in memory and only written
-/// through to the database - a page view never waits for the records.
+/// Read by the platform's jobs as they run, so the values are read once as
+/// the platform starts (<see cref="LoadAsync"/>), held in memory and only
+/// written through to the database - nothing waits for the records.
+///
+/// The switches of the build agent were here once; they are the agent's
+/// settings now (<c>Services/Building</c>), kept under the same rows.
 /// </remarks>
 public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases) : ISettingsService
 {
-    private const string BuildBoxKey = "build-box";
-
-    private const string ChangeBoxKey = "change-box";
-
     private const string OptimizationKey = "database-optimization";
 
     /// <summary>
@@ -44,8 +43,6 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
         var stored = await database.Settings.AsNoTracking().ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
 
         _current = new SiteSettings(
-            BuildBox: Flag(stored, BuildBoxKey, SiteSettings.Default.BuildBox),
-            ChangeBox: Flag(stored, ChangeBoxKey, SiteSettings.Default.ChangeBox),
             OptimizeDatabases: Flag(stored, OptimizationKey, SiteSettings.Default.OptimizeDatabases)
         );
     }
@@ -61,8 +58,6 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
         {
             await using var database = await databases.CreateDbContextAsync(cancellation);
 
-            await WriteAsync(database, BuildBoxKey, settings.BuildBox, cancellation);
-            await WriteAsync(database, ChangeBoxKey, settings.ChangeBox, cancellation);
             await WriteAsync(database, OptimizationKey, settings.OptimizeDatabases, cancellation);
 
             await database.SaveChangesAsync(cancellation);
@@ -99,25 +94,15 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
 /// <summary>
 /// The switches of the installation.
 /// </summary>
-/// <param name="BuildBox">
-/// Whether the site offers the text box that has the agent build an app - on
-/// /build, or the front page of an installation without one. Off, the page
-/// only explains how to connect an agent of one's own. Either way there is no
-/// box without an agent.
-/// </param>
-/// <param name="ChangeBox">
-/// Whether the Change section of the editor offers its text box. Off, it only
-/// explains how to connect an agent of one's own.
-/// </param>
 /// <param name="OptimizeDatabases">
 /// Whether the platform keeps the databases in shape itself - its own and the
 /// lambdas', each in its quiet hours. Off for an operator whose database is
 /// looked after by its own tools, such as a PostgreSQL server with its own
 /// maintenance.
 /// </param>
-public sealed record SiteSettings(bool BuildBox, bool ChangeBox, bool OptimizeDatabases = true)
+public sealed record SiteSettings(bool OptimizeDatabases = true)
 {
 
-    public static readonly SiteSettings Default = new(BuildBox: true, ChangeBox: true, OptimizeDatabases: true);
+    public static readonly SiteSettings Default = new(OptimizeDatabases: true);
 
 }

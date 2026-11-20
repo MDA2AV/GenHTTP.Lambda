@@ -25,7 +25,9 @@ namespace GenHTTP.Lambda.Api;
 /// it into is creating a lambda, which is what it is for.
 ///
 /// What is on this side is the counting: a few builds per address per day,
-/// because each one spends somebody's subscription.
+/// because each one spends somebody's subscription or API key - and the
+/// models and efforts the operator offers, the dearer ones behind a password
+/// where they put them there.
 /// </remarks>
 [Tag(ApiDocumentation.Builds)]
 [Summary("The build agent of the installation: a sentence in, a new lambda out - for anybody, without a key.")]
@@ -36,8 +38,10 @@ namespace GenHTTP.Lambda.Api;
          is declined with a sentence saying why.
 
          Whether this installation builds anything at all is in `GET /system` (`build`), with how many builds one address
-         may ask for a day. Each build is counted against that allowance, which starts again at midnight UTC and is shared
-         with the changes asked for in the editor. An agent may also be reached directly through MCP at `/mcp`.
+         may ask for a day and the models and efforts its operator offers (`build.offer`) - a model may need the
+         installation's password, and runs without a clock and a limit on its steps with it. Each build is counted against
+         that allowance, which starts again at midnight UTC and is shared with the changes asked for in the editor. An agent
+         may also be reached directly through MCP at `/mcp`.
 
          Errors here carry `status` and `message` only.
          """)]
@@ -56,18 +60,19 @@ public sealed class BuildResource(IBuildService builds, ILogger<BuildResource> l
              operator knows what people ask for - put nothing into it that should not be read. It is cut past 2000 characters.
              """)]
     [Response(ResponseStatus.Accepted, "The build was taken on. Follow it by its `id`.")]
-    [Response(ResponseStatus.BadRequest, "The prompt says too little, or there is no such model.")]
-    [Response(ResponseStatus.Forbidden, "The password for the second model is not right.")]
+    [Response(ResponseStatus.BadRequest, "The prompt says too little, or the model or the effort is not one offered here.")]
+    [Response(ResponseStatus.Forbidden, "The model asked for needs the installation's password, and this is not it.")]
     [Response(ResponseStatus.NotFound, "This installation builds nothing: it has no agent, or the operator switched building off.")]
     [Response(ResponseStatus.TooManyRequests, "This address asked for as many builds today as one may.")]
     [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering. Nothing was counted.")]
     public async ValueTask<Result<BuildStarted>> Create(BuildRequest body, IRequest request)
     {
-        var started = await builds.StartAsync(body?.Prompt, body?.Model, body?.Password, request.Client.Address);
+        var started = await builds.StartAsync(body?.Prompt, body?.Model, body?.Effort, body?.Password, request.Client.Address);
 
         // the one argument logged in full however long it is: what people ask
         // to have built is what the operator most needs to know
-        logger.LogInformation("Started build {Build} model {Model} prompt {Prompt}", started.Id, body?.Model ?? "default", body?.Prompt?.Trim());
+        logger.LogInformation("Started build {Build} model {Model} effort {Effort} prompt {Prompt}",
+                              started.Id, started.Model, started.Effort, body?.Prompt?.Trim());
 
         return new Result<BuildStarted>(started).Status(ResponseStatus.Accepted);
     }

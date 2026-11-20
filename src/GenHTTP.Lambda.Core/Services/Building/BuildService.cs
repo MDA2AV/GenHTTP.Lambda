@@ -3,8 +3,6 @@ using System.Net;
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
-using GenHTTP.Lambda.Services.Settings;
-
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Building;
@@ -20,15 +18,17 @@ namespace GenHTTP.Lambda.Services.Building;
 /// Two kinds of job go through it. A build makes something new for whoever
 /// typed into the box on /build. A change works on a lambda that exists, for
 /// whoever holds its editor key, and is asked for from the control center.
-/// They share the queue and the daily allowance, since both spend the same
-/// subscription.
+/// They share the queue and the daily allowance, since both spend what the
+/// runner signs in with - a Claude subscription, or an API key billed by the
+/// token.
 ///
 /// This class decides what may be asked for and in which order things are
 /// checked; the rest is done by the units it orchestrates. <see cref="AgentClient"/>
 /// is the only thing that talks to the agent and holds the shared secret,
 /// <see cref="BuildAllowance"/> counts the jobs of each address,
-/// <see cref="ModelGate"/> says who may have which model, and
-/// <see cref="AgentInput"/> checks what the pages send.
+/// <see cref="ModelGate"/> says who may have which model and effort,
+/// <see cref="AgentSettingsStore"/> keeps what the operator decided about
+/// them, and <see cref="AgentInput"/> checks what the pages send.
 ///
 /// Nothing about a change is kept here. The agent files it under the lambda
 /// and is asked for it by lambda, so a change goes on being reported when
@@ -40,7 +40,7 @@ namespace GenHTTP.Lambda.Services.Building;
 /// panel - builds and changes each have a switch of their own - and the page
 /// is then left with how to connect an agent of one's own.
 /// </remarks>
-public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, ISettingsService settings,
+public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, AgentSettingsStore settings,
                                  ILogger<BuildService> logger) : IBuildService
 {
 
@@ -49,17 +49,41 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
     /// <summary>Whether the box on /build is offered: there is an agent, and the operator has not switched it off.</summary>
     public bool BuildsOffered()
-        => Available && settings.Get().BuildBox;
+        => Available && settings.Get().Builds;
 
     /// <summary>Whether the box in the Change section is offered: there is an agent, and the operator has not switched it off.</summary>
     public bool ChangesOffered()
-        => Available && settings.Get().ChangeBox;
+        => Available && settings.Get().Changes;
 
     /// <summary>How many builds one address is allowed in a day.</summary>
     public int PerDay => allowance.PerDay;
 
-    /// <summary>Whether the second model is on offer at all.</summary>
-    public bool HasSecondModel => models.HasSecondModel;
+    /// <summary>The models and efforts the pages may offer, with what they start on.</summary>
+    public AgentOffer Offer() => models.Offer();
+
+    /// <summary>Whether the installation has a password for the models behind one.</summary>
+    public bool PasswordSet => models.PasswordSet;
+
+    #region Settings
+
+    /// <summary>What the operator decided about the agent.</summary>
+    public AgentSettings GetSettings() => settings.Get();
+
+    /// <summary>
+    /// Replaces what the operator decided about the agent.
+    /// </summary>
+    /// <remarks>
+    /// Applies to the next job asked for and the next page drawn; a job under
+    /// way runs on as it was asked for.
+    /// </remarks>
+    public ValueTask<AgentSettings> SaveSettingsAsync(AgentSettings changed, CancellationToken cancellation = default)
+        => settings.SaveAsync(changed, cancellation);
+
+    /// <summary>What the runner of the agent says of itself, or nothing where there is none.</summary>
+    public async ValueTask<AgentRunner?> RunnerAsync(CancellationToken cancellation = default)
+        => Available ? await agent.HealthAsync(cancellation) : null;
+
+    #endregion
 
     #region Building
 
@@ -67,10 +91,11 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
     /// Starts a build, if this caller has any left today.
     /// </summary>
     /// <param name="model">
-    /// Which of the offered models to use. The second one needs the password.
+    /// Which of the offered models to use. One behind the password needs it.
     /// </param>
-    /// <param name="password">The password for the second model, where one was asked for.</param>
-    public async ValueTask<BuildStarted> StartAsync(string? prompt, string? model, string? password, IPAddress? caller)
+    /// <param name="effort">Which of the offered efforts to run at.</param>
+    /// <param name="password">The password, where a model behind it was asked for.</param>
+    public async ValueTask<BuildStarted> StartAsync(string? prompt, string? model, string? effort, string? password, IPAddress? caller)
     {
         agent.Require();
 
@@ -81,7 +106,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         var wanted = AgentInput.Prompt(prompt, "Say what you would like built.");
 
-        var wantedModel = models.Choose(model, password);
+        var choice = models.Choose(model, effort, password);
 
         if (!allowance.Spend(caller))
         {
@@ -94,7 +119,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         try
         {
-            started = await agent.StartBuildAsync(wanted, wantedModel);
+            started = await agent.StartBuildAsync(wanted, choice);
         }
         catch (ProviderException)
         {
@@ -111,7 +136,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         logger.LogInformation("Started build {Build}", started.Id);
 
-        return started with { Left = allowance.Left(caller) };
+        return started with { Left = allowance.Left(caller), Model = choice.ModelName, Effort = choice.EffortName };
     }
 
     /// <summary>
@@ -149,10 +174,10 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
     {
         if (!ChangesOffered())
         {
-            return new AgentState(false, PerDay, 0, HasSecondModel, null);
+            return new AgentState(false, PerDay, 0, Offer(), null);
         }
 
-        return new AgentState(true, PerDay, allowance.Left(caller), HasSecondModel, await agent.GetChangeAsync(lambda));
+        return new AgentState(true, PerDay, allowance.Left(caller), Offer(), await agent.GetChangeAsync(lambda));
     }
 
     /// <summary>
@@ -162,7 +187,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
     /// </summary>
     /// <remarks>
     /// A question costs what a change costs: the agent runs the same way for
-    /// either, and the allowance defends the subscription it runs on.
+    /// either, and the allowance defends what it signs in with.
     /// </remarks>
     /// <param name="lambda">The lambda, by the id the agent files the change under</param>
     /// <param name="privateKey">The editor key, which the agent needs to change anything</param>
@@ -172,7 +197,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
     /// <param name="history">What was said before, as the page keeps it, for the agent to understand the message by</param>
     public async ValueTask<AgentState> ChangeAsync(long lambda, string privateKey, int? before, string? prompt, bool deploy,
-                                                   string? model, string? password, string? language, string? feature,
+                                                   string? model, string? effort, string? password, string? language, string? feature,
                                                    IReadOnlyList<ConversationTurn>? history, IPAddress? caller)
     {
         agent.Require();
@@ -184,7 +209,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         var wanted = AgentInput.Prompt(prompt, "Say what should be different.");
 
-        var wantedModel = models.Choose(model, password);
+        var choice = models.Choose(model, effort, password);
 
         // asked before anything is spent: a second change of the same lambda
         // is refused, and refusing it should not cost the owner one
@@ -204,7 +229,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         try
         {
-            job = await agent.StartChangeAsync(lambda, privateKey, before, wanted, deploy, wantedModel,
+            job = await agent.StartChangeAsync(lambda, privateKey, before, wanted, deploy, choice,
                                                AgentInput.Language(language), feature, AgentInput.History(history));
         }
         catch (ProviderException)
@@ -222,7 +247,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
         // somebody reading this log and the ability to change the lambda
         logger.LogInformation("Started change {Change} of lambda #{LambdaId}", job.Id, lambda);
 
-        return new AgentState(true, PerDay, allowance.Left(caller), HasSecondModel, job);
+        return new AgentState(true, PerDay, allowance.Left(caller), Offer(), job);
     }
 
     /// <summary>
@@ -241,7 +266,7 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
             current = await agent.StopChangeAsync(current.Id, lambda) ?? current;
         }
 
-        return new AgentState(true, PerDay, allowance.Left(caller), HasSecondModel, current);
+        return new AgentState(true, PerDay, allowance.Left(caller), Offer(), current);
     }
 
     #endregion

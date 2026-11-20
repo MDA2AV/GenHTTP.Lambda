@@ -3,8 +3,8 @@ import type { KitMessages } from '../en';
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Je voudrais un site web qui…',
   password: 'mot de passe',
-  fable:
-    'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que votre site web soit fini, pas jusqu’à la fin du chrono.',
+  unlimited:
+    'Ce modèle demande le mot de passe, puis fonctionne sans limite de temps : il continue jusqu’à ce que votre site soit terminé, et non jusqu’à la fin du délai.',
   ideas: [
     'un site pour notre association où les membres s’inscrivent aux événements',
     'une liste pour notre auberge espagnole, pour que personne n’apporte le même plat',

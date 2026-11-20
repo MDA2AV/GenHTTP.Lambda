@@ -17,8 +17,7 @@ export const change: EditorMessages['change'] = {
   newFeature: 'Un borrador nuevo',
   full: (limit) =>
     `Ya hay ${limit} borradores, que es el máximo. Elige uno para seguir con él, o pon uno en línea o descártalo antes.`,
-  password: 'Contraseña',
-  fable: 'Fable se toma su tiempo: sin límite de tiempo ni de pasos, y con su propia cola.',
+  unlimited: 'Con la contraseña se toma su tiempo: sin reloj ni límite de pasos, en un carril propio.',
   left: (left, perDay) => (left === 1 ? `Hoy te queda 1 de ${perDay}` : `Hoy te quedan ${left} de ${perDay}`),
   leftTitle: 'La página Crear y esta sección comparten el mismo límite diario.',
   noneLeft: (time) =>

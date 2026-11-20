@@ -63,7 +63,7 @@ export const selfHosting = {
     ['A domain of its own', 'For Premium apps', 'For any app you move to production'],
     ['Apps nobody uses', `Offline after ${offline} days without a visit or a change, unless Premium`, 'As you set it'],
     ['Limits and rules', 'Ours, and our terms of service', 'Yours, set in the admin panel'],
-    ['The build agent', 'Included, a number of builds a day', 'Optional, with your own Claude subscription'],
+    ['The build agent', 'Included, a number of builds a day', 'Optional, with your own Claude subscription or API key'],
     ['Usage reports', 'None', 'Once a day: the version, the machine, the options and counts over the apps - never an app or a person. You can switch it off.'],
   ],
 

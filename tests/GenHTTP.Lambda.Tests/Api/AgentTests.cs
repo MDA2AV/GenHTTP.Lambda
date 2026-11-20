@@ -1,11 +1,17 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Tests.Api;
 
@@ -319,7 +325,7 @@ public sealed class AgentTests
         await using var agent = FakeAgent.Start();
         await using var fixture = await WithAgentAsync(agent);
 
-        using var off = await SwitchAsync(fixture, new SettingsModel(BuildBox: true, ChangeBox: false));
+        using var off = await SwitchAsync(fixture, new AgentSettingsRequest(Changes: false));
 
         Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
 
@@ -346,7 +352,7 @@ public sealed class AgentTests
 
         Assert.IsTrue(await BuildOfferedAsync(fixture), "on by default");
 
-        using var off = await SwitchAsync(fixture, new SettingsModel(BuildBox: false, ChangeBox: true));
+        using var off = await SwitchAsync(fixture, new AgentSettingsRequest(Builds: false));
 
         Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
 
@@ -573,12 +579,92 @@ public sealed class AgentTests
     }
 
     [TestMethod]
-    public async Task TheSecondModelIsForWhoeverKnowsItsPassword()
+    public async Task EveryModelButTheOneBehindThePasswordIsOfferedAtFirst()
     {
         await using var agent = FakeAgent.Start();
-        await using var fixture = await WithAgentAsync(agent, fablePassword: "open sesame");
+        await using var fixture = await WithAgentAsync(agent);
 
-        Assert.IsTrue(await SecondModelOfferedAsync(fixture));
+        var offer = await OfferAsync(fixture);
+
+        CollectionAssert.AreEqual(new[] { "opus", "sonnet", "haiku" }, offer.Models.Select(m => m.Name).ToArray(),
+                                  "Fable is behind the password, and there is none");
+        Assert.AreEqual("Opus 5.5", offer.Models[0].Label);
+        Assert.IsTrue(offer.Models.All(m => !m.Password));
+        Assert.AreEqual("opus", offer.Model);
+        CollectionAssert.AreEqual(new[] { "low", "medium", "high", "xhigh", "max" }, offer.Efforts.ToArray());
+        Assert.AreEqual("high", offer.Effort);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var change = (await StateAsync(fixture, lambda.PrivateKey)).Offer;
+
+        CollectionAssert.AreEqual(offer.Models.ToArray(), change.Models.ToArray(), "the Change section offers the same");
+        CollectionAssert.AreEqual(offer.Efforts.ToArray(), change.Efforts.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ABuildRunsOnTheModelAndTheEffortItAsksFor()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var chosen = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", " Sonnet ", Effort: "LOW"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, chosen.StatusCode);
+
+        var started = await chosen.GetContentAsync<BuildStarted>();
+
+        Assert.AreEqual("sonnet", started.Model);
+        Assert.AreEqual("low", started.Effort);
+
+        using var plain = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A guestbook"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, plain.StatusCode);
+
+        var sent = agent.Received.ToArray();
+
+        Assert.AreEqual("sonnet", sent[0]["model"]!.GetValue<string>());
+        Assert.AreEqual("low", sent[0]["effort"]!.GetValue<string>());
+        Assert.IsFalse(sent[0]["unbounded"]!.GetValue<bool>(), "on the clock, like everybody's");
+
+        Assert.AreEqual("opus", sent[1]["model"]!.GetValue<string>(), "where nobody chose, the default model");
+        Assert.AreEqual("high", sent[1]["effort"]!.GetValue<string>(), "and the default effort");
+    }
+
+    [TestMethod]
+    public async Task AChangeRunsOnTheModelAndTheEffortItAsksFor()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                     new ChangeRequest("Add a dark mode", Model: "haiku", Effort: "xhigh"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+
+        var job = (await response.GetContentAsync<AgentState>()).Job!;
+
+        Assert.AreEqual("haiku", job.Model);
+        Assert.AreEqual("xhigh", job.Effort, "the change says what it runs at, as the agent took it");
+
+        var sent = agent.Received.Single();
+
+        Assert.AreEqual("haiku", sent["model"]!.GetValue<string>());
+        Assert.AreEqual("xhigh", sent["effort"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task TheModelBehindThePasswordIsForWhoeverKnowsIt()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, password: "open sesame");
+
+        var fable = (await OfferAsync(fixture)).Models.Single(m => m.Name == "fable");
+
+        Assert.AreEqual("Fable 5.2", fable.Label);
+        Assert.IsTrue(fable.Password, "the page asks for it");
 
         using var wrong = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "fable", "open says me"));
 
@@ -588,7 +674,11 @@ public sealed class AgentTests
         using var right = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", " Fable ", "open sesame"));
 
         Assert.AreEqual(HttpStatusCode.Accepted, right.StatusCode);
-        Assert.AreEqual("fable", agent.Received.Single()["model"]!.GetValue<string>());
+
+        var sent = agent.Received.Single();
+
+        Assert.AreEqual("fable", sent["model"]!.GetValue<string>());
+        Assert.IsTrue(sent["unbounded"]!.GetValue<bool>(), "with the password, without the clock");
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -597,19 +687,19 @@ public sealed class AgentTests
     }
 
     [TestMethod]
-    public async Task WithoutAPasswordThereIsNoSecondModel()
+    public async Task WithoutAPasswordTheModelBehindOneIsOfferedToNobody()
     {
         await using var agent = FakeAgent.Start();
         await using var fixture = await WithAgentAsync(agent);
 
-        Assert.IsFalse(await SecondModelOfferedAsync(fixture));
+        Assert.IsFalse((await OfferAsync(fixture)).Models.Any(m => m.Name == "fable"));
 
         var lambda = await fixture.CreateLambdaAsync();
 
         using var guessed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
-                                                    new ChangeRequest("Add a dark mode", Model: "fable"));
+                                                    new ChangeRequest("Add a dark mode", Model: "fable", Password: ""));
 
-        Assert.AreEqual(HttpStatusCode.Forbidden, guessed.StatusCode, "no password is not an empty one");
+        Assert.AreEqual(HttpStatusCode.BadRequest, guessed.StatusCode, "not offered, rather than open to an empty password");
 
         using var unknown = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
                                                     new ChangeRequest("Add a dark mode", Model: "gpt"));
@@ -619,23 +709,213 @@ public sealed class AgentTests
         Assert.IsEmpty(agent.Received);
     }
 
+    [TestMethod]
+    public async Task OnlyAModelBehindThePasswordRunsWithoutTheClock()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, password: "open sesame");
+
+        using var moved = await SwitchAsync(fixture, new AgentSettingsRequest(Models:
+        [
+            new("opus", "open"), new("sonnet", "open"), new("haiku", "password"), new("fable", "open")
+        ]));
+
+        Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode);
+
+        using var fable = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "fable"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, fable.StatusCode, "Fable is everybody's now");
+
+        using var haiku = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "haiku", "open sesame"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, haiku.StatusCode);
+
+        var sent = agent.Received.ToArray();
+
+        Assert.IsFalse(sent[0]["unbounded"]!.GetValue<bool>(), "taken from behind the password, Fable is on the clock like every other");
+        Assert.IsTrue(sent[1]["unbounded"]!.GetValue<bool>(), "and the model put behind it runs without it");
+
+        using var plain = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "haiku"));
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, plain.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task WhatTheOperatorDoesNotOfferIsRefusedBeforeAnythingIsSpent()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var narrowed = await SwitchAsync(fixture, new AgentSettingsRequest(
+            Models: [new("opus", "open"), new("sonnet", "off"), new("haiku", "open"), new("fable", "off")],
+            Efforts: ["low", "medium", "high"]));
+
+        Assert.AreEqual(HttpStatusCode.OK, narrowed.StatusCode);
+
+        var offer = await OfferAsync(fixture);
+
+        CollectionAssert.AreEqual(new[] { "opus", "haiku" }, offer.Models.Select(m => m.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "low", "medium", "high" }, offer.Efforts.ToArray());
+
+        using var sonnet = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "sonnet"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, sonnet.StatusCode);
+
+        using var max = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", Effort: "max"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, max.StatusCode);
+
+        using var turbo = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", Effort: "turbo"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, turbo.StatusCode);
+
+        Assert.IsEmpty(agent.Received, "the agent is not asked");
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        Assert.AreEqual(fixture.Options.AgentBuildsPerDay, (await StateAsync(fixture, lambda.PrivateKey)).Left, "and nothing is counted");
+    }
+
+    [TestMethod]
+    public async Task TheDefaultsAreOfferedToEverybody()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, password: "open sesame");
+
+        using var hidden = await SwitchAsync(fixture, new AgentSettingsRequest(Models:
+        [
+            new("opus", "password"), new("sonnet", "open"), new("haiku", "open"), new("fable", "password")
+        ]));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, hidden.StatusCode, "the default model is everybody's");
+
+        using var none = await SwitchAsync(fixture, new AgentSettingsRequest(Efforts: []));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, none.StatusCode, "something has to be offered");
+
+        using var unoffered = await SwitchAsync(fixture, new AgentSettingsRequest(Efforts: ["low", "medium"]));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, unoffered.StatusCode, "the default effort is offered");
+
+        using var unknown = await SwitchAsync(fixture, new AgentSettingsRequest(Model: "gpt"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, unknown.StatusCode);
+
+        Assert.AreEqual("opus", (await OfferAsync(fixture)).Model, "nothing was changed");
+
+        using var moved = await SwitchAsync(fixture, new AgentSettingsRequest(Model: "haiku", Effort: "low",
+            Models: [new("opus", "password"), new("sonnet", "open"), new("haiku", "open"), new("fable", "password")]));
+
+        Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode, "with another default, the first may go behind the password");
+
+        var offer = await OfferAsync(fixture);
+
+        Assert.AreEqual("haiku", offer.Model);
+        Assert.AreEqual("low", offer.Effort);
+        Assert.IsTrue(offer.Models.Single(m => m.Name == "opus").Password);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, build.StatusCode);
+        Assert.AreEqual("haiku", agent.Received.Single()["model"]!.GetValue<string>());
+        Assert.AreEqual("low", agent.Received.Single()["effort"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task ThePanelSaysWhatTheRunnerSignsInWithAndRunsAs()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, password: "open sesame");
+
+        agent.SignsInWith = "api-key";
+
+        using var response = await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await response.GetContentAsync<AgentSettingsResponse>();
+
+        Assert.IsTrue(settings.Builds);
+        Assert.IsTrue(settings.Changes);
+        Assert.IsTrue(settings.PasswordSet);
+        Assert.AreEqual(agent.Url, settings.Url);
+        Assert.AreEqual(fixture.Options.AgentBuildsPerDay, settings.PerDay);
+
+        Assert.AreEqual("password", settings.Models.Single(m => m.Name == "fable").Access);
+        Assert.IsTrue(settings.Models.Single(m => m.Name == "fable").Offered);
+        Assert.IsTrue(settings.Efforts.All(e => e.Offered));
+
+        var runner = settings.Runner!;
+
+        Assert.IsTrue(runner.Reachable);
+        Assert.AreEqual("api-key", runner.SignsInWith);
+        Assert.AreEqual("claude-fable-5-2", runner.Models!["fable"]);
+        Assert.AreEqual("2.1.329", runner.Cli);
+
+        var raw = await response.Content.ReadAsStringAsync();
+
+        Assert.DoesNotContain("open sesame", raw, "whether there is a password, never what it is");
+        Assert.DoesNotContain("a secret", raw, "nor the token the server sends the runner");
+    }
+
+    [TestMethod]
+    public async Task ThePanelSaysWhenTheRunnerDoesNotAnswer()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { AgentUrl = "http://127.0.0.1:9/", AdminToken = AdminToken });
+
+        var settings = await (await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent")).GetContentAsync<AgentSettingsResponse>();
+
+        Assert.IsFalse(settings.Runner!.Reachable);
+        Assert.IsFalse(settings.PasswordSet);
+        Assert.IsFalse(settings.Models.Single(m => m.Name == "fable").Offered, "behind a password there is not");
+    }
+
+    [TestMethod]
+    public async Task TheSwitchesKeepWhatWasSavedBeforeTheyMoved()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        // where the site's settings kept them, before the agent had a section of its own
+        await using (var database = await fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>().CreateDbContextAsync())
+        {
+            database.Settings.Add(new SettingEntity { Key = "build-box", Value = "false" });
+            await database.SaveChangesAsync();
+        }
+
+        await fixture.Platform.Services.GetRequiredService<AgentSettingsStore>().LoadAsync();
+
+        Assert.IsFalse(await BuildOfferedAsync(fixture), "switched off before, off still");
+
+        using var on = await SwitchAsync(fixture, new AgentSettingsRequest(Builds: true));
+
+        Assert.IsTrue(await BuildOfferedAsync(fixture));
+
+        await using (var database = await fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>().CreateDbContextAsync())
+        {
+            Assert.AreEqual("true", (await database.Settings.FindAsync("build-box"))!.Value, "and kept in the same row");
+            Assert.AreEqual("password", (await database.Settings.FindAsync("agent.model.fable"))!.Value);
+            Assert.AreEqual("high", (await database.Settings.FindAsync("agent.default-effort"))!.Value);
+        }
+    }
+
     #region Helpers
 
-    private const string AdminToken = "the-admin-token";
+    private const string AdminToken = LambdaFixture.OperatorToken;
 
-    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, int perDay = 10, string? fablePassword = null)
+    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, int perDay = 10, string? password = null)
         => LambdaFixture.CreateAsync(o => o with
         {
             AgentUrl = agent.Url,
             AgentToken = "a secret",
             AgentBuildsPerDay = perDay,
-            AgentFablePassword = fablePassword,
+            AgentPassword = password,
             AdminToken = AdminToken
         });
 
-    private static async Task<HttpResponseMessage> SwitchAsync(LambdaFixture fixture, SettingsModel settings)
+    private static async Task<HttpResponseMessage> SwitchAsync(LambdaFixture fixture, AgentSettingsRequest settings)
     {
-        using var request = fixture.Host.GetRequest("/api/v1/admin/settings", HttpMethod.Put);
+        using var request = fixture.Host.GetRequest("/api/v1/admin/agent", HttpMethod.Put);
 
         request.Headers.Add("X-Admin-Token", AdminToken);
         request.Content = System.Net.Http.Json.JsonContent.Create(settings, options: new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
@@ -652,13 +932,13 @@ public sealed class AgentTests
         return platform["build"]!["available"]!.GetValue<bool>();
     }
 
-    private static async Task<bool> SecondModelOfferedAsync(LambdaFixture fixture)
+    private static async Task<AgentOffer> OfferAsync(LambdaFixture fixture)
     {
         using var response = await fixture.GetAsync("/api/v1/system");
 
         var platform = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
 
-        return platform["build"]!["secondModel"]!.GetValue<bool>();
+        return platform["build"]!["offer"].Deserialize<AgentOffer>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
     }
 
     private static async Task<AgentState> StateAsync(LambdaFixture fixture, string privateKey)

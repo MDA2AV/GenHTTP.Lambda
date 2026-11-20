@@ -3,8 +3,8 @@ import type { KitMessages } from '../en';
 export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Ik wil een website die…',
   password: 'wachtwoord',
-  fable:
-    'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je website af is, niet tot de tijd om is.',
+  unlimited:
+    'Dit model heeft het wachtwoord nodig en werkt dan zonder tijdslimiet: het gaat door tot je website klaar is, in plaats van tot de klok afloopt.',
   ideas: [
     'een website voor onze vereniging waar leden zich voor activiteiten aanmelden',
     'een inschrijflijst voor onze buurtborrel, zodat niet iedereen hetzelfde hapje meeneemt',

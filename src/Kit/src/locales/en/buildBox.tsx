@@ -6,8 +6,9 @@
 export const buildBox = {
   placeholder: 'I would like a website that…',
   password: 'password',
-  fable:
-    'Fable is behind a password while it is being tried out. It runs with no time limit, so it will keep going until your website is finished rather than until the clock runs out.',
+  /** Under the box, while a model that only runs with the site's password is chosen. */
+  unlimited:
+    'This model needs the password, and then runs with no time limit: it keeps going until your website is finished rather than until the clock runs out.',
   ideas: [
     'a website for our club where members sign up for events',
     'a sign-up sheet for our potluck, so nobody brings the same dish',
