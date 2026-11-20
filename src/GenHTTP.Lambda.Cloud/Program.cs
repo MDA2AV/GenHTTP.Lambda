@@ -14,6 +14,12 @@ using GenHTTP.Modules.Layouting;
 // the LAMBDA_* variables, with the lambdas at subdomains of LAMBDA_HOSTING_URL
 var settings = LambdaSettings.FromEnvironment();
 
+// the image's health check: asks the server running beside it, and starts nothing
+if (HealthProbe.IsRequested(args))
+{
+    return await HealthProbe.CheckAsync(settings.Server);
+}
+
 await using var platform = await LambdaPlatform.Create()
                                                .Options(CloudInstallation.Of(settings.Platform))
                                                .BuildAsync();

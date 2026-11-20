@@ -41,7 +41,13 @@ published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
 `.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
 hand. Both host images run the server as the unprivileged `lambda` (uid and
 gid 1001), which owns `/data` and its home; the application in `/app` belongs
-to root, so the server cannot change what it runs.
+to root, so the server cannot change what it runs. They are chiseled
+(`aspnet:11.0-resolute-chiseled-extra`: no shell, no package manager, with ICU
+and the time zones), so the health check is the host's own binary: called
+with `--health` (`HealthProbe`), it asks the server beside it for
+`/api/v1/system` and starts nothing, and any answer short of a server error
+counts - a redirect where TLS is set up, a 401 where a host puts a login in
+front.
 
 genhttp.dev is the cloud edition: `deploy/cloud/docker-compose.yml` builds it
 from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
