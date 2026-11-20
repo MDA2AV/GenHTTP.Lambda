@@ -214,7 +214,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             try
             {
-                version = meta.Save(lambda.PrivateKey, LambdaSource.Serialize(step.Read.Files!), new VersionNote(specification, change, VersionOrigins.Git), after);
+                version = await meta.SaveAsync(lambda.PrivateKey, LambdaSource.Serialize(step.Read.Files!), new VersionNote(specification, change, VersionOrigins.Git), after);
             }
             catch (LambdaException e) when (saved.Count > 0)
             {
@@ -288,7 +288,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
     {
         var branch = update.ShortName;
 
-        var feature = features.List(lambda.PrivateKey).FirstOrDefault(f => f.Branch == branch);
+        var feature = (await features.ListAsync(lambda.PrivateKey)).FirstOrDefault(f => f.Branch == branch);
 
         if (update.IsDelete)
         {
@@ -378,13 +378,13 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         }
         else if (feature.Base != based)
         {
-            feature = features.Update(lambda.PrivateKey, feature.Key, new FeatureUpdate(Base: based));
+            feature = await features.UpdateAsync(lambda.PrivateKey, feature.Key, new FeatureUpdate(Base: based));
         }
 
         try
         {
-            feature = features.Save(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
-                                    after: feature.Revision);
+            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
+                                              after: feature.Revision);
         }
         catch (LambdaException) when (started)
         {
@@ -532,7 +532,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
     /// </summary>
     private async ValueTask NotOnlineAsync(GitLambda lambda, int version, Said said)
     {
-        var online = meta.Get(lambda.PrivateKey)?.ActiveVersion;
+        var online = (await meta.GetAsync(lambda.PrivateKey))?.ActiveVersion;
 
         await said.LineAsync($"{(online == null ? "Nothing is online yet" : $"Version {online} is online")}. To put version {version} online, deploy it in the editor "
                            + $"or POST {lambda.Project.Home}/api/v1/lambdas/<editor key>/deployment/start; -o deploy does it with a push.");

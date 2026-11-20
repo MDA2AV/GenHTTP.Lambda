@@ -22,11 +22,11 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
 
     public async ValueTask<SecretListing> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = Resolve(privateKey, feature, false);
+        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, false, cancellation);
 
-        var enabled = Enabled(lambdaId);
+        var enabled = await EnabledAsync(lambdaId, cancellation);
 
-        var (used, optional) = Used(lambdaId, featureId);
+        var (used, optional) = await UsedAsync(lambdaId, featureId, cancellation);
 
         var stored = await vault.ListAsync(lambdaId, featureId, cancellation);
 
@@ -42,9 +42,9 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
 
     public async ValueTask<SecretInfo> SetAsync(string privateKey, string name, string value, string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = Resolve(privateKey, feature, true);
+        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, true, cancellation);
 
-        if (!Enabled(lambdaId))
+        if (!await EnabledAsync(lambdaId, cancellation))
         {
             throw LambdaException.Conflict(DataKinds.SecretsOff);
         }
@@ -61,14 +61,14 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
             logger.LogInformation("Set secret {Name} of lambda #{LambdaId}", stored.Name, lambdaId);
         }
 
-        var (used, _) = Used(lambdaId, featureId);
+        var (used, _) = await UsedAsync(lambdaId, featureId, CancellationToken.None);
 
         return new SecretInfo(stored.Name, stored.Created, stored.Changed, used.Contains(stored.Name));
     }
 
     public async ValueTask DeleteAsync(string privateKey, string name, string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = Resolve(privateKey, feature, true);
+        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, true, cancellation);
 
         if (!await vault.RemoveAsync(lambdaId, featureId, name?.Trim() ?? "", cancellation))
         {
@@ -93,27 +93,27 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
     /// The lambda and, where one is named, the feature - checked for being
     /// changeable where something is about to change.
     /// </summary>
-    private (long LambdaId, long? FeatureId) Resolve(string privateKey, string? feature, bool editable)
+    private async ValueTask<(long LambdaId, long? FeatureId)> ResolveAsync(string privateKey, string? feature, bool editable, CancellationToken cancellation)
     {
         if (!string.IsNullOrWhiteSpace(feature))
         {
-            var (lambdaId, featureId) = features.Require(privateKey, feature, editable);
+            var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, editable, cancellation);
 
             return (lambdaId, featureId);
         }
 
         var id = editable
-            ? meta.RequireEditable(privateKey)
-            : meta.GetId(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+            ? await meta.RequireEditableAsync(privateKey, cancellation)
+            : await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
         return (id, null);
     }
 
-    private bool Enabled(long lambdaId)
+    private async ValueTask<bool> EnabledAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return DataSwitches.IsEnabled(database, lambdaId, DataKinds.Secrets);
+        return await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Secrets, cancellation);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
     /// what is online and what was saved last, which is what goes online next.
     /// </summary>
     /// <returns>Every name read, and those of them the code asks about with Exists first - it does without them</returns>
-    private (HashSet<string> Used, HashSet<string> Optional) Used(long lambdaId, long? featureId)
+    private async ValueTask<(HashSet<string> Used, HashSet<string> Optional)> UsedAsync(long lambdaId, long? featureId, CancellationToken cancellation)
     {
         var sources = new List<IReadOnlyList<(string Name, bool Checked)>>();
 
@@ -131,11 +131,11 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
         }
         else
         {
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync(cancellation);
 
-            var active = database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefault();
+            var active = await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefaultAsync(cancellation);
 
-            var newest = database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).Max(d => (int?)d.Version);
+            var newest = await database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).MaxAsync(d => (int?)d.Version, cancellation);
 
             foreach (var version in new[] { active, newest }.OfType<int>().Distinct())
             {

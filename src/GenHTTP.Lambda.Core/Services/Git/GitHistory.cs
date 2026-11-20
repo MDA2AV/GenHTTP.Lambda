@@ -59,7 +59,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         var dropped = false;
 
-        var versions = meta.GetVersions(lambda.PrivateKey).OrderBy(v => v.Version).ToList();
+        var versions = (await meta.GetVersionsAsync(lambda.PrivateKey)).OrderBy(v => v.Version).ToList();
 
         var existing = versions.Select(v => v.Version).ToHashSet();
 
@@ -88,7 +88,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
             try
             {
-                code = meta.GetVersion(lambda.PrivateKey, version.Version).Code;
+                code = (await meta.GetVersionAsync(lambda.PrivateKey, version.Version)).Code;
             }
             catch (LambdaException)
             {
@@ -112,7 +112,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
         {
             try
             {
-                changed |= await MoveAsync(lambda, index, newest, () => meta.GetVersion(lambda.PrivateKey, versions[^1].Version).Code) != newest;
+                changed |= await MoveAsync(lambda, index, newest, async () => (await meta.GetVersionAsync(lambda.PrivateKey, versions[^1].Version)).Code) != newest;
             }
             catch (LambdaException)
             {
@@ -122,7 +122,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         if (withFeatures)
         {
-            var open = features.List(lambda.PrivateKey);
+            var open = await features.ListAsync(lambda.PrivateKey);
 
             var keys = open.Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
 
@@ -164,7 +164,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     {
         index.Features.TryGetValue(feature.Key, out var tip);
 
-        string Code() => features.Get(lambda.PrivateKey, feature.Key).Code;
+        async ValueTask<string> Code() => (await features.GetAsync(lambda.PrivateKey, feature.Key)).Code;
 
         if (tip != null && tip.Revision == feature.Revision && tip.Base >= feature.Base)
         {
@@ -199,7 +199,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         try
         {
-            code = Code();
+            code = await Code();
         }
         catch (LambdaException)
         {
@@ -213,13 +213,13 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         if (!own)
         {
-            var version = meta.GetVersion(lambda.PrivateKey, feature.Base).Code;
+            var version = (await meta.GetVersionAsync(lambda.PrivateKey, feature.Base)).Code;
 
             // nothing of its own yet: as long as it holds what its version
             // holds, it is that version's commit - as it is laid out now
             if (LambdaSource.Same(code, version))
             {
-                index.Features[feature.Key] = new FeatureTip(await MoveAsync(lambda, index, based, () => version), feature.Revision, feature.Base);
+                index.Features[feature.Key] = new FeatureTip(await MoveAsync(lambda, index, based, () => ValueTask.FromResult(version)), feature.Revision, feature.Base);
                 return true;
             }
 
@@ -254,7 +254,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     /// </remarks>
     /// <param name="code">What the tip holds: its version, or its feature as it is</param>
     /// <returns>The commit that stands for the tip</returns>
-    private async ValueTask<string> MoveAsync(GitLambda lambda, GitIndex index, string tip, Func<string> code)
+    private async ValueTask<string> MoveAsync(GitLambda lambda, GitIndex index, string tip, Func<ValueTask<string>> code)
     {
         if (index.Moved.TryGetValue(tip, out var moved))
         {
@@ -272,7 +272,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             ? "Moves assets/ to resources/, where the platform keeps what a lambda reads and serves now"
             : "Brings the platform's files up to date with how it lays a lambda out now";
 
-        var made = await CommitAsync(lambda, LambdaSource.Parse(code()), [tip], null, message, DateTime.UtcNow, null);
+        var made = await CommitAsync(lambda, LambdaSource.Parse(await code()), [tip], null, message, DateTime.UtcNow, null);
 
         index.Moved[tip] = made;
 

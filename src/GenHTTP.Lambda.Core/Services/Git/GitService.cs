@@ -40,33 +40,33 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
 
     public async ValueTask<IGitRepository?> OpenAsync(string privateKey, string origin, CancellationToken cancellation = default)
     {
-        if (meta.Get(privateKey) is not { } info || meta.GetId(privateKey) is not { } id)
+        if (await meta.GetAsync(privateKey, cancellation) is not { } info || await meta.GetIdAsync(privateKey, cancellation) is not { } id)
         {
             return null;
         }
 
-        var lambda = Describe(info, id, origin);
+        var lambda = await DescribeAsync(info, id, origin, cancellation);
 
         var index = await SyncAsync(lambda, true, cancellation);
 
-        var branches = features.List(privateKey).ToDictionary(f => f.Key, f => f.Branch);
+        var branches = (await features.ListAsync(privateKey, cancellation)).ToDictionary(f => f.Key, f => f.Branch);
 
         return new WritableLambdaRepository(store, history, id, index, key => branches.GetValueOrDefault(key), push => PushAsync(lambda, push));
     }
 
     public async ValueTask<IGitRepository?> ReadAsync(string publicKey, string origin, CancellationToken cancellation = default)
     {
-        if (sources.GetProject(publicKey) == null || meta.GetPrivateKey(publicKey) is not { } privateKey)
+        if (await sources.GetProjectAsync(publicKey, cancellation) == null || await meta.GetPrivateKeyAsync(publicKey, cancellation) is not { } privateKey)
         {
             return null;
         }
 
-        if (meta.Get(privateKey) is not { } info || meta.GetId(privateKey) is not { } id)
+        if (await meta.GetAsync(privateKey, cancellation) is not { } info || await meta.GetIdAsync(privateKey, cancellation) is not { } id)
         {
             return null;
         }
 
-        var index = await SyncAsync(Describe(info, id, origin), false, cancellation);
+        var index = await SyncAsync(await DescribeAsync(info, id, origin, cancellation), false, cancellation);
 
         return new LambdaRepository(store, history, id, index, false, _ => null);
     }
@@ -153,11 +153,11 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
     /// with the commits it builds on, so renaming the installation changes
     /// the platform's files of the commits made after it and refuses no push.
     /// </remarks>
-    private GitLambda Describe(LambdaInfo lambda, long id, string origin)
+    private async ValueTask<GitLambda> DescribeAsync(LambdaInfo lambda, long id, string origin, CancellationToken cancellation)
     {
         var home = (options.PublicUrl ?? origin).TrimEnd('/');
 
-        var license = sources.Get(lambda.PrivateKey) is { Published: true } source && SourceLicenses.Find(source.License) is { } found
+        var license = await sources.GetAsync(lambda.PrivateKey, cancellation) is { Published: true } source && SourceLicenses.Find(source.License) is { } found
             ? new RepositoryLicense(found, DateTime.UtcNow.Year, SourceLicenses.Holder(source.Author, lambda.PublicKey))
             : null;
 

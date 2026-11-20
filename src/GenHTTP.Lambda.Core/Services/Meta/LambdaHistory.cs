@@ -4,6 +4,8 @@ using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
@@ -17,6 +19,10 @@ namespace GenHTTP.Lambda.Services.Meta;
 ///
 /// Each kind is kept to a bound, oldest first, so a lambda an agent saves and
 /// deploys all day long does not grow without end.
+///
+/// Takes no cancellation token: what it writes is part of a change already
+/// decided on, and pruning deletes files before the rows that name them are
+/// saved - stopped in between, rows would be left naming nothing.
 /// </remarks>
 public sealed class LambdaHistory(IStorageService storage, ILimitsService limits, EditorAddresses editors)
 {
@@ -41,10 +47,10 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// beyond what the lambda's tier keeps (<see cref="TierLimits.Versions"/>)
     /// go from both.
     /// </remarks>
-    public LambdaVersionInfo Append(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note)
+    public async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note)
     {
-        var version = database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                              .Max(d => (int?)d.Version) + 1 ?? 1;
+        var version = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                                    .MaxAsync(d => (int?)d.Version) + 1 ?? 1;
 
         var specification = VersionInput.Tidy(note.Specification, VersionNote.MaxSpecification);
 
@@ -64,11 +70,11 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         lambda.Modified = now;
 
-        Record(database, lambda, LambdaEvents.Saved);
+        await RecordAsync(database, lambda, LambdaEvents.Saved);
 
-        database.SaveChanges();
+        await database.SaveChangesAsync();
 
-        Prune(database, lambda);
+        await PruneAsync(database, lambda);
 
         return new LambdaVersionInfo(version, now, specification, change, note.Origin);
     }
@@ -76,16 +82,16 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// <summary>
     /// Keeps the version history bounded, never touching the version that is live.
     /// </summary>
-    private void Prune(LambdaDbContext database, LambdaEntity lambda)
+    private async ValueTask PruneAsync(LambdaDbContext database, LambdaEntity lambda)
     {
         // the base of a feature is kept like the version online: it is what
         // the feature is compared with, and what it is shown to change
-        var bases = database.Features.Where(f => f.LambdaId == lambda.Id).Select(f => f.BaseVersion).ToList();
+        var bases = await database.Features.Where(f => f.LambdaId == lambda.Id).Select(f => f.BaseVersion).ToListAsync();
 
-        var obsolete = database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
-                               .OrderByDescending(d => d.Version)
-                               .Skip(limits.Get().Versions)
-                               .ToList();
+        var obsolete = await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
+                                     .OrderByDescending(d => d.Version)
+                                     .Skip(limits.Get().Versions)
+                                     .ToListAsync();
 
         if (obsolete.Count == 0)
         {
@@ -99,7 +105,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         database.Deployments.RemoveRange(obsolete);
 
-        database.SaveChanges();
+        await database.SaveChangesAsync();
     }
 
     #endregion
@@ -110,9 +116,9 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// Starts a stretch of being online with a version, ending the one before.
     /// </summary>
     /// <param name="origin">Who put it online</param>
-    public void Activate(LambdaDbContext database, long lambdaId, int version, DateTime now, string origin)
+    public async ValueTask ActivateAsync(LambdaDbContext database, long lambdaId, int version, DateTime now, string origin)
     {
-        Close(database, lambdaId, now, ActivationEndings.Replaced);
+        await CloseAsync(database, lambdaId, now, ActivationEndings.Replaced);
 
         database.Activations.Add(new ActivationEntity
         {
@@ -127,10 +133,10 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// Ends whatever stretch of being online is still open.
     /// </summary>
     /// <param name="endedBy">Why it ended, one of <see cref="ActivationEndings"/></param>
-    public void Close(LambdaDbContext database, long lambdaId, DateTime now, string endedBy)
+    public async ValueTask CloseAsync(LambdaDbContext database, long lambdaId, DateTime now, string endedBy)
     {
-        var open = database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended == null)
-                           .ToList();
+        var open = await database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended == null)
+                                 .ToListAsync();
 
         foreach (var activation in open)
         {
@@ -145,19 +151,19 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// <remarks>
     /// Reads what was saved, so it runs after the stretch it would count was.
     /// </remarks>
-    public void PruneActivations(LambdaDbContext database, long lambdaId)
+    public async ValueTask PruneActivationsAsync(LambdaDbContext database, long lambdaId)
     {
-        var obsolete = database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended != null)
-                               .OrderByDescending(a => a.Started)
-                               .ThenByDescending(a => a.Id)
-                               .Skip(MaxActivations)
-                               .ToList();
+        var obsolete = await database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended != null)
+                                     .OrderByDescending(a => a.Started)
+                                     .ThenByDescending(a => a.Id)
+                                     .Skip(MaxActivations)
+                                     .ToListAsync();
 
         if (obsolete.Count > 0)
         {
             database.Activations.RemoveRange(obsolete);
 
-            database.SaveChanges();
+            await database.SaveChangesAsync();
         }
     }
 
@@ -177,7 +183,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// counting those would bury the activity the figures are meant to show.
     /// </remarks>
     /// <param name="kind">What happened, one of <see cref="LambdaEvents"/></param>
-    public void Record(LambdaDbContext database, LambdaEntity lambda, string kind)
+    public async ValueTask RecordAsync(LambdaDbContext database, LambdaEntity lambda, string kind)
     {
         if (limits.PolicyOf(lambda.Tier).ReadOnly)
         {
@@ -196,7 +202,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
         // lambda that is going has nothing left to block
         if (kind != LambdaEvents.Deleted)
         {
-            editors.Note(lambda.Id);
+            await editors.NoteAsync(lambda.Id);
         }
     }
 

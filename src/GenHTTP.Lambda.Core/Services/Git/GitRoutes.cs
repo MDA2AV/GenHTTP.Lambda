@@ -121,7 +121,7 @@ public sealed class GitRoutes : IHandler
         {
             if (route.Owner)
             {
-                _logger.LogInformation("Fetched lambda {Lambda} with git", _meta.PublicKeyOf(route.Key));
+                _logger.LogInformation("Fetched lambda {Lambda} with git", await _meta.PublicKeyOfAsync(route.Key));
             }
             else
             {

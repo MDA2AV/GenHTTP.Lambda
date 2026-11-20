@@ -21,7 +21,7 @@ public interface IWorkspaceVault
     /// </summary>
     /// <param name="room">The room of the lambda's data, as its tier allows it now</param>
     /// <param name="beside">The room the rest of its data - its database - takes</param>
-    WorkspaceBinding Bind(long lambdaId, long? featureId, Func<long> room, Func<CancellationToken, ValueTask<long>> beside);
+    WorkspaceBinding Bind(long lambdaId, long? featureId, Func<CancellationToken, ValueTask<long>> room, Func<CancellationToken, ValueTask<long>> beside);
 
     /// <summary>
     /// The room the workspace of a lambda - or a feature's copy of it -

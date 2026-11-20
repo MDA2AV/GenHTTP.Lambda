@@ -65,8 +65,8 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
              at which of its addresses. Counted in memory since the server last started, which `since` says.
              """)]
     [return: Summary("Its traffic since the server came up")]
-    public LambdaTraffic Traffic([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => telemetry.DescribeLambda(meta.RequireId(privateKey));
+    public async ValueTask<LambdaTraffic> Traffic([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => telemetry.DescribeLambda(await meta.RequireIdAsync(privateKey));
 
     [ResourceMethod("lambdas/:privateKey/logs")]
     [Summary("Reads the log of a lambda")]
@@ -77,12 +77,12 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
              error and as errors with a server error. The previews of its features have logs of their own.
              """)]
     [return: Summary("The lines, and where to carry on from")]
-    public OwnerLogResponse Logs([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+    public async ValueTask<OwnerLogResponse> Logs([Summary(ApiDocumentation.PrivateKey)] string privateKey,
                                  [Summary("The `cursor` of the previous answer: only what came after it. Left out, the last 500 lines.")] long? since,
                                  [Summary("The lowest level to answer with: `debug`, `info` (the default), `warn` or `error`")] string? level,
                                  [Summary("At most this many lines, up to 2000; by default 500, or 1000 with `since`")] int? limit)
     {
-        var id = meta.RequireId(privateKey);
+        var id = await meta.RequireIdAsync(privateKey);
 
         var wanted = Math.Clamp(limit ?? (since.HasValue ? 1000 : 500), 1, 2000);
 

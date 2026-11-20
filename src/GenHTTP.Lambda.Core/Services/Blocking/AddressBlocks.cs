@@ -36,7 +36,7 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
     /// </summary>
     private volatile Held _held = Held.Empty;
 
-    private readonly Lock _writing = new();
+    private readonly SemaphoreSlim _writing = new(1, 1);
 
     #region Serving
 
@@ -66,7 +66,7 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
         return [.. held.Rows.OrderByDescending(r => r.Created).ThenByDescending(r => r.Id).Select(r => Describe(r, held))];
     }
 
-    public IReadOnlyList<AddressBlock> Block(IReadOnlyList<string> addresses, string? reason, string? publicKey)
+    public async ValueTask<IReadOnlyList<AddressBlock>> BlockAsync(IReadOnlyList<string> addresses, string? reason, string? publicKey)
     {
         var ranges = new List<IPNetwork>();
 
@@ -84,13 +84,15 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
 
         var names = ranges.Select(NetworkAddress.Describe).ToList();
 
-        lock (_writing)
+        await _writing.WaitAsync();
+
+        try
         {
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync();
 
             var now = DateTime.UtcNow;
 
-            var existing = database.AddressBlocks.Where(b => names.Contains(b.Address)).ToDictionary(b => b.Address, StringComparer.Ordinal);
+            var existing = await database.AddressBlocks.Where(b => names.Contains(b.Address)).ToDictionaryAsync(b => b.Address, StringComparer.Ordinal);
 
             foreach (var name in names)
             {
@@ -107,9 +109,13 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
                 }
             }
 
-            database.SaveChanges();
+            await database.SaveChangesAsync();
 
-            Reload(database);
+            await ReloadAsync(database);
+        }
+        finally
+        {
+            _writing.Release();
         }
 
         var held = _held;
@@ -117,54 +123,72 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
         return [.. held.Rows.Where(r => names.Contains(r.Address)).Select(r => Describe(r, held))];
     }
 
-    public bool Remove(long id)
+    public async ValueTask<bool> RemoveAsync(long id)
     {
-        lock (_writing)
-        {
-            using var database = databases.CreateDbContext();
+        await _writing.WaitAsync();
 
-            var removed = database.AddressBlocks.Where(b => b.Id == id).ExecuteDelete() > 0;
+        try
+        {
+            await using var database = await databases.CreateDbContextAsync();
+
+            var removed = await database.AddressBlocks.Where(b => b.Id == id).ExecuteDeleteAsync() > 0;
 
             if (removed)
             {
-                Reload(database);
+                await ReloadAsync(database);
             }
 
             return removed;
         }
+        finally
+        {
+            _writing.Release();
+        }
     }
 
-    public int Expire(DateTime now)
+    public async ValueTask<int> ExpireAsync(DateTime now)
     {
         var before = now - IAddressBlocks.Kept;
 
-        lock (_writing)
-        {
-            using var database = databases.CreateDbContext();
+        await _writing.WaitAsync();
 
-            var expired = database.AddressBlocks.Where(b => b.Created < before).ExecuteDelete();
+        try
+        {
+            await using var database = await databases.CreateDbContextAsync();
+
+            var expired = await database.AddressBlocks.Where(b => b.Created < before).ExecuteDeleteAsync();
 
             if (expired > 0)
             {
-                Reload(database);
+                await ReloadAsync(database);
 
                 logger.LogInformation("Expired address blocks count {Count}", expired);
             }
 
             return expired;
         }
+        finally
+        {
+            _writing.Release();
+        }
     }
 
     /// <summary>
     /// Reads the blocks from the database, once before the first request.
     /// </summary>
-    public void Reload()
+    public async ValueTask ReloadAsync()
     {
-        lock (_writing)
-        {
-            using var database = databases.CreateDbContext();
+        await _writing.WaitAsync();
 
-            Reload(database);
+        try
+        {
+            await using var database = await databases.CreateDbContextAsync();
+
+            await ReloadAsync(database);
+        }
+        finally
+        {
+            _writing.Release();
         }
     }
 
@@ -172,9 +196,9 @@ public sealed class AddressBlocks(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Helpers
 
-    private void Reload(LambdaDbContext database)
+    private async ValueTask ReloadAsync(LambdaDbContext database)
     {
-        var rows = database.AddressBlocks.AsNoTracking().ToList();
+        var rows = await database.AddressBlocks.AsNoTracking().ToListAsync();
 
         var previous = _held;
 

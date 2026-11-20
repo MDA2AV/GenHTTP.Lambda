@@ -22,7 +22,7 @@ namespace GenHTTP.Lambda.Execution;
 public sealed class FeatureLocator(IFeatureService features) : ILambdaLocator
 {
 
-    public ResolvedLambda? Locate(IRequest request)
+    public async ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
     {
         var target = request.Header.Target;
 
@@ -31,7 +31,7 @@ public sealed class FeatureLocator(IFeatureService features) : ILambdaLocator
             return null;
         }
 
-        var lambda = features.ResolvePreview(segment.Decode());
+        var lambda = await features.ResolvePreviewAsync(segment.Decode());
 
         if (lambda != null)
         {

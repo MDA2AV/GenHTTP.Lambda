@@ -362,7 +362,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// Moves a lambda to a tier, which only an administrator can do.
     /// </summary>
-    public void ChangeTier(string privateKey, LambdaTier tier) => Meta.ChangeTier(privateKey, tier);
+    public async Task ChangeTierAsync(string privateKey, LambdaTier tier) => await Meta.ChangeTierAsync(privateKey, tier);
 
     /// <summary>
     /// Creates a lambda through the API, the way the creation assistant does.
@@ -407,8 +407,15 @@ internal sealed class LambdaFixture : IAsyncDisposable
         return deployment;
     }
 
+    /// <remarks>
+    /// Fails the test where the platform asked for its records without
+    /// awaiting them, which compiles - a query enumerated with LINQ's own
+    /// methods - and runs synchronously on PostgreSQL as well.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
+        var synchronous = Platform.Services.GetRequiredService<SynchronousRecords>();
+
         await Host.DisposeAsync();
 
         await Platform.DisposeAsync();
@@ -416,6 +423,11 @@ internal sealed class LambdaFixture : IAsyncDisposable
         Loggers.Dispose();
 
         Cleanup();
+
+        if (synchronous.Count > 0)
+        {
+            throw new AssertFailedException($"The platform asked for its records synchronously {synchronous.Count} time(s), first: {synchronous.First}");
+        }
     }
 
     /// <summary>

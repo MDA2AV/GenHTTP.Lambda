@@ -80,7 +80,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// </remarks>
     private async ValueTask<DbConnection> ConnectAsync(DataScope scope, CancellationToken cancellation)
     {
-        var snapshot = Current(scope);
+        var snapshot = await CurrentAsync(scope);
 
         if (!snapshot.Enabled)
         {
@@ -90,18 +90,30 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
         return await provider.ConnectAsync(scope, await RoomOfAsync(scope.LambdaId, scope.FeatureId, snapshot.Tier, cancellation), cancellation);
     }
 
-    private Snapshot Current(DataScope scope)
+    /// <remarks>
+    /// What is held is answered with a task that has completed; only a
+    /// snapshot that has to be read again is awaited.
+    /// </remarks>
+    private ValueTask<Snapshot> CurrentAsync(DataScope scope)
     {
         var generation = _generations.GetValueOrDefault(scope.LambdaId);
 
         if (_snapshots.TryGetValue(scope, out var known) && known.Generation == generation)
         {
-            return known;
+            return ValueTask.FromResult(known);
         }
 
-        // taken with the generation read before it, so a switch landing while
-        // it loads leaves it old, and the next connection loads again
-        var loaded = Load(scope.LambdaId, generation);
+        return ReloadAsync(scope, generation);
+    }
+
+    /// <summary>
+    /// Reads the snapshot again and keeps it, taken with the generation read
+    /// before it - so a switch landing while it loads leaves it old, and the
+    /// next connection loads again.
+    /// </summary>
+    private async ValueTask<Snapshot> ReloadAsync(DataScope scope, long generation)
+    {
+        var loaded = await LoadAsync(scope.LambdaId, generation);
 
         _snapshots[scope] = loaded;
 
@@ -112,19 +124,23 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Reads whether the lambda has a database and how large it may grow, from
     /// the platform's own records.
     /// </summary>
-    private Snapshot Load(long lambdaId, long generation)
+    /// <remarks>
+    /// Without a cancellation token: what is read is kept for every
+    /// connection after, not only for the one asking.
+    /// </remarks>
+    private async ValueTask<Snapshot> LoadAsync(long lambdaId, long generation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync();
 
-        var enabled = database.DataStores.AsNoTracking()
-                              .Where(s => s.LambdaId == lambdaId && s.Kind == DataKinds.DatabaseId)
-                              .Select(s => (bool?)s.Enabled)
-                              .FirstOrDefault() ?? DataKinds.Database.Default;
+        var enabled = await database.DataStores.AsNoTracking()
+                                    .Where(s => s.LambdaId == lambdaId && s.Kind == DataKinds.DatabaseId)
+                                    .Select(s => (bool?)s.Enabled)
+                                    .FirstOrDefaultAsync() ?? DataKinds.Database.Default;
 
-        var tier = database.Lambdas.AsNoTracking()
-                           .Where(l => l.Id == lambdaId)
-                           .Select(l => (LambdaTier?)l.Tier)
-                           .FirstOrDefault();
+        var tier = await database.Lambdas.AsNoTracking()
+                                 .Where(l => l.Id == lambdaId)
+                                 .Select(l => (LambdaTier?)l.Tier)
+                                 .FirstOrDefaultAsync();
 
         // a lambda that is gone has no database, and the least room of any
         // tier until whatever still holds it lets go
@@ -160,7 +176,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         _snapshots.TryRemove(target, out _);
 
-        if (Load(lambdaId, 0).Enabled)
+        if ((await LoadAsync(lambdaId, 0)).Enabled)
         {
             // a whole database, a gigabyte in production, which a provider
             // that answers at once copies on the thread it is asked on (see
@@ -218,8 +234,8 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// A connection that only reads, to the database of a lambda or a
     /// feature's copy of it - or nothing where there is none.
     /// </summary>
-    public ValueTask<DbConnection?> OpenForReadingAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
-        => Load(lambdaId, 0).Enabled ? provider.ReadAsync(new DataScope(lambdaId, featureId), Patience, cancellation) : ValueTask.FromResult<DbConnection?>(null);
+    public async ValueTask<DbConnection?> OpenForReadingAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+        => (await LoadAsync(lambdaId, 0)).Enabled ? await provider.ReadAsync(new DataScope(lambdaId, featureId), Patience, cancellation) : null;
 
     /// <summary>
     /// Whether the lambda's database is there.
@@ -254,8 +270,12 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// write on. The tier is the one the connections read (see
     /// <see cref="Invalidate"/>), held in memory.
     /// </remarks>
-    public Func<long> DataRoomFor(long lambdaId, long? featureId)
-        => () => limits.PolicyOf(Current(new DataScope(lambdaId, featureId)).Tier).MaxDataBytes;
+    public Func<CancellationToken, ValueTask<long>> DataRoomFor(long lambdaId, long? featureId)
+    {
+        var scope = new DataScope(lambdaId, featureId);
+
+        return async _ => limits.PolicyOf((await CurrentAsync(scope)).Tier).MaxDataBytes;
+    }
 
     /// <summary>
     /// Writes the database of a lambda into a SQLite file of its own, whole -
@@ -267,7 +287,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// <see cref="Offload"/>).
     /// </remarks>
     public async ValueTask<string?> ExportAsync(long lambdaId, CancellationToken cancellation = default)
-        => Load(lambdaId, 0).Enabled ? await Offload.Run(() => provider.ExportAsync(new DataScope(lambdaId), cancellation), cancellation) : null;
+        => (await LoadAsync(lambdaId, 0)).Enabled ? await Offload.Run(() => provider.ExportAsync(new DataScope(lambdaId), cancellation), cancellation) : null;
 
     #endregion
 

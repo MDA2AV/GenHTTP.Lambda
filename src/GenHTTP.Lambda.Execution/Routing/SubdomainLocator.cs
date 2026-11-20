@@ -22,14 +22,14 @@ namespace GenHTTP.Lambda.Execution;
 public sealed class SubdomainLocator(IMetaService meta, HostingPages pages) : ILambdaLocator
 {
 
-    public ResolvedLambda? Locate(IRequest request)
+    public ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
     {
         if (request.GetHost() is not HostedLambda hosted || !LambdaKeys.TryRead(hosted.Label, out var key))
         {
-            return null;
+            return ValueTask.FromResult<ResolvedLambda?>(null);
         }
 
-        return meta.Resolve(key);
+        return meta.ResolveAsync(key);
     }
 
     public IResponse Unavailable(IRequest request) => pages.Missing(request, request.GetHost()?.Name ?? string.Empty);

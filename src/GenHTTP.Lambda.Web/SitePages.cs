@@ -154,7 +154,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 return Answer(request, meta.Robots(brand), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
-                var sitemap = meta.Sitemap(sources.ListAddresses());
+                var sitemap = meta.Sitemap(await sources.ListAddressesAsync());
 
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
@@ -186,7 +186,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 markup = SiteMeta.InHead(markup, more);
             }
 
-            markup = prerender.Render(markup, page, request, brand);
+            markup = await prerender.RenderAsync(markup, page, request, brand);
 
             return Answer(request, PageBranding.Apply(markup, brand), "text/html; charset=utf-8");
         }

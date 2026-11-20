@@ -18,11 +18,9 @@ public sealed class AddressBlockJob(IAddressBlocks blocks) : IBackgroundJob
 
     public TimeSpan Interval => TimeSpan.FromHours(1);
 
-    public ValueTask ExecuteAsync(CancellationToken cancellation)
+    public async ValueTask ExecuteAsync(CancellationToken cancellation)
     {
-        blocks.Expire(DateTime.UtcNow);
-
-        return ValueTask.CompletedTask;
+        await blocks.ExpireAsync(DateTime.UtcNow);
     }
 
 }

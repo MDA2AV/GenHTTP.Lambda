@@ -35,9 +35,10 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
 
     /// <summary>
     /// One reload at a time: two running side by side could finish in either
-    /// order, and the one that read the database first would win.
+    /// order, and the one that read the database first would win. Waited for
+    /// asynchronously, as it is held across the query.
     /// </summary>
-    private readonly Lock _reloading = new();
+    private readonly SemaphoreSlim _reloading = new(1, 1);
 
     #region Get-/Setters
 
@@ -76,19 +77,25 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
     /// Reads the served domains again. Called once on startup and after
     /// anything that changes a domain, a tier or the key of a lambda.
     /// </summary>
-    public void Reload()
+    /// <remarks>
+    /// Without a cancellation token: it follows a change that was written, and
+    /// stopped half way the domains served would not be what was written.
+    /// </remarks>
+    public async ValueTask ReloadAsync()
     {
-        lock (_reloading)
+        await _reloading.WaitAsync();
+
+        try
         {
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync();
 
             // LambdaAddresses.Serves, as the database is asked it
             var tiers = limits.TiersWhere(p => p.OwnDomain);
 
-            var served = database.Lambdas.AsNoTracking()
-                                 .Where(l => tiers.Contains(l.Tier) && l.Domain != null)
-                                 .Select(l => new { l.Id, l.PublicKey, Domain = l.Domain! })
-                                 .ToList();
+            var served = await database.Lambdas.AsNoTracking()
+                                       .Where(l => tiers.Contains(l.Tier) && l.Domain != null)
+                                       .Select(l => new { l.Id, l.PublicKey, Domain = l.Domain! })
+                                       .ToListAsync();
 
             var previous = _served.Domains.Count;
 
@@ -108,6 +115,10 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
             {
                 logger.LogInformation("Serving {Count} custom domain(s)", _served.Domains.Count);
             }
+        }
+        finally
+        {
+            _reloading.Release();
         }
     }
 

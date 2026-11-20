@@ -182,16 +182,16 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
     /// </remarks>
     private async ValueTask<List<LambdaStorage>> DescribeAsync(Dictionary<long, Owned> owned, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambdas = database.Lambdas.AsNoTracking()
-                              .Select(l => new { l.Id, l.PublicKey, l.Tier })
-                              .ToList();
+        var lambdas = await database.Lambdas.AsNoTracking()
+                                    .Select(l => new { l.Id, l.PublicKey, l.Tier })
+                                    .ToListAsync(cancellation);
 
-        var keeping = database.DataStores.AsNoTracking()
-                              .Where(s => s.Kind == DataKinds.DatabaseId && s.Enabled)
-                              .Select(s => s.LambdaId)
-                              .ToHashSet();
+        var keeping = await database.DataStores.AsNoTracking()
+                                    .Where(s => s.Kind == DataKinds.DatabaseId && s.Enabled)
+                                    .Select(s => s.LambdaId)
+                                    .ToHashSetAsync(cancellation);
 
         var described = new List<LambdaStorage>(owned.Count);
 

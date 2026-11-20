@@ -11,6 +11,7 @@ using GenHTTP.Lambda.Integrations.Secrets;
 using GenHTTP.Lambda.Integrations.Sqlite;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -25,7 +26,10 @@ namespace GenHTTP.Lambda.Tests.Infrastructure;
 /// call reaches what keeps the data - the platform's SQLite and local files
 /// underneath, the secrets in memory - so whatever awaits them is resumed
 /// later, elsewhere, and the plain calls a lambda kept wait for them. Each
-/// counts what it was asked, so a test can tell it was.
+/// counts what it was asked, so a test can tell it was. The platform's own
+/// records yield before every statement as well, as they do on a database
+/// server: the turns a change takes are held across a real wait, and the
+/// caches serving reads are loaded by tasks that have not completed.
 /// </remarks>
 internal static class YieldingIntegrations
 {
@@ -44,9 +48,14 @@ internal static class YieldingIntegrations
     /// </summary>
     internal sealed class Counter
     {
-        private int _database, _files, _secrets;
+        private int _database, _files, _secrets, _records;
 
         public int Database => Volatile.Read(ref _database);
+
+        /// <summary>
+        /// How many statements the platform sent to its own records.
+        /// </summary>
+        public int Records => Volatile.Read(ref _records);
 
         public int Files => Volatile.Read(ref _files);
 
@@ -55,6 +64,12 @@ internal static class YieldingIntegrations
         internal async ValueTask DatabaseAsync()
         {
             Interlocked.Increment(ref _database);
+            await Task.Yield();
+        }
+
+        internal async ValueTask RecordsAsync()
+        {
+            Interlocked.Increment(ref _records);
             await Task.Yield();
         }
 
@@ -85,7 +100,15 @@ internal static class YieldingIntegrations
 
         public DatabaseBinding Binding => inner.Binding;
 
-        public void ConfigureStore(DbContextOptionsBuilder options, DatabaseStore store) => inner.ConfigureStore(options, store);
+        public void ConfigureStore(DbContextOptionsBuilder options, DatabaseStore store)
+        {
+            inner.ConfigureStore(options, store);
+
+            if (store == DatabaseStore.Platform)
+            {
+                options.AddInterceptors(new YieldingRecords(counter));
+            }
+        }
 
         public void ConfigureContext(DbContextOptionsBuilder options, DbConnection connection) => inner.ConfigureContext(options, connection);
 
@@ -171,6 +194,35 @@ internal static class YieldingIntegrations
         {
             await counter.DatabaseAsync();
             return await inner.NaturalOrderAsync(connection, table, cancellation);
+        }
+
+    }
+
+    /// <summary>
+    /// Yields before every statement the platform sends to its own records.
+    /// </summary>
+    private sealed class YieldingRecords(Counter counter) : DbCommandInterceptor
+    {
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+                                                                                               CancellationToken cancellationToken = default)
+        {
+            await counter.RecordsAsync();
+            return result;
+        }
+
+        public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
+                                                                                        CancellationToken cancellationToken = default)
+        {
+            await counter.RecordsAsync();
+            return result;
+        }
+
+        public override async ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<object> result,
+                                                                                         CancellationToken cancellationToken = default)
+        {
+            await counter.RecordsAsync();
+            return result;
         }
 
     }

@@ -22,7 +22,7 @@ public sealed class CensusService(LambdaTally tally, StorageSurvey survey) : ICe
 
     #region Functionality
 
-    public LambdaCensus Count() => tally.Count(DateTime.UtcNow);
+    public ValueTask<LambdaCensus> CountAsync(CancellationToken cancellation = default) => tally.CountAsync(DateTime.UtcNow, cancellation);
 
     public (long? Size, long? Free) Disk() => survey.Disk();
 

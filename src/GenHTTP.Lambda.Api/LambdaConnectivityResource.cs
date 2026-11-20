@@ -42,8 +42,8 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
     [ResourceMethod("lambdas/:privateKey/connectivity")]
     [Summary("Reads whether a lambda may connect to other servers")]
     [return: Summary("Whether it may, and where its request stands")]
-    public ConnectivityResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => ConnectivityResponse.Of(connectivity.Get(privateKey));
+    public async ValueTask<ConnectivityResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => ConnectivityResponse.Of(await connectivity.GetAsync(privateKey));
 
     [ResourceMethod(Method.Put, "lambdas/:privateKey/connectivity")]
     [Summary("Asks for a lambda to connect to other servers")]
@@ -59,11 +59,11 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
     [Response(ResponseStatus.BadRequest, "No purpose was given.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public ConnectivityResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ConnectivityRequest request)
+    public async ValueTask<ConnectivityResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ConnectivityRequest request)
     {
-        var asked = connectivity.Request(privateKey, request.Purpose);
+        var asked = await connectivity.RequestAsync(privateKey, request.Purpose);
 
-        logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", meta.PublicKeyOf(privateKey), Said(asked));
+        logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", await meta.PublicKeyOfAsync(privateKey), Said(asked));
 
         return ConnectivityResponse.Of(asked);
     }
@@ -77,11 +77,11 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public ConnectivityResponse Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<ConnectivityResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var withdrawn = connectivity.Withdraw(privateKey);
+        var withdrawn = await connectivity.WithdrawAsync(privateKey);
 
-        logger.LogInformation("Withdrew connectivity of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Withdrew connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
 
         return ConnectivityResponse.Of(withdrawn);
     }

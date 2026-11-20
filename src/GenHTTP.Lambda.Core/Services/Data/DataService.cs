@@ -25,11 +25,11 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
     public async ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
-        var id = RequireId(privateKey);
+        var id = await RequireIdAsync(privateKey, cancellation);
 
-        long? featureId = feature != null ? (features.Require(privateKey, feature, false)).FeatureId : null;
+        long? featureId = feature != null ? (await features.RequireAsync(privateKey, feature, false, cancellation)).FeatureId : null;
 
-        var switches = Read(id);
+        var switches = await ReadAsync(id, cancellation);
 
         var stores = new List<DataStoreInfo>();
 
@@ -45,18 +45,18 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     {
         var wanted = DataKinds.Require(kind);
 
-        var id = RequireId(privateKey);
+        var id = await RequireIdAsync(privateKey, cancellation);
 
-        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], null, cancellation);
     }
 
     public async ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
-        var id = meta.RequireEditable(privateKey);
+        var id = await meta.RequireEditableAsync(privateKey, cancellation);
 
-        if (!(Read(id))[wanted.Id].Enabled)
+        if (!(await ReadAsync(id, cancellation))[wanted.Id].Enabled)
         {
             // there before it is switched on, so the first request finds it
             if (wanted.Id == DataKinds.DatabaseId)
@@ -64,32 +64,33 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
                 await stores.CreateAsync(id, cancellation);
             }
 
-            Switch(id, wanted, true);
+            // and switched on once it is there, whoever cancels
+            await SwitchAsync(id, wanted, true);
 
             logger.LogInformation("Enabled {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
-        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, CancellationToken.None))[wanted.Id], null, CancellationToken.None);
     }
 
     public async ValueTask<DataStoreInfo> DisableAsync(string privateKey, string kind, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
-        var id = meta.RequireEditable(privateKey);
+        var id = await meta.RequireEditableAsync(privateKey, cancellation);
 
-        if ((Read(id))[wanted.Id].Enabled)
+        if ((await ReadAsync(id, cancellation))[wanted.Id].Enabled)
         {
             // switched off first, so nothing new arrives while the rest goes -
             // and the rest goes whoever cancels, or it would stay behind unseen
-            Switch(id, wanted, false);
+            await SwitchAsync(id, wanted, false);
 
             await ClearAsync(id, wanted, CancellationToken.None);
 
             logger.LogInformation("Disabled and deleted {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
-        return await DescribeAsync(id, wanted, (Read(id))[wanted.Id], null, cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, CancellationToken.None))[wanted.Id], null, CancellationToken.None);
     }
 
     #endregion
@@ -118,7 +119,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
                 }
             case DataKinds.DatabaseId:
                 {
-                    var tier = Tier(lambdaId);
+                    var tier = await TierAsync(lambdaId, cancellation);
 
                     var room = await stores.RoomOfAsync(lambdaId, featureId, tier, cancellation);
 
@@ -165,7 +166,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
         await workspace.ClearAsync(lambdaId, null, cancellation);
 
         // a copy is still the data, and switching it off leaves none of it
-        foreach (var copy in Copies(lambdaId))
+        foreach (var copy in await CopiesAsync(lambdaId, cancellation))
         {
             await workspace.ClearAsync(lambdaId, copy, cancellation);
         }
@@ -174,35 +175,39 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// <summary>
     /// The features of a lambda, each of which has a copy of its data.
     /// </summary>
-    private List<long> Copies(long lambdaId)
+    private async ValueTask<List<long>> CopiesAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.Features.AsNoTracking()
-                       .Where(f => f.LambdaId == lambdaId)
-                       .Select(f => f.Id)
-                       .ToList();
+        return await database.Features.AsNoTracking()
+                             .Where(f => f.LambdaId == lambdaId)
+                             .Select(f => f.Id)
+                             .ToListAsync(cancellation);
     }
 
     #endregion
 
     #region Helpers
 
-    private long RequireId(string privateKey)
-        => meta.GetId(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+    private async ValueTask<long> RequireIdAsync(string privateKey, CancellationToken cancellation)
+        => await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-    private IReadOnlyDictionary<string, DataSwitch> Read(long lambdaId)
+    private async ValueTask<IReadOnlyDictionary<string, DataSwitch>> ReadAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return DataSwitches.Read(database, lambdaId);
+        return await DataSwitches.ReadAsync(database, lambdaId, cancellation);
     }
 
-    private void Switch(long lambdaId, DataKind kind, bool enabled)
+    /// <remarks>
+    /// Without a cancellation token: it follows what was begun - a database
+    /// made, data about to be deleted - and is written whoever leaves.
+    /// </remarks>
+    private async ValueTask SwitchAsync(long lambdaId, DataKind kind, bool enabled)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync();
 
-        var row = database.DataStores.FirstOrDefault(s => s.LambdaId == lambdaId && s.Kind == kind.Id);
+        var row = await database.DataStores.FirstOrDefaultAsync(s => s.LambdaId == lambdaId && s.Kind == kind.Id);
 
         if (row == null)
         {
@@ -214,7 +219,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             row.Changed = DateTime.UtcNow;
         }
 
-        database.SaveChanges();
+        await database.SaveChangesAsync();
 
         // a lambda reads whether it has secrets and a database as it uses them
         secrets.Invalidate(lambdaId);
@@ -229,11 +234,11 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
         }
     }
 
-    private LambdaTier Tier(long lambdaId)
+    private async ValueTask<LambdaTier> TierAsync(long lambdaId, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefault();
+        return await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefaultAsync(cancellation);
     }
 
     /// <summary>

@@ -58,7 +58,7 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
 
         var warmed = 0;
 
-        foreach (var id in Candidates())
+        foreach (var id in await CandidatesAsync(cancellation))
         {
             if (cancellation.IsCancellationRequested)
             {
@@ -67,7 +67,7 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
 
             // asked again rather than taken from the list: one taken offline
             // or blocked since is not served, so it is not compiled either
-            if (meta.Resolve(id) is not { } lambda)
+            if (await meta.ResolveAsync(id) is not { } lambda)
             {
                 continue;
             }
@@ -102,20 +102,20 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
     /// Ids only: each is resolved as its turn comes, and what it is served
     /// with may have changed by then.
     /// </remarks>
-    private List<long> Candidates()
+    private async ValueTask<List<long>> CandidatesAsync(CancellationToken cancellation)
     {
         var warm = limits.TiersWhere(p => p.WarmedUp);
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         // SQLite sorts nothing before everything, so the ones never visited
         // since the column existed come last
-        return database.Lambdas.AsNoTracking()
-                       .Where(l => warm.Contains(l.Tier) && l.ActiveVersion != null && l.Blocked == null)
-                       .OrderByDescending(l => l.LastSeen)
-                       .ThenBy(l => l.Id)
-                       .Select(l => l.Id)
-                       .ToList();
+        return await database.Lambdas.AsNoTracking()
+                             .Where(l => warm.Contains(l.Tier) && l.ActiveVersion != null && l.Blocked == null)
+                             .OrderByDescending(l => l.LastSeen)
+                             .ThenBy(l => l.Id)
+                             .Select(l => l.Id)
+                             .ToListAsync(cancellation);
     }
 
     #endregion

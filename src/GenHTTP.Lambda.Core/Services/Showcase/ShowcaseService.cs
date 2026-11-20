@@ -26,15 +26,15 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
     #region Owner
 
-    public ShowcaseInfo? Get(string privateKey)
+    public async ValueTask<ShowcaseInfo?> GetAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = Require(database, privateKey);
+        var lambda = await RequireAsync(database, privateKey, cancellation);
 
-        return Entries(database.Showcases.Where(s => s.LambdaId == lambda.Id))
-                     .Select(e => e.Info)
-                     .FirstOrDefault();
+        return await Entries(database.Showcases.Where(s => s.LambdaId == lambda.Id))
+                           .Select(e => e.Info)
+                           .FirstOrDefaultAsync(cancellation);
     }
 
     public async ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default)
@@ -82,16 +82,16 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                 ?? throw LambdaException.Invalid("The picture has to be a PNG, JPEG, GIF or WebP image.");
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
         if (!limits.PolicyOf(lambda.Tier).Showcased)
         {
             throw LambdaException.Forbidden($"'{lambda.PublicKey}' is in the tier '{limits.PolicyOf(lambda.Tier).Name}', the installation's own, which is never listed in the showcase.");
         }
 
-        var entry = database.Showcases.FirstOrDefault(s => s.LambdaId == lambda.Id);
+        var entry = await database.Showcases.FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
         var now = DateTime.UtcNow;
 
@@ -135,20 +135,21 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
             }
         }
 
-        database.SaveChanges();
+        // the picture is written, so the row that names it is, whoever cancels
+        await database.SaveChangesAsync(CancellationToken.None);
 
-        return Entries(database.Showcases.Where(s => s.LambdaId == lambda.Id))
-                     .Select(e => e.Info)
-                     .First();
+        return await Entries(database.Showcases.Where(s => s.LambdaId == lambda.Id))
+                           .Select(e => e.Info)
+                           .FirstAsync(CancellationToken.None);
     }
 
     public async ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
-        if (database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDelete() > 0)
+        if (await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation) > 0)
         {
             logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
         }
@@ -158,9 +159,9 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
     public async ValueTask ForgetAsync(long lambdaId, CancellationToken cancellation = default)
     {
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
+            await database.Showcases.Where(s => s.LambdaId == lambdaId).ExecuteDeleteAsync(cancellation);
         }
 
         await files.DeleteAsync(FileStore.Showcase, PictureNames.Showcase(lambdaId), cancellation);
@@ -170,9 +171,9 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
     #region Public
 
-    public ShowcasePage List(int skip, int take)
+    public async ValueTask<ShowcasePage> ListAsync(int skip, int take, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         // every online entry at once: they are ranked by figures that live
         // partly in memory, so the database cannot do the ordering - and a
@@ -181,8 +182,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         // moved out again
         var listed = limits.TiersWhere(p => p.Showcased);
 
-        var entries = Entries(database.Showcases.Where(s => s.Lambda!.ActiveVersion != null && listed.Contains(s.Lambda.Tier)))
-                            .ToList();
+        var entries = await Entries(database.Showcases.Where(s => s.Lambda!.ActiveVersion != null && listed.Contains(s.Lambda.Tier)))
+                                  .ToListAsync(cancellation);
 
         var now = DateTime.UtcNow;
 
@@ -196,12 +197,12 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
     public async ValueTask<ShowcaseImage?> GetImageAsync(string publicKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var entry = database.Showcases.AsNoTracking()
-                            .Where(s => s.Lambda!.PublicKey == publicKey)
-                            .Select(s => new { s.LambdaId, s.ImageType, s.Updated })
-                            .FirstOrDefault();
+        var entry = await database.Showcases.AsNoTracking()
+                                  .Where(s => s.Lambda!.PublicKey == publicKey)
+                                  .Select(s => new { s.LambdaId, s.ImageType, s.Updated })
+                                  .FirstOrDefaultAsync(cancellation);
 
         if (entry == null)
         {
@@ -210,7 +211,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         // the row's own bytes where the picture was not moved out of it yet
         var content = await files.ReadAsync(FileStore.Showcase, PictureNames.Showcase(entry.LambdaId), cancellation)
-                   ?? database.Showcases.AsNoTracking().Where(s => s.LambdaId == entry.LambdaId).Select(s => s.Image).FirstOrDefault();
+                   ?? await database.Showcases.AsNoTracking().Where(s => s.LambdaId == entry.LambdaId).Select(s => s.Image).FirstOrDefaultAsync(cancellation);
 
         return content is { Length: > 0 } ? new ShowcaseImage(content, entry.ImageType, entry.Updated) : null;
     }
@@ -279,8 +280,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                        s.Lambda.LastSeen,
                        s.Lambda.Modified));
 
-    private static LambdaEntity Require(LambdaDbContext database, string privateKey)
-        => database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+    private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+        => await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
@@ -290,9 +291,9 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     /// A demo's key is announced, so holding it says nothing about being the
     /// one who decides what the showcase says about it.
     /// </remarks>
-    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private async ValueTask<LambdaEntity> RequireEditableAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
     {
-        var lambda = Require(database, privateKey);
+        var lambda = await RequireAsync(database, privateKey, cancellation);
 
         LambdaGuard.EnsureUnblocked(lambda);
 

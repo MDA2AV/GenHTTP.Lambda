@@ -17,8 +17,9 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// unpacking, reading or writing a file that may be large - and copying or
 /// exporting a whole database or workspace, which an integration that answers
 /// at once does on the thread it is asked on, however it is awaited. What it
-/// is not for: a query against SQLite or a small file, which take less than
-/// the hop. On Kestrel and the internal engine it is a hop to the pool and
+/// is not for: a query against SQLite - the platform's own records included,
+/// which are awaited and answer on the thread that asks - or a small file,
+/// which take less than the hop. On Kestrel and the internal engine it is a hop to the pool and
 /// nothing more.
 ///
 /// The only way to the pool: <c>Task.Run</c> is refused when the server is

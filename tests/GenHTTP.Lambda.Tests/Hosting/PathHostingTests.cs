@@ -209,7 +209,7 @@ public sealed class PathHostingTests
     {
         var lambda = await ServeAsync(fixture, key);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using var response = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest(Domain));
 

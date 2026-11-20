@@ -188,7 +188,7 @@ public sealed class BlockingTests
             Assert.AreEqual(HttpStatusCode.NoContent, removed.StatusCode);
         }
 
-        Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));
+        Assert.IsNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
     }
 
     [TestMethod]
@@ -231,7 +231,7 @@ public sealed class BlockingTests
 
         await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow.AddYears(1));
 
-        Assert.IsNotNull(fixture.Meta.Get(lambda.PrivateKey));
+        Assert.IsNotNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
     }
 
     [TestMethod]
@@ -409,7 +409,7 @@ public sealed class BlockingTests
 
         var you = (await BlocksAsync(fixture)).You!;
 
-        Blocks(fixture).Block([you], "Myself, by mistake", null);
+        await Blocks(fixture).BlockAsync([you], "Myself, by mistake", null);
 
         using var anonymous = await fixture.GetAsync("/api/v1/admin/blocks");
 
@@ -423,7 +423,7 @@ public sealed class BlockingTests
 
         var blocks = Blocks(fixture);
 
-        var made = blocks.Block(["2001:db8:1:2::5", "203.0.113.7"], "Spam", null);
+        var made = await blocks.BlockAsync(["2001:db8:1:2::5", "203.0.113.7"], "Spam", null);
 
         CollectionAssert.AreEquivalent(new[] { "2001:db8:1:2::/64", "203.0.113.7" }, made.Select(b => b.Address).ToArray());
 
@@ -443,12 +443,12 @@ public sealed class BlockingTests
 
         var blocks = Blocks(fixture);
 
-        blocks.Block(["203.0.113.7"], "Spam", null);
+        await blocks.BlockAsync(["203.0.113.7"], "Spam", null);
 
-        Assert.AreEqual(0, blocks.Expire(DateTime.UtcNow.AddDays(13)));
+        Assert.AreEqual(0, await blocks.ExpireAsync(DateTime.UtcNow.AddDays(13)));
         Assert.HasCount(1, (await BlocksAsync(fixture)).Blocks);
 
-        Assert.AreEqual(1, blocks.Expire(DateTime.UtcNow.AddDays(15)));
+        Assert.AreEqual(1, await blocks.ExpireAsync(DateTime.UtcNow.AddDays(15)));
         Assert.IsEmpty((await BlocksAsync(fixture)).Blocks);
         Assert.IsFalse(blocks.Covers(IPAddress.Parse("203.0.113.7")));
     }
@@ -460,9 +460,9 @@ public sealed class BlockingTests
 
         var blocks = Blocks(fixture);
 
-        var first = blocks.Block(["203.0.113.7"], "Spam", "one").Single();
+        var first = (await blocks.BlockAsync(["203.0.113.7"], "Spam", "one")).Single();
 
-        var second = blocks.Block(["203.0.113.7"], "Phishing", "two").Single();
+        var second = (await blocks.BlockAsync(["203.0.113.7"], "Phishing", "two")).Single();
 
         Assert.AreEqual(first.Id, second.Id);
         Assert.IsGreaterThanOrEqualTo(first.Created, second.Created);

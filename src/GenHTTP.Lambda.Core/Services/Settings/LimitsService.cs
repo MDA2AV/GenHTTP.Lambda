@@ -24,8 +24,9 @@ namespace GenHTTP.Lambda.Services.Settings;
 /// its installation holds until the operator saves the form.
 ///
 /// Read on every request a lambda answers (the room of its data, the rate
-/// limit), so the values and the policies made of them are held in memory
-/// once they were read and only written through to the database.
+/// limit), so the values and the policies made of them are read once as the
+/// platform starts (<see cref="LoadAsync"/>), held in memory and only written
+/// through to the database - a request never waits for the records.
 ///
 /// A change applies to what is checked next: a save, an upload, a write to the
 /// workspace, a connection to a database, the next sweep. Nothing a lambda
@@ -37,9 +38,12 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 {
     private const string Prefix = "limits.";
 
-    private readonly Lock _lock = new();
+    /// <summary>
+    /// Who is changing the limits: one at a time, across the write.
+    /// </summary>
+    private readonly SemaphoreSlim _turn = new(1, 1);
 
-    private State? _current;
+    private volatile State? _current;
 
     /// <summary>
     /// The limits and the policy of every tier made of them, replaced together.
@@ -101,17 +105,13 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     );
 
     private State Current()
-    {
-        if (_current is { } current)
-        {
-            return current;
-        }
+        => _current ?? throw new InvalidOperationException("The limits of the installation are read as the platform starts, which it has not.");
 
-        lock (_lock)
-        {
-            return _current ??= Resolve(Read());
-        }
-    }
+    /// <summary>
+    /// Reads the limits into memory, before anything is served.
+    /// </summary>
+    public async ValueTask LoadAsync(CancellationToken cancellation = default)
+        => _current = Resolve(await ReadAsync(cancellation));
 
     private static State Resolve(ProductLimits limits)
         => new(limits, [.. TierPolicies.All.Select(t => TierPolicies.Of(t, limits))]);
@@ -129,15 +129,17 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// options or a later release say the default is.
     /// </remarks>
     /// <returns>The limits that were saved, and those they replaced</returns>
-    public (ProductLimits Saved, ProductLimits Previous) Save(ProductLimits limits)
+    public async ValueTask<(ProductLimits Saved, ProductLimits Previous)> SaveAsync(ProductLimits limits, CancellationToken cancellation = default)
     {
         limits = Tidy(limits);
 
         Validate(limits);
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            var previous = _current ?? Resolve(Read());
+            var previous = Current();
 
             // in memory before it is written: the write makes what serving
             // holds about each lambda stale (DatabaseChanges), and what it
@@ -147,7 +149,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
             try
             {
-                Write(limits);
+                await WriteAsync(limits, cancellation);
             }
             catch
             {
@@ -157,15 +159,19 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
             return (limits, previous.Limits);
         }
+        finally
+        {
+            _turn.Release();
+        }
     }
 
-    private void Write(ProductLimits limits)
+    private async ValueTask WriteAsync(ProductLimits limits, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         foreach (var (key, value) in Flatten(limits))
         {
-            var existing = database.Settings.Find(key);
+            var existing = await database.Settings.FindAsync([key], cancellation);
 
             if (existing == null)
             {
@@ -181,13 +187,13 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
         // the two read until they were saved themselves
         foreach (var key in Retired.SelectMany(r => new[] { $"{Prefix}sandbox.{r}", $"{Prefix}production.{r}" }))
         {
-            if (database.Settings.Find(key) is { } retired)
+            if (await database.Settings.FindAsync([key], cancellation) is { } retired)
             {
                 database.Settings.Remove(retired);
             }
         }
 
-        database.SaveChanges();
+        await database.SaveChangesAsync(cancellation);
     }
 
     /// <summary>
@@ -296,13 +302,13 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Helpers
 
-    private ProductLimits Read()
+    private async ValueTask<ProductLimits> ReadAsync(CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var stored = database.Settings.AsNoTracking()
-                             .Where(s => s.Key.StartsWith(Prefix))
-                             .ToDictionary(s => s.Key, s => s.Value);
+        var stored = await database.Settings.AsNoTracking()
+                                   .Where(s => s.Key.StartsWith(Prefix))
+                                   .ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
 
         var defaults = DefaultsOf(options);
 

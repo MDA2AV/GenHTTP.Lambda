@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Tests.Hosting;
@@ -133,7 +134,7 @@ public sealed class DomainTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Code);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await SetAsync(fixture, lambda.PrivateKey, $"www.{Domain}");
 
@@ -158,7 +159,7 @@ public sealed class DomainTests
 
         await fixture.DeployAsync(other.PrivateKey, """return Inline.Create().Get(() => "other");""");
 
-        fixture.ChangeTier(other.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(other.PrivateKey, LambdaTier.Production);
 
         await SetAsync(fixture, other.PrivateKey, $"www.{Domain}");
 
@@ -176,7 +177,7 @@ public sealed class DomainTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Code);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await SetAsync(fixture, lambda.PrivateKey, "example.org");
 
@@ -326,7 +327,7 @@ public sealed class DomainTests
 
         var lambda = await ServeAsync(fixture, "shop");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         using (var response = await fixture.GetAsync("/start", host: Domain))
         {
@@ -345,7 +346,7 @@ public sealed class DomainTests
         Assert.IsFalse(described.Served);
         Assert.IsFalse(described.Allowed);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var response = await fixture.GetAsync("/start", host: Domain))
         {
@@ -365,7 +366,7 @@ public sealed class DomainTests
         Assert.AreEqual(0, report.Undeployed);
         Assert.AreEqual(0, report.Deleted);
 
-        var described = fixture.Meta.Get(lambda.PrivateKey);
+        var described = await fixture.Meta.GetAsync(lambda.PrivateKey);
 
         Assert.IsNotNull(described!.ActiveVersion);
         Assert.IsNull(described.DeployedUntil, "nothing is going to take it down");
@@ -388,7 +389,7 @@ public sealed class DomainTests
         Assert.AreEqual($"https://{Domain}/", served.Address);
         Assert.AreEqual("http://shop.localhost:8080/", served.PublicUrl, "its own address, which sends visitors on to the domain");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         Assert.AreEqual("http://shop.localhost:8080/", (await ReadAsync(fixture, lambda.PrivateKey)).Address, "a domain that is not served is no place to send anybody");
     }
@@ -424,7 +425,7 @@ public sealed class DomainTests
 
         var lambda = await fixture.CreateLambdaAsync("tidy");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var described = await SetAsync(fixture, lambda.PrivateKey, "https://Shop.Example.com./some/page");
 
@@ -441,7 +442,7 @@ public sealed class DomainTests
 
         var second = await fixture.CreateLambdaAsync("second");
 
-        fixture.ChangeTier(second.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(second.PrivateKey, LambdaTier.Production);
 
         using var response = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{second.PrivateKey}/domain", new DomainChangeRequest(Domain));
 
@@ -455,7 +456,7 @@ public sealed class DomainTests
 
         var lambda = await fixture.CreateLambdaAsync("greedy");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         foreach (var claimed in new[] { "genhttp.dev", "www.genhttp.dev", "localhost" })
         {
@@ -522,13 +523,13 @@ public sealed class DomainTests
 
         var lambda = await fixture.CreateLambdaAsync("local");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         // the one name that resolves the same everywhere, without a network
-        await using var database = fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
-                                          .CreateDbContext();
+        await using var database = await fixture.Platform.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
+                                                .CreateDbContextAsync();
 
-        var row = database.Lambdas.Single(l => l.PublicKey == "local");
+        var row = await database.Lambdas.SingleAsync(l => l.PublicKey == "local");
         row.Domain = "localhost";
         await database.SaveChangesAsync();
 
@@ -546,7 +547,7 @@ public sealed class DomainTests
 
         var lambda = await fixture.CreateLambdaAsync("pointed");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using var set = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("pointed.example"));
 
@@ -564,7 +565,7 @@ public sealed class DomainTests
 
         var lambda = await fixture.CreateLambdaAsync("nowhere");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using var set = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("nowhere.example"));
 
@@ -687,7 +688,7 @@ public sealed class DomainTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Code);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         // at its own address while it has no domain, and at the domain after
         using (await fixture.GetAsync("http://shop.localhost/")) { }
@@ -720,7 +721,7 @@ public sealed class DomainTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Code);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var described = await SetAsync(fixture, lambda.PrivateKey, Domain);
 

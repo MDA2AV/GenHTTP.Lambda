@@ -165,7 +165,7 @@ public sealed class McpTests
         var answer = await CallToolAsync(fixture, "create_lambda", new JsonObject());
 
         Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
-        Assert.AreEqual(0, fixture.Meta.Count().Lambdas, "and no lambda was made anyway");
+        Assert.AreEqual(0, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made anyway");
     }
 
     [TestMethod]
@@ -191,7 +191,7 @@ public sealed class McpTests
         var full = Structured(await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey, ["view"] = "full" }));
 
         Assert.AreEqual("Full", full["view"]!.GetValue<string>());
-        Assert.AreEqual("Full", (fixture.Meta.Get(privateKey))!.View, "and it is kept");
+        Assert.AreEqual("Full", (await fixture.Meta.GetAsync(privateKey))!.View, "and it is kept");
     }
 
     [TestMethod]
@@ -218,7 +218,7 @@ public sealed class McpTests
 
         Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
         Assert.Contains("view", Problem(refused), "the refusal says which argument does not fit");
-        Assert.AreEqual("Full", fixture.Meta.Get(privateKey)!.View, "and nothing was changed");
+        Assert.AreEqual("Full", (await fixture.Meta.GetAsync(privateKey))!.View, "and nothing was changed");
 
         var missing = await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey });
 
@@ -227,7 +227,7 @@ public sealed class McpTests
         var wrong = await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["view"] = "minimal" });
 
         Assert.IsTrue(wrong["result"]!["isError"]!.GetValue<bool>());
-        Assert.AreEqual(1, fixture.Meta.Count().Lambdas, "and no lambda was made for it");
+        Assert.AreEqual(1, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made for it");
     }
 
     [TestMethod]
@@ -454,7 +454,7 @@ public sealed class McpTests
 
         Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
 
-        var versions = fixture.Meta.GetVersions(privateKey);
+        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
 
         Assert.AreEqual("a page that says hello", versions[0].Specification);
         Assert.AreEqual("Answers every request with hello", versions[0].Change);
@@ -468,7 +468,7 @@ public sealed class McpTests
 
         Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey }));
 
-        var history = fixture.Meta.GetActivations(privateKey);
+        var history = await fixture.Meta.GetActivationsAsync(privateKey);
 
         Assert.AreEqual("agent", history[0].Origin);
     }
@@ -530,7 +530,7 @@ public sealed class McpTests
 
         Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
 
-        var versions = fixture.Meta.GetVersions(privateKey);
+        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
 
         Assert.AreEqual("Adds a readme", versions[0].Change);
         Assert.AreEqual("agent", versions[0].Origin);
@@ -1038,7 +1038,7 @@ public sealed class McpTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var deployed = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
         {
@@ -1066,7 +1066,7 @@ public sealed class McpTests
 
         Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
         Assert.IsTrue(merged["online"]!.GetValue<bool>(), "a merge put online says so as well");
-        Assert.AreEqual(merged["version"]!.GetValue<int>(), fixture.Meta.Get(lambda.PrivateKey)?.ActiveVersion);
+        Assert.AreEqual(merged["version"]!.GetValue<int>(), (await fixture.Meta.GetAsync(lambda.PrivateKey))?.ActiveVersion);
     }
 
     [TestMethod]
@@ -1450,7 +1450,7 @@ public sealed class McpTests
         Assert.AreEqual("Production", sandbox["above"]!["tier"]!.GetValue<string>(), "and what the tier above allows");
         Assert.AreEqual(fixture.Limits.PolicyOf(LambdaTier.Production).MaxVersionBytes, sandbox["above"]!["buildBytes"]!.GetValue<long>());
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var production = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 

@@ -20,12 +20,12 @@ internal static class DataSwitches
     /// Whether the lambda has the kind of data: as its owner switched it, or
     /// as the kind comes by default if they never did.
     /// </summary>
-    public static bool IsEnabled(LambdaDbContext database, long lambdaId, DataKind kind)
+    public static async ValueTask<bool> IsEnabledAsync(LambdaDbContext database, long lambdaId, DataKind kind, CancellationToken cancellation = default)
     {
-        var chosen = database.DataStores.AsNoTracking()
-                             .Where(s => s.LambdaId == lambdaId && s.Kind == kind.Id)
-                             .Select(s => (bool?)s.Enabled)
-                             .FirstOrDefault();
+        var chosen = await database.DataStores.AsNoTracking()
+                                   .Where(s => s.LambdaId == lambdaId && s.Kind == kind.Id)
+                                   .Select(s => (bool?)s.Enabled)
+                                   .FirstOrDefaultAsync(cancellation);
 
         return chosen ?? kind.Default;
     }
@@ -33,11 +33,11 @@ internal static class DataSwitches
     /// <summary>
     /// How the lambda has every kind of data there is.
     /// </summary>
-    public static IReadOnlyDictionary<string, DataSwitch> Read(LambdaDbContext database, long lambdaId)
+    public static async ValueTask<IReadOnlyDictionary<string, DataSwitch>> ReadAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation = default)
     {
-        var chosen = database.DataStores.AsNoTracking()
-                             .Where(s => s.LambdaId == lambdaId)
-                             .ToDictionary(s => s.Kind, s => new DataSwitch(s.Enabled, s.Changed));
+        var chosen = await database.DataStores.AsNoTracking()
+                                   .Where(s => s.LambdaId == lambdaId)
+                                   .ToDictionaryAsync(s => s.Kind, s => new DataSwitch(s.Enabled, s.Changed), cancellation);
 
         return DataKinds.All.ToDictionary(k => k.Id, k => chosen.GetValueOrDefault(k.Id) ?? new DataSwitch(k.Default, null));
     }

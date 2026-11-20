@@ -42,7 +42,7 @@ public sealed class WarmupTests
         var shop = await OnlineAsync(fixture, "shop", Stamped, LambdaTier.Production);
         var collector = await OnlineAsync(fixture, "collector", Stamped, LambdaTier.System);
 
-        Restart(fixture, shop, collector);
+        await RestartAsync(fixture, shop, collector);
 
         await fixture.WarmUpAsync();
 
@@ -61,7 +61,7 @@ public sealed class WarmupTests
 
         var trial = await OnlineAsync(fixture, "trial", Stamped, LambdaTier.Sandbox);
 
-        Restart(fixture, trial);
+        await RestartAsync(fixture, trial);
 
         await fixture.WarmUpAsync();
 
@@ -79,10 +79,10 @@ public sealed class WarmupTests
         var blocked = await OnlineAsync(fixture, "blocked", Stamped, LambdaTier.Production);
         var trial = await OnlineAsync(fixture, "trial", Stamped, LambdaTier.Sandbox);
 
-        fixture.Meta.Undeploy(stopped.PrivateKey);
-        fixture.Meta.Block(blocked.PrivateKey, "Phishing");
+        await fixture.Meta.UndeployAsync(stopped.PrivateKey);
+        await fixture.Meta.BlockAsync(blocked.PrivateKey, "Phishing");
 
-        Restart(fixture, stopped, blocked, trial);
+        await RestartAsync(fixture, stopped, blocked, trial);
 
         var before = Deployed(fixture);
 
@@ -101,7 +101,7 @@ public sealed class WarmupTests
         // settings reuses - so it is in production before it is built
         var flaky = await fixture.CreateLambdaAsync("flaky");
 
-        fixture.ChangeTier(flaky.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(flaky.PrivateKey, LambdaTier.Production);
 
         using (var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{flaky.PrivateKey}/versions", new VersionRequest(
                [
@@ -131,7 +131,7 @@ public sealed class WarmupTests
 
         var steady = await OnlineAsync(fixture, "steady", Stamped, LambdaTier.Production);
 
-        Restart(fixture, flaky, steady);
+        await RestartAsync(fixture, flaky, steady);
 
         await fixture.WarmUpAsync();
 
@@ -156,7 +156,7 @@ public sealed class WarmupTests
 
         if (tier != LambdaTier.Sandbox)
         {
-            fixture.ChangeTier(lambda.PrivateKey, tier);
+            await fixture.ChangeTierAsync(lambda.PrivateKey, tier);
         }
 
         return lambda;
@@ -166,11 +166,11 @@ public sealed class WarmupTests
     /// What a restart leaves of the lambdas: what they have online, and
     /// nothing compiled for it.
     /// </summary>
-    private static void Restart(LambdaFixture fixture, params LambdaResponse[] lambdas)
+    private static async Task RestartAsync(LambdaFixture fixture, params LambdaResponse[] lambdas)
     {
         foreach (var lambda in lambdas)
         {
-            fixture.Deployments.EvictAll(fixture.Meta.GetId(lambda.PrivateKey)!.Value);
+            fixture.Deployments.EvictAll((await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value);
         }
     }
 

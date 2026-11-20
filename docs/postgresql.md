@@ -119,12 +119,14 @@ session mode, or lower the pool size.
 
 What the apps send to their databases is awaited, and so is everything the
 platform asks of the integration - opening a connection, measuring a
-database, copying one for a draft, the analytics. On the image's engine, and
-on Kestrel, no thread waits while PostgreSQL answers. An app that still calls
-`Database.GetConnection()`, or Entity Framework's synchronous methods, holds
-one; the asynchronous forms, which agents are taught, do not. The platform's
-own records are still read and written synchronously, so a slow or distant
-server slows the editor, the panel and the API. Keep it close.
+database, copying one for a draft, the analytics - and its own records: the
+lambdas, their versions and drafts, the secrets, the settings. On the image's
+engine, and on Kestrel, no thread waits while PostgreSQL answers. An app that
+still calls `Database.GetConnection()`, or Entity Framework's synchronous
+methods, holds one; the asynchronous forms, which agents are taught, do not.
+Serving an app reads nothing from the platform's records but after a change,
+so a distant server slows the editor, the panel and the API by its round
+trips, never by taking threads from the apps.
 
 The Ioxide engine (`LAMBDA_ENGINE=ioxide`) is built for a database that
 answers on the thread that asks, as SQLite does. With PostgreSQL it works -

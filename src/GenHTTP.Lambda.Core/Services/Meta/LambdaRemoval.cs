@@ -39,25 +39,25 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         // in the activity list that nothing can be looked up from any more
         telemetry.ForgetLambda(lambda.Id);
 
-        history.Record(database, lambda, LambdaEvents.Deleted);
+        await history.RecordAsync(database, lambda, LambdaEvents.Deleted);
 
         // the key cascades in the schema, but only where the connection has
         // foreign keys switched on - said here so it does not depend on that
-        database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDelete();
+        await database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDeleteAsync();
 
         // its entry and its picture, wherever the files are kept
         await showcases.ForgetAsync(lambda.Id);
 
-        database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
+        await database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync();
 
         // wherever they are kept, before the lambda they belong to goes
         await secrets.ClearAsync(lambda.Id);
 
-        database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDelete();
+        await database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDeleteAsync();
 
         database.Lambdas.Remove(lambda);
 
-        database.SaveChanges();
+        await database.SaveChangesAsync();
 
         secrets.Invalidate(lambda.Id);
 
@@ -68,7 +68,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
 
         if (lambda.Domain != null)
         {
-            domains.Reload();
+            await domains.ReloadAsync();
         }
 
         storage.Delete(lambda.Id);

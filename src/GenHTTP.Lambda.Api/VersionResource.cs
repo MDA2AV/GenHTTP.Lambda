@@ -48,9 +48,9 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     [Summary("Lists the versions that are kept, newest first")]
     [Remarks("Without their files. `GET …/versions/{version}` reads one with them.")]
     [return: Summary("The versions, newest first")]
-    public List<VersionResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<List<VersionResponse>> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var versions = meta.GetVersions(privateKey);
+        var versions = await meta.GetVersionsAsync(privateKey);
 
         return versions.Select(Describe).ToList();
     }
@@ -64,9 +64,9 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version - it never existed, or it was not kept.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The version with its files")]
-    public VersionContentResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+    public async ValueTask<VersionContentResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
                                       [Summary("Only the files whose name starts with this, such as `docs/` or `resources/`")] string? folder)
-        => Describe(meta.GetVersion(privateKey, version), folder);
+        => Describe(await meta.GetVersionAsync(privateKey, version), folder);
 
     [ResourceMethod("lambdas/:privateKey/versions/:version/zip")]
     [Summary("Downloads a version as a zip archive")]
@@ -80,14 +80,14 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, named after the public key and the version: `quiz-v3.zip`, or `quiz-v3-project.zip`")]
     [Response(ResponseStatus.BadRequest, "There is no such layout.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public IResponse GetArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+    public async ValueTask<IResponse> GetArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
                                 [Summary(ApiDocumentation.Layout)] string? layout, IRequest request)
     {
         var laid = LayoutOf(layout);
 
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
-        var content = meta.GetVersion(privateKey, version);
+        var content = await meta.GetVersionAsync(privateKey, version);
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code), laid);
 
@@ -129,9 +129,9 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
 
         // looked up before the body is read, because how much of it may be
         // read depends on the tier - and a key that names nothing needs none
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
-        var files = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, meta.LatestFiles(privateKey));
+        var files = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, await meta.LatestFilesAsync(privateKey));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }
@@ -151,7 +151,7 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     public async ValueTask<Result<SavedVersionResponse>> Change([Summary(ApiDocumentation.PrivateKey)] string privateKey,
                                                                 [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionChangeRequest request)
     {
-        var files = LambdaChanges.Apply(meta.LatestFiles(privateKey), request.Files, request.Remove, request.Edits);
+        var files = LambdaChanges.Apply(await meta.LatestFilesAsync(privateKey), request.Files, request.Remove, request.Edits);
 
         return await SaveAsync(privateKey, files, deploy, request.Specification, request.Change);
     }
@@ -187,9 +187,9 @@ public sealed class VersionResource(IMetaService meta, ILogger<VersionResource> 
     {
         var note = new VersionNote(specification, change, VersionOrigins.Api);
 
-        var version = meta.Save(privateKey, Serialize(files), note);
+        var version = await meta.SaveAsync(privateKey, Serialize(files), note);
 
-        var publicKey = meta.PublicKeyOf(privateKey);
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", publicKey, version.Version, files!.Count);
 

@@ -84,8 +84,8 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Remarks("Its keys and tier, its newest version and the one online, until when it stays online and is kept, and where it answers.")]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda")]
-    public LambdaResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => LambdaDescription.Of(meta.Require(privateKey));
+    public async ValueTask<LambdaResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => LambdaDescription.Of(await meta.RequireAsync(privateKey));
 
     /// <remarks>
     /// The view is read before anything changes, so a request that names one
@@ -107,24 +107,24 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public LambdaResponse Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, UpdateLambdaRequest request)
+    public async ValueTask<LambdaResponse> Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, UpdateLambdaRequest request)
     {
         var view = EditorViews.Parse(request.View);
 
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
         if (request.PublicKey is { } publicKey)
         {
             var before = lambda.PublicKey;
 
-            lambda = meta.ChangeKey(privateKey, publicKey);
+            lambda = await meta.ChangeKeyAsync(privateKey, publicKey);
 
             logger.LogInformation("Changed public key of lambda {Before} to {Lambda}", before, lambda.PublicKey);
         }
 
         if (view is { } wanted)
         {
-            lambda = meta.ChangeView(privateKey, wanted);
+            lambda = await meta.ChangeViewAsync(privateKey, wanted);
 
             logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
         }
@@ -146,7 +146,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var publicKey = meta.PublicKeyOf(privateKey);
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         await meta.DeleteAsync(privateKey);
 
@@ -176,14 +176,14 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no version to export.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<IResponse> Export([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
         if (lambda.LatestVersion is not { } latest)
         {
             throw LambdaException.NotFound("That lambda has nothing saved to take away yet.");
         }
 
-        var content = meta.GetVersion(privateKey, latest);
+        var content = await meta.GetVersionAsync(privateKey, latest);
 
         var address = lambda.Address;
 
@@ -194,7 +194,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         // a lambda whose source is published is taken away under the same
         // license everybody else downloads it under
-        var published = sources.Get(privateKey) is { Published: true } source ? source : null;
+        var published = await sources.GetAsync(privateKey) is { Published: true } source ? source : null;
 
         var license = published != null && SourceLicenses.Find(published.License) is { } found
             ? new ExportedLicense(found, SourceLicenses.Holder(published.Author, lambda.PublicKey),
@@ -203,7 +203,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names, license);
 
-        var id = meta.RequireId(privateKey);
+        var id = await meta.RequireIdAsync(privateKey);
 
         // a copy of what the lambda keeps, packed along and then let go
         var database = await databases.ExportAsync(id);

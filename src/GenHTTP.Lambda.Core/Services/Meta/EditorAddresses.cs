@@ -18,9 +18,9 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// </summary>
 /// <remarks>
 /// Noted wherever a lambda is changed - created, saved, put online or taken
-/// offline (<see cref="LambdaHistory.Record"/>), and whatever asks for a
+/// offline (<see cref="LambdaHistory.RecordAsync"/>), and whatever asks for a
 /// lambda its owner may change: its drafts, its data, its files, the agent
-/// (<see cref="MetaService.RequireEditable"/>) - with the address of the
+/// (<see cref="MetaService.RequireEditableAsync"/>) - with the address of the
 /// request being served. Through whichever door: the editor, the API, MCP,
 /// git. A change the build agent makes comes from the installation's own
 /// network and is not noted, so its address never becomes one to block.
@@ -57,9 +57,11 @@ public sealed class EditorAddresses(IDbContextFactory<LambdaDbContext> databases
     /// </summary>
     /// <remarks>
     /// In a context of its own, so a note that cannot be written - the lambda
-    /// deleted at that moment - never fails the change it is about.
+    /// deleted at that moment - never fails the change it is about; and
+    /// without a cancellation token, since it is written beside a change that
+    /// is not stopped for it either.
     /// </remarks>
-    public void Note(long lambdaId)
+    public async ValueTask NoteAsync(long lambdaId)
     {
         if (Caller.Ambient is not { Peer: { } peer } caller || NetworkAddress.IsOwn(peer, options.UnblockableNetworks) || ByTheOperator(caller))
         {
@@ -75,9 +77,9 @@ public sealed class EditorAddresses(IDbContextFactory<LambdaDbContext> databases
             return;
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync();
 
-        var row = database.EditorAddresses.FirstOrDefault(e => e.LambdaId == lambdaId && e.Address == address);
+        var row = await database.EditorAddresses.FirstOrDefaultAsync(e => e.LambdaId == lambdaId && e.Address == address);
 
         if (row == null)
         {
@@ -90,7 +92,7 @@ public sealed class EditorAddresses(IDbContextFactory<LambdaDbContext> databases
 
         try
         {
-            database.SaveChanges();
+            await database.SaveChangesAsync();
         }
         catch (DbUpdateException)
         {
@@ -101,21 +103,21 @@ public sealed class EditorAddresses(IDbContextFactory<LambdaDbContext> databases
     /// <summary>
     /// Where the lambda was changed from, most recently first.
     /// </summary>
-    public IReadOnlyList<EditorAddress> Of(LambdaDbContext database, long lambdaId)
-        => database.EditorAddresses.AsNoTracking()
-                   .Where(e => e.LambdaId == lambdaId)
-                   .OrderByDescending(e => e.LastSeen)
-                   .Select(e => new EditorAddress(e.Address, e.FirstSeen, e.LastSeen))
-                   .ToList();
+    public async ValueTask<IReadOnlyList<EditorAddress>> OfAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation = default)
+        => await database.EditorAddresses.AsNoTracking()
+                         .Where(e => e.LambdaId == lambdaId)
+                         .OrderByDescending(e => e.LastSeen)
+                         .Select(e => new EditorAddress(e.Address, e.FirstSeen, e.LastSeen))
+                         .ToListAsync(cancellation);
 
     /// <summary>
     /// Forgets the addresses not seen for <see cref="Kept"/>.
     /// </summary>
-    public int Prune(LambdaDbContext database, DateTime now)
+    public async ValueTask<int> PruneAsync(LambdaDbContext database, DateTime now, CancellationToken cancellation = default)
     {
         var before = now - Kept;
 
-        return database.EditorAddresses.Where(e => e.LastSeen < before).ExecuteDelete();
+        return await database.EditorAddresses.Where(e => e.LastSeen < before).ExecuteDeleteAsync(cancellation);
     }
 
     #endregion

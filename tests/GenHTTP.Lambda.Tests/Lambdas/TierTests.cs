@@ -119,7 +119,7 @@ public sealed class TierTests
 
             await fixture.DeployAsync(lambda.PrivateKey);
 
-            fixture.ChangeTier(lambda.PrivateKey, tier);
+            await fixture.ChangeTierAsync(lambda.PrivateKey, tier);
 
             var long_ago = DateTime.UtcNow.AddDays(-120);
 
@@ -133,14 +133,14 @@ public sealed class TierTests
 
         foreach (var key in new[] { "running", "depended" })
         {
-            var kept = fixture.Meta.Get(fixture.Meta.GetPrivateKey(key)!)!;
+            var kept = (await fixture.Meta.GetAsync((await fixture.Meta.GetPrivateKeyAsync(key))!))!;
 
             Assert.IsNotNull(kept.ActiveVersion, $"{key} is online");
             Assert.IsNull(kept.DeployedUntil, $"{key} has no deadline");
             Assert.IsNull(kept.KeptUntil);
         }
 
-        Assert.IsNull(fixture.Meta.GetPrivateKey("trying"));
+        Assert.IsNull(await fixture.Meta.GetPrivateKeyAsync("trying"));
     }
 
     [TestMethod]
@@ -152,11 +152,11 @@ public sealed class TierTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var before = DateTime.UtcNow;
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         // nobody visited or edited it for two months while it was in
         // production, where nothing measured that
@@ -169,7 +169,7 @@ public sealed class TierTests
         Assert.AreEqual(0, report.Undeployed, "never counted back from the last visit");
         Assert.AreEqual(0, report.Deleted);
 
-        var info = fixture.Meta.Get(lambda.PrivateKey)!;
+        var info = (await fixture.Meta.GetAsync(lambda.PrivateKey))!;
 
         Assert.IsTrue(info.DeployedUntil >= before + fixture.Options.DeploymentLifetime, "the clock starts at the move");
 
@@ -186,7 +186,7 @@ public sealed class TierTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var feature = await CreateFeatureAsync(fixture, lambda.PrivateKey, "Slow work");
 
@@ -206,13 +206,13 @@ public sealed class TierTests
             await database.SaveChangesAsync();
         }
 
-        Assert.AreEqual(0, features.RunMaintenance(DateTime.UtcNow), "in production a preview is kept like the lambda");
+        Assert.AreEqual(0, await features.RunMaintenanceAsync(DateTime.UtcNow), "in production a preview is kept like the lambda");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
-        Assert.AreEqual(0, features.RunMaintenance(DateTime.UtcNow), "and moved to the sandbox, it is measured from the move");
+        Assert.AreEqual(0, await features.RunMaintenanceAsync(DateTime.UtcNow), "and moved to the sandbox, it is measured from the move");
 
-        Assert.AreEqual(1, features.RunMaintenance(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1)));
+        Assert.AreEqual(1, await features.RunMaintenanceAsync(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1)));
     }
 
     #endregion
@@ -236,15 +236,15 @@ public sealed class TierTests
 
         Assert.AreEqual("1", await ServedAsync(fixture, "http://steady.localhost/"));
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         Assert.AreEqual("2", await ServedAsync(fixture, "http://steady.localhost/"), "promoted, it keeps running - though production connects and the sandbox did not");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         Assert.AreEqual("3", await ServedAsync(fixture, "http://steady.localhost/"));
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         Assert.AreEqual("4", await ServedAsync(fixture, "http://steady.localhost/"), "and so it does moved back, built as it was without connecting");
     }
@@ -256,7 +256,7 @@ public sealed class TierTests
 
         var lambda = await fixture.CreateLambdaAsync("crowded");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(lambda.PrivateKey, """
             return Inline.Create()
@@ -268,7 +268,7 @@ public sealed class TierTests
 
         Assert.AreEqual("written", await ServedAsync(fixture, $"http://crowded.localhost/write?name=big.bin&size={size}"));
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         Assert.AreEqual(size.ToString(), await ServedAsync(fixture, "http://crowded.localhost/read?name=big.bin"), "what it has stays readable");
 
@@ -305,7 +305,7 @@ public sealed class TierTests
 
         var lambda = await fixture.CreateLambdaAsync("records");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var on = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/data/database"))
         {
@@ -344,7 +344,7 @@ public sealed class TierTests
 
         Assert.AreEqual("grew", await ServedAsync(fixture, "http://records.localhost/grow"), "four hundred kilobytes fit in production");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         Assert.AreEqual("4", await ServedAsync(fixture, "http://records.localhost/count"), "its records are read as before");
 
@@ -360,7 +360,7 @@ public sealed class TierTests
 
         var lambda = await fixture.CreateLambdaAsync("shrunk");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         int version;
 
@@ -381,7 +381,7 @@ public sealed class TierTests
             Assert.AreEqual(HttpStatusCode.OK, filled.StatusCode, await filled.Content.ReadAsStringAsync());
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         using (var back = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new DeploymentRequest(version)))
         {
@@ -418,7 +418,7 @@ public sealed class TierTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         var long_ago = DateTime.UtcNow.AddYears(-1);
 
@@ -429,7 +429,7 @@ public sealed class TierTests
         Assert.AreEqual(0, report.Undeployed);
         Assert.AreEqual(0, report.Deleted);
 
-        Assert.IsNotNull(fixture.Meta.Get(lambda.PrivateKey)!.ActiveVersion);
+        Assert.IsNotNull((await fixture.Meta.GetAsync(lambda.PrivateKey))!.ActiveVersion);
     }
 
     [TestMethod]
@@ -441,7 +441,7 @@ public sealed class TierTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         using (var refused = await AsOperatorAsync(fixture, HttpMethod.Post, "/api/v1/admin/lambdas/collector/block", new BlockRequest("Looks odd")))
         {
@@ -449,11 +449,11 @@ public sealed class TierTests
             Assert.Contains("cannot be blocked", (await refused.GetContentAsync<ErrorResponse>()).Message);
         }
 
-        Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey)!.Blocked, "and it is not");
-        Assert.IsNotNull(fixture.Meta.Get(lambda.PrivateKey)!.ActiveVersion);
+        Assert.IsNull((await fixture.Meta.GetAsync(lambda.PrivateKey))!.Blocked, "and it is not");
+        Assert.IsNotNull((await fixture.Meta.GetAsync(lambda.PrivateKey))!.ActiveVersion);
 
         // the explicit way: out of the tier first, as a decision of its own
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         using (var blocked = await AsOperatorAsync(fixture, HttpMethod.Post, "/api/v1/admin/lambdas/collector/block", new BlockRequest("Looks odd")))
         {
@@ -474,7 +474,7 @@ public sealed class TierTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"reported\"));");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         Assert.AreEqual("reported", await ServedAsync(fixture, "http://collector.localhost/"));
 
@@ -482,7 +482,7 @@ public sealed class TierTests
         {
             var you = (await listing.GetContentAsync<AddressBlockListing>()).You!;
 
-            fixture.Platform.Services.GetRequiredService<IAddressBlocks>().Block([you], "Floods the collector", null);
+            await fixture.Platform.Services.GetRequiredService<IAddressBlocks>().BlockAsync([you], "Floods the collector", null);
         }
 
         using var refused = await fixture.GetAsync("http://collector.localhost/");
@@ -497,7 +497,7 @@ public sealed class TierTests
 
         var lambda = await fixture.CreateLambdaAsync("collector");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         using (var refused = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}"))
         {
@@ -505,7 +505,7 @@ public sealed class TierTests
             Assert.Contains("Only the operator", (await refused.GetContentAsync<ErrorResponse>()).Message);
         }
 
-        Assert.IsNotNull(fixture.Meta.Get(lambda.PrivateKey));
+        Assert.IsNotNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
 
         using (var other = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/files/notes.txt", new FileRequest(Convert.ToBase64String("kept"u8.ToArray()))))
         {
@@ -515,7 +515,7 @@ public sealed class TierTests
         using var deleted = await AsOperatorAsync(fixture, HttpMethod.Delete, "/api/v1/admin/lambdas/collector");
 
         Assert.AreEqual(HttpStatusCode.NoContent, deleted.StatusCode, await deleted.Content.ReadAsStringAsync());
-        Assert.IsNull(fixture.Meta.Get(lambda.PrivateKey));
+        Assert.IsNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
     }
 
     [TestMethod]
@@ -534,7 +534,7 @@ public sealed class TierTests
 
         Assert.AreEqual(1, (await ShowcaseAsync(fixture)).Total);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.System);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.System);
 
         Assert.AreEqual(0, (await ShowcaseAsync(fixture)).Total, "moved to the system tier, it is no longer listed");
 
@@ -543,7 +543,7 @@ public sealed class TierTests
             Assert.AreEqual(HttpStatusCode.Forbidden, refused.StatusCode, "nor listed again");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         Assert.AreEqual(1, (await ShowcaseAsync(fixture)).Total, "its entry was kept, and is back once it leaves the tier");
     }

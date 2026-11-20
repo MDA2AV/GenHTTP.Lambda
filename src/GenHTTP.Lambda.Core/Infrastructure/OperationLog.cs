@@ -54,15 +54,15 @@ public static class OperationLog
     /// <summary>
     /// The public key of the lambda of the editor key, to name it in a log line.
     /// </summary>
-    public static string PublicKeyOf(this IMetaService meta, string privateKey)
-        => meta.GetPublicKey(privateKey) ?? Unknown;
+    public static async ValueTask<string> PublicKeyOfAsync(this IMetaService meta, string privateKey)
+        => await meta.GetPublicKeyAsync(privateKey) ?? Unknown;
 
     /// <summary>
     /// The name of a feature, to name it in a log line where nothing at hand
     /// has it already.
     /// </summary>
-    public static string NameOf(this IFeatureService features, string privateKey, string feature)
-        => features.GetName(privateKey, feature) ?? Unknown;
+    public static async ValueTask<string> NameOfAsync(this IFeatureService features, string privateKey, string feature)
+        => await features.GetNameAsync(privateKey, feature) ?? Unknown;
 
     /// <summary>
     /// What a lambda or a feature is called in a log line when it cannot be

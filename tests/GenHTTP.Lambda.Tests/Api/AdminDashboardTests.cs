@@ -191,14 +191,14 @@ public sealed class AdminDashboardTests
         // offline within one
         var limits = fixture.Limits.Get();
 
-        fixture.Limits.Save(limits with { OfflineAfter = TimeSpan.FromHours(24), RemovedAfter = TimeSpan.FromHours(48) });
+        await fixture.Limits.SaveAsync(limits with { OfflineAfter = TimeSpan.FromHours(24), RemovedAfter = TimeSpan.FromHours(48) });
 
         var online = await fixture.CreateLambdaAsync("online");
         await fixture.CreateLambdaAsync("offline");
 
         await fixture.DeployAsync(online.PrivateKey);
 
-        fixture.ChangeTier(online.PrivateKey, Data.Entities.LambdaTier.Production);
+        await fixture.ChangeTierAsync(online.PrivateKey, Data.Entities.LambdaTier.Production);
 
         await fixture.CreateLambdaAsync("going");
 

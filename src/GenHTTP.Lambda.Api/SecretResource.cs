@@ -64,7 +64,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         var secret = await secrets.SetAsync(privateKey, name, request.Value);
 
-        logger.LogInformation("Set secret {Name} of lambda {Lambda}", secret.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Set secret {Name} of lambda {Lambda}", secret.Name, await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(secret);
     }
@@ -79,7 +79,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         await secrets.DeleteAsync(privateKey, name);
 
-        logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), await meta.PublicKeyOfAsync(privateKey));
     }
 
     #endregion
@@ -109,7 +109,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
         var secret = await secrets.SetAsync(privateKey, name, request.Value, feature);
 
         logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(secret);
     }
@@ -125,7 +125,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
         await secrets.DeleteAsync(privateKey, name, feature);
 
         logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
     }
 
     #endregion

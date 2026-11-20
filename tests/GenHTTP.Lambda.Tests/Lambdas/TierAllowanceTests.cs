@@ -40,7 +40,7 @@ public sealed class TierAllowanceTests
             Assert.Contains("In the tier 'Premium' a version may come to 4 KB", said, "and whoever reads it learns there is more");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Coding(2000)))
         {
@@ -136,7 +136,7 @@ public sealed class TierAllowanceTests
             Assert.Contains("workspace", said, "and says where a large file that is no part of the program belongs");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Shipping(2048)))
         {
@@ -166,7 +166,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var saved = await UploadAsync(fixture, lambda.PrivateKey, archive))
         {
@@ -243,7 +243,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var written = await PutAsync(fixture, lambda.PrivateKey, "big.bin", file))
         {
@@ -268,7 +268,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var first = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
@@ -305,7 +305,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("squeezed");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
@@ -313,7 +313,7 @@ public sealed class TierAllowanceTests
 
         // how a workspace ends up past its quota: filled under a larger one,
         // which is what leaving production does to it
-        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         await File.WriteAllBytesAsync(Path.Combine(fixture.Options.WorkspaceDirectory, id.ToString(), "x.bin"), new byte[2 * WorkspaceLimits.Block]);
 
@@ -344,7 +344,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("hoarder");
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
@@ -431,14 +431,14 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "more than a sandbox lambda may write");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         using (var written = await fixture.GetAsync($"http://mover.localhost/write?name=big.bin&size={size}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "promoted, and not deployed again");
         }
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Sandbox);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Sandbox);
 
         using var demoted = await fixture.GetAsync($"http://mover.localhost/write?name=other.bin&size={size}");
 
@@ -462,7 +462,7 @@ public sealed class TierAllowanceTests
             """);
 
         // built again on the next request, like every lambda after a restart
-        fixture.Deployments.Evict(fixture.Meta.GetId(lambda.PrivateKey)!.Value);
+        fixture.Deployments.Evict((await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value);
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => fixture.GetAsync("http://crowded.localhost/")));
 
@@ -500,7 +500,7 @@ public sealed class TierAllowanceTests
         Assert.AreEqual(32L * 1024 * 1024, free.Limits.BuildBytes);
         Assert.AreEqual(512L * 1024 * 1024, free.Limits.DataBytes);
 
-        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Production);
 
         var premium = await SummaryAsync(fixture, lambda.PrivateKey);
 

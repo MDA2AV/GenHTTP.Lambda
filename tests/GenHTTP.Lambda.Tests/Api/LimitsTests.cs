@@ -50,7 +50,7 @@ public sealed class LimitsTests
         var sandbox = await fixture.CreateLambdaAsync();
         var production = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(production.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(production.PrivateKey, LambdaTier.Production);
 
         using (var before = await SaveAsync(fixture, sandbox.PrivateKey, Coding(2000)))
         {
@@ -360,7 +360,7 @@ public sealed class LimitsTests
 
         var production = await fixture.CreateLambdaAsync();
 
-        fixture.ChangeTier(production.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(production.PrivateKey, LambdaTier.Production);
 
         await fixture.DeployAsync(production.PrivateKey, "return Content.From(Resource.FromString(\"x\"));");
 

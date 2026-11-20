@@ -29,12 +29,12 @@ public interface IGuideService
     /// Writes the operator's section, or replaces it.
     /// </summary>
     /// <returns>The section as it is kept</returns>
-    GuideSection Change(string? title, string? text);
+    ValueTask<GuideSection> ChangeAsync(string? title, string? text, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the operator's section out of the guide.
     /// </summary>
     /// <returns>The section that was there, or nothing where there was none</returns>
-    GuideSection? Remove();
+    ValueTask<GuideSection?> RemoveAsync(CancellationToken cancellation = default);
 
 }

@@ -50,7 +50,7 @@ public sealed class UsageReportTests
             Assert.IsTrue(counting.IsSuccessStatusCode);
         }
 
-        fixture.ChangeTier(keeping.PrivateKey, LambdaTier.Production);
+        await fixture.ChangeTierAsync(keeping.PrivateKey, LambdaTier.Production);
 
         // every installation has the demos, so they say nothing about this one
         await fixture.MakeDemoAsync(demo.PublicKey);

@@ -24,7 +24,8 @@ namespace GenHTTP.Lambda.Integrations;
 /// storage, a vault - awaits it rather than holding a thread, which Kestrel
 /// and GenHTTP's internal engine make use of. One that answers at once
 /// completes synchronously, and costs nothing for it: SQLite, local
-/// directories and the platform's own secrets do. That is what an
+/// directories and the platform's own secrets, while its records are in
+/// SQLite, do. That is what an
 /// installation on the Ioxide engine wants, where a request runs on the
 /// reactor of its core and whatever an integration awaits there resumes on
 /// that reactor afterwards: an integration meant for Ioxide answers on the

@@ -68,8 +68,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Remarks("The most recently changed first, without their files.")]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The features, the most recently changed first")]
-    public List<FeatureResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => [.. (features.List(privateKey)).Select(Describe)];
+    public async ValueTask<List<FeatureResponse>> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => [.. (await features.ListAsync(privateKey)).Select(Describe)];
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features")]
     [Summary("Starts a feature")]
@@ -93,7 +93,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigins.Api));
 
-        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
+        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
         return new Result<FeatureResponse>(Describe(created)).Status(ResponseStatus.Created);
     }
@@ -102,10 +102,10 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Summary("Reads a feature with its files")]
     [Remarks("Its `revision` is what a later `PUT …/files` passes to be refused, rather than replace a save made since.")]
     [return: Summary("The feature with its files")]
-    public FeatureContentResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+    public async ValueTask<FeatureContentResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                       [Summary("Only the files whose name starts with this - `docs/` for its documentation, `tests/` for its tests")] string? folder)
     {
-        var found = features.Get(privateKey, feature);
+        var found = await features.GetAsync(privateKey, feature);
 
         return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), folder));
     }
@@ -124,12 +124,12 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature, or there is no version to move the base to.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The feature afterwards")]
-    public FeatureResponse Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+    public async ValueTask<FeatureResponse> Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                   UpdateFeatureRequest request)
     {
-        var updated = features.Update(privateKey, feature, new FeatureUpdate(request.Name, request.Specification, request.Change, request.Base));
+        var updated = await features.UpdateAsync(privateKey, feature, new FeatureUpdate(request.Name, request.Specification, request.Change, request.Base));
 
-        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
+        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, await meta.PublicKeyOfAsync(privateKey), updated.Base);
 
         return Describe(updated);
     }
@@ -142,7 +142,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var name = await features.DeleteAsync(privateKey, feature);
 
-        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, await meta.PublicKeyOfAsync(privateKey));
     }
 
     #endregion
@@ -182,7 +182,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
                                                         [Summary("Whether to put its preview online with what was saved")] bool? deploy,
                                                         VersionChangeRequest request)
     {
-        var read = features.Get(privateKey, feature);
+        var read = await features.GetAsync(privateKey, feature);
 
         var files = LambdaChanges.Apply(LambdaSource.Parse(read.Code), request.Files, request.Remove, request.Edits);
 
@@ -196,16 +196,16 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Response(ResponseStatus.Ok, "The files, as a zip archive", ContentType = ApiDocumentation.Zip)]
     [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, named after the start of the feature's key: `feature-3f9a1c2e.zip`")]
     [Response(ResponseStatus.BadRequest, "There is no such layout.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public IResponse GetArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+    public async ValueTask<IResponse> GetArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                 [Summary(ApiDocumentation.Layout)] string? layout, IRequest request)
     {
         var laid = VersionResource.LayoutOf(layout);
 
-        var found = features.Get(privateKey, feature);
+        var found = await features.GetAsync(privateKey, feature);
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code), laid);
 
-        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} layout {Layout}", found.Feature.Name, meta.PublicKeyOf(privateKey), laid);
+        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} layout {Layout}", found.Feature.Name, await meta.PublicKeyOfAsync(privateKey), laid);
 
         return request.Respond()
                       .Content(zip, new ContentType("application/zip"))
@@ -233,10 +233,10 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         // looked up before the body is read, because how much of it may be
         // read depends on the tier - and a key that names nothing needs none
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
         var files = await VersionResource.UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid,
-                                                      LambdaSource.Parse(features.Get(privateKey, feature).Code));
+                                                      LambdaSource.Parse((await features.GetAsync(privateKey, feature)).Code));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }
@@ -261,7 +261,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var deployment = await features.DeployAsync(privateKey, feature);
 
-        logger.Previewed(deployment, meta.PublicKeyOf(privateKey));
+        logger.Previewed(deployment, await meta.PublicKeyOfAsync(privateKey));
 
         var outcome = Describe(deployment);
 
@@ -272,11 +272,11 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Summary("Takes the preview of a feature offline")]
     [Remarks("The feature, its files and its copy of the data are kept. Nothing happens if the preview is offline already.")]
     [return: Summary("The feature afterwards")]
-    public FeatureResponse Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+    public async ValueTask<FeatureResponse> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
     {
-        var stopped = features.Undeploy(privateKey, feature);
+        var stopped = await features.UndeployAsync(privateKey, feature);
 
-        logger.LogInformation("Undeployed feature '{Feature}' of lambda {Lambda}", stopped.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Undeployed feature '{Feature}' of lambda {Lambda}", stopped.Name, await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(stopped);
     }
@@ -288,12 +288,12 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
              log, and read the same way (`GET /lambdas/{privateKey}/logs`): oldest first, followed with `since`.
              """)]
     [return: Summary("The lines, and where to carry on from")]
-    public OwnerLogResponse Logs([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
+    public async ValueTask<OwnerLogResponse> Logs([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                  [Summary("The `cursor` of the previous answer: only what came after it. Left out, the last 500 lines.")] long? since,
                                  [Summary("The lowest level to answer with: `debug`, `info` (the default), `warn` or `error`")] string? level,
                                  [Summary("At most this many lines, up to 2000; by default 500, or 1000 with `since`")] int? limit)
     {
-        var (lambdaId, featureId) = features.Require(privateKey, feature, false);
+        var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false);
 
         var wanted = Math.Clamp(limit ?? (since.HasValue ? 1000 : 500), 1, 2000);
 
@@ -330,7 +330,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var refreshed = await features.RefreshDataAsync(privateKey, feature);
 
-        logger.LogInformation("Refreshed data of feature '{Feature}' of lambda {Lambda}", refreshed.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Refreshed data of feature '{Feature}' of lambda {Lambda}", refreshed.Name, await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(refreshed);
     }
@@ -364,7 +364,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var merged = await features.MergeAsync(privateKey, feature, note, request?.Deploy == true);
 
-        var publicKey = meta.PublicKeyOf(privateKey);
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         if (merged.Merged)
         {
@@ -397,9 +397,9 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     private async ValueTask<FeatureSavedResponse> SaveAsync(string privateKey, string feature, IReadOnlyList<LambdaFile>? files, bool? deploy,
                                                             string? specification, string? change, int? after = null)
     {
-        var saved = features.Save(privateKey, feature, VersionResource.Serialize(files), new VersionNote(specification, change), after);
+        var saved = await features.SaveAsync(privateKey, feature, VersionResource.Serialize(files), new VersionNote(specification, change), after);
 
-        var publicKey = meta.PublicKeyOf(privateKey);
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, publicKey, files!.Count);
 

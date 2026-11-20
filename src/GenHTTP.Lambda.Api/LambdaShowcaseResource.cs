@@ -38,9 +38,9 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     [ResourceMethod("lambdas/:privateKey/showcase")]
     [Summary("Reads the showcase entry of a lambda")]
     [return: Summary("The entry, if the lambda has one, and the limits of an entry")]
-    public OwnShowcaseResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<OwnShowcaseResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var showcase = showcases.Get(privateKey);
+        var showcase = await showcases.GetAsync(privateKey);
 
         return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase, addresses), Limits(limits));
     }
@@ -89,7 +89,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     {
         await showcases.RemoveAsync(privateKey);
 
-        logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Removed lambda {Lambda} from showcase", await meta.PublicKeyOfAsync(privateKey));
     }
 
     internal static ShowcaseLimitsResponse Limits(ILimitsService limits)

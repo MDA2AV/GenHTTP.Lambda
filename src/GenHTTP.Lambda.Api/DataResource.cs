@@ -71,7 +71,7 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     {
         var store = await data.EnableAsync(privateKey, kind);
 
-        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(store);
     }
@@ -92,7 +92,7 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     {
         var store = await data.DisableAsync(privateKey, kind);
 
-        logger.LogInformation("Disabled and deleted {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Disabled and deleted {Kind} of lambda {Lambda}", store.Kind, await meta.PublicKeyOfAsync(privateKey));
 
         return Describe(store);
     }

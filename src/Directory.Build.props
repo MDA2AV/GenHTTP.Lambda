@@ -31,7 +31,7 @@
 
         <!--
             Refuses, at compile time, what the server must not call - EF
-            Core's async methods, waiting for a task, Task.Run (see
+            Core's synchronous methods, waiting for a task, Task.Run (see
             BannedSymbols.txt). Every component runs on the same reactors, so
             every component is held to it.
         -->

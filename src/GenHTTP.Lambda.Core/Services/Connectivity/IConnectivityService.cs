@@ -21,7 +21,7 @@ public interface IConnectivityService
     /// <summary>
     /// Where the connectivity of the lambda behind an editor key stands.
     /// </summary>
-    ConnectivityInfo Get(string privateKey);
+    ValueTask<ConnectivityInfo> GetAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Asks the operator to let the lambda connect to other servers.
@@ -33,14 +33,14 @@ public interface IConnectivityService
     /// allowed. Refused for a demo and a blocked lambda, like every change.
     /// </remarks>
     /// <param name="purpose">What it connects to and why, in the owner's words - required</param>
-    ConnectivityInfo Request(string privateKey, string? purpose);
+    ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the request back while it waits, or gives up what was allowed -
     /// code that connects then no longer compiles. Nothing happens when
     /// nothing was asked or it was declined.
     /// </summary>
-    ConnectivityInfo Withdraw(string privateKey);
+    ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// The operator's decision: allow the lambda to connect, asked for or not,
@@ -52,13 +52,13 @@ public interface IConnectivityService
     /// blocked lambda, of which nothing changes but its block.
     /// </remarks>
     /// <param name="note">What the operator says about it, which the owner reads</param>
-    ConnectivityInfo Decide(string privateKey, bool allow, string? note);
+    ValueTask<ConnectivityInfo> DecideAsync(string privateKey, bool allow, string? note, CancellationToken cancellation = default);
 
     /// <summary>
     /// The lambdas whose request waits for the operator, the longest waiting
     /// first, and then the ones allowed, the most recently allowed first.
     /// </summary>
-    IReadOnlyList<ConnectivityListing> List();
+    ValueTask<IReadOnlyList<ConnectivityListing>> ListAsync(CancellationToken cancellation = default);
 
     /// <summary>
     /// Whether the code of the version online, or of the newest, connects to

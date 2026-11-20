@@ -29,6 +29,6 @@ public interface IDomainRegistry
     /// Reads the served domains again, after anything that changes a domain,
     /// a tier or the key of a lambda.
     /// </summary>
-    void Reload();
+    ValueTask ReloadAsync();
 
 }

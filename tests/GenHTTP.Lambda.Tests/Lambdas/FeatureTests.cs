@@ -341,7 +341,7 @@ public sealed class FeatureTests
         Assert.AreEqual("deployed", await ServedAsync(fixture, feature.PreviewPath), "saving alone changes nothing a visitor of the preview gets");
 
         // what a restart does: nothing compiled, everything read again
-        fixture.Deployments.EvictAll((fixture.Meta.GetId(lambda.PrivateKey))!.Value);
+        fixture.Deployments.EvictAll((await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value);
 
         Assert.AreEqual("deployed", await ServedAsync(fixture, feature.PreviewPath), "not even after a restart");
 
@@ -574,7 +574,7 @@ public sealed class FeatureTests
             Assert.AreEqual(HttpStatusCode.NotFound, preview.StatusCode);
         }
 
-        var directory = Path.Combine(fixture.Options.FeatureDirectory, (fixture.Meta.GetId(lambda.PrivateKey))!.Value.ToString());
+        var directory = Path.Combine(fixture.Options.FeatureDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value.ToString());
 
         Assert.IsFalse(Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any(), "its files and its copy of the data are gone");
     }
@@ -727,7 +727,7 @@ public sealed class FeatureTests
 
         Assert.IsEmpty(await listed.GetContentAsync<List<FeatureResponse>>());
 
-        var directory = Path.Combine(fixture.Options.FeatureDirectory, (fixture.Meta.GetId(lambda.PrivateKey))!.Value.ToString());
+        var directory = Path.Combine(fixture.Options.FeatureDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value.ToString());
 
         Assert.IsFalse(Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any(), "its files and its copy of the data are gone");
     }
@@ -743,7 +743,7 @@ public sealed class FeatureTests
 
         await StartAsync(fixture, lambda.PrivateKey, feature.Key);
 
-        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         using (var _ = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}")) { }
 
@@ -766,9 +766,9 @@ public sealed class FeatureTests
 
         var features = fixture.Platform.Services.GetRequiredService<IFeatureService>();
 
-        Assert.AreEqual(0, features.RunMaintenance(DateTime.UtcNow), "not while it is being worked on");
+        Assert.AreEqual(0, await features.RunMaintenanceAsync(DateTime.UtcNow), "not while it is being worked on");
 
-        Assert.AreEqual(1, features.RunMaintenance(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1)));
+        Assert.AreEqual(1, await features.RunMaintenanceAsync(DateTime.UtcNow + fixture.Options.DeploymentLifetime + TimeSpan.FromHours(1)));
 
         using var preview = await fixture.GetAsync(feature.PreviewPath);
 
@@ -788,7 +788,7 @@ public sealed class FeatureTests
 
         var feature = await CreateAsync(fixture, lambda.PrivateKey, "Kept");
 
-        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
         // what a request still writing to a deleted feature's data leaves behind
         var orphan = Path.Combine(fixture.Options.FeatureDirectory, id.ToString(), "999999", "workspace");

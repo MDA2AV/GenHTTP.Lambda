@@ -51,9 +51,9 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     {
         LambdaEntity lambda;
 
-        using (var database = databases.CreateDbContext())
+        await using (var database = await databases.CreateDbContextAsync(cancellation))
         {
-            lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
+            lambda = await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
                   ?? throw LambdaException.NotFound(Missing);
         }
 
@@ -62,9 +62,9 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
     public async ValueTask<LambdaAnalytics> EnableAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
         if (lambda.AnalyticsSince == null)
         {
@@ -83,7 +83,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
             lambda.AnalyticsSince = DateTime.UtcNow;
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
         }
 
         return await DescribeAsync(lambda, null, DateTime.UtcNow, cancellation);
@@ -91,9 +91,9 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
     public async ValueTask<string> DisableAsync(string privateKey, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = RequireEditable(database, privateKey);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
         await _turn.WaitAsync(cancellation);
 
@@ -103,12 +103,13 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
             {
                 lambda.AnalyticsSince = null;
 
-                database.SaveChanges();
+                await database.SaveChangesAsync(cancellation);
             }
 
             // also where they were off already: what is deleted is never
-            // shown, and nothing is left that could be
-            await store.ForgetAsync(lambda.Id, cancellation);
+            // shown, and nothing is left that could be - whoever cancels,
+            // once they are off
+            await store.ForgetAsync(lambda.Id, CancellationToken.None);
         }
         finally
         {
@@ -140,7 +141,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
             {
                 var tally = new VisitTally(visitors, classifier, addresses);
 
-                var since = Counting(visits.Select(v => v.Lambda.Id).Distinct().ToList());
+                var since = await CountingAsync(visits.Select(v => v.Lambda.Id).Distinct().ToList(), cancellation);
 
                 foreach (var visit in visits)
                 {
@@ -188,14 +189,14 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// <summary>
     /// Since when each of the lambdas has its visits counted, for those that do.
     /// </summary>
-    private Dictionary<long, DateTime> Counting(List<long> lambdas)
+    private async ValueTask<Dictionary<long, DateTime>> CountingAsync(List<long> lambdas, CancellationToken cancellation)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        return database.Lambdas.AsNoTracking()
-                       .Where(l => lambdas.Contains(l.Id) && l.AnalyticsSince != null)
-                       .Select(l => new { l.Id, l.AnalyticsSince })
-                       .ToDictionary(l => l.Id, l => l.AnalyticsSince!.Value);
+        return await database.Lambdas.AsNoTracking()
+                             .Where(l => lambdas.Contains(l.Id) && l.AnalyticsSince != null)
+                             .Select(l => new { l.Id, l.AnalyticsSince })
+                             .ToDictionaryAsync(l => l.Id, l => l.AnalyticsSince!.Value, cancellation);
     }
 
     #endregion
@@ -244,9 +245,9 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
     /// A demo's key is announced, so holding it says nothing about being the
     /// one who decides whether its visitors are counted.
     /// </remarks>
-    private LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
+    private async ValueTask<LambdaEntity> RequireEditableAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
     {
-        var lambda = database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey)
+        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
                   ?? throw LambdaException.NotFound(Missing);
 
         LambdaGuard.EnsureUnblocked(lambda);

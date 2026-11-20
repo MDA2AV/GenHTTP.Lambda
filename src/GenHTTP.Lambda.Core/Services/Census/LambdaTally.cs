@@ -16,8 +16,8 @@ namespace GenHTTP.Lambda.Services.Census;
 /// One read of the lambdas' rows and a few counts beside it, done in memory -
 /// a row is a few dozen bytes, and the conditions the counts need (when a
 /// sandbox lambda expires, whether one may connect) are read off the tier's
-/// policy, which the database does not hold. Synchronous, like every query of
-/// the platform's database.
+/// policy, which the database does not hold. Awaited, like every query of the
+/// platform's records, one after another on the one context.
 /// </remarks>
 public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, ILimitsService limits)
 {
@@ -29,16 +29,16 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
 
     #region Functionality
 
-    public LambdaCensus Count(DateTime now)
+    public async ValueTask<LambdaCensus> CountAsync(DateTime now, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         var demos = limits.TiersWhere(p => p.ReadOnly);
 
-        var rows = database.Lambdas.AsNoTracking()
-                           .Select(l => new Row(l.Id, l.Tier, l.ActiveVersion, l.Blocked, l.Created, l.Modified, l.LastSeen, l.TierChanged, l.View,
-                                                l.Domain, l.AnalyticsSince, l.Connectivity, l.ConnectivityChanged))
-                           .ToList();
+        var rows = await database.Lambdas.AsNoTracking()
+                                 .Select(l => new Row(l.Id, l.Tier, l.ActiveVersion, l.Blocked, l.Created, l.Modified, l.LastSeen, l.TierChanged, l.View,
+                                                      l.Domain, l.AnalyticsSince, l.Connectivity, l.ConnectivityChanged))
+                                 .ToListAsync(cancellation);
 
         var tiers = rows.GroupBy(l => l.Tier).ToDictionary(g => g.Key, g => g.Count());
 
@@ -46,11 +46,11 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
 
         var ids = lambdas.Select(l => l.Id).ToHashSet();
 
-        var switched = database.DataStores.AsNoTracking()
-                               .Select(s => new { s.LambdaId, s.Kind, s.Enabled })
-                               .ToList()
-                               .Where(s => ids.Contains(s.LambdaId))
-                               .ToList();
+        var switched = (await database.DataStores.AsNoTracking()
+                                      .Select(s => new { s.LambdaId, s.Kind, s.Enabled })
+                                      .ToListAsync(cancellation))
+                       .Where(s => ids.Contains(s.LambdaId))
+                       .ToList();
 
         // as their owners switched it, or as the kind comes where they never did
         int Keeping(DataKind kind) => kind.Default
@@ -59,22 +59,22 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
 
         int Among(IEnumerable<long> owners) => owners.Distinct().Count(ids.Contains);
 
-        var showcased = Among(database.Showcases.AsNoTracking().Select(s => s.LambdaId).ToList());
+        var showcased = Among(await database.Showcases.AsNoTracking().Select(s => s.LambdaId).ToListAsync(cancellation));
 
-        var published = Among(database.Sources.AsNoTracking().Where(s => s.Published).Select(s => s.LambdaId).ToList());
+        var published = Among(await database.Sources.AsNoTracking().Where(s => s.Published).Select(s => s.LambdaId).ToListAsync(cancellation));
 
-        var drafting = Among(database.Features.AsNoTracking().Select(f => f.LambdaId).ToList());
+        var drafting = Among(await database.Features.AsNoTracking().Select(f => f.LambdaId).ToListAsync(cancellation));
 
-        var versions = database.Deployments.Count(d => !demos.Contains(d.Lambda!.Tier));
+        var versions = await database.Deployments.CountAsync(d => !demos.Contains(d.Lambda!.Tier), cancellation);
 
         var recent = now - Month;
 
-        var saved = database.Deployments.AsNoTracking()
-                            .Where(d => d.Created >= recent && !demos.Contains(d.Lambda!.Tier))
-                            .GroupBy(d => d.Origin)
-                            .Select(g => new { Origin = g.Key, Count = g.Count() })
-                            .ToList()
-                            .ToDictionary(g => g.Origin ?? "unknown", g => g.Count);
+        var saved = (await database.Deployments.AsNoTracking()
+                                   .Where(d => d.Created >= recent && !demos.Contains(d.Lambda!.Tier))
+                                   .GroupBy(d => d.Origin)
+                                   .Select(g => new { Origin = g.Key, Count = g.Count() })
+                                   .ToListAsync(cancellation))
+                    .ToDictionary(g => g.Origin ?? "unknown", g => g.Count);
 
         var product = limits.Get();
 

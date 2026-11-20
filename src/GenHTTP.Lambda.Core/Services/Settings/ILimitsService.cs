@@ -48,6 +48,6 @@ public interface ILimitsService
     /// Replaces the limits, every one of them.
     /// </summary>
     /// <returns>The limits that were saved, and those they replaced</returns>
-    (ProductLimits Saved, ProductLimits Previous) Save(ProductLimits limits);
+    ValueTask<(ProductLimits Saved, ProductLimits Previous)> SaveAsync(ProductLimits limits, CancellationToken cancellation = default);
 
 }

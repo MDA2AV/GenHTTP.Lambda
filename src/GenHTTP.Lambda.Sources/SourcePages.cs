@@ -149,7 +149,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
         // a page of the sources in a language
         if (first != null && SiteLanguages.IsLanguage(first) && target.Next(1)?.Decode() == PlatformRoutes.Source && IsRead(request))
         {
-            return Revalidated(Page(request, first));
+            return Revalidated(await PageAsync(request, first));
         }
 
         return null;
@@ -161,7 +161,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
     /// A page of the sources: the catalog, named as the bundle's table names
     /// it, or the page of a source, named after its lambda.
     /// </summary>
-    private IResponse Page(IRequest request, string language)
+    private async ValueTask<IResponse> PageAsync(IRequest request, string language)
     {
         var path = request.Header.Path.ToString();
 
@@ -183,7 +183,7 @@ internal sealed class SourcePagesHandler(Bundle bundle, SiteMeta meta, ISourceSe
         var below = "/" + string.Join('/', segments.Skip(1));
 
         // an unpublished source is not found, the same as a key nobody has
-        if (sources.GetProject(key) is not { } project)
+        if (await sources.GetProjectAsync(key) is not { } project)
         {
             return bundle.Answer(request, ResponseStatus.NotFound, brand);
         }

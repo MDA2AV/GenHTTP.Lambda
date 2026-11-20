@@ -40,9 +40,9 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     [Summary("Reads what is online")]
     [Remarks("Which version, since when, and until when it stays online unless it is used.")]
     [return: Summary("What is online")]
-    public DeploymentResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<DeploymentResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var lambda = meta.Require(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
 
         return new DeploymentResponse(lambda.ActiveVersion != null, lambda.ActiveVersion, lambda.DeployedAt, lambda.DeployedUntil);
     }
@@ -65,7 +65,7 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     {
         var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigins.Api);
 
-        logger.Deployed(result, meta.PublicKeyOf(privateKey), request?.Version);
+        logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), request?.Version);
 
         var payload = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
@@ -81,9 +81,9 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda, offline")]
-    public LambdaResponse Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<LambdaResponse> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var lambda = meta.Undeploy(privateKey, ActivationEndings.Stopped);
+        var lambda = await meta.UndeployAsync(privateKey, ActivationEndings.Stopped);
 
         logger.LogInformation("Undeployed lambda {Lambda}", lambda.PublicKey);
 
@@ -98,11 +98,11 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
              are kept.
              """)]
     [return: Summary("The stretches, newest first")]
-    public List<ActivationResponse> History([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<List<ActivationResponse>> History([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var now = DateTime.UtcNow;
 
-        var activations = meta.GetActivations(privateKey);
+        var activations = await meta.GetActivationsAsync(privateKey);
 
         return activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
                                                               (long)((a.Ended ?? now) - a.Started).TotalSeconds))

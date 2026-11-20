@@ -80,7 +80,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// </summary>
     public async ValueTask<MaintenanceReport> SweepAsync(DateTime now, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         /*
          * What counts as use, written down before anything is decided by it.
@@ -91,7 +91,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
          * this moment is not swept by figures taken before its traffic was
          * recorded.
          */
-        RecordUse(database);
+        await RecordUseAsync(database, cancellation);
 
         var abandoned = now - limits.Get().RemovedAfter;
 
@@ -102,11 +102,11 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
         // free again for whoever it was blocked for
         var expiring = limits.TiersWhere(p => p.ExpiresWhenUnused);
 
-        var expired = database.Lambdas
-                              .Where(l => expiring.Contains(l.Tier) && l.Blocked == null && l.Modified < abandoned
-                                             && (l.LastSeen == null || l.LastSeen < abandoned)
-                                             && (l.TierChanged == null || l.TierChanged < abandoned))
-                              .ToList();
+        var expired = await database.Lambdas
+                                    .Where(l => expiring.Contains(l.Tier) && l.Blocked == null && l.Modified < abandoned
+                                                   && (l.LastSeen == null || l.LastSeen < abandoned)
+                                                   && (l.TierChanged == null || l.TierChanged < abandoned))
+                                    .ToListAsync(cancellation);
 
         foreach (var lambda in expired)
         {
@@ -118,8 +118,8 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         var quiet = now - limits.Get().OfflineAfter;
 
-        var running = database.Lambdas.Where(l => expiring.Contains(l.Tier) && l.ActiveVersion != null)
-                              .ToList();
+        var running = await database.Lambdas.Where(l => expiring.Contains(l.Tier) && l.ActiveVersion != null)
+                                    .ToListAsync(cancellation);
 
         var undeployed = 0;
 
@@ -151,16 +151,17 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            history.Close(database, lambda.Id, now, ActivationEndings.Expired);
+            await history.CloseAsync(database, lambda.Id, now, ActivationEndings.Expired);
 
             deployments.Evict(lambda.Id);
 
             undeployed++;
         }
 
+        // what was let go of above is written down whoever cancels
         if (undeployed > 0)
         {
-            database.SaveChanges();
+            await database.SaveChangesAsync(CancellationToken.None);
         }
 
         if (undeployed > 0 || expired.Count > 0)
@@ -179,7 +180,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// counters, and a lambda that has had no traffic since should keep the
     /// date it already had rather than be pushed back to the epoch.
     /// </remarks>
-    private void RecordUse(LambdaDbContext database)
+    private async ValueTask RecordUseAsync(LambdaDbContext database, CancellationToken cancellation)
     {
         var seen = telemetry.DescribeLambdas()
                            .Where(a => a.LastSeen != null)
@@ -192,7 +193,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         var keys = seen.Keys.ToList();
 
-        var rows = database.Lambdas.Where(l => keys.Contains(l.PublicKey)).ToList();
+        var rows = await database.Lambdas.Where(l => keys.Contains(l.PublicKey)).ToListAsync(cancellation);
 
         var moved = 0;
 
@@ -207,7 +208,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         if (moved > 0)
         {
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
         }
     }
 

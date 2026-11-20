@@ -107,10 +107,6 @@ public sealed class LambdaPlatform : IAsyncDisposable
         Services.GetRequiredService<ConsoleCapture>();
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
-
-        // before the first request, which is asked about against them
-        Services.GetRequiredService<DomainRegistry>().Reload();
-        Services.GetRequiredService<AddressBlocks>().Reload();
     }
 
     /// <summary>
@@ -120,6 +116,15 @@ public sealed class LambdaPlatform : IAsyncDisposable
     internal async ValueTask PrepareAsync(CancellationToken cancellation)
     {
         var logger = Loggers.CreateLogger<LambdaPlatform>();
+
+        // what serving reads from memory, read before anything asks for it:
+        // the limits every check reads, and before the first request, which
+        // is asked about against them, the domains and the blocked addresses
+        await Services.GetRequiredService<LimitsService>().LoadAsync(cancellation);
+
+        await Services.GetRequiredService<DomainRegistry>().ReloadAsync();
+
+        await Services.GetRequiredService<AddressBlocks>().ReloadAsync();
 
         // the pictures out of the records they were kept in before - read
         // from there meanwhile where that fails, and tried again next time
@@ -132,7 +137,12 @@ public sealed class LambdaPlatform : IAsyncDisposable
             logger.LogWarning(e, "Failed to move the pictures from the platform's records into its files");
         }
 
-        // what every page is branded with, its logo among the files
+        // what the pages and the serving read from memory: the operator's
+        // switches, and what every page is branded with, its logo among the files
+        await Services.GetRequiredService<SettingsService>().LoadAsync(cancellation);
+
+        await Services.GetRequiredService<GuideService>().LoadAsync(cancellation);
+
         await Services.GetRequiredService<BrandingService>().LoadAsync(cancellation);
     }
 
@@ -188,14 +198,16 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
 
         // pooled, because a context is made for nearly every call to the API;
-        // the interceptor tells the caches that something was written
+        // the interceptors tell the caches that something was written, and
+        // the log that something asked for the records without awaiting them
         services.AddSingleton<DatabaseChanges>();
+        services.AddSingleton<SynchronousRecords>();
 
         services.AddPooledDbContextFactory<LambdaDbContext>((provider, builder) =>
         {
             integrations.Database.ConfigureStore(builder, DatabaseStore.Platform);
 
-            builder.AddInterceptors(provider.GetRequiredService<DatabaseChanges>());
+            builder.AddInterceptors(provider.GetRequiredService<DatabaseChanges>(), provider.GetRequiredService<SynchronousRecords>());
         });
 
         services.AddSingleton<ServerRegistry>();
@@ -239,11 +251,14 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<GitHistory>();
         services.AddSingleton<GitPushes>();
         services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<ILimitsService, LimitsService>();
+        services.AddSingleton<SettingsService>();
+        services.AddSingleton<ISettingsService>(provider => provider.GetRequiredService<SettingsService>());
+        services.AddSingleton<LimitsService>();
+        services.AddSingleton<ILimitsService>(provider => provider.GetRequiredService<LimitsService>());
         services.AddSingleton<BrandingService>();
         services.AddSingleton<IBrandingService>(provider => provider.GetRequiredService<BrandingService>());
-        services.AddSingleton<IGuideService, GuideService>();
+        services.AddSingleton<GuideService>();
+        services.AddSingleton<IGuideService>(provider => provider.GetRequiredService<GuideService>());
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
         services.AddSingleton<AgentClient>();

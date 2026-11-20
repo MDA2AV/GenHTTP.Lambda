@@ -24,9 +24,9 @@ public sealed class LambdaListing(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Functionality
 
-    public LambdaPage List(LambdaQuery query, int skip, int take)
+    public async ValueTask<LambdaPage> ListAsync(LambdaQuery query, int skip, int take, CancellationToken cancellation = default)
     {
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
         var all = database.Lambdas.AsNoTracking();
 
@@ -39,27 +39,27 @@ public sealed class LambdaListing(IDbContextFactory<LambdaDbContext> databases, 
             all = all.Where(l => !demos.Contains(l.Tier));
         }
 
-        var total = all.Count();
+        var total = await all.CountAsync(cancellation);
 
-        var deployed = all.Count(l => l.ActiveVersion != null);
+        var deployed = await all.CountAsync(l => l.ActiveVersion != null, cancellation);
 
         var narrowed = Narrow(database, all, query, DateTime.UtcNow);
 
-        var matched = narrowed.Count();
+        var matched = await narrowed.CountAsync(cancellation);
 
-        var lambdas = Order(narrowed, query.Order).Skip(skip)
-                                                  .Take(take)
-                                                  .ToList();
+        var lambdas = await Order(narrowed, query.Order).Skip(skip)
+                                                        .Take(take)
+                                                        .ToListAsync(cancellation);
 
         var ids = lambdas.Select(l => l.Id).ToList();
 
-        var versions = database.Deployments.AsNoTracking()
-                               .Where(d => ids.Contains(d.LambdaId))
-                               .GroupBy(d => d.LambdaId)
-                               .Select(g => new { LambdaId = g.Key, Count = g.Count(), Latest = g.Max(d => d.Version) })
-                               .ToDictionary(g => g.LambdaId);
+        var versions = await database.Deployments.AsNoTracking()
+                                     .Where(d => ids.Contains(d.LambdaId))
+                                     .GroupBy(d => d.LambdaId)
+                                     .Select(g => new { LambdaId = g.Key, Count = g.Count(), Latest = g.Max(d => d.Version) })
+                                     .ToDictionaryAsync(g => g.LambdaId, cancellation);
 
-        var uses = UsesOf(database, lambdas);
+        var uses = await UsesOfAsync(database, lambdas, cancellation);
 
         return new LambdaPage([.. lambdas.Select(l => describer.Overview(l, versions.GetValueOrDefault(l.Id)?.Latest, versions.GetValueOrDefault(l.Id)?.Count ?? 0) with
                               {
@@ -72,31 +72,32 @@ public sealed class LambdaListing(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// What each of these lambdas uses, by its id.
     /// </summary>
-    public IReadOnlyDictionary<long, LambdaUses> UsesOf(LambdaDbContext database, IReadOnlyCollection<LambdaEntity> lambdas)
+    public async ValueTask<IReadOnlyDictionary<long, LambdaUses>> UsesOfAsync(LambdaDbContext database, IReadOnlyCollection<LambdaEntity> lambdas,
+                                                                              CancellationToken cancellation = default)
     {
         var ids = lambdas.Select(l => l.Id).ToList();
 
-        var switched = database.DataStores.AsNoTracking()
-                               .Where(s => ids.Contains(s.LambdaId))
-                               .Select(s => new { s.LambdaId, s.Kind, s.Enabled })
-                               .ToList()
-                               .ToDictionary(s => (s.LambdaId, s.Kind), s => s.Enabled);
+        var switched = (await database.DataStores.AsNoTracking()
+                                      .Where(s => ids.Contains(s.LambdaId))
+                                      .Select(s => new { s.LambdaId, s.Kind, s.Enabled })
+                                      .ToListAsync(cancellation))
+                       .ToDictionary(s => (s.LambdaId, s.Kind), s => s.Enabled);
 
-        var showcased = database.Showcases.AsNoTracking()
-                                .Where(s => ids.Contains(s.LambdaId))
-                                .Select(s => s.LambdaId)
-                                .ToHashSet();
+        var showcased = await database.Showcases.AsNoTracking()
+                                      .Where(s => ids.Contains(s.LambdaId))
+                                      .Select(s => s.LambdaId)
+                                      .ToHashSetAsync(cancellation);
 
-        var published = database.Sources.AsNoTracking()
-                                .Where(s => s.Published && ids.Contains(s.LambdaId))
-                                .Select(s => s.LambdaId)
-                                .ToHashSet();
+        var published = await database.Sources.AsNoTracking()
+                                      .Where(s => s.Published && ids.Contains(s.LambdaId))
+                                      .Select(s => s.LambdaId)
+                                      .ToHashSetAsync(cancellation);
 
-        var drafts = database.Features.AsNoTracking()
-                             .Where(f => ids.Contains(f.LambdaId))
-                             .GroupBy(f => f.LambdaId)
-                             .Select(g => new { LambdaId = g.Key, Count = g.Count() })
-                             .ToDictionary(g => g.LambdaId, g => g.Count);
+        var drafts = await database.Features.AsNoTracking()
+                                   .Where(f => ids.Contains(f.LambdaId))
+                                   .GroupBy(f => f.LambdaId)
+                                   .Select(g => new { LambdaId = g.Key, Count = g.Count() })
+                                   .ToDictionaryAsync(g => g.LambdaId, g => g.Count, cancellation);
 
         // as its owner switched it, or as the kind comes where they never did
         bool Keeps(long id, DataKind kind) => switched.TryGetValue((id, kind.Id), out var on) ? on : kind.Default;

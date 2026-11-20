@@ -19,8 +19,8 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// <remarks>
 /// The document is <see cref="GuideDocument"/>'s and what a section may be
 /// <see cref="GuideChecks"/>'. The section is kept as two settings
-/// (<c>guide.title</c>, <c>guide.text</c>) and held in memory once read, as
-/// the branding is; the guide is written anew with every call, since it is
+/// (<c>guide.title</c>, <c>guide.text</c>), read once as the platform starts
+/// (<see cref="LoadAsync"/>) and held in memory, as the branding is; the guide is written anew with every call, since it is
 /// called rarely and differs by the address it was asked at.
 ///
 /// Where the installation has no admin token, a section in the database is
@@ -36,11 +36,12 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
 
     private readonly GuideDocument _document = new(options, tiers, addresses, database, files, secrets);
 
-    private readonly Lock _lock = new();
+    /// <summary>
+    /// Who is changing the section: one at a time, across the write.
+    /// </summary>
+    private readonly SemaphoreSlim _turn = new(1, 1);
 
-    private bool _read;
-
-    private GuideSection? _section;
+    private volatile GuideSection? _section;
 
     #region Reading
 
@@ -51,15 +52,7 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     {
         get
         {
-            if (!options.Administrable)
-            {
-                return null;
-            }
-
-            lock (_lock)
-            {
-                return Current();
-            }
+            return options.Administrable ? _section : null;
         }
     }
 
@@ -68,24 +61,24 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     /// </summary>
     public string Write(string origin) => _document.Write(origin, branding.Current.Name, Section);
 
-    /// <remarks>Under the lock.</remarks>
-    private GuideSection? Current()
+    /// <summary>
+    /// Reads the operator's section into memory, before anything is served -
+    /// where there is an operator to have written one.
+    /// </summary>
+    public async ValueTask LoadAsync(CancellationToken cancellation = default)
     {
-        if (_read)
+        if (!options.Administrable)
         {
-            return _section;
+            return;
         }
 
-        using var database = databases.CreateDbContext();
+        await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var stored = database.Settings.AsNoTracking()
-                             .Where(s => s.Key == TitleKey || s.Key == TextKey)
-                             .ToDictionary(s => s.Key, s => s.Value);
+        var stored = await database.Settings.AsNoTracking()
+                                   .Where(s => s.Key == TitleKey || s.Key == TextKey)
+                                   .ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
 
         _section = stored.TryGetValue(TitleKey, out var title) && stored.TryGetValue(TextKey, out var text) ? new GuideSection(title, text) : null;
-        _read = true;
-
-        return _section;
     }
 
     #endregion
@@ -95,58 +88,66 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     /// <summary>
     /// Writes the operator's section, or replaces it.
     /// </summary>
-    public GuideSection Change(string? title, string? text)
+    public async ValueTask<GuideSection> ChangeAsync(string? title, string? text, CancellationToken cancellation = default)
     {
         RequireOperator();
 
         var section = GuideChecks.Section(title, text, _document.Headings);
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync(cancellation);
 
-            Keep(database, TitleKey, section.Title);
-            Keep(database, TextKey, section.Text);
+            await KeepAsync(database, TitleKey, section.Title, cancellation);
+            await KeepAsync(database, TextKey, section.Text, cancellation);
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
-            _section = section;
-            _read = true;
-
-            return section;
+            return _section = section;
+        }
+        finally
+        {
+            _turn.Release();
         }
     }
 
     /// <summary>
     /// Takes the operator's section out of the guide.
     /// </summary>
-    public GuideSection? Remove()
+    public async ValueTask<GuideSection?> RemoveAsync(CancellationToken cancellation = default)
     {
         RequireOperator();
 
-        lock (_lock)
+        await _turn.WaitAsync(cancellation);
+
+        try
         {
-            var was = Current();
+            var was = _section;
 
-            using var database = databases.CreateDbContext();
+            await using var database = await databases.CreateDbContextAsync(cancellation);
 
-            foreach (var setting in database.Settings.Where(s => s.Key == TitleKey || s.Key == TextKey).ToList())
+            foreach (var setting in await database.Settings.Where(s => s.Key == TitleKey || s.Key == TextKey).ToListAsync(cancellation))
             {
                 database.Settings.Remove(setting);
             }
 
-            database.SaveChanges();
+            await database.SaveChangesAsync(cancellation);
 
             _section = null;
-            _read = true;
 
             return was;
         }
+        finally
+        {
+            _turn.Release();
+        }
     }
 
-    private static void Keep(LambdaDbContext database, string key, string value)
+    private static async ValueTask KeepAsync(LambdaDbContext database, string key, string value, CancellationToken cancellation)
     {
-        if (database.Settings.Find(key) is { } existing)
+        if (await database.Settings.FindAsync([key], cancellation) is { } existing)
         {
             existing.Value = value;
         }

@@ -27,19 +27,19 @@ public interface ISourceService
     /// Whether the lambda behind an editor key is published, or nothing when
     /// it never was.
     /// </summary>
-    SourceSettings? Get(string privateKey);
+    ValueTask<SourceSettings?> GetAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Publishes the source of a lambda, or changes the license it is
     /// published under.
     /// </summary>
-    SourceSettings Publish(string privateKey, SourceDraft draft);
+    ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the source down. Its stars are kept for when it is published
     /// again; nothing happens when it was not published.
     /// </summary>
-    SourceSettings? Withdraw(string privateKey);
+    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
 
     #endregion
 
@@ -49,12 +49,12 @@ public interface ISourceService
     /// One page of the published sources.
     /// </summary>
     /// <param name="search">Words the key, the title or what it is about have to contain</param>
-    SourceListing List(string? search, SourceOrder order, int skip, int take);
+    ValueTask<SourceListing> ListAsync(string? search, SourceOrder order, int skip, int take, CancellationToken cancellation = default);
 
     /// <summary>
     /// The published source at a public key, or nothing where there is none.
     /// </summary>
-    SourceProject? GetProject(string publicKey);
+    ValueTask<SourceProject?> GetProjectAsync(string publicKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// A version of a published source, packed - or nothing where there is no
@@ -79,12 +79,12 @@ public interface ISourceService
     /// </remarks>
     /// <param name="ticket">The ticket the page was handed when it read the source</param>
     /// <param name="client">Who is starring</param>
-    StarOutcome? Star(string publicKey, string? ticket, IPAddress? client, bool starred);
+    ValueTask<StarOutcome?> StarAsync(string publicKey, string? ticket, IPAddress? client, bool starred, CancellationToken cancellation = default);
 
     /// <summary>
     /// Every published source, for the sitemap.
     /// </summary>
-    IReadOnlyList<SourceAddress> ListAddresses();
+    ValueTask<IReadOnlyList<SourceAddress>> ListAddressesAsync(CancellationToken cancellation = default);
 
     #endregion
 
