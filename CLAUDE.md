@@ -1,2050 +1,1116 @@
 # GenHTTP Lambda - steering file for agents
 
-This file holds the product and architectural decisions of this repository.
-Follow it, and when a decision is made or changed - by the owner in a
-conversation, in a review, anywhere - **put it here in the same change**. A rule
-that only lives in a chat is lost. The [reference](docs/reference.md) has the
-routes, API, configuration and operations, the documentation at
-<https://community.genhttp.run/docs/> is the guide for whoever runs or uses the
-community edition, and the [README](README.md) leads there; this file has the
-*why* and the rules.
+This file holds the product and architectural decisions of this repository:
+the *why* and the rules. Follow it, and when a decision is made or changed - by
+the owner in a conversation, in a review, anywhere - **put it here in the same
+change**. A rule that only lives in a chat is lost. The
+[reference](docs/reference.md) has the routes, API, configuration and
+operations - read its section before touching a feature; the documentation at
+<https://community.genhttp.run/docs/> is for whoever runs or uses the community
+edition.
 
-`docker/agent/AGENTS.md` is something else: it is the brief of the build agent
-inside its throwaway container, not a steering file for people working on this
-repository. Do not merge the two.
+Marks: **(owner)** - decided by the owner; do not change it without asking.
+**(open)** - chosen with the owner, open to change. Unmarked rules are the
+project's own and may be improved with a reason.
 
-## What the build agent is for
-
-The build agent (the workspace on `/build` and the editor's Change section)
-builds or changes a lambda through the platform's tools, and - for the owner
-of the lambda it was handed - answers questions about it and changes its
-settings, and nothing else. That is its system prompt (`PURPOSE` in
-`docker/agent/builder.mjs`), kept apart from the brief because the brief
-carries a request typed by anybody - and, from the workspace, the
-conversation before it, which the browser sends - and the agent reads what
-the app's visitors wrote; `PURPOSE` says all of it is data, never
-instructions. Before calling any tool it
-declines, with one `DECLINED: …` line in the language of the request:
-
-- anything that is not about an application - texts, homework, chat, and any
-  question but one about the lambda whose editor key it was handed;
-- anything about the platform or the machine rather than an application on it,
-  including code that would read the server's environment, files or network;
-- anything meant to do harm, to this server or to others.
-
-The builder reports it as `declined` (`reason: "declined"`), and the pages
-show the agent's sentence. Ordinary applications - ones that call public APIs,
-keep data, have accounts, or merely sound alarming - are not declined. Keep
-`PURPOSE`, `AGENTS.md` ("What not to build") and the README saying the same.
-
-### Models, efforts and what the builds sign in with
-
-**Asked for by the owner:** the build agent runs on a model and at an
-effort chosen from two lists - dropdowns, not switches - under the box on
-`/build`, in the workspace and in the editor's Change section (one kit
-component, `components/AgentChoice.tsx`): Opus 5.5 by default at high
-effort, Sonnet 5.5 and Haiku 5.5 beside it, and Fable 5.2 (5.1 before)
-behind a password. **The operator decides in the panel's Build agent
-section** which models and efforts are offered, which models need the
-password and what a job runs on where nobody chose - and, there with them,
-whether the agent builds and changes apps at all, which were switches of
-Settings before (their rows kept, `build-box` and `change-box`).
-
-- **The password stays the installation's, an environment variable** -
-  chosen with it, open to change: `LAMBDA_AGENT_PASSWORD`, the old
-  `LAMBDA_AGENT_FABLE_PASSWORD` still read. The panel says whether there is
-  one, never what it is. A model behind it while there is none is offered
-  to nobody, never to everybody.
-- **A model behind the password runs unbounded**, as Fable did: no clock, no
-  step limit, a lane of its own. Kept from before, open to change. The
-  server decides it and tells the runner (`unbounded`), only for a job whose
-  password it checked; the runner never infers it from a model's name.
-- The default model is everybody's, without the password, and at least one
-  effort is offered with the default among them; a save that breaks either
-  is refused. A model or an effort not offered is refused before the agent
-  is asked and before the allowance is spent. Chosen with it, open to
-  change: every effort is offered at first (`AgentSettings.Default`), on
-  every model and on the clock everybody's runs on - so on an installation
-  open to strangers the operator decides in the panel whether `xhigh` and
-  `max` should be theirs.
-- **A subscription token or an API key - asked for by the owner**
-  ("enterprise would rather use an API key"): `CLAUDE_CODE_OAUTH_TOKEN` or
-  `ANTHROPIC_API_KEY` on the runner. Exactly one goes into a build and the
-  other is set empty there. With both, the token wins and the runner says so
-  as it starts - chosen with it: the key is billed by the token, and one
-  exported by accident must not take over unseen. genhttp.dev stays on its
-  subscription.
-- The labels the pages show (`AgentCatalog`) name the versions the runner
-  runs by default; which identifier each model runs as is the runner's
-  (`AGENT_MODEL` for Opus, `AGENT_SONNET_MODEL`, `AGENT_HAIKU_MODEL`,
-  `AGENT_FABLE_MODEL`), shown in the panel beside them.
-- **The CLI was moved to a version that knows the models** (2.1.329): one
-  that does not may ask for a model with settings it refuses. Builds load no
-  built-in tool (`--tools ""`) as well as naming them in the denylist, and
-  `verify-tools.sh` reads what a build loaded from the CLI's own first line
-  rather than asking the model. Run it after every change of the version.
+`docker/agent/AGENTS.md` is the brief of the build agent inside its throwaway
+container, not a steering file for this repository. Do not merge the two.
 
 ## What this is
 
 A platform on which somebody describes an app - or an agent writes a C# snippet
 that returns a GenHTTP `IHandler` - and gets a public URL that serves it. The
 snippet is compiled with Roslyn at runtime and hosted by the same GenHTTP
-server (`GenHTTP.Full.Ioxide`, .NET 11) that serves this application.
-
-It is **open source under MIT - decided by the owner** (`LICENSE`), the whole
-repository.
-
-## Editions and components
-
-**Decided by the owner:** the platform is a set of components that hosts put
-together the GenHTTP way, and there are two hosts - two editions:
-
-- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at
-  subdomains of the hosting domain, the marketing site (the front page, which
-  shows the features, the workspace at `/build`, the guide at `/ship`, the
-  comparison with the community edition at `/self-hosting`), the legal pages, its terms of use, its contact and abuse mailbox
-  and its description of itself to search engines (`CloudInstallation`,
-  `CloudStructuredData`). There is no page of prices any more.
-- **Community** (`src/GenHTTP.Lambda.Community`) is what anybody runs on
-  their own server, published as the Docker image `genhttp/lambda`: every
-  feature of the cloud, the build agent included, behind a simpler front page
-  for developers (`LandingPage`: what it does, the ways to an app, what every
-  app gets, how it runs, where to look next) with the same `/build` and `/ship`
-  as the cloud - decided by the owner - and the showcase -
-  translated like everything else, crisp, and selling nothing. No terms, no
-  legal pages, no imprint, no organization behind it; what its operator names
-  (`LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`) is shown, and nothing else.
-- **Lambdas answer by path in the community edition - decided by the owner**:
-  `/lambda/{key}/` on the one address an installation runs at
-  (`LambdaAddressing.Paths`, `LAMBDA_PUBLIC_URL`), with domains of their own
-  served as in the cloud. Giving it `LAMBDA_HOSTING_URL` switches it to
-  subdomains; `LAMBDA_ADDRESSING` decides over both. **The trade-off is said,
-  not hidden**: by path, a lambda shares the platform's origin and can read
-  what the editor and the panel keep in that browser. So the editor's pages
-  send no referrer (its key is in their address) and are not indexed, the
-  panel keeps its token for the tab only (session storage) wherever the
-  lambdas answer on its origin - local storage only once `/system` says they
-  do not - and the documentation (Security) says who should switch to
-  subdomains.
-- **Nothing in the pages names the cloud.** What differs per installation -
-  where a lambda answers, the git address, where a domain has to point (the
-  server resolves its own public name, `DomainResponse.Target`), the page
-  with the workspace (`LambdaOptions.StartPage`: `/build` on both editions,
-  for a host whose site has it elsewhere) - is asked of the installation,
-  never written into a bundle.
-- **The cloud's front page is its features - decided by the owner** (it was
-  `/platform` until 2026-11-17, which now leads to `/` for good,
-  `SitePagesBuilder.Moved`). It shows what every app gets beyond being built
-  and changed (drafts, history, documentation, records, keys and passwords,
-  analytics, a domain, the code, publishing), a section each with a
-  screenshot of the real editor or workspace - all of one example app, the
-  court booking of a tennis club that does not exist, taken on a local
-  installation with the app, its records, visitors and history made up for
-  it, in both themes. **Its first picture is that app being built on
-  `/build` - decided by the owner**: the request, the agent's answer that
-  it is online and the editor link, so a visitor sees how building one feels
-  before anything else (it was the editor's overview before). The front page
-  from before - the video, the three steps, the contact cards - went with it.
-- **The cloud has a page about self-hosting - decided by the owner.**
-  `/self-hosting` sets genhttp.dev and the community edition side by side to
-  say that the platform can be run elsewhere: **neither is preferred** -
-  both drawn alike, in the same order, with the same weight of button, and
-  every row a fact of each, taken from the code and the README rather than
-  from memory. Its name in the menu, "Self-hosting", says the one thing a
-  visitor would not otherwise know. The community edition has neither the
-  features nor this page: it sells nothing and does not name the cloud. The
-  pages, the comparison's neutrality and the screenshots were the owner's;
-  the paths, the menu's word and the order of the sections were chosen with
-  them, and are open to change.
-- **The menu is the same principle on both editions - decided by the
-  owner**: the front page, then Build (`/build`) and Ship (`/ship`); the cloud
-  adds Self-hosting and then the Showcase (the showcase after self-hosting,
-  the owner's ask), the community the Showcase; the panel last.
-- **`/ship` is a guide - decided by the owner**: how to connect an agent of
-  one's own and have it publish an app, in three steps (the kit's
-  `AgentGuide`: connect, what to say, what comes back), then the site's own
-  words - on the cloud a paragraph on the database and multiplayer and the
-  questions people ask, on the community the questions a developer asks
-  next. The scene, the comparison with other hosts and the domain section
-  went.
-- **Every page links to the platform's source - decided by the owner.**
-  `REPOSITORY` in the kit's `installation.ts`, beside Discord: the footer of
-  every page (the owner's ask), and - chosen with it - the GitHub mark in the
-  bar where it has room (from `xl`, the menu below `lg`), the cloud's front
-  page and `/self-hosting`, and the community's front page, whose
-  Reference card leads to `docs/reference.md` where the guide's card was.
-  `/build` and `/ship` have the footer's link only: the one speaks to people
-  who do not write code, the other is a guide and nothing else. **Not on an
-  enterprise installation - decided by the owner**: neither GitHub nor
-  Discord is linked there, in the bar, the footer or the front page
-  (`useProjectLinks`); its colleagues come for their tools.
-- **By path, the "Made with" line is a plain link** - a link within the same
-  site, as it was before the subdomains - and nofollow at subdomains; the
-  guide says whichever holds (`platform_guide`, `backlink`).
-- **The community edition can be branded - decided by the owner**: its
-  operator gives it a name and a logo in the panel's **Branding** section -
-  never with environment variables - and every page shows them in place of
-  GenHTTP Lambda's: the bar, the end of every title, link previews, the tab's
-  icon, the manifest, `llms.txt`, the front page's eyebrow. An agent with the
-  admin token does the same, through `/admin/branding` and the MCP tool
-  `customize_installation`. **The cloud does not offer it**: the host decides
-  (`LambdaOptions.Branding`, switched on by the community host only), and
-  without it the routes, the tool and the section are not there and nothing
-  stored is read. More customizations may join it there later (the owner's
-  words). Chosen with it, open to change: one form with a preview in both
-  themes, the name a setting and the logo a row of its own; a name without a
-  logo is drawn as its first letter on a plate (`Monogram`), so a branded
-  installation never shows the platform's mark; the brand is written into
-  every index page on the server (`PageBranding`, `#lambda-brand`) and the
-  community site is prerendered once more for a brand, so neither a tab nor
-  the first moment of a page shows the platform's; an unbranded installation
-  is sent its pages exactly as built. **Wherever the pages or an app say what
-  the installation is, they say its name - decided by the owner**: the "Made
-  with" line (see The link back), the sentences of the translations that say
-  what an app was built with (the hosting domain's page, what a lambda is and
-  a source's description on `/source`, as `{platform}` - the glossary tells a
-  translator to write them for any name), and a lambda's repository
-  (`AGENTS.md`, `CLAUDE.md`, `Program.cs`, as the installation is called when
-  a commit is made - a push is compared with the commits it builds on, so a
-  rename refuses none). Where the software is meant, GenHTTP Lambda stays
-  named: the source and Discord links (no answer from the owner to whether a
-  branded installation should say "Powered by" instead), the API's
-  description, the MCP server and the export. The usage report says whether
-  an installation is branded (`branded`, decided by the owner), never as
-  what.
-- **Who an installation is for - asked for by the owner**, since the
-  community edition read like private stuff in a company: a profile
-  (`InstallationProfile`) - `cloud`, a public platform; `home`, somebody and
-  the people around them; `enterprise`, an organization and its people -
-  which the pages and the guide for agents speak to. **Chosen in the panel,
-  home by default on the community edition and fixed cloud on genhttp.dev -
-  decided by the owner**: the host says which there may be
-  (`LambdaOptions.Profile`, `Profiles`), as it does the branding, and the
-  operator chooses under **Settings** (`/admin/settings`, a row `profile`).
-  **The community edition offers home and enterprise, never cloud - decided
-  by the owner.** **Used where it clearly fits, never as a switch spread
-  through the code - decided by the owner** ("avoid spaghetti code and too
-  many ifs").
-  - **Words, steering and the platform's own links, nothing else** - chosen
-    with it, open to change. No limit, tier, default, rule of connectivity,
-    block or decline depends on it, and `PURPOSE` frames the request as data
-    alike for every profile. A new use keeps to that.
-  - **The words are the catalogs'**: a section says what a profile says its
-    own way under `profiles` - only what differs - and the kit's catalogs
-    hand every page the words of the installation's profile (`profile.ts`,
-    `wordsFor`), so no component asks which it is. Only `enterprise` has
-    words of its own: the ideas and the placeholder on `/build` and its
-    intro on the community site, the asks on the community's `/ship`, and
-    the examples in the editor's Change box, new draft and showcase. `home`
-    says what the cloud says.
-  - **The community's front page addresses an enterprise installation's
-    colleagues, not its operator - decided by the owner**: people who do
-    not write code, come to have their tools built (`EnterpriseLanding`,
-    chosen in `Landing` by the profile): what they can build, how it goes,
-    what they ask first, in the simple view's words. The menu, with `/build`
-    and `/ship`, stays as it is (the owner's words). Home keeps the page for
-    whoever runs it. Its tab title stays the one `pages.json` gives `/`,
-    which knows no profiles.
-  - **What is built is an app, on every installation - decided by the
-    owner**: the menu says "Create an app" and the build box speaks of an
-    app, where both said website. The cloud's own `/build` page is written
-    for search and says what people search for (see The words each page is
-    found by).
-  - **Prerendered for each profile** the community site names, as the
-    platform and as a brand, keeping the pages that differ - every page for
-    enterprise, since the footer does; `#site-facts` says which profile a
-    page was rendered for, and a visitor is sent that one page, never the
-    file of them (a bundle serves neither `prerender.json` nor
-    `pages.json`). The editor asks `/system`.
-  - **The guide's introduction says whom the apps are for**, a sentence per
-    profile; the build agent's brief points there. The MCP instructions,
-    fixed when the endpoint starts, leave it to the guide.
-  - **No "Made with" line on an enterprise installation, and no link to the
-    platform's GitHub or Discord - decided by the owner** (see The link back,
-    and Every page links to the platform's source).
-  - **The usage report says which (`configuration.profile`) - decided by the
-    owner**, a choice like `branded`, never whose an installation is.
-  - Left as they were: the demos and the front pages.
-- **The community edition sends a usage report once a day - decided by the
-  owner** (`Services/UsageReports`), on by default and switched off with
-  `LAMBDA_USAGE_REPORTS=false` (or `DO_NOT_TRACK`). Neither hidden nor
-  pushed: documented like any other feature (a line of the README, with the
-  details in `docs/telemetry.md`; the documentation's Install page;
-  the reference, a line on startup, the panel's **Usage report** section
-  with the last report as sent), never a banner or a prompt. It says
-  **how an installation runs, never what it runs**: the version, the
-  machine, which options are on, and counts and sums over the lambdas - no
-  key, domain, title, code, record, secret, visitor or address of anybody,
-  and no demo counted. **Not the installation's address either - decided by
-  the owner**: `LAMBDA_PUBLIC_URL` names whoever runs it, and operators would
-  rightly object; options are sent as switches, never their values. A new
-  field keeps to that, is added rather than renamed, and is said in
-  `docs/telemetry.md`. It never delays startup or a request: a background
-  job, one attempt a day with a time limit, a warning once when it does not
-  arrive.
-  The cloud sends none (`FromEnvironment(…, usageReports: true)` is the
-  community host's). The collector is the lambda `telemetry` on genhttp.dev
-  (`telemetry.genhttp.run`): its source is in the lambda, not here, and its
-  front page says what is kept - keep the three saying the same.
-
-The components, each a project with a builder in front (`X.Create(...)`, the
-GenHTTP style), and what they need given to the builder rather than read from
-the environment:
-
-| Component | Project | Builder | Mounted at |
-|---|---|---|---|
-| The platform: services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
-| The REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
-| The MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
-| The editor, the create page, the owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
-| The operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
-| The published sources, their public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` (no path of its own) |
-| Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
-| Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
-| Engine, ports, TLS, the environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
-| What data is kept in: the contracts | `GenHTTP.Lambda.Integrations` | - | - |
-| SQLite, the default database | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
-| Local directories, the default files | `GenHTTP.Lambda.Integrations.Local` | - (the platform's own) | `.Files(...)` |
-| PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
-
-- **A host's `Program.cs` is the composition, and stays short and plain**:
-  read the settings, build the platform, put the components into a layout,
-  hand it to the runner and the server. Read both before adding a component.
-- **Nothing below the hosts reads the environment - decided by the owner.**
-  `LambdaSettings.FromEnvironment()` (in `Server`) reads the `LAMBDA_*`
-  variables into the platform's options (`LambdaOptions`, the DTO the
-  components share) and the server's (`ServerSettings`: engine, ports,
-  certificates, ACME); a host adds what is its own (`CloudInstallation.Of`).
-  The variables are the same as before the split, so an installation's
-  configuration did not change - but for `LAMBDA_WEB_ROOT`, which went with
-  the one folder of pages it named, and three that were added
-  (`LAMBDA_ADDRESSING`, `LAMBDA_CONTACT`, `LAMBDA_ABUSE_CONTACT`).
-- **The mount paths are fixed** (`PlatformRoutes`): the components link to
-  one another - the API hands out the editor's address, a clone keeps its
-  git address - so a host mounts each at its name and nowhere else.
-- **The runner goes around the site**, not into it: a lambda's own host owns
-  every path there. On the platform's host it takes `/features/` and, by path,
-  `/lambda/`, and leaves the rest to the site.
-- **The editor and the panel talk to the platform through the REST API
-  only**; the API and MCP share logic through the services (`OperationLog`,
-  `LambdaAccess`, the analytics' wire shape), never one door reaching into the
-  other. The admin token is the platform's (`LambdaOptions.AdminToken`).
-- **Every component with pages owns its frontend - decided by the owner.**
-  Its sources are in its `Frontend/` folder, an npm workspace at the root
-  builds each into its project's `bundle/`, and the project copies that beside
-  the host's assemblies (`bundles/<name>/`, read by `Bundle.Beside`; a
-  builder's `.Bundle(directory)` overrides it). No component serves another's
-  bundle and there is no shared folder of pages. What they share is source,
-  not a build: the kit (`src/Kit`, `@genhttp-lambda/kit`) - the shell, the
-  components, the i18n machinery, the API client, the workspace, the guide,
-  the showcase, the Tailwind preset and the Vite helper. A link into another
-  bundle loads it (`claim`, `owns`).
-- **What only one installation says is the host's**: terms, contact, abuse
-  mailbox, legal pages (`LambdaOptions.Terms`, `Contact`, `AbuseContact`,
-  `LegalPages`). Without terms nothing is accepted on creating a lambda; the
-  pages every installation shares read the rest from `/system` (`operator`),
-  and leave out what is not there.
-- **Docker**: each host has its Dockerfile (`src/<host>/Dockerfile`, built
-  from the root). **The community image runs on GenHTTP's internal engine -
-  decided by the owner** (`LAMBDA_ENGINE=internal`, Kestrel before): io_uring
-  is blocked by the default seccomp profile of container runtimes, and an
-  operator may still choose `ioxide` or `kestrel`. The cloud's operations are in `deploy/cloud` - one compose
-  file with the build agent, its `.env`, `deploy.sh` and `set-token.sh` - so
-  the root holds nothing only genhttp.dev needs; its compose file names the
-  project (`genhttplambda`), since the containers and the data volume are
-  named after it. `.github/workflows/release.yml` publishes the community
-  image and the build agent (`genhttp/lambda-agent`) to the `genhttp` Docker
-  Hub account for amd64 and arm64, on a tag `v*` or by hand - nothing is
-  pushed otherwise. `samples/community` runs it with Compose, the build agent
-  as a profile.
-- **Shipped as project references for now**; the components are meant to
-  become NuGet packages, so a component takes nothing from a host.
+server (`GenHTTP.Full.Ioxide`, .NET 11) that serves the platform. Open source
+under MIT, the whole repository **(owner)**.
 
 ## The number one rule: asymmetric interfaces
 
-This is a platform for **agentic coding**. We do not assume that every actor
-works in the same tools with the same workflow. Instead:
+This is a platform for **agentic coding**. Not every actor works in the same
+tools with the same workflow:
 
 - **Agents get the best interface for producing and changing functionality**:
-  the MCP tools, the REST API, `platform_guide`, the demos, small targeted
-  changes (`change_code`), compile checks, logs.
+  MCP tools, the REST API, `platform_guide`, the demos, targeted changes
+  (`change_code`), compile checks, logs.
 - **Humans get the best interface for controlling and reviewing what was
-  generated**: the editor, the history with the change and the specification of
+  generated**: the editor, the history with the change and specification of
   every version, diffs, previews, a way back, the dashboard.
 
-Every design decision is measured against this before anything else. Do not
-build a symmetric view where a human and an agent use the same screen for the
-same job. If a feature makes the agent's job harder to make the human's
-easier, or the reverse, find the interface that serves each of them.
+Every design decision is measured against this first. Do not build a symmetric
+view where a human and an agent use the same screen for the same job; if a
+feature makes one's job harder to make the other's easier, find the interface
+that serves each.
 
 ## Two target groups
 
 | | No-code "vibers" | Developers |
 |---|---|---|
-| Who | Have an app built and want it changed; do not write code | Have their own coding agent and code |
-| Entry | the workspace at `/build`, the **Change** section of the editor | `/ship`, connecting an agent via MCP |
+| Entry | the workspace at `/build`, the editor's **Change** section | `/ship`, their own agent via MCP |
 | Editor | the **simple view** (`view: Simple`) | the **full view** (`view: Full`) |
-| Agent | the built-in prompt boxes | their own, through `/mcp` |
-| Cares about | what the app does, whether it is online, what changed | control: code, files, versions, deployments, logs |
+| Cares about | what the app does, whether it is online, what changed | code, files, versions, deployments, logs |
 
-Give both a good experience. Concretely:
+- **No developer slang in the simple view or on `/build`**: not merge, base,
+  branch, rebase, commit, compile error; no files or logs. Fixed vocabulary: a
+  feature is a **draft**, its data copy **test data**, merging **putting it
+  online**, a feature behind the newest version **out of date**, a version is
+  described by the **change** it made (its number only where the owner must
+  name one), the database is **records**, secrets are **keys and passwords**,
+  the workspace is **what your app saved**. A compile error is the agent's to
+  fix. The full view, `/ship`, the API, MCP, the guide and the docs use the
+  precise words.
+- The simple view has a section per kind of data (Records, Saved by your app,
+  Keys and passwords) only once the app keeps something there or, for keys,
+  its code waits for one. No switches, folders, code or column types there;
+  entering a key switches secrets on.
+- What the agent does reaches the pages as **steps** - facts the runner
+  records per tool call (`begin` in `docker/agent/builder.mjs`) and the
+  agent's own short lines in the request's language - never English sentences
+  from the runner. `/build` and the Change section draw a run with the same
+  parts (`components/AgentRun.tsx`). A new tool the agent may call gets a step
+  kind and words on both pages.
+- The view a lambda opens in is a default only (`view`): the build agent
+  creates `Simple` lambdas, everything else `Full`.
 
-- **Nothing in the simple view or on `/build` uses developer slang.** Not
-  "merge", "base", "branch", "rebase", "commit", "compile error", and no files
-  or logs. The vocabulary is fixed: a feature is a **draft**, its data copy is
-  **test data**, merging it is **putting it online**, a feature behind the newest
-  version is **out of date**, and a version is described as the **change** it
-  made. A compile error is the agent's to fix, not something the owner reads.
-  Say "version" and its number only where the owner needs to name which one goes
-  back online or which one a draft becomes (the draft dialogs do), never as the
-  way to describe a change. The database is **records** (a table of them, a
-  row is a record), secrets are **keys and passwords**, the workspace is **what
-  your app saved**.
-- What the agent is doing reaches the pages as **steps** - facts the runner
-  records per tool call (`begin` in `docker/agent/builder.mjs`), and the
-  lines the agent writes between them - never as English sentences from the
-  runner. `/build` and the Change section draw a run with the **same parts**
-  (`components/AgentRun.tsx`): what was asked, the step it is on and the clock
-  against its limit, what the agent said, and how it ended. `/build` and the
-  simple view show the agent's own lines, which both briefs ask for short and
-  in the language of the request; `/build` names the step it is on in its own
-  words (getting ready, choosing an address for your website, checking it for
-  mistakes). A new tool the agent may call gets a step kind and words on both
-  pages.
-- The simple view has a section per kind of data - **Records**, **Saved by
-  your app**, **Keys and passwords** - each only once the app keeps something
-  in it (a table, a saved file, a secret) or, the keys, its code waits for
-  one; an app that keeps nothing has none of them. No switches, no folders, no
-  code, no column types - its records table by table to read, a plain list of
-  what was saved, and the keys to enter or replace. Entering one there
-  switches secrets on.
-- The full view, `/ship`, the API, MCP tools, the guide and the README use the
-  precise words (feature, version, merge, base).
-- **The workspace (`/build`) is a conversation, not the editor - decided by
-  the owner** (see The workspace below): request and response, with the few
-  things the owner has to do there and a link to the editor for the rest.
-- The view a lambda opens in is a default only (`view`, set at creation and via
-  `PATCH`). The build agent creates `Simple` lambdas, everything else `Full`.
-  Whoever switches views has chosen for themselves, in their browser.
+### The workspace (`/build`)
 
-### The workspace
+**(owner)** A chat like ChatGPT or Claude: the apps this browser knows in a
+sidebar, a conversation about the one open, the box at its foot. A message is a
+question, a setting or a change.
 
-**Asked for by the owner:** `/build` is a workspace in the shape of the chats
-people know - ChatGPT, Claude: the apps this browser knows in a sidebar, a
-conversation with the agent about the one open, the box at its foot. A
-message is a question, a setting or a change; the answer is what the agent
-said, with what came of it underneath.
-
-- **Kept in the browser, by editor key - decided by the owner** (local
-  storage on every installation, `src/Kit/src/workspace/store.ts`): an app is
-  remembered when it is built there, or added with its editor link or its key
-  (the owner's ask); the conversation is kept beside it, the newest sixty
-  turns. There are still no accounts. A script on the platform's own origin -
-  a draft's preview at `/features/…`, every lambda of an installation that
-  answers by path - can read that storage; the documentation says so (Security),
-  and moving previews off the site's host is still a decision of its own. A
-  demo is not added. Which app is open is in the address by its public key
-  (`?app=`), never its editor key.
-- **Through the doors that were there.** The first message is a build
-  (`POST /builds`, its id kept in the browser while it runs, so a reload finds
-  the editor key it makes); every message after is a change of that lambda
-  (`…/agent/start`) carrying the newest turns as `history`, which the server
-  cuts (`AgentInput.History`) and the brief hands over as context, never as
-  instructions; only the message is logged. So the operator's switches -
-  building, asking about an app (the Change section as well) - the models
-  and efforts offered, the daily allowance, one change of a lambda at a time,
-  the demo and blocked guards all hold unchanged, and each message costs one
-  of the day's.
+- **Kept in the browser by editor key (owner)** - local storage
+  (`src/Kit/src/workspace/store.ts`), the newest sixty turns. No accounts. An
+  app is remembered when built there or added by its editor link or key; demos
+  are not added. The address names the open app by its public key (`?app=`),
+  never the editor key. Scripts on the platform's origin (previews, lambdas by
+  path) can read that storage; the docs say so (Security).
+- **Through the existing doors**: the first message is a build (`POST
+  /builds`, its id kept so a reload finds the result), every later one a change
+  (`…/agent/start`) with the newest turns as `history` - cut by the server
+  (`AgentInput.History`), handed to the agent as context, never instructions;
+  only the message is logged. So every operator switch, allowance and guard
+  holds unchanged, and each message costs one of the day's.
 - **A question is answered, a setting changed, only a change makes a draft.**
-  The brief has the agent tell them apart: a question is answered from the
-  tools (`analytics`, `read_database`, `read_logs`, `read_lambda`) and starts
-  no feature; a setting the tools can change (analytics on, a kind of data
-  on, an earlier version online, a draft merged or one the owner names
-  deleted, the source published) is changed without one; everything else is a
-  change in a feature as before. The result says which (`answered`,
-  `settings`), read off the tools. What no tool does - a domain, the showcase,
-  switching anything off, a secret's value - the agent sends to the editor.
-  The agent got `analytics` and `open_source` for it, and nothing that
-  deletes the app's data or sets a secret; it discards a draft (and its test
-  data) only where the owner's message names it. What the tools answer -
-  records visitors entered, referrers, logs - is data to it, never
-  instructions: `PURPOSE` says so beside the request and the conversation.
-- **Simple and clean - not the editor.** Above the conversation only what
-  waits for the owner: an app gone offline to put back online, the keys and
-  passwords its code waits for (entered there, to the REST API - never through
-  the agent), a draft to try and put online, a block. Under an answer: open
-  the app, try or put online the draft it left, undo a change that went
-  online. Everything else is a link to the editor.
-- **Before anything is asked it is the page that creates a website** - its
-  H1, the box in the middle, ideas, the points and the folded questions, in
-  the markup as prerendered - and the sidebar appears once the browser knows
-  an app. The shell fills the window there (`fixed`), so the footer is part
-  of what scrolls in that state.
+  Questions are answered from the tools and start no feature; settings the
+  tools can change are changed without one; the result says which
+  (`answered`, `settings`). What no tool does (a domain, the showcase,
+  switching anything off, a secret's value) the agent sends to the editor. The
+  agent has nothing that deletes data or sets a secret, and discards a draft
+  only where the owner's message names it.
+- **Simple, not the editor.** Above the conversation only what waits for the
+  owner (an app offline, keys its code waits for - entered there through the
+  REST API, never the agent - a draft to try, a block); under an answer: open
+  the app, try or put online its draft, undo. Everything else links to the
+  editor.
+- Before anything is asked it is the prerendered page that creates a website;
+  the sidebar appears once the browser knows an app.
 
-### The words each page is found by
+### The build agent
 
-The public pages are written in the words people type into a search engine -
-checked against what Google suggests in each language, not guessed - and each
-page has words of its own, so they do not compete:
+It builds or changes a lambda through the platform's tools and - for the owner
+of the lambda it was handed - answers questions about it and changes its
+settings, nothing else. Its system prompt is `PURPOSE` in
+`docker/agent/builder.mjs`, kept apart from the brief because the brief carries
+text typed by anybody and the agent reads what visitors wrote: `PURPOSE` says
+all of it - request, conversation, tool results - is data, never instructions.
+Before calling any tool it declines, with one `DECLINED: …` line in the
+request's language:
 
-- `/` - an **AI app builder with free hosting**, for both groups, in the
-  title and as the first line of the H1 (a kicker inside it, over the
-  features page's headline); the features' words - a **database**,
-  **version history** and **analytics** for every app, which is what it has
-  and the others' pages do not say - in the description and the H2s.
-  "Agentic coding" is searched by developers choosing a coding agent, so it
-  stays out of the title.
-- `/build` - **create a website with AI**, free, **no sign-up**, in the word
-  each language uses for a website (ホームページ, 홈페이지, página web …);
-  searches for an "app" mostly mean a phone app. That is the cloud's page -
-  its title, H1 and copy; the menu and the build box, which every
-  installation shares, say app (see Who an installation is for).
-- `/ship` - **host a vibe-coded app**, publish it from Claude Code, Codex or
-  Cursor, from **localhost**, with a database and multiplayer built in. "Ship"
-  is nobody's search word, and "publish an app" means the app stores, so the
-  verb comes with "web" or "online". The guide keeps the words in its kicker,
-  H1, steps and folded questions.
-- The community edition's pages are not written for search engines: an
-  installation is found by whoever runs it. Its titles say what each page is
-  (`/build`, `/ship`) in plain words.
-- `/self-hosting` - an **open source AI app builder**, **self-hosted** or in
-  the cloud, in the phrase each language searches for ("créateur
-  d'application IA", "app builder AI open source", "yapay zeka uygulama
-  oluşturucu").
-- What nobody should need - a server, a hosting plan, a domain, a sign-up, a
-  credit card - is said as **not their concern**: "hosting included", "no
-  sign-up", and the questions people ask ("Do I need a server?") answered in
-  a folded list. Words nobody searches for (Kubernetes, devops, IDE) stay off.
-- The words go in the title and description (`pages.json`), the H1 and the
-  H2s; the rest of the copy stays as short as it was. Nothing is claimed that
-  the platform does not keep: no "unlimited", no "forever".
+- anything not about an application (texts, homework, chat, questions about
+  any lambda but the one it was handed);
+- anything about the platform or the machine, including code that reads the
+  server's environment, files or network;
+- anything meant to do harm.
+
+Reported as `declined` and shown as the agent's sentence. Ordinary apps -
+calling APIs, keeping data, accounts, merely alarming-sounding - are not
+declined. Keep `PURPOSE`, `AGENTS.md` ("What not to build") and the docs
+saying the same.
+
+**Models and efforts (owner)**: chosen from two dropdowns under the box on
+`/build`, the workspace and the Change section (`components/AgentChoice.tsx`):
+Opus at high effort by default, Sonnet and Haiku beside it, Fable behind a
+password. The operator decides in the panel's **Build agent** section which models and
+efforts are offered, which need the password, the default, and whether the
+agent builds and changes apps at all.
+
+- The password is the installation's environment variable
+  (`LAMBDA_AGENT_PASSWORD`, `LAMBDA_AGENT_FABLE_PASSWORD` still read) **(open)**;
+  the panel says whether there is one, never what. A model behind it while
+  there is none is offered to nobody.
+- A model behind the password runs **unbounded** (no clock, no step limit, its
+  own lane) **(open)**. The server decides it for a job whose password it
+  checked and tells the runner (`unbounded`); the runner never infers it from
+  a model's name.
+- The default model needs no password, and at least one effort including the
+  default is offered; a save breaking either is refused. A model or effort not
+  offered is refused before the agent is asked or the allowance spent. Every
+  effort is offered at first (`AgentSettings.Default`) **(open)**.
+- **Token or API key (owner)**: `CLAUDE_CODE_OAUTH_TOKEN` or
+  `ANTHROPIC_API_KEY` on the runner; exactly one goes into a build, the other
+  set empty. With both the token wins and the runner says so at start.
+- `AgentCatalog` labels name the default versions; the identifiers are the
+  runner's (`AGENT_MODEL`, `AGENT_SONNET_MODEL`, `AGENT_HAIKU_MODEL`,
+  `AGENT_FABLE_MODEL`).
+- Builds load no built-in tool (`--tools ""` plus the denylist).
+  `verify-tools.sh` checks what a build loaded from the CLI's first line; run
+  it after every change of the CLI's version.
+
+## Editions and components
+
+**(owner)** The platform is a set of components that hosts put together the
+GenHTTP way. Two hosts, two editions:
+
+- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
+  of the hosting domain, the marketing site (front page of features, `/build`,
+  `/ship`, `/self-hosting`), legal pages, terms, contact and abuse mailbox,
+  structured data (`CloudInstallation`, `CloudStructuredData`).
+- **Community** (`src/GenHTTP.Lambda.Community`), the Docker image
+  `genhttp/lambda`: every feature of the cloud, the build agent included,
+  behind a simpler front page for developers, the same `/build` and `/ship`,
+  and the showcase - translated, crisp, selling nothing. No terms, legal pages
+  or organization; only what its operator names (`LAMBDA_CONTACT`,
+  `LAMBDA_ABUSE_CONTACT`) is shown.
+
+### Rules of both editions
+
+- **Nothing in the pages names the cloud.** What differs per installation -
+  where a lambda answers, the git address, where a domain points
+  (`DomainResponse.Target`), the workspace page (`LambdaOptions.StartPage`) -
+  is asked of the installation, never written into a bundle.
+- **What only one installation says is the host's**: terms, contact, abuse
+  mailbox, legal pages (`LambdaOptions.Terms`, `Contact`, `AbuseContact`,
+  `LegalPages`). Without terms nothing is accepted on creating a lambda; shared
+  pages read the rest from `/system` (`operator`) and leave out what is not
+  there.
+- **The menu (owner)**: the front page, Build, Ship; the cloud adds
+  Self-hosting, then the Showcase; the community the Showcase; the panel last.
+  The menu and build box say **app** on every installation **(owner)**.
+- **`/ship` is a guide (owner)**: connecting one's own agent and having it
+  publish an app in three steps (the kit's `AgentGuide`), then the site's own
+  words.
+- **Every page links to the platform's source (owner)** (`REPOSITORY` in the
+  kit's `installation.ts`, beside Discord) in the footer; `/build` and `/ship`
+  only there. **Not on an enterprise installation (owner)**: no GitHub or
+  Discord link anywhere (`useProjectLinks`).
+- **Lambdas answer by path on the community edition (owner)** - see Where the
+  lambdas answer.
+
+### The cloud's pages
+
+- **The front page is the features (owner)**: what every app gets beyond being
+  built (drafts, history, documentation, records, keys, analytics, a domain,
+  the code, publishing), a section each with a screenshot of the real editor -
+  all of one made-up example app (a tennis club's court booking), both themes.
+  Its first picture is that app being built on `/build` **(owner)**. When a
+  feature an owner would notice is added, or the editor's look changes, its
+  section and picture change with it.
+- **`/self-hosting` (owner)** sets genhttp.dev and the community edition side
+  by side: **neither preferred** - drawn alike, same order, same weight of
+  button, every row a fact taken from the code, not memory.
+- **The words each page is found by**: the public pages use what people type
+  into a search engine (checked against Google's suggestions per language),
+  each page its own words so they do not compete - `/` an *AI app builder with
+  free hosting* (database, version history, analytics in description and
+  H2s); `/build` *create a website with AI*, free, *no sign-up*, in each
+  language's word for website; `/ship` *host a vibe-coded app*, from Claude
+  Code, Codex, Cursor, localhost; `/self-hosting` an *open source AI app
+  builder*, self-hosted. What nobody should need (a server, a domain, a
+  sign-up, a card) is said as not their concern. Words go in `pages.json`, the
+  H1 and H2s. Nothing is claimed the platform does not keep: no "unlimited",
+  no "forever". The community's pages are not written for search.
+
+### Branding (community only)
+
+**(owner)** The operator gives the installation a name and a logo in the
+panel's **Branding** section (or `/admin/branding`, the MCP tool
+`customize_installation`) - never environment variables - and every page shows
+them instead of GenHTTP Lambda's: bar, titles, link previews, icon, manifest,
+`llms.txt`. The host decides whether it is offered (`LambdaOptions.Branding`);
+without it the routes, tool and section are absent and nothing stored is read.
+
+- A name without a logo is drawn as its first letter (`Monogram`), so a branded
+  installation never shows the platform's mark **(open)**. The brand is written
+  into every index page by the server (`PageBranding`, `#lambda-brand`) and the
+  site is prerendered for it; an unbranded installation gets its pages exactly
+  as built.
+- **Wherever the pages or an app say what the installation is, they say its
+  name (owner)**: the "Made with" line, the translated sentences that say what
+  an app was built with (`{platform}`), a lambda's repository files. Where the
+  software is meant, GenHTTP Lambda stays named: source and Discord links, the
+  API description, the MCP server, the export.
+
+### Who an installation is for
+
+**(owner)** A profile (`InstallationProfile`): `cloud` (a public platform),
+`home` (somebody and the people around them), `enterprise` (an organization).
+The host says which may be chosen (`LambdaOptions.Profile`, `Profiles`): fixed
+`cloud` on genhttp.dev; `home` (default) or `enterprise` on the community
+edition, chosen under **Settings**.
+
+- **Used where it clearly fits, never as a switch spread through the code
+  (owner)** ("avoid spaghetti code and too many ifs"). Only words, steering and
+  the platform's own links depend on it - no limit, tier, default,
+  connectivity, block or decline **(open)**.
+- **The words are the catalogs'**: a section's `profiles` holds only what a
+  profile says differently, and the kit hands every page its profile's words
+  (`profile.ts`, `wordsFor`), so no component asks which it is. Only
+  `enterprise` has words of its own; `home` says what the cloud says.
+- **Enterprise (owner)**: the community front page addresses the colleagues,
+  not the operator (`EnterpriseLanding`) - people who do not write code and
+  come to have tools built; no "Made with" line; no GitHub or Discord links.
+- Prerendered per profile; `#site-facts` says which, and a visitor is sent that
+  page only (bundles serve neither `prerender.json` nor `pages.json`). The
+  editor asks `/system`. The guide's introduction says whom the apps are for.
+
+### Usage reports (community only)
+
+**(owner)** Once a day (`Services/UsageReports`), on by default, off with
+`LAMBDA_USAGE_REPORTS=false` or `DO_NOT_TRACK`. Neither hidden nor pushed:
+documented like any feature (`docs/telemetry.md`, the docs, the reference, a
+startup line, the panel's **Usage report** with the last report), never a
+banner or prompt.
+
+- **How an installation runs, never what it runs**: version, machine, which
+  options are on (switches, never values), counts and sums over lambdas - no
+  key, domain, title, code, record, secret, visitor, address, and **not the
+  installation's address (owner)**. Demos are not counted. It says whether an
+  installation is branded and its profile, never as what or whose.
+- A new field keeps to that, is added rather than renamed, and is described in
+  `docs/telemetry.md`. It never delays startup or a request: a background job,
+  one attempt a day with a time limit, one warning when it fails.
+- The cloud sends none. The collector is the lambda `telemetry` on genhttp.dev;
+  keep its front page, `docs/telemetry.md` and the code saying the same.
+
+### Components
+
+Each a project with a builder in front (`X.Create(...)`); what a component
+needs is given to its builder, not read from the environment.
+
+| Component | Project | Builder | Mounted at |
+|---|---|---|---|
+| Services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
+| REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
+| MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
+| Editor, create page, owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
+| Operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
+| Published sources, public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` |
+| Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
+| Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
+| Engine, ports, TLS, environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
+| Integration contracts | `GenHTTP.Lambda.Integrations` | - | - |
+| SQLite (default database) | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
+| Local directories (default files) | `GenHTTP.Lambda.Integrations.Local` | the platform's own | `.Files(...)` |
+| PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
+
+- **A host's `Program.cs` is the composition, short and plain**: read the
+  settings, build the platform, lay out the components, hand it to the runner
+  and the server. Read both before adding a component.
+- **Nothing below the hosts reads the environment (owner).**
+  `LambdaSettings.FromEnvironment()` (in `Server`) reads `LAMBDA_*` into
+  `LambdaOptions` (the DTO components share) and `ServerSettings`; a host adds
+  its own (`CloudInstallation.Of`).
+- **Mount paths are fixed** (`PlatformRoutes`): components link to one another.
+- **The runner goes around the site**: a lambda's own host owns every path; on
+  the platform's host it takes `/features/` and, by path, `/lambda/`.
+- **The editor and the panel talk to the platform through the REST API only**;
+  the API and MCP share logic through the services (`OperationLog`,
+  `LambdaAccess`, the analytics' wire shape), never one door reaching into the
+  other.
+- **Every component with pages owns its frontend (owner)**: sources in its
+  `Frontend/`, built by the root npm workspace into its `bundle/`, copied
+  beside the host's assemblies (`bundles/<name>/`, `Bundle.Beside`). No
+  component serves another's bundle. What they share is source: the kit
+  (`src/Kit`, `@genhttp-lambda/kit`). A link into another bundle loads it
+  (`claim`, `owns`).
+- **Docker**: a Dockerfile per host (`src/<host>/Dockerfile`, built from the
+  root). **The community image runs on GenHTTP's internal engine (owner)**:
+  io_uring is blocked by container runtimes' default seccomp profile. The
+  cloud's operations are in `deploy/cloud`, so the root holds nothing only
+  genhttp.dev needs. `.github/workflows/release.yml` publishes `genhttp/lambda`
+  and `genhttp/lambda-agent` (amd64, arm64) on a `v*` tag or by hand only.
+- Shipped as project references for now; meant to become NuGet packages, so a
+  component takes nothing from a host.
 
 ## Domain model
 
 ### Keys and ownership
 
-A lambda has a **public key** (it names its address, `{key}.genhttp.run`, and
-may be changed) and a **private key** (the editor link). Whoever holds the private key owns the lambda, and
-**editing is only possible with it**. The private key is shown only to the
-creator. It travels in a brief, never in a log line the platform writes about
-what was done. The request line is the exception, decided by the owner: it logs
-the path as requested, so `/api/v1/lambdas/{privateKey}/…` carries the key, and
-that is fine - the log is behind the admin token. There are no accounts.
+A lambda has a **public key** (names its address, may be changed) and a
+**private key** (the editor link). Whoever holds the private key owns the
+lambda; **editing is only possible with it**. It is shown only to the creator,
+travels in a brief, and never appears in a log line about what was done - the
+request line, which logs the path as requested, is the exception **(owner)**:
+the log is behind the admin token. There are no accounts.
 
-The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
-the reference. It is GenHTTP's API key authentication (`AdminAuthentication`): 401
-without the header, 403 with the wrong token, and the routes are not there at
-all (404) on an installation without a token. Behind it are the panel, the
-server's telemetry and the log. The token is **the platform's**
-(`LambdaOptions.AdminToken`, decided by the owner): the REST API's operator
-routes answer to it and the address block lets the panel through with it; the
-panel (`AdminPanel`) is pages only, over the REST API. **The editor has no
-Admin section any more - decided by the owner**, so the two components do not
-reach into each other: what only the operator decides about one lambda - its
-block (`console/BlockControl.tsx`), its tier - is on its page in the panel.
-**Only owners and the operator see telemetry**
-- the owner a lambda's own in the editor, the operator everybody's; nothing is
-public.
+`/admin` authenticates with `X-Admin-Token` (`AdminAuthentication`, GenHTTP's
+API key auth): 401 without, 403 wrong, 404 on an installation without a
+token. The token is the platform's (`LambdaOptions.AdminToken`) **(owner)**;
+the REST API's operator routes answer to it. **The editor has no admin section
+(owner)**: what only the operator decides about a lambda (block, tier) is on
+its page in the panel. Telemetry is seen only by owners (their lambda's) and
+the operator.
 
 ### Where the lambdas answer
 
-**Decided by the owner:** on genhttp.dev (the cloud edition) every lambda
-answers at a subdomain of the hosting domain named after its public key -
-`https://{key}.genhttp.run/` (`LAMBDA_HOSTING_URL`) - not below the site's own
-host. The community edition answers **by path** instead (see Editions below):
-`{public address}/lambda/{key}/` (`LambdaAddressing.Paths`), on the one address
-an installation is run at, and switches to subdomains once it is given a
-hosting URL. What follows is about subdomains unless it says otherwise.
+**(owner)** On genhttp.dev every lambda answers at a subdomain of the hosting
+domain (`https://{key}.genhttp.run/`, `LAMBDA_HOSTING_URL`). The community
+edition answers **by path** (`{public address}/lambda/{key}/`,
+`LambdaAddressing.Paths`) and switches to subdomains when given a hosting URL;
+`LAMBDA_ADDRESSING` decides over both.
 
-- **A site of its own.** A host of its own keeps what a lambda runs in a
-  browser away from what the site keeps there - the admin token - and from the
-  other lambdas, and gives it the root of its host. The hosting domain
-  belongs on the Public Suffix List, so a lambda cannot set cookies for the
-  others; that is the operator's to apply for.
-- **The control plane stays on the site**: the editor, the API, MCP, git,
-  the panel. So do the previews of features at `/features/{key}/` - for now
-  the one place a lambda's code still runs on the site's host; moving them is
-  a decision of its own.
+- **A host of its own** keeps a lambda's scripts away from what the site keeps
+  in the browser and from other lambdas. The hosting domain belongs on the
+  Public Suffix List (the operator applies).
+- **By path, the trade-off is said, not hidden**: a lambda shares the
+  platform's origin. So the editor's pages send no referrer and are not
+  indexed, the panel keeps its token in session storage while lambdas share
+  its origin, and the docs (Security) say who should switch to subdomains.
+- **The control plane stays on the site**: editor, API, MCP, git, panel - and
+  the previews at `/features/{key}/`, the one place a lambda's code still runs
+  on the site's host; moving them is a decision of its own.
 - **A lambda on the site's host may not widen a service worker's scope**
-  (`LambdaExecutionHandler`): a preview always, a lambda by path too. A
-  response with `Service-Worker-Allowed` is refused there with a 500 that
-  says why, and a line in the log - a worker for `/` would see the editor
-  and the panel in that browser afterwards. Refused rather than stripped:
-  GenHTTP adds headers to a response and takes none away. At a host of its
-  own, its scope is its own business.
-- **`/lambda/{key}/…` redirects permanently** to where the lambda answers
-  now - its domain while it has one - with the path and the query, before
-  anything else the server does: no request line, no telemetry, no other
-  middleware (`LambdaRedirectConcern`, added last on the host). Moved
-  Permanently for a read, Permanent Redirect for the rest, cached for a day
-  since a domain comes and goes.
-- **The subdomain serves the lambda only while it has no domain of its
-  own that its tier serves**; with one, it redirects there the same way. A
-  domain of its own works as it did.
-- **`www.` in front of a domain redirects to the domain - decided by the
-  owner**, the same way, unless the owner entered the domain with `www.`:
-  then that is where it answers, and the name without is not sent there.
-  Never served at both names (two sites to a search engine), and never
-  where the `www.` is another lambda's domain or the platform's own name.
-- **A host nobody has is never the platform - decided by the owner.** With
-  a public address (`LAMBDA_PUBLIC_URL`) the platform answers only at its
-  own names - `localhost`, that address's host, the MCP origins - and any
-  other host that is no lambda's gets the page of a subdomain with nothing
-  online, 404, on every path (`UnknownHost`). A domain pointed here before
-  its owner entered it served the site under its name, and crawlers kept
-  asking for the site's paths there once it was a lambda's. The ACME
-  challenge is still answered for every host. Without a public address the
-  installation cannot tell its names from others', and every host is the
-  platform's.
-- **Finding a lambda by an address reads the key as it is spelled
-  (`LambdaKeys.TryRead`), never by the rules for claiming one**
-  (`TryNormalize`): a rule made later - a reserved name, `xn--` - must not
-  take a lambda from before it offline.
-- **The wildcard certificate is the fallback.** The io_uring engine matches
-  names exactly, so the certificate of `*.{hosting domain}` is presented to
-  every name no certificate is listed for (`CertificateLoader`); the site's
-  keeps being presented by its names.
-- **The hosting domain itself has a minimal page** that leads to the site, and
-  a subdomain with nothing online a plain one (`HostingPages`). Both are
-  rendered by the server, never the site's bundle - no script of the site is
-  served at the hosting domain - and their words are in `pages.json`
-  (`hosting:/`, `hosting:/:key`), so they are translated with the rest.
-- **Addresses come from `ILambdaAddresses`**, never put together from strings
-  elsewhere. The API hands out `publicUrl` (the subdomain) and `address`
-  (where to link: the domain while it is served, the subdomain otherwise), the
-  frontend `lambdaUrl` (`{key}` in the template) for what has no lambda yet.
+  (`LambdaExecutionHandler`): a response with `Service-Worker-Allowed` is
+  refused there with a 500 and a log line.
+- **`/lambda/{key}/…` redirects permanently** where lambdas have hosts of their
+  own (to the domain while it has one), with path and query, before anything
+  else the server does (`LambdaRedirectConcern`). The subdomain redirects to
+  the lambda's own domain while its tier serves one.
+- **`www.` redirects to the domain (owner)** unless the owner entered it with
+  `www.`; never served at both names, never where the `www.` name is another
+  lambda's or the platform's.
+- **A host nobody has is never the platform (owner).** With a public address
+  (`LAMBDA_PUBLIC_URL`) the platform answers only at its own names
+  (`localhost`, that host, the MCP origins); any other unknown host gets a 404
+  page on every path (`UnknownHost`). ACME challenges are answered for every
+  host.
+- **Finding a lambda by address reads the key as spelled**
+  (`LambdaKeys.TryRead`), never by the rules for claiming one
+  (`TryNormalize`): a later rule must not take an existing lambda offline.
+- The wildcard certificate is presented to every name with no certificate of
+  its own (`CertificateLoader`).
+- The hosting domain's own page and a subdomain with nothing online
+  (`HostingPages`) are rendered by the server - no script of the site at the
+  hosting domain - with their words in `pages.json`.
+- **Addresses come from `ILambdaAddresses`**, never assembled from strings.
 
-### Versions, data, and how they differ
+### Versions and data
 
-- A **version** is the program: its code *and* its resources (a SPA, for
-  example) - and what is written about it, its documentation and tests, which
-  are part of its code (below). It never changes once saved. Different
-  versions may have different code and different resources.
-- **Data** is what the program keeps: the database, the workspace and the
-  secrets. It belongs to the lambda and is **shared by all versions**.
-  Deploys, rollbacks and merges never touch it.
-- Records go in the database and files in the workspace, never in the
-  resources. The front end goes in the version, never in the data. API keys
-  and passwords go in the secrets, never in code, resources, the workspace or
-  the database.
-- Every kind of data is switched on before a lambda can use it. An agent may
-  switch one on (`enable_data`) when what it builds needs it; **switching off
-  deletes, so only the owner does it**. **Each kind is a section of its own
-  in the editor - decided by the owner** (they were pills of one Data section
-  until the sidebar had room for groups), in the group of the program and its
-  data beside the versions, and all are drawn the same way (`DataTab`): what
-  the kind is, whether it is on, how full, its switch - only what it holds is
-  shown its own way. A draft lists the same kinds under **Test data**. A new
-  kind joins `DataKinds`, the editor's `DATA_KINDS` and that group, and gets a
-  section like the others. `/data` and `/data/{kind}`, the addresses from
-  before, open the kind they name or the first one the lambda keeps.
-
-### Secrets
-
-- **A value is written and never read back** - not by the editor, the API, MCP
-  or the owner. Only the lambda reads it (`Secret.ReadAsync`, `Secret.ExistsAsync`,
-  and their plain forms `Secret.Read` and `Secret.Exists`). No answer, log line
-  or note may contain a value; name only.
-- **Off by default.** Names are environment variable names (letters, digits,
-  underscore, no leading digit, case sensitive), because an exported project
-  reads `Secret.ReadAsync("X")` from `$X`. Values are not exported.
-- Kept by the secrets integration (see Integrations below); the platform's own
-  (`DatabaseSecrets`) stores them in the platform's database, sealed with
-  AES-GCM under a key made from the installation's key (`LAMBDA_SECRETS_KEY`,
-  or `secrets.key` in the data directory - never in the database) and a random
-  per-lambda salt; the name is associated data. Backup and migration = the database + the installation's
-  key. Do not put the installation's key in the database, and do not describe
-  the encryption as isolating lambdas from each other: they share a process.
-- Read at runtime through a function handed to the compiled lambda, never
-  compiled in, so a changed value applies without a deploy. What the
-  integration loaded is held in memory until something changes it.
-- A feature gets a copy (copied sealed); merging throws it away.
-- Agents are steered to write `Secret.ReadAsync("NAME")`, switch secrets on and let
-  the **owner enter the value in the editor**, so it never passes through the
-  agent. The platform lists the names the code reads that have no value
-  (`missing`; only-`Exists` ones are `optional`, either form), and the editor and the
-  simple overview ask the owner for them. That is the asymmetric interface for
-  secrets: the agent declares the need, the human supplies the value. The build
-  agent may switch secrets on and list them, and cannot set or delete one.
-
-### Databases
-
-- **A database per lambda**, kept by the database integration (see
-  Integrations below) - a SQLite file, or a PostgreSQL schema - reached with
-  `await Database.GetConnectionAsync()` (an open `DbConnection`, pooled, one
-  per request, disposed of; `Database.GetConnection()` for code written
-  before). **Off by default**; switching it on makes it empty, switching it
-  off deletes it and the features' copies. Either switch restarts the lambda
-  on its next request, so its startup migrations run against what is there.
-- **Schema by Evolve migrations** shipped as resources in `resources/migrations/`, applied as
-  the lambda starts - never Entity Framework's migrations, `EnsureCreated` or
-  `Migrate`, which the code guard refuses. A migration that was applied is
-  never edited.
-- **Records through Entity Framework Core - decided.** A lambda writes a
-  `DbContext` of its own that maps the tables the migrations make, on the
-  connection it is handed: `new Records(await Database.GetConnectionAsync())`,
-  configured with `options.UseDatabase(connection)`, one per request. Plain
-  SQL on the connection stays possible. The demos use EF Core, and agents are
-  steered to it - **awaited, decided by the owner**: `ToListAsync`,
-  `SaveChangesAsync`, in routes that are async (see Serving, and the threads
-  it runs on). It was the other way round until the integrations' contracts
-  became asynchronous. This is a hint, not enforced: the synchronous forms
-  keep working.
-- **A lambda names no database - decided by the owner.** "They should just use
-  EF Core and Evolve, with the connection retrieved from the integration, so
-  the lambda does not know anything about the underlying provider." So lambdas,
-  the demos and every text that teaches agents use a `DbConnection`,
-  `options.UseDatabase(connection)` (generated into every lambda, configured by
-  the integration), migrations of plain SQL every database accepts (`TEXT`,
-  `INTEGER`, `BIGINT`, `BOOLEAN`, `DOUBLE PRECISION`; keys the code makes, no
-  `AUTOINCREMENT` or `SERIAL`; unquoted names), times as ISO 8601 text, and a
-  unique violation told by looking whether the row is there - never an error
-  code of one database. Names match whatever their case: PostgreSQL folds the
-  names EF asks for to lower case (`LowerCaseNames`). A demo's applied
-  migration is never edited for it (its data persists): a flag kept as
-  `INTEGER` gets `HasConversion<int>()` instead. Code written before against
-  SQLite (`SqliteConnection`, `UseSqlite`, `SqliteException`) keeps compiling
-  where SQLite keeps the database (`DatabaseBinding`), and nowhere else.
-- **No connection of the lambda's own** (another file, the workspace, a
-  connection string - EF's `UseSqlite(string)` included). The code guard
-  refuses them - making any `DbConnection` is checked on the compilation, so a
-  target-typed `new()` or a derived class is caught, and so is `UseSqlite`
-  without a connection - and the client library of a database is handed to the
-  compiler only where its integration names it (`ReferenceProvider`), so a
-  lambda on SQLite cannot name Npgsql, which the community image carries. On
-  SQLite, the connection handed out carries an authorizer (`ConnectionGuard`,
-  in the SQLite integration) that refuses `ATTACH`, `VACUUM INTO`, the
-  directory pragmas and lifting `max_page_count`, which is the quota; on
-  PostgreSQL the lambda's role reaches its own schemas and nothing else. Of EF, only the
-  root namespace and `Metadata.Builders`, `ChangeTracking` and
-  `Storage.ValueConversion` are reachable - its `Infrastructure`, `Storage` and
-  `Internal` hold a context's services and options, and with them another
-  connection. `dynamic` is refused for the same reason: it binds members the
-  guard never sees. Keep all of this when touching any of it.
-- **Not encrypted - decided.** SQLite cannot encrypt; it takes replacing the
-  SQLite of the whole process with a build that can (SQLite3 Multiple Ciphers
-  was tried: well kept, but one maintainer and a small .NET package, while
-  SQLitePCLRaw 3 dropped free encryption builds), and the key would sit in the
-  platform's database on the same volume. Do not bring it back without the
-  owner asking.
-- **The export carries it** as `database/database.db`, an ordinary SQLite file:
-  the owner takes their data away with their code. An exported project keeps
-  its records in SQLite whatever kept them here (the code names no database);
-  where PostgreSQL kept them, the export carries none, and `pg_dump` of the
-  lambda's schema takes them along.
-- A feature gets a copy, consistent at one moment; merging throws it away.
-- The editor **reads** it - tables, columns, rows - and never edits it. A change
-  to records is a change to the app.
-
-Because data outlives versions, a rollback or a newer version reads data written
-by a different one. **Agents find a good compromise between data compatibility
-across versions and the effort it costs**: prefer additive, tolerant formats
-(optional fields, defaults for what is missing) over migrations, and do not
-build machinery for compatibility that nobody needs.
+- A **version** is the program - code, resources, and the documentation and
+  tests in its code. It never changes once saved.
+- **Data** - database, workspace, secrets - belongs to the lambda and is
+  **shared by all versions**; deploys, rollbacks and merges never touch it.
+- Records go in the database, files in the workspace, never in resources. The
+  front end goes in the version. Keys and passwords go in secrets, nowhere
+  else.
+- Every kind of data is switched on before use. An agent may switch one on
+  (`enable_data`); **switching off deletes, so only the owner does it**. Each
+  kind is a section of its own in the editor, all drawn alike (`DataTab`); a
+  new kind joins `DataKinds`, the editor's `DATA_KINDS` and that group.
+- Data outlives versions, so **agents find a compromise between compatibility
+  across versions and its cost**: additive, tolerant formats over migrations,
+  no machinery nobody needs.
 
 ### Code and resources
 
-**Decided by the owner:** a version is two parts, and nothing else.
+**(owner)** A version is two parts, nothing else.
 
-- Its **code** is every file that is not a resource. Its `.cs` files are
-  compiled, in any folder, as a C# project compiles its own - **decided by
-  the owner**: sub folders work like in any C# project. Every other file, of
-  any kind - the documentation, the tests, what a front end is built from,
-  scripts, configuration - is kept with the version and never compiled or
-  served. Its **resources**, in `resources/`,
-  are what it reads and serves while it runs (`Resources`, formerly `Assets`,
-  which stays as an alias so old code compiles).
-- **No `.lambda/` and no special kinds.** The documentation and the tests are
-  folders of the code by convention, `docs/` and `tests/`, which the editor
-  reads for its Documentation and Tests sections and the agents are told to
-  keep; nothing else about them is special. Do not bring back a kind of file
-  (context, build) with rules of its own.
-- **How the rest of the code is arranged is the agent's to decide** - a
-  `frontend/` for the sources of a SPA, say. Nothing about it is assumed or
-  detected, in the editor or anywhere else.
-- **Two allowances, in bytes - decided by the owner.** What a version may
-  come to, its code and its resources together (`build-bytes`), and what the
-  lambda may keep, its database and its workspace together (`data-bytes`).
-  There is no limit on characters of C#: the room bounds what the compiler is
-  given. The workspace is compiled with the data's allowance and asks for the
-  database's size as it writes; the database is given what the workspace
-  leaves (`DatabaseVault.RoomOf`).
-- **Lambdas saved before keep working, untouched on disk.** A version or a
-  feature is read in the layout it was saved in and translated as it is read
-  (`LambdaSource.Parse`: an envelope `"version": 1` is the old layout, 2 the
-  one after it) - assets at the top move below `resources/`, `.lambda/docs/`,
-  `.lambda/tests/` and `.lambda/build/` to `docs/`, `tests/` and `build/`;
-  C# that was in `.lambda/` was never compiled, so it keeps a `.txt` ending
-  (`tests/Smoke.cs.txt`) rather than be compiled into a lambda online.
-  Never rewrite stored versions for it. Their git history keeps its commits;
-  the move is a commit of its own on top (see Git). A top-level `assets/` or
-  `.lambda/` is refused with a hint where it goes now. Such a version is
-  moved into the store as the platform starts (see How versions are kept),
-  translated as it is read.
-- Names: a C# file's own name as C# names (dots allowed), its folders as the
-  rest of the code; a resource as files that are served
-  always were (an extension, no dot names, six folders deep); the rest of the
-  code as tools name files - dot files and `[]()+@$~{}` allowed, no spaces, no
-  `.git`, sixteen folders deep. What a project has at its top
-  (`ProjectPaths`, the `Platform` folder, `Dockerfile`, `AGENTS.md`, …) is
-  refused there.
-- **The platform builds nothing - decided by the owner.** No build on a push,
-  no tool run, no check that the program is what its sources build to. The
-  agent changes the files, builds where it works and saves them with what was
-  built, in one version or feature. Do not add build machinery. The build
-  agent has no shell: it writes plain front ends and leaves sources it finds
-  alone. The demos have none: they teach with plain files.
-- **What a build installs, caches or keeps for itself is kept out by the
-  `.gitignore` files of the code - decided with the owner, so it works for any
-  technology.** Nothing is refused by name: git follows them in a clone, a zip
-  put back follows them (`IgnoredPaths`, git's rules) but keeps what the
-  lambda already has, as git keeps what it tracks, and a save that names a
-  file keeps it, as `git add -f` would. The root `.gitignore` of a repository
-  stays the platform's, generic one, anchored to the root, taking `build/`
-  back in (`!/build/`), since many ignore that name everywhere and the lambdas
-  from before have their sources there.
-- **A zip holds what a commit would - decided by the owner.** It is counted as
-  it is sent, before any `.gitignore` leaves something out.
-- **One layout everywhere.** A version, its zip, a clone, an export and a
-  published source lay the files out the same way, so a build that writes by
-  relative paths finds them wherever it runs; `?layout=project` reads a zip
-  back as a commit of a clone (the platform's files skipped).
-- In the editor, **Code** (full view, Develop group) is every file of a
-  version: the code and the resources as two trees beside the editor, with
-  the allowance under them - it replaced the Files and Build sections and the
-  old code view, and their addresses lead to it. Nothing of the layout is in
-  the simple view or on `/build`.
-- This is said in the MCP instructions (a line), `platform_guide` (`code`,
-  `resources`), the tool descriptions, a clone's `AGENTS.md`, the build
-  agent's brief and the README - keep them the same.
+- Its **code** is every file that is not a resource: `.cs` files compiled in
+  any folder, as a C# project compiles; every other file (docs, tests, front
+  end sources, scripts) kept and never compiled or served. Its **resources**
+  in `resources/` are what it reads and serves (`Resources`; `Assets` stays an
+  alias).
+- **No `.lambda/`, no special kinds of file.** `docs/` and `tests/` are
+  folders by convention; how the rest is arranged is the agent's to decide and
+  nothing detects it.
+- **Two allowances in bytes (owner)**: a version (code and resources,
+  `build-bytes`) and the data (database and workspace, `data-bytes`). The
+  database gets what the workspace leaves (`DatabaseVault.RoomOf`).
+- **Lambdas saved in older layouts keep working, untouched on disk**: read and
+  translated as read (`LambdaSource.Parse`). Never rewrite stored versions; git
+  gets a commit on top (see Git). A top-level `assets/` or `.lambda/` is
+  refused with a hint.
+- Names: C# files as C# names them; resources with an extension, no dot
+  names, six folders deep; the rest as tools name files (no spaces, no `.git`,
+  sixteen deep). What a project has at its top (`ProjectPaths`) is refused
+  there.
+- **The platform builds nothing (owner).** No build on push, no tool run. The
+  agent builds where it works and saves the result with its sources. Do not
+  add build machinery. The build agent has no shell and writes plain front
+  ends; the demos teach with plain files.
+- **`.gitignore` files of the code keep out what a build installs or caches
+  (owner)**, for any technology - nothing is refused by name. A zip put back
+  follows them (`IgnoredPaths`) but keeps what the lambda has; a save naming a
+  file keeps it. The root `.gitignore` stays the platform's, taking `build/`
+  back in (`!/build/`). A zip holds what a commit would and is counted as sent.
+- **One layout everywhere**: version, zip, clone, export and published source
+  lay files out the same; `?layout=project` reads a zip as a clone's commit.
+- Nothing of the layout is in the simple view or on `/build`.
 
 ### How versions are kept
 
-**Asked for by the owner**, after a lambda with 68 MB of resources took the
-server to 3.5 GB on one push: a version was one string holding every file -
-text escaped, binaries in base64 - parsed and serialized whole by every
-service it passed through, and stored whole again for every version and
-twice for every feature.
+**(owner)** A version is a **manifest over a content store per lambda**:
+`v{n}.manifest.json` names the files (size, text or binary, SHA-256), and the
+content is kept once per lambda below `code/{lambda}/blobs/` (`ContentStore`)
+however many versions, features and previews hold it. Features and previews
+are manifests over the same store, so starting, deploying and merging copy no
+content. The store per lambda and the manifests' shape are **(open)**.
 
-- **A version is a manifest over a store per lambda.** `v{n}.manifest.json`
-  names the files in their order - size, text or binary, and the SHA-256 of
-  what each holds - and the content is kept once per lambda below
-  `code/{lambda}/blobs/`, as its bytes, however many versions, features and
-  previews hold it (`ContentStore`). A feature's `files.manifest.json` and
-  `preview.manifest.json` are manifests over the same store, so starting a
-  feature, deploying its preview and merging it copy no content. Everything
-  goes by reference, the code included, not only the resources. Chosen with
-  it, open to change: a store per lambda rather than one for all, the
-  manifests' names, and what a manifest holds.
-- **Git's ids are git's concern, kept as data - decided by the owner**: "not a
-  storage decision influencing our architecture". A row of `blobs` per piece
-  of content says its size, its length as text and the ids git gives it -
-  **SHA-1 and SHA-256 both, decided by the owner**, since git's SHA-256 object
-  format is coming - so a push does not read a file the lambda keeps, and a
-  commit is laid out without hashing. A row is what is known of content; one
-  lost is made again as it is next kept. Moving to git's SHA-256 changes the
-  git layer, not the store. Chosen with it, open to change: the store names
-  content by the SHA-256 of its bytes, its own id and none of git's.
-- **Services hand on `VersionFile`s, never a string of the version.** Name,
-  size, text or binary, and where the content is: kept by the store, or as it
-  arrived (a request's string, a push's bytes, an archive's file in
-  `/data/staging`). Content is read by what needs it and nowhere else -
-  compiling and checking the C#, the facts and the scans the C# and the
-  documentation, deploying copies the resources out by the file system
-  (copied, never linked: the served folder is the lambda's to read), zips,
-  exports and git stream it. `LambdaFile` stays the doors' shape, whose JSON
-  answers read only the files they return. `ContentReads` counts what is
-  read, and the tests hold every path that needs no resource to reading none
-  (`StoreTests`); keep it that way when adding one.
-- **Kept before the turn, named in it.** A save keeps what the lambda does not
-  have yet before it takes the lambda's or the feature's turn, and in the turn
-  writes the manifest. The store's own turn is taken last and held for a
-  moment - moving content in, freshening it, writing a manifest - and for
-  collecting; it takes no other.
-- **What nothing names is collected, not counted.** Pruning a version or
-  deleting a feature removes its manifest; the maintenance removes content no
-  manifest names for the lambdas whose manifests changed, and for all once
-  after a start, leaving what was written or named in the last hour
-  (`ContentStore.Fresh`), which a save may be about to name.
-- **Versions from before are moved into the store at the start, not
-  rewritten - decided by the owner** ("just migrate all of them at the
-  start"; a manifest beside the untouched file, the owner's choice among
-  those proposed). `StoreMigration` reads each `v{n}.cs`, `files.json` and
-  `preview.json` of before once, keeps its files and writes the manifest
-  beside it. The file of before stays as it was: a version never changes, and
-  its room is taken twice until it is pruned. A feature's goes with its next
-  save, as it always went. One that cannot be moved is read whole, as before.
-  Chosen with it, open to change: it runs before anything is served, rather
-  than in the background as the warm-up does, so no request reads one of them
-  whole meanwhile nor saves one while it is moved - measured on a copy that
-  0.6.0 wrote, 7 versions and a draft with 32 MB of pictures moved in 1.4 s.
-- **The git store stays apart - decided by the owner.** Its commits' files are
-  copied from the store, not shared with it: a commit is served for as long as
-  it is reachable, which is longer than a version may be kept.
-- **Nothing changed at the doors**: the API, MCP, git, zips and the export
-  keep their shapes and layouts, and the commits git makes are the same. What
-  the doors still hold is theirs: a JSON save holds what it carries, and
-  GenHTTP.Modules.Git holds a push while it unpacks it.
+- **Git's ids are git's concern, kept as data (owner)**: a `blobs` row per
+  piece of content holds its size and its git ids (SHA-1 and SHA-256) so a
+  push reads no file and a commit needs no hashing. The store names content by
+  the SHA-256 of its bytes, none of git's.
+- **Services hand on `VersionFile`s, never a string of the whole version.**
+  Content is read only where needed (compiling, the facts, deploying, zips,
+  exports, git); `ContentReads` counts reads and `StoreTests` holds every path
+  that needs no resource to reading none - keep it so when adding one.
+- **Kept before the turn, named in it**: a save stores new content before
+  taking the lambda's or feature's turn and writes the manifest inside it. The
+  store's own turn is taken last and takes no other.
+- **What nothing names is collected**: maintenance removes content no manifest
+  names, leaving what was written or named in the last hour
+  (`ContentStore.Fresh`).
+- Versions from before are moved into the store at start (`StoreMigration`),
+  a manifest beside the untouched old file **(owner)**, before anything is
+  served **(open)**.
+- **The git store stays apart (owner)**: commits are served as long as they
+  are reachable, longer than a version may be kept.
+- The doors (API, MCP, git, zips, export) keep their shapes.
 
 ### Documentation and tests
 
-Every version keeps what is written about it in its code: `docs/product.md`
-(what the app is, for whom, why, what people do with it - in the user's terms;
-its first paragraph is the app in a sentence or two), `docs/decisions.md` (the
-technical decisions and why), `tests/README.md` (how it is tested
-automatically), and beside those more pages, pictures, test scripts and test
-data.
+Every version keeps `docs/product.md` (what the app is, for whom, why, in the
+user's terms; first paragraph = the app in a sentence or two),
+`docs/decisions.md` (technical decisions and why) and `tests/README.md` (how it
+is tested), and beside them more pages, pictures, scripts and test data.
 
-- **Files of the version, not fields in the database.** They describe that
-  version, so they are saved, diffed, rolled back, copied into a feature and
-  merged with it like any file, and travel in the zip and the export. Do not
-  move them into SQLite or into the workspace.
-- **A convention, not a kind of file - decided by the owner.** `docs/` and
-  `tests/` are folders of the code like any other: never compiled, never
-  served, left out of what identifies a build, counted towards what a version
-  may come to. Only the editor reads them as what they are - markdown pages
-  with files beside them, one component for both. Do not build them as two
-  features, nor give them rules the rest of the code does not have.
-- **Agents write them, humans read them** - the asymmetric interface again.
-  Agents write all three with a new lambda, update what a change affects in
-  the same save, read them before changing a lambda, and run the tests against
-  a feature's preview before merging.
-- **In proportion to the lambda - decided.** A small lambda gets a short
-  paragraph a page and one quick check, not a test suite, extra pages or seeded
-  test data; they grow with the app. Agents overdid it for small lambdas, so
-  this is said wherever they are told to write them. The demos have more,
-  because they teach. This is said the same way in the MCP
-  instructions, the tool descriptions and answers, `platform_guide`
-  (`documentationAndTests`), the build agent's brief, a repository's
-  `AGENTS.md`, the guide and the README - keep them the same.
-- The editor: **Documentation** is the second section after the overview, in
-  both views; **Tests** is in the full view only. The simple view calls the
-  documentation **About** and shows the product page alone, to be corrected by
-  telling the agent rather than by editing it.
+- **Files of the version**, saved, diffed, rolled back and merged like any
+  file. Never in the database or workspace.
+- **A convention, not a kind of file (owner)**: never compiled or served, left
+  out of what identifies a build, counted towards the version. Only the editor
+  reads them as markdown pages (one component for both).
+- **Agents write them, humans read them.** Agents write all three with a new
+  lambda, update what a change affects in the same save, read them before
+  changing a lambda, and run the tests against a preview before merging.
+- **In proportion to the lambda**: a small lambda gets a short paragraph a page
+  and one quick check, no test suite; they grow with the app. Agents overdid
+  it, so this is said wherever they are told to write them.
+- Editor: **Documentation** second after the overview in both views (**About**
+  in the simple view, the product page only, corrected by telling the agent);
+  **Tests** in the full view only.
 
-### Pages meant to be found
+### Secrets
 
-Agents are steered to make a page that is meant to be found or shared - by a
-search engine, an AI agent, a link in a chat - findable, in proportion: a
-title, a meta description, the language, an icon, a social preview (Open
-Graph), what the page is about in the HTML as served rather than only in what
-a script renders, and the domain as canonical where the lambda has one. A tool
-for a few people gets a title and nothing more. This is said in the MCP
-instructions (one line), `platform_guide` (`beingFound`), the build agent's
-brief, a repository's `AGENTS.md` and the README - keep them the same.
-The platform writes none
-of it into a lambda's pages; the agent does.
+- **A value is written and never read back** - not by the editor, API, MCP or
+  owner. Only the lambda reads it (`Secret.ReadAsync`, `Secret.ExistsAsync`,
+  plain `Read`/`Exists`). No answer, log line or note contains a value.
+- Off by default. Names are environment variable names, since an export reads
+  `Secret.ReadAsync("X")` from `$X`. Values are not exported.
+- The platform's own integration (`DatabaseSecrets`) seals them with AES-GCM
+  under a key derived from the installation's key (`LAMBDA_SECRETS_KEY` or
+  `secrets.key` in the data directory - **never in the database**) and a
+  per-lambda salt, the name as associated data. Backup = database + key. Do not
+  describe it as isolating lambdas from each other: they share a process.
+- Read at runtime through a function handed to the lambda, never compiled in;
+  a changed value applies without a deploy.
+- A feature gets a sealed copy; merging throws it away.
+- **The agent declares the need, the human supplies the value**: agents write
+  `Secret.ReadAsync("NAME")` and switch secrets on; the platform lists names
+  without a value (`missing`, `optional` for `Exists`-only), and the editor
+  asks the owner. The build agent may switch secrets on and list them, never
+  set or delete one.
 
-- `og:image` takes a full address - social networks do not resolve a relative
-  one - and is the exception to relative links, with `og:url` and the
-  canonical link. The warning a feature's deploy gives for a link to the
-  lambda's own address, or to its old path below `/lambda/` (`McpTools.Leaks`),
-  leaves meta tags and the canonical link out: they name the page, and the
-  page never follows them.
-- **No renderer - decided for now.** Rendering a lambda in a headless browser
-  on the server (for the agent to look at its page, a picture proposed in the
-  showcase tab, an `og:image`) was considered and left out: it runs strangers'
-  JavaScript in a browser beside the platform, and costs a container,
-  Chromium and fonts. Nor are tools added to the build agent's image - it has
-  no shell to run them, and must not get one, since its token is in its
-  environment. Do not bring either back without the owner asking.
-- **The sitemap names no lambda - decided by the owner.** The operator could
-  list one, by its address below `/lambda/`; the switch went when the lambdas
-  moved to hosts of their own (V20 drops `in_sitemap`), since a sitemap names
-  pages of the host it is served from. Do not bring it back on the site's
-  host.
+### Databases
 
-### Analytics
-
-An owner can have the visits of their lambda counted - visitors, page views
-and requests per day, and the pages, referring sites, countries, devices,
-browsers, systems and crawlers behind them - in the editor's **Analytics**
-section.
-
-- **Opt-in - decided by the owner.** Nothing is counted until the owner
-  switches it on. Switching it off deletes what was counted, like switching
-  off a kind of data, so an agent may switch it on when the user asks
-  (`analytics` with `enable`) and never off. A demo and a feature's preview
-  are not counted.
-- **By day, kept for a year, shown per tier - decided by the owner.** The
-  sandbox shows seven days, production the year; the window is a tier limit
-  in the panel (`analytics-days`), the year is `AnalyticsStore.Kept`. What is
-  kept beyond the window is shown once the lambda is moved to a tier that
-  shows more, which is the point.
-- **One visit per request, read by whoever needs it - decided by the
-  owner.** `LambdaVisitConcern` makes the `LambdaVisit` once (status, time,
-  bytes, path, caller's country and agent), for previews too, and does
-  nothing else; the overview's figures (`LambdaActivityConcern`), the
-  request log (`CallerConcern`) and the analytics (`AnalyticsConcern`) read
-  it off the request and decide for themselves what is theirs. Anything new
-  that wants to know about requests to lambdas reads the visit, and what is
-  missing is added to it - nothing measures a request to a lambda again.
-  What only analytics need (the referrer, whether a page was opened, the
-  client hints) is read only for a lambda that counts visits; what is made of
-  it (the referrer's host, the kind of device) is worked out by the job,
-  never on the request.
-- **Collected on the request, written by a job - decided by the owner.** A
-  lock-free queue (`AnalyticsQueue`, bounded) and a job every five minutes
-  that sums it and writes one transaction. Losing what is queued on a restart
-  is accepted. Do not write to a database while a request is served.
-- **A database of its own, a star - decided by the owner.** `analytics.db`,
-  `lambdas` and a fact table per statistic keyed by lambda, year, month, day
-  (and value). Plain commands, awaited; migrated by Evolve from
-  `Services/Analytics/Migrations`, numbered on their own. Only the switch is
-  in the platform's database, so serving reads it from memory.
-- **Crawlers by a maintained list and by their addresses, not by guessing -
-  decided with the owner.** Bots are told from people by
-  crawler-user-agents (MIT, refreshed daily, the release's copy as fallback)
-  and counted by its kinds; Google, Bing, OpenAI, Apple and Perplexity are
-  named only when the connection came from an address they publish - never
-  a forwarding header's - and an unconfirmed claim otherwise. Visitors are
-  people only. Browsers, systems and devices come from the agent's tokens
-  and Chromium's client hints, and a value the sender wrote is only taken
-  where it is one of a known few. Matching stays linear in the length of an
-  agent: no backtracking expression ever reads one.
-- **A visitor is a person who opened a page - decided by the owner.** One
-  the classifier takes for a browser and whose visit was a page view,
-  counted once a day with the first page they opened. A request for anything
-  else - a script, an API call, `robots.txt`, a path that was not there -
-  makes nobody a visitor, so there are never more visitors than page views.
-- **Page views are people's, bots behind a switch - decided by the owner.**
-  The views of programs are counted apart (`bot_views`, in every table), and
-  the editor shows the pages people opened unless the owner switches on
-  **Include bots** - beside the ranges, since it changes the figure, its chart
-  and the page views' cards alike; remembered in their browser, and worked out
-  from the one answer rather than asked for again, and marked "incl. bots"
-  wherever it counts them. Where visitors came from is people's whatever the
-  switch says - a bot comes from nowhere and would read as typed in - and
-  requests and crawlers count every request either way. Days counted before `V2` keep their bots among
-  the people of their pages, referrers and countries; their totals and devices
-  were filled in.
-- **Nothing that names a visitor is kept.** Counts only; the referrer as its
-  host; visitors told apart for a day by a hash under a random key per day
-  and lambda, held in memory and never written. No cookie, no script in the
-  lambda. The privacy page says so; keep it saying so.
-- **In both views, in the words of the simple one.** It is about the
-  audience, not the program, so unlike the stats it is in the simple view as
-  well (after the domain). Charts, not tables: the figures at the top pick
-  what the columns below show, the breakdowns are ranked bars, the devices
-  one bar of shares; every chart has its values as a table one click away.
-  It does not poll - it reads again when the page is looked at again.
-- **The breakdowns are grouped by what they count - decided by the owner.**
-  Page views (pages, sites, countries, devices, browsers, systems) under one
-  heading, requests (what was requested, crawlers) under another: the two can
-  be far apart, and a card counting one beside a card counting the other
-  read as figures that did not add up.
-- This is said in the README (Analytics), `platform_guide` (`analytics`),
-  the tool's description, the privacy page and the cloud's front page (See
-  who visits) - keep them the same.
-
-### Quiet hours
-
-**Asked for by the owner:** the platform knows when the installation, and
-each lambda, is usually quiet, so work that can wait is done then - the
-optimization of the databases first, and whatever else later. **Independent
-of what uses it - decided by the owner** ("quiet hour information can be
-useful for other stuff later"): `IQuietHoursService` decides nothing, and
-nothing it keeps is about the databases.
-
-- **Light, and an indication rather than a measurement - decided by the
-  owner** ("do not collect too much data and do not introduce locks on the
-  hot path"; "it must not be 100% precise"). A request costs two increments
-  of a fixed array, without a lock (`QuietHoursConcern`, `HourlyCounts`): the
-  installation's, and the lambda's from the visit - not a preview's, which is
-  the installation's load and not the lambda's visitors. What is kept is a
-  typical day of 24 numbers per lambda visited and for the installation, a
-  week ago counting half as much as today (`QuietProfile`), written hourly in
-  one write (`QuietHoursJob`); one nobody visits costs nothing. Chosen with
-  it, open to change: hours of the day in UTC, no weekdays; the quietest
-  three in a row; known once every hour was counted, over a day, with a
-  request an hour on average - an hour never counted is not a quiet one.
-- **Shown in the panel - decided by the owner**: its **Quiet hours** section
-  (Platform) for the installation, on the operator's clock. **A lambda's page
-  shows when it is used, not when it is quiet - decided by the owner**: its
-  typical day with the hours it is busy singled out ("When it is used"),
-  since that is what anybody looking at an app wants to know, and its quiet
-  hours are maintenance's business. Chosen with it, open to change: busy is
-  every hour with at least half the requests of its busiest, said as ranges
-  of the operator's clock with the busiest hour. Nothing about it is shown to
-  owners or in the editor.
-
-### Optimizing the databases
-
-**Asked for by the owner:** the platform optimizes the databases now and
-then in the background - its own records and analytics, and every lambda's
-database; **not the drafts' copies - decided by the owner** ("we can skip
-features").
-
-- **The platform decides, the integration does - decided by the owner** ("the
-  logic should live in the platform and not in the integration, the
-  integration just provides the way of doing so"). Whether, which and when
-  are `OptimizationService`'s and `OptimizationSchedule`'s; how is
-  `IDatabaseProvider.OptimizeAsync`, which says what it did in its own terms
-  (`DatabaseOptimization`). What a step costs a database as it is now - a
-  rebuild of a file too large for one - is the integration's to judge: it
-  knows its database.
-- **In the quiet hours** - a lambda's own where known, else the
-  installation's, which are the platform's own too; 03:00 to 06:00 on the
-  server's clock while nothing is known, and never in the minutes after a
-  start. Chosen with it, open to change: each at most once a day, a lambda's
-  only where it was visited since, one database at a time, a run's work
-  bounded.
-- **Switched off by the operator - decided by the owner**, under Settings
-  (`optimizeDatabases`): "DB engineers might want to do the optimization
-  themselves in postgres". On by default. **The usage report says which -
-  decided by the owner** (`configuration.optimizeDatabases`), as it does the
-  site's other switches.
-- **Never anything that changes what a database holds.** SQLite's `VACUUM`
-  numbers anew the rows of a table with neither an `INTEGER PRIMARY KEY` nor
-  an index, so a file with one is not rebuilt; `VACUUM FULL` locks out
-  PostgreSQL's readers and is not run. A database that is not there is not
-  made by optimizing it.
-- What each came to is kept per database (`database_optimizations`),
-  written once per run, since a write to the platform's records makes the
-  caches stale. The panel shows it where the switch is - the platform's own
-  and a count of the lambdas' - and **not on a lambda's page - decided by the
-  owner**: nobody looking at an app cares when its database was optimized.
-  The API still answers it (`optimization` of a lambda).
-
-### Pushing, not polling
-
-Agents are told never to poll: a page does not fetch on a timer to see
-whether something changed. What changes while a page is open is pushed by the
-server - server-sent events where the page only listens (`demo-live`), a
-websocket where it talks back (`demo-game`). A poll is a request whether
-anything changed or not, on a server every lambda shares. This is said in the
-MCP instructions (one line), `platform_guide` (`liveUpdates`), the build
-agent's brief, a repository's `AGENTS.md` and the README - keep them the
-same.
-
-### The link back
-
-**Decided by the owner:** agents are asked - not required - to put a small
-"Made with GenHTTP Lambda" line at the foot of the pages they build.
-
-- **The installation's name - decided by the owner.** On an installation its
-  operator branded, the line says that name ("Made with Acme Apps"), since it
-  links to that installation: `platform_guide` (`backlink`), a repository's
-  `AGENTS.md` and the build agent's brief name it as it is called, and the
-  MCP instructions - fixed when the endpoint starts - leave the words to the
-  guide. A line naming the installation otherwise is given its name with the
-  next change to the page, as a link without `rel="nofollow"` is given it.
-
-- **A nofollow link without a domain, plain text with one.** Below the
-  hosting domain the line links to the installation's public address
-  (`LAMBDA_PUBLIC_URL`, else the address the agent called) with
-  `rel="nofollow"`. It was a plain link while the lambdas answered below
-  `/lambda/` - a link within the same site, which no link-spam policy is
-  about; at a host of its own every lambda is another site, and the same link
-  in the footers of many sites is what search engines count as link spam
-  unless it says it is no recommendation. A line from before is given the
-  attribute with the next change. On a lambda with a domain of its own it is
-  plain text: there it would be a link from its owner's site. A lambda whose
-  line links and that gets a domain has it made plain text with its next
-  change.
-
-- **The user may refuse.** The agent says that it added the link, leaves it
-  out or takes it out when asked, and notes in `decisions.md` that it was not
-  wanted, so the next agent does not put it back. A change does not add one to
-  a lambda that has none.
-- **None on an enterprise installation - decided by the owner.** Its lambdas
-  are an organization's tools, not sites to be found by: the guide's
-  `backlink` asks for none there, and the agent adds none and takes out the
-  line of a page it changes. The MCP instructions, fixed when the endpoint
-  starts, say that the guide says whether one is asked for.
-- **The name and nothing else** as the link's words: no keywords, no badge, no
-  script, nothing hidden.
-- The platform never writes it into a lambda, and nothing checks for it.
-- This is said in the MCP instructions (one line), `platform_guide`
-  (`backlink`), the build agent's brief, a repository's `AGENTS.md` and the
-  README - keep them the same.
+- **One per lambda** from the database integration (a SQLite file or a
+  PostgreSQL schema), reached with `await Database.GetConnectionAsync()` (an
+  open, pooled `DbConnection`, one per request). Off by default; switching on
+  makes it empty, off deletes it and the features' copies; either restarts the
+  lambda on its next request.
+- **Schema by Evolve migrations** in `resources/migrations/`, applied at start -
+  never EF migrations, `EnsureCreated` or `Migrate` (the code guard refuses
+  them). An applied migration is never edited.
+- **Records through EF Core, awaited (owner)**: a `DbContext` of the lambda's
+  own on the handed connection (`options.UseDatabase(connection)`), one per
+  request, `ToListAsync`/`SaveChangesAsync` in async routes. A hint, not
+  enforced.
+- **A lambda names no database (owner)**: lambdas, demos and every text that
+  teaches agents use a `DbConnection`, `UseDatabase`, migrations in plain SQL
+  every database accepts (`TEXT`, `INTEGER`, `BIGINT`, `BOOLEAN`, `DOUBLE
+  PRECISION`; keys the code makes; unquoted names), ISO 8601 text for times,
+  and look for an existing row instead of catching a unique violation.
+  PostgreSQL folds names to lower case (`LowerCaseNames`). Code written against
+  SQLite (`SqliteConnection`, `UseSqlite`) keeps compiling where SQLite keeps
+  the database (`DatabaseBinding`), nowhere else.
+- **No connection of the lambda's own.** The code guard refuses making any
+  `DbConnection` (checked on the compilation) and `UseSqlite` without a
+  connection; a database's client library is handed to the compiler only
+  where its integration names it (`ReferenceProvider`). On SQLite the handed
+  connection carries an authorizer (`ConnectionGuard`) refusing `ATTACH`,
+  `VACUUM INTO`, directory pragmas and lifting `max_page_count` (the quota); on
+  PostgreSQL the lambda's role reaches its own schemas only. Of EF only the
+  root namespace, `Metadata.Builders`, `ChangeTracking` and
+  `Storage.ValueConversion` are reachable; `dynamic` is refused. Keep all of
+  this when touching any of it.
+- **Not encrypted - decided.** Do not bring encryption back without the owner
+  asking (it means replacing the process's SQLite, and the key would sit on the
+  same volume).
+- **The export carries it** as `database/database.db` (SQLite); from
+  PostgreSQL the export carries none and `pg_dump` of the schema takes it.
+- A feature gets a copy consistent at one moment; merging throws it away.
+- The editor **reads** it and never edits it: a change to records is a change
+  to the app.
 
 ### Features ("Drafts")
 
 New functionality is developed in a **feature** (a *draft* in the editor):
+based on a version, edited in place until done, with a **copy of the data**
+and its own preview (`/features/{key}/`); merging makes it a new version.
 
-- It is based on an existing version and is edited in place as a single version
-  until it is done. It has a **copy of the data**, and is **published on its own
-  URL** (`/features/{key}/`) so people can try it.
-- When ready, it is converted into a new version (merge).
-- **Only a feature based on the newest version can be merged.** If the lambda
-  has newer versions, the agent must bring those changes into the feature,
-  then move its `base` (`update_feature`), and only then may it merge.
-- **GenHTTP Lambda provides no merging or rebasing functionality, and must not
-  grow any.** The agent does that work. The platform only checks the base, under
-  the lambda's lock.
+- **Only a feature based on the newest version can be merged.** Otherwise the
+  agent brings the newer changes in and moves its `base` (`update_feature`).
+- **GenHTTP Lambda provides no merging or rebasing and must not grow any.** The
+  agent does that work; the platform checks the base under the lambda's lock.
 - A lambda that exists is changed in a feature; a new lambda is written as
-  versions. This is said the same way in the MCP instructions, the tool
-  descriptions and answers, the guide, a repository's `AGENTS.md`, and the
-  README - keep them the same.
+  versions.
+
+### Analytics
+
+Opt-in visit counts per lambda (visitors, page views, requests per day, and
+pages, referrers, countries, devices, browsers, systems, crawlers), in the
+editor's **Analytics** section.
+
+- **Opt-in (owner).** Switching off deletes what was counted, so an agent may
+  switch it on when asked (`analytics` with `enable`), never off. Demos and
+  previews are not counted.
+- **By day, kept a year, shown per tier (owner)**: the window is a tier limit
+  (`analytics-days`); what is kept beyond it shows once the lambda moves up.
+- **One visit per request (owner).** `LambdaVisitConcern` makes the
+  `LambdaVisit` once; the overview figures, request log and analytics read it.
+  Anything new that wants to know about requests to lambdas reads the visit,
+  adding what is missing - nothing measures a request again. What only
+  analytics need is read only for lambdas that count; derived values are
+  worked out by the job, never on the request.
+- **Collected on the request, written by a job (owner)**: a bounded lock-free
+  queue (`AnalyticsQueue`), a job every five minutes, one transaction. Losing
+  the queue on restart is accepted. Never write a database while serving.
+- **A database of its own, a star (owner)**: `lambdas` and a fact table per
+  statistic keyed by lambda and day, migrated from
+  `Services/Analytics/Migrations` (numbered on their own). Only the switch is
+  in the platform's database.
+- **Crawlers by a maintained list and their addresses (owner)**:
+  crawler-user-agents (refreshed daily); Google, Bing, OpenAI, Apple and
+  Perplexity named only when the connection came from their published
+  addresses, never a forwarded header's. A value the sender wrote is taken only
+  if it is one of a known few. Matching stays linear: no backtracking
+  expression reads a user agent.
+- **A visitor is a person who opened a page (owner)**, counted once a day, so
+  never more visitors than page views. **Bots' views are counted apart
+  (owner)** (`bot_views`) and shown only with **Include bots**; referrers are
+  people's either way.
+- **Nothing that names a visitor is kept**: counts, the referrer's host, a
+  daily hash under a random in-memory key. No cookie, no script in the lambda.
+  The privacy page says so.
+- In both views, in the simple view's words; charts, every one with its values
+  as a table one click away; page-view and request breakdowns under separate
+  headings **(owner)**. It does not poll.
+
+### Quiet hours and optimizing databases
+
+**(owner)** The platform knows when the installation and each lambda are
+usually quiet (`IQuietHoursService`), independent of what uses it - it decides
+nothing.
+
+- **Light, an indication not a measurement (owner)**: two lock-free increments
+  per request (`QuietHoursConcern`, `HourlyCounts`), a typical day of 24
+  numbers per lambda (`QuietProfile`), written hourly (`QuietHoursJob`).
+  UTC hours, quietest three in a row **(open)**.
+- The panel shows the installation's quiet hours, and on a lambda's page **when
+  it is used**, not when it is quiet **(owner)**. Nothing in the editor.
+
+The platform optimizes its own records, analytics and every lambda's database
+in the background - **not drafts' copies (owner)**.
+
+- **The platform decides, the integration does (owner)**: whether, which and
+  when are `OptimizationService`/`OptimizationSchedule`'s; how is
+  `IDatabaseProvider.OptimizeAsync`, which judges what its database can bear.
+- In the quiet hours (03:00-06:00 server time while unknown), never right after
+  start; at most daily, only lambdas visited since, one at a time **(open)**.
+- **Switched off under Settings (owner)** (`optimizeDatabases`, on by default),
+  for DB engineers who do it themselves.
+- **Never anything that changes what a database holds**: no SQLite `VACUUM` of
+  a file with a table lacking an `INTEGER PRIMARY KEY` and an index (rowids
+  renumbered), no `VACUUM FULL`. Optimizing never creates a database.
+- Results are kept per database (`database_optimizations`), shown in the panel
+  only, not on a lambda's page **(owner)**.
 
 ### Showcase, export, ownership of the code
 
 - **Showcasing is the owner's choice**: opt-in, never automatic.
-- **No MCP tool puts a lambda there - decided by the owner** (2026-11-20). An
-  entry needs a picture, and as base64 in a tool call it was too large for the
-  agents that tried; they gave up rather than find the REST API, which took it
-  all along. So agents are sent to `PUT /lambdas/{privateKey}/showcase` with
-  the body written to a file, never through a tool call, their output or a
-  command line (`platform_guide`, `showcase`, which shows how, and a line of
-  the MCP instructions that points there), and an agent that cannot make
-  requests sends the user to the editor's Showcase section.
-  Do not bring the tool back for the picture's sake.
-- **The code belongs to whoever created the lambda.** We do not interfere with
-  it. They can export it as a runnable C# project (`GET …/export`) and run it
-  elsewhere. Do not add lock-in, and keep the export working.
-- The export is **as small as a GenHTTP project can be**: .NET 10,
-  `GenHTTP.Full` (the internal engine, not Ioxide) at the version the server
-  runs, the default hosting snippet (`Defaults()`, no port, `RunAsync()`, no
-  console output of our own), the snippet in a static `Project` class returned
-  by `Project.Create()`, the other files named the .NET way, everything that
-  stands in for the platform in `Platform/`, and a `Dockerfile`. SQLite, EF Core
-  and Evolve are referenced only where the code uses them, and the database comes
-  along in `database/`. `Program.cs`
-  opens with a short note that it was a lambda on genhttp.dev, its metadata,
-  and a link to the GenHTTP documentation. A test builds the export of every
-  demo; keep it passing.
+- **No MCP tool puts a lambda there (owner)**: a picture in base64 is too large
+  for a tool call. Agents use `PUT /lambdas/{privateKey}/showcase` with the
+  body written to a file (`platform_guide`, `showcase`); one that cannot make
+  requests sends the user to the editor. Do not bring the tool back.
+- **The code belongs to whoever created the lambda.** No lock-in; keep the
+  export working.
+- The export (`GET …/export`) is **as small as a GenHTTP project can be**: .NET
+  10, `GenHTTP.Full` (internal engine) at the server's version, the default
+  hosting snippet, the snippet in a static `Project` class, platform stand-ins
+  in `Platform/`, a `Dockerfile`; SQLite, EF Core and Evolve only where used,
+  the database in `database/`. A test builds the export of every demo.
 
 ### Open source
 
-An owner may publish the code of a lambda at `/source/{publicKey}`, for anybody
-to read, star and download.
+An owner may publish a lambda's code at `/source/{publicKey}` to read, star and
+download.
 
-- **Publishing is the owner's choice**: opt-in, never automatic, and only with
-  the private key - the editor's **Open source** section (both views, after the
-  showcase), `PUT …/source`, or the `open_source` tool, which agents use only
-  when the user asks. A license is picked from a short list (`SourceLicenses`),
-  **MIT by default**.
-- **What is published is the program and what is written about it**: every
-  version, as the export packs it, with a `LICENSE`. **Never the data** - no
-  database, no workspace, no secret's value; `ProjectPacker.Publish` takes no
-  database, keep it that way - and **never what only the owner may know**: the
-  specification (their words), the editor key, traffic, logs, visitors. A
-  version is described by its change line.
-- **Just the source.** No issues, pull requests, wikis or projects, and nothing
-  on `/source` acts on the lambda. Whoever wants to build on it downloads it;
-  `platform_guide` (`openSource`, starting from one) tells an agent how a download
-  becomes a lambda again.
-- `/source` is a component of its own (`SourcePages`, with its bundle in
-  `src/GenHTTP.Lambda.Sources/Frontend`),
-  in a frame of its own, not in the landing page's menu - but in the site's
-  colours, languages and addresses per language. Not prerendered: the server
-  names each page after its lambda, marks it up as `SoftwareSourceCode`, and
-  lists every published source in the sitemap. An unpublished source is not
-  found, the same as a key nobody has.
-- **The versions are the single source of truth.** A version is packed once
-  into `/data/sources/{lambda}` and served from there - a cache, held to
-  `LAMBDA_SOURCE_CACHE_BYTES`, keyed by everything it is packed with.
-- **Stars are a `POST` with a signed ticket** the page was handed at least a
-  second before, never a link; each address stars once, remembered in memory
-  as a keyed hash and never on disk. The count is in the database and survives
-  taking the source down.
-- The demos are published under MIT by the installation, being there to be
-  read and built on; nobody can change that.
+- **Opt-in**, only with the private key (editor, `PUT …/source`, or
+  `open_source`, which agents use only when asked). License from
+  `SourceLicenses`, MIT by default.
+- **Published: every version as the export packs it, with a `LICENSE`. Never
+  the data** (`ProjectPacker.Publish` takes no database) **and never what only
+  the owner may know**: specification, editor key, traffic, logs. A version is
+  described by its change line.
+- **Just the source**: no issues, PRs or wikis; nothing on `/source` acts on
+  the lambda.
+- `/source` is its own component (`SourcePages`), not prerendered: the server
+  names each page, marks it up as `SoftwareSourceCode` and lists it in the
+  sitemap. An unpublished source is not found, like an unknown key.
+- Versions are the single source of truth; packs are a cache
+  (`/data/sources`, `LAMBDA_SOURCE_CACHE_BYTES`).
+- **Stars are a `POST` with a signed ticket** handed out at least a second
+  before; one per address, remembered in memory as a keyed hash.
+- Demos are published under MIT by the installation.
 
 ### Git
 
-Every lambda is a git repository as well: `/editor/{privateKey}/{name}.git`
-for its owner to clone and push to - the name only names the clone's folder,
-the editor offers the public key - and `/source/{publicKey}.git` for anybody
-to clone while its source is published. Served by GenHTTP.Modules.Git from
-what the platform keeps (`Services/Git`); there is no repository on disk.
+Every lambda is a repository: `/editor/{privateKey}/{name}.git` for its owner,
+`/source/{publicKey}.git` for anybody while published. Served by
+GenHTTP.Modules.Git from what the platform keeps (`Services/Git`); no
+repository on disk.
 
-- **One history per lambda - decided.** `main` is the newest version, every
-  version a commit tagged `v{n}`, every feature a branch. The published
-  source is the same commits without the features' branches, whose commits
-  it does not serve either. So nothing only the owner may know goes into a
-  commit the platform makes: no specification, no editor key - the message is
-  the change line.
-- **A commit is made once and kept.** The platform makes the commits of
-  versions and of features' saves when the repository is read, not when they
-  are saved - saving stays as it was, and a lambda nobody clones costs
-  nothing - and keeps their bytes and their files below `/data/git/{lambda}`,
-  copied from the lambda's store by the ids its rows know.
-  Never make one again from the version: a newer platform would make it
-  differently, and every clone would see its history rewritten. Pushed
-  commits are kept exactly as they came.
-- **The tree is the project, the export's shape made for a repository.** What
-  the platform puts around the lambda (`Program.cs`, the project file,
-  `Platform/`, `Dockerfile`, the ignore files, `AGENTS.md`, `CLAUDE.md`,
-  `LICENSE` while published) depends on nothing a version decides - so the
-  project references SQLite, EF Core and Evolve always and the snippet is
-  `async Task<object> BuildAsync()` always - and a push that leaves those files
-  alone is right whatever it changed. Keep it that way. A commit whose
-  lambda.cs did not change keeps the `Project.cs` before it.
-- **A layout that changed is a commit on top, never history made again -
-  decided.** The commits made before the code and the resources (`assets/`,
-  the old platform files) are kept as they are; the newest version and each
-  feature's tip get a commit on top that lays them out as today
-  (`GitHistory.MoveAsync`, `moved` in the index), and `main` is that commit. A
-  push built on a commit of the old layout is refused, saying to rebase onto
-  `origin/main`. Do the same for any later change of the layout.
-- **The platform's files are refused, not ignored - decided.** A push that
-  changes, adds or removes one, or adds a file with a name a lambda cannot
-  hold, is refused saying which and how to undo it; ignoring it would leave a
-  commit that says what the lambda does not. Every other file is a file of the
-  code or of the resources - a README at the root, an editor's settings.
-- **A commit pushed to main is a version, each one.** `main` only moves
-  forward, linear - no force, no merge commits, no deletion - and the newest
-  is compiled first and refused when it does not compile, as a merge is.
-  Pushes go through the services every other door uses (origin `git`), so
-  their rules hold. A feature whose tip reaches `main` is merged.
-- **A branch is a feature.** Pushed, it starts or replaces one - based on
-  the newest version among its commits - and puts its preview online, which
-  no visitor sees; `-o merge` merges it, `-o deploy` puts a version online.
-  A feature's branch is named once (`features.branch`) and kept when it is
-  renamed.
-- **The answers never hold the editor key.** Whoever pushed has it, and a
-  build log of theirs may be read by others.
-- **For whoever works with code.** The clone popover is in the full view only
-  - the overview's header, the code section, a draft - and on `/source` in the
-  **Code** menu. Nothing about git is in the simple view or on `/build`.
-- **`AGENTS.md` is a place the platform's rules are said** for an agent
-  working in a clone (`Resources/Export/Agents.md.txt`), in git's terms: keep
-  it saying what the MCP instructions and `platform_guide` say.
-- A test clones every demo and builds the clone with the .NET SDK, as one
-  builds every export; keep it passing.
+- **One history per lambda.** `main` is the newest version, each version a
+  commit tagged `v{n}`, each feature a branch. The public source has no
+  feature branches. Commit messages are change lines - no specification or
+  editor key.
+- **A commit is made once and kept** (below `/data/git/{lambda}`), made lazily
+  when the repository is read. Never make one again from the version: every
+  clone would see its history rewritten. Pushed commits are kept as they came.
+- **The tree is the export's shape.** What the platform puts around the lambda
+  (`Program.cs`, project file, `Platform/`, `Dockerfile`, ignore files,
+  `AGENTS.md`, `CLAUDE.md`, `LICENSE`) depends on nothing a version decides,
+  so a push that leaves them alone is right. Keep it that way.
+- **A changed layout is a commit on top, never rewritten history**
+  (`GitHistory.MoveAsync`); a push built on the old layout is refused, saying
+  to rebase onto `origin/main`. Do the same for any later layout change.
+- **The platform's files are refused, not ignored**, with how to undo it.
+- **Each commit pushed to main is a version**: linear, forward only; the newest
+  must compile. Pushes go through the same services as every door.
+- **A branch is a feature**: pushing starts or replaces it and deploys its
+  preview; `-o merge` merges, `-o deploy` puts a version online. A feature's
+  branch name is kept when it is renamed.
+- **Answers never hold the editor key** (build logs may be read by others).
+- Git appears in the full view and on `/source` only, never in the simple view
+  or on `/build`.
+- A test clones every demo and builds it with the .NET SDK.
 
 ### Demos
 
-The demos (`DemoCatalog`, files in `Resources/Templates`) exist to show agents
-how to write apps and to give them a good starting point.
+The demos (`DemoCatalog`, `Resources/Templates`) teach agents how to write apps
+and give them a starting point.
 
-- They are **read-only by definition** (tier `Demo`, enforced in
-  `LambdaGuard.EnsureEditable`, whichever door the request comes in). Their
-  editor key is public. Anyone starts an editable copy with `create_lambda` and
-  a demo as template.
-- They follow the **best practices of the GenHTTP framework**
-  (<https://genhttp.org/documentation/content/>) and use its **high-level APIs
-  wherever possible** rather than inventing their own functionality.
-- **When you add functionality to the platform, add it to the demos as well if
-  it makes sense**, so agents learn it by reading them. `demo-crud` is where a
-  lambda offers tools to AI agents (`Tools.cs`, over the same store as its API)
-  and describes its API in the words of the documentation attributes. Every demo has the three
-  pages of its documentation and tests and a script its tests run
-  (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
-  keep their records in the database, migrated with Evolve and read and
-  written through Entity Framework Core, and files
-  (`demo-files`' uploads) in the workspace - every one of them awaited, as
-  agents are taught; the seeder switches the database on
-  (`LambdaDemo.Database`), and a copy starts with one of its own. A demo that
-  reads a secret is given a random value by the seeder (`LambdaDemo.Secrets`)
-  and works without one, so a copy runs before its owner switches secrets on
-  (`demo-registration`, `PASSWORD_PEPPER`).
+- **Read-only** (tier `Demo`, `LambdaGuard.EnsureEditable`, every door); their
+  editor key is public; `create_lambda` with a demo as template makes a copy.
+- They follow **GenHTTP's best practices**
+  (<https://genhttp.org/documentation/content/>) and its high-level APIs.
+- **When you add functionality to the platform, add it to the demos where it
+  makes sense.** `demo-crud` shows tools for AI agents (`Tools.cs`) and API
+  documentation attributes. Every demo has its docs, tests and a test script
+  (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`). Records via Evolve + EF Core,
+  files in the workspace, all awaited. A demo reading a secret gets a random
+  value from the seeder (`LambdaDemo.Secrets`) and works without one.
 
-### The operator's panel
+### Pages meant to be found
 
-**Reworked as one piece - asked for by the owner**, once it had grown
-section by section with each feature. Its concepts did not change with it;
-how it shows them did.
+Agents make a page meant to be found or shared findable, in proportion: title,
+meta description, language, icon, Open Graph preview, content in the served
+HTML, the domain as canonical. A tool for a few people gets a title only. The
+platform writes none of it; the agent does.
 
-- **Sections in groups, as the editor has them** (the kit's `Navigation`):
-  the **Dashboard** first, under no heading; **Lambdas** (Statistics, All
-  lambdas); **Security** (Connectivity, Blocked addresses); **Performance**
-  (Server, Storage, Log); **Platform** (Branding - where the host lets the
-  operator brand the installation - Guide, Build agent, Settings, Limits,
-  Integrations, Quiet hours, Usage report) - the owner's ask: Settings,
-  Integrations, Branding, Quiet hours and the Usage report moved there, the
-  usage report last, and the Configuration and Misc groups went with them;
-  Build agent, the owner's ask too, took the switches for building and
-  asking out of Settings. A new section
-  joins the group it belongs to, and a group left empty is not shown. A mark beside a
-  section says what waits there, read from `GET /admin/overview` as the
-  operator moves around the panel - never on a timer.
-- **What is shown and what is done are kept apart - asked for by the owner.**
-  Information is in cards, which may link on. Actions are buttons in three
-  places only: a section's header, a card titled as such (the **Manage**
-  card of a lambda), and the last cell of a row (a menu in the list of
-  lambdas). Each that changes something says what it will do in a dialog
-  before it does it. A setting is the one exception: its switch or field is
-  what it is. What waits for the operator is a notice that leads to where it
-  is decided, and decides nothing itself. The parts are in
-  `console/parts.tsx`; a new section is built from them.
-- **The operator does not open the editor to see how a lambda is set up -
-  asked for by the owner.** A lambda's page sums up every section of the
-  editor, read only: what its documentation says it is, its traffic and
-  problems, which of the platform's features it uses and what they hold,
-  what it keeps against its allowances, its versions, deployments and
-  lifetime. The list says on each row what a lambda uses and narrows by it.
-  A feature the editor gains gets its line there (`console/uses.tsx`), and a
-  count in the census where the platform's database keeps it.
-- **The operator's actions stay what they were**: online, tier, domain,
-  connectivity, block, remove. The panel switches nothing that is the
-  owner's - data, analytics, showcase, source.
-- **Dashboards are drawn from counts, never from a walk while a request
-  waits.** `ICensusService` counts the lambdas on the platform's database as
-  asked (`LambdaTally`); what takes the room is a walk over the data
-  directory, done hourly by `StorageCensusJob` - only where there is a panel
-  - and on **Measure again**, and kept; the free space is read on every
-  request, since that is what runs out. The demos are counted apart and in
-  nothing else, and listed apart too, so a count leads to a list of as many. The workspace counts as switched on unless its owner switched
-  it off, as it comes.
-- **Free space is watched**: on the dashboard, in Storage and as a mark
-  beside it - under a tenth of the volume or 2 GB a warning, under a
-  twentieth or 512 MB a problem (`diskState`).
-- **Charts**: the kit's `Chart` for a series over time; `Segments` (one whole
-  in a handful of parts) and `Ranked` (the largest first, one hue) in
-  `console/charts.tsx`, in the colour pairs the Server section validated.
-  Every chart has its values as a table one click away.
+- `og:image`, `og:url` and the canonical link take full addresses - the
+  exception to relative links; the deploy warning for self-links
+  (`McpTools.Leaks`) leaves them out.
+- **No renderer - decided for now**: no headless browser on the server (it runs
+  strangers' JavaScript beside the platform), and no tools or shell in the
+  build agent's image (its token is in its environment). Not without the owner
+  asking.
+- **The sitemap names no lambda (owner)**: a sitemap names pages of its own
+  host.
 
-### Blocking
+### The link back
 
-What the operator does about abuse - a lambda that phishes, spreads malware or
-attacks others. It is the operator's alone, in the panel, in English like the
-panel.
+**(owner)** Agents are asked - not required - to put a small "Made with
+{installation name}" line at the foot of the pages they build.
 
-- **A blocked lambda is offline and frozen.** Blocking takes it offline with
-  its features' previews, and every change is refused, through every door, in
-  `LambdaGuard.EnsureUnblocked` - which a new door into a lambda calls too
-  (`LambdaError.Blocked`, 403, a message that tells an agent to stop and the
-  user). The operator is refused as well but for lifting the block and
-  deleting it: anything else would put back online what it was blocked for.
-- **Reading and the export stay**: the code belongs to its owner. The owner is
-  told it was blocked - a banner in both views of the editor, which leaves out
-  what would only be refused (the Change, Showcase and Open source sections,
-  putting a version online) - **and why - decided by the owner**: the
-  operator's reason, as they wrote it, is in that banner and in `blockReason`
-  of the lambda, since an owner may understand why it was blocked. The panel
-  tells the operator so as they write it. Not in the refusals, which may end
-  up in a build log others read; they leave it to the editor.
-- **What it shows the public goes with it**: offline, out of the showcase, its
-  published source not found - kept, and back once the block is lifted.
-- **Kept until the operator decides**: a blocked lambda is never removed for
-  going unused, since removed its key would be free again for whoever it was
-  blocked for. Lifting the block leaves it offline and starts a sandbox
-  lambda's time again. A demo cannot be blocked, **nor can a system lambda -
-  decided by the owner** (`TierPolicy.Blockable`): an operator who means to
-  stop one moves it to another tier first, and a blocked lambda is not moved
-  into the system tier. An address block still refuses an address at a system
-  lambda as everywhere else.
-- **The addresses a lambda was changed from are recorded with it**
-  (`EditorAddresses`, `editor_addresses`): wherever it is created, saved, put
-  online or asked for as a lambda its owner may change, through any door, at
-  most hourly, for 30 days after each was last seen - only where the server
-  keeps addresses at all (`LAMBDA_LOG_CLIENT_ADDRESS`), never the operator's
-  own requests in the panel. The privacy page says so; keep it saying so.
-- **Never the installation's own networks** (`LAMBDA_UNBLOCKABLE_NETWORKS`,
-  loopback and the private, link local and shared ranges by default): the
-  build agent reaches the MCP from a container on one with a fresh address each
-  build, and blocking it would stop every build. The connection's address,
-  never a forwarded one: a header is written by whoever sends it.
-- **A blocked address is refused before anything else** - the outermost
-  concern (`AddressBlockConcern`), ahead of the redirects and the request log,
-  every lambda's host as well as the platform's - with a plain 403 that is
-  counted against its block in memory rather than logged. An IPv6 address is
-  blocked with its /64. Held in memory and asked of every request, so it costs
-  nothing while no block is held.
-- **The panel stays reachable from a blocked address - decided by the owner**
-  - its bundle below `/admin`, `/api/v1/system` and the API behind the token -
-  so an operator who blocked themselves can lift it. Nothing else is let
-  through.
-- **Two weeks, by a job - decided by the owner.** `AddressBlockJob` lets go
-  of every block two weeks after it was made (`IAddressBlocks.Kept`); blocking
-  an address again starts its time again. Addresses change hands, so a block
-  that held for good would one day refuse somebody who did nothing.
-- The panel's **Blocked addresses** section lists the blocks with why, the
-  lambda, until when and what each refused, marks the operator's own and lifts
-  them. This is said in the reference (Blocking), `platform_guide`
-  (`lifecycle`), the API's introduction, the terms and the privacy
-  page - keep them the same.
+- A **nofollow** link to the installation's public address at a subdomain; a
+  plain link by path (same site); **plain text on a lambda with its own
+  domain**. A line from before is corrected with the next change to the page.
+- **The user may refuse**: the agent says it added the line, removes it when
+  asked and notes in `decisions.md` that it is not wanted. A change does not
+  add one to a lambda that has none.
+- **None on an enterprise installation (owner)**: the agent adds none and
+  removes it from pages it changes.
+- The name only - no keywords, badge, script or anything hidden. The platform
+  never writes it, nothing checks for it. The MCP instructions, fixed at
+  start, leave the words and whether to add it to `platform_guide`
+  (`backlink`).
+
+### Pushing, not polling
+
+Agents are told never to poll: what changes while a page is open is pushed -
+server-sent events where the page listens (`demo-live`), a websocket where it
+talks back (`demo-game`).
 
 ### Connectivity
 
-Whether a lambda's code may connect to other servers - call an API with
-`HttpClient`, open a socket, a WebSocket or mail client, look up a name.
-Lambdas were used as proxies and jump hosts - an API of their own that fetched
-whatever address it was handed - so **it is a grant of the lambda's, not a
-property of its tier - decided by the owner**: the operator allows or
-declines it per lambda, and the tier only says what holds while nothing was
-decided (`ConnectivityRule`, `TierPolicy.Connectivity`), as each installation
-sets it. **It is called connectivity
-everywhere - decided by the owner** - not egress: the API, MCP, the code and
-the pages.
+Whether a lambda's code may connect to other servers (`HttpClient`, sockets,
+WebSockets, mail, DNS). **Called connectivity everywhere (owner)**, not egress.
+Lambdas were used as proxies, so **it is a grant per lambda, not a property of
+its tier (owner)**: the operator allows or declines it; the tier only says what
+holds while nothing was decided (`ConnectivityRule`,
+`TierPolicy.Connectivity`).
 
-- **Production connects by default, everywhere - decided by the owner**; the
-  sandbox asks. A decision about the lambda comes first either way: declined
-  is declined in production too, and a request connects nothing until it is
-  allowed. Moving a lambda to a tier that connects by default forgets a
-  request that waits. A demo never connects, and a blocked lambda cannot ask
-  nor be decided about.
-- **Asked for by the owner, decided by the operator** - the asymmetric
-  interface again: the agent, which knows what the code connects to, asks
-  with `request_connectivity` and a purpose (the servers and why), the owner reads
-  and can change or take back the request in the editor, and the operator,
-  who answers for what the server does to others, allows or declines it in
-  the panel with a note the owner reads. A purpose is required. Declining what
-  was allowed takes it back; the owner may ask again after a decline.
-- **Refused as it compiles, not filtered as it runs.** Without connectivity the
-  compiler is not handed the assemblies that connect (`ReferenceProvider`,
-  `Network`), which is what holds; the code guard refuses their names and
-  namespaces with `LAMBDA0003` and a message that says how to ask, and binds
-  what other assemblies fetch on the code's behalf - XML or a `DataSet` read
-  from an address, a bearer token's issuer, `Resource.FromWeb`, a mail client
-  (`CodeGuard.InspectConnectivity`). It stays governance, not a sandbox. Keep the
-  three together when touching any of them: a new way to connect is excluded
-  or refused, and said in the message.
-- **Part of the build.** It is compiled in (`BuildSettings`), so a decision
-  that takes it away builds the lambda and its previews again on the next
-  request, without a deploy; taken back, code that connects stops compiling
-  and answers with an error until it changes. A build made without it keeps
-  serving once it may connect - it compiled without the means to - so a
-  lambda moved to production is not started again for it.
-- **Nothing was allowed for the lambdas that existed - decided by the owner.**
-  The migration (V24) grants nothing; the operator allows the sandbox lambdas
-  that need it by hand.
-- **The browser first.** What a lambda's pages fetch is the visitor's
-  browser's business and needs nothing. Agents - the build agent above all,
-  which cannot wait for a decision - are steered to call a public API from the
-  page wherever it allows that, and to ask only where the server must make
-  the call (a key, an API that refuses browsers). This is said in the MCP
-  instructions (one line), `platform_guide` (`connectivity`), the tool descriptions,
-  the build agent's briefs (`SERVICES`) and `AGENTS.md`, a repository's
-  `AGENTS.md`, the README, the API's introduction and the reference - keep
-  them the same.
-- **The words.** The API, MCP, the full view and the panel say *connectivity*; the
-  simple view never does: there an app wants to **use other services**, and
-  the owner asks for **permission**. The full view has a **Connectivity** section
-  in the run group, marked while the code connects and may not; the simple
-  view a tile on its overview only while there is something to ask, to wait
-  for or to read - a lambda that never connects shows nothing new there. A
-  deployment refused for it says so in either view, with the way to ask.
-- **The panel** has a **Connectivity** section with what waits - the longest
-  waiting first, the purpose, whether the code connects - and what was
-  allowed, the count of what waits beside its name; the lambda's page has the
-  same card, and the list a badge.
+- **Production connects by default (owner)**; the sandbox asks. A decision
+  about the lambda comes first either way. Demos never connect; a blocked
+  lambda cannot ask or be decided about.
+- **The agent asks, the operator decides**: `request_connectivity` with a
+  required purpose (servers and why); the owner can read, change or withdraw
+  it in the editor; the operator allows or declines in the panel with a note.
+- **Refused as it compiles, not filtered as it runs.** Without it, the
+  connecting assemblies are not handed to the compiler (`ReferenceProvider`,
+  `Network`); the code guard refuses their names with `LAMBDA0003` and binds
+  what other assemblies fetch on the code's behalf (XML from a URL, a bearer
+  issuer, `Resource.FromWeb`, mail clients; `CodeGuard.InspectConnectivity`).
+  Governance, not a sandbox. Keep the three together: a new way to connect is
+  excluded or refused, and named in the message.
+- **Part of the build** (`BuildSettings`): taking it away rebuilds the lambda
+  and previews on their next request; a build without it keeps serving once
+  it may connect.
+- **The browser first**: agents - the build agent above all - call public APIs
+  from the page where the API allows it, and ask only where the server must
+  make the call.
+- **The words**: the API, MCP, the full view and the panel say connectivity;
+  the simple view says the app wants to **use other services** and the owner
+  asks for **permission**, in a tile shown only while there is something to
+  ask, wait for or read.
 
 ### Tiers
 
-**Named by purpose, not by price - decided by the owner.** `Free` and
-`Premium` mixed two questions: who pays, which is the installation's business,
-and how much a lambda matters, which is the lambda's - and on the community
-edition "premium" meant nothing. The tiers (`LambdaTier`) say what a lambda is
-for, assigned by the operator and never chosen by the owner:
+**Named by purpose, not by price (owner)**, assigned by the operator, never
+chosen by the owner (`LambdaTier`):
 
-| | Sandbox | Production | System |
-|---|---|---|---|
-| For | trying something | an app people use | what the installation depends on (the usage report collector) |
-| Unused | offline after 30 days, removed after 90 | kept | kept; deleted only by the operator |
-| Version / data | 32 MB / 512 MB | 128 MB / 4 GB | 128 MB / 4 GB - limits, not none |
-| Domain of its own | no | yes | yes |
-| Analytics shown | 7 days | the year | the year |
-| Connects by default | no | yes | yes |
-| Compiled as the server starts | no - on its first request | yes | yes |
+- **Sandbox** - trying something: offline when unused, then removed; no domain
+  of its own; asks for connectivity; compiled on its first request.
+- **Production** - an app people use: kept; a domain; connects by default;
+  compiled as the server starts.
+- **System** - what the installation depends on (the usage report collector):
+  as production, never blocked, never in the showcase, deleted only by the
+  operator. The intended hook for running a lambda apart from or ahead of the
+  others, which nothing does yet.
+- **Demo (owner)** - the installation's own demos, assigned by the seeder,
+  read only.
 
-`Demo` stays beside them - **decided by the owner** - as the installation's
-own demos, which nobody assigns (the seeder does) and which are read only.
+- **One policy, resolved in one place.** `TierPolicies.Of` maps a tier and the
+  installation's settings to a `TierPolicy` that every check reads
+  (`ILimitsService.PolicyOf`, `TiersWhere`, `Above`). Nothing else compares a
+  tier with a value. What a tier is *for* is fixed in code; its sizes,
+  analytics window, connectivity default and **label** are the installation's
+  (`TierSettings`, the panel's **Limits**). genhttp.dev labels them "Free" and
+  "Premium" **(owner)**. The API, MCP and code use identifiers only; pages and
+  refusals use labels.
+- The default tier for new lambdas is the sandbox **(owner)**.
+- **A move changes the policy and nothing else (owner)**: no restart, no data
+  moved; what is beyond the new limits stays readable and does not grow. Moved
+  into the sandbox, a lambda is measured from the move (`tier_changed`).
+- **Production and system are compiled as the server starts (owner)**
+  (`TierPolicy.WarmedUp`, `LambdaWarmup`), in the background after the server
+  answers, one at a time (compiling is one snippet at a time for memory)
+  **(open)**, each built as a request would (`ResolvedLambda.Settings`).
+- **The simple view offers the tier above** in a tile whose only action is a
+  mail to the installation's contact naming the public address, never the
+  editor key; no contact, no tile.
+- **Tier limits are product settings, not server configuration**: set in the
+  panel's **Limits** (`LimitsService`, rows in `settings`); a change applies to
+  what is checked next. Ports, directories, keys, buffers,
+  `LAMBDA_MAX_CONCURRENCY` and the execution timeout stay environment
+  variables: they protect the process. Callers ask `ILimitsService`, never
+  `LambdaOptions`, for a limit.
+- **Enterprise** customers running their own instance are planned, but **do not
+  anticipate enterprise features unless asked**, and do not shape the cloud
+  code for them.
 
-- **One policy, resolved in one place - decided.** `TierPolicies.Of` maps a
-  tier and the installation's settings to a `TierPolicy`, and every check
-  reads it (`ILimitsService.PolicyOf`; `TiersWhere` for a query of the
-  database, `Above` for the tier that allows more). Nothing else compares a
-  tier with a value - but the seeder, whose tier the demos are. What a tier is
-  for is fixed there (expires when unused, own domain, the installation's own,
-  read only); how much it may have, whether it connects by default and what it
-  is called are the installation's (`TierSettings`, a default in
-  `LambdaOptions`, the panel's Limits over it). A sandbox that is kept for ever
-  is a lambda in production, so the purpose is not a setting.
-- **The installation's settings**: the tier a new lambda starts in - the
-  sandbox, on both editions by default (decided by the owner), production for
-  an installation run for a team - and per tier the sizes, the analytics
-  shown, the connectivity default and a **label**. The label is what the
-  pages call the tier, shown as written in every language; without one the
-  tier's own name is translated. **genhttp.dev labels the sandbox "Free" and
-  production "Premium" - decided by the owner** (`CloudInstallation`). The
-  API, MCP and the code name the tiers by their identifiers only; a refusal
-  names the limit and the tier above by its label.
-- **The same for every lambda**: how many versions are kept and how many
-  features may be open, which were the same in every tier.
-- **Editor keys and access are as they were - decided by the owner.** A
-  system lambda is owned through its editor key like any other, and moved
-  there by the operator like any tier; what makes it the installation's is
-  its policy: never blocked, never in the showcase (an entry it has is
-  hidden, and back once it leaves), not deleted with the editor key. **System
-  is the intended hook for running a lambda apart from the others or ahead of
-  them**, which nothing does yet: every lambda shares one process.
-- **A move changes the policy and nothing else - decided by the owner.** No
-  restart: the room of a lambda's data is read as its workspace writes
-  (`IDatabaseVault.DataRoomFor`), not compiled in, and a build without
-  connectivity keeps serving where the lambda may connect. No data is moved.
-  What a lambda has beyond its new tier stays: its versions can still be put
-  online, its data is read and does not grow (writes fail as they do when the
-  data is full), and what it saves, merges or pushes next is held to the new
-  limits. Moved into the sandbox, a lambda - and its previews - is measured
-  from the move (`tier_changed`), never from a visit before it.
-- **Production and system are compiled as the server starts - asked for by
-  the owner**, so their first visitor after a restart does not wait for it
-  (`TierPolicy.WarmedUp`, `LambdaWarmup`), in the background once the server
-  answers rather than delaying its start - the owner's words. Chosen with it,
-  open to change: one lambda after another, the one visited last first.
-  Compiling stays one snippet at a time (memory), so asking for all at once
-  would build nothing sooner and put every warm-up ahead of a visitor whose
-  lambda is not warm yet; one at a time, a request waits for one compilation
-  at most. Compiling several at once would take a guard per lambda in the
-  deployment service and more memory on every way a lambda is built. Each is
-  asked for as a request asks for it
-  (`ResolvedLambda.Settings`), so the build is the one the first request
-  finds; one that fails is said in the log and left to its first request.
-  The sandbox and the demos are compiled on their first request as before.
-  Its cost, said in the reference: an installation whose new lambdas start in
-  production compiles and loads every lambda as it starts, and each
-  lambda's startup (migrations, calls it makes) runs then rather than on a
-  visit.
-- **The simple view offers the tier above** (`tierPolicy.above`, production
-  for a sandbox) in a tile beside the latest change, named by its label; its
-  only action is a mail to the installation's contact (`LambdaOptions.Contact`)
-  naming the app by its public address, never the editor key - the tier stays
-  the operator's to assign. Where the installation names no contact - a
-  community one, usually - the tile is not there.
-- **Migrated, not reassigned (V25).** Free became the sandbox and Premium
-  production, the panel's limits came along under the new names, versions and
-  features became the larger of the two, and a production lambda's stale
-  connectivity request or decline was forgotten so it keeps connecting.
-  Nothing was made a system lambda: that is the operator's, lambda by lambda.
-  Usage reports keep `free` and `premium` and add `sandbox`, `production` and
-  `system`; the admin API still reads `Free` and `Premium` as aliases.
-- **The limits of a tier are product settings, not server configuration -
-  decided.** What a version may come to (its code and resources together),
-  what the data may (its database and workspace together), the analytics
-  shown, the connectivity default and the label per tier, versions and
-  features for every lambda, the sandbox's lifetime, the default tier, and
-  the per-caller limits (showcase picture, requests per second, builds per
-  day) are set in the panel's **Limits** (`LimitsService`, rows in
-  `settings`): one form, the tier limits as a table with a column per tier,
-  what holds for every lambda and the per-caller ones in blocks of their own,
-  so which is which is plain without a switch hiding half of it.
-  A change applies to what is checked next and takes nothing away. Ports,
-  directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
-  timeout stay environment variables: they protect the process. The old
-  limit variables are no longer read. Callers ask `ILimitsService`, never `LambdaOptions`,
-  for a limit.
-- **Enterprise** - a customer running their own instance, on-prem or in the
-  cloud - is planned but **do not anticipate enterprise features unless asked**.
-  It is not decided that the enterprise code base will be the same as the cloud
-  one, so do not shape the cloud code for it. The page with its prices was
-  removed from the cloud - decided by the owner, with the panel's switch for it
-  (V23).
+### Blocking
+
+What the operator does about abuse (phishing, malware, attacks), in the panel
+only.
+
+- **A blocked lambda is offline and frozen**: with its previews, and every
+  change refused through every door in `LambdaGuard.EnsureUnblocked` (a new
+  door calls it too; `LambdaError.Blocked`, 403). The operator may only lift
+  the block or delete it.
+- **Reading and the export stay.** The owner sees a banner **with the
+  operator's reason (owner)** (`blockReason`); refusals leave the reason out,
+  since build logs may be read by others.
+- Offline, out of the showcase, source not found - all back once lifted.
+- **Kept until the operator decides**, never removed for going unused (its key
+  would be free for whoever it was blocked for). Demos and **system lambdas
+  (owner)** cannot be blocked (`TierPolicy.Blockable`).
+- **The addresses a lambda was changed from are recorded**
+  (`EditorAddresses`), at most hourly, for 30 days, only where the server
+  keeps addresses (`LAMBDA_LOG_CLIENT_ADDRESS`), never the operator's own. The
+  privacy page says so.
+- **Address blocks**: never the installation's own networks
+  (`LAMBDA_UNBLOCKABLE_NETWORKS` - the build agent's container gets a fresh
+  address each build); the connection's address, never a forwarded one; IPv6
+  by its /64. Refused first of all (`AddressBlockConcern`, outermost) with a
+  plain 403 counted in memory, on every host. **The panel stays reachable
+  from a blocked address (owner)**, so an operator can unblock themselves.
+  **Blocks lapse after two weeks (owner)** (`AddressBlockJob`): addresses
+  change hands.
+
+### The operator's panel
+
+**(owner)** Sections in groups like the editor's (the kit's `Navigation`):
+Dashboard; Lambdas; Security; Performance; Platform. A new section joins the
+group it belongs to; an empty group is hidden. A mark beside a section says what
+waits there (`GET /admin/overview`, read as the operator moves, never on a
+timer).
+
+- **What is shown and what is done are kept apart (owner).** Information in
+  cards; actions only in a section's header, a card titled as such (**Manage**)
+  or a row's last cell. Each action that changes something confirms in a
+  dialog first; a setting's switch or field is the exception. Notices lead to
+  where something is decided. Built from `console/parts.tsx`.
+- **The operator never opens the editor to see how a lambda is set up
+  (owner)**: its page sums up every editor section, read only. A feature the
+  editor gains gets its line there (`console/uses.tsx`) and a census count.
+- **The operator's actions**: online, tier, domain, connectivity, block,
+  remove. Nothing that is the owner's (data, analytics, showcase, source).
+- **Dashboards are drawn from counts**, never a walk while a request waits
+  (`ICensusService`; storage walked hourly by `StorageCensusJob`). Demos are
+  counted and listed apart. Free space is read every time and warned about
+  (`diskState`).
+- English only.
 
 ## Architecture
 
-Read the reference's section "How it is put together" before touching
-services. The rules that matter:
+Read the reference's "How it is put together" before touching services.
 
-- The platform's services are one project, `GenHTTP.Lambda.Core`, divided into
-  services behind interfaces; every component talks to the interfaces. `Meta`
-  is the only part that speaks to the database, and its public surface is
-  hand-mapped DTOs. Code lives on the file system (`Storage`), never in the
-  database - which knows of what a lambda's store keeps, a row each, and
-  nothing of what it holds. The components over it, and the hosts that put them together, are
-  in Editions and components above.
-- **A service orchestrates, and the concerns it would mix are units of their
-  own - decided in the architecture review.** A protocol, a count, a check:
-  each goes into a class beside the service, in its folder, and the service
-  keeps deciding what is done and in which order. Not a class per method - a
-  unit is a concern somebody can review on its own. The resources still talk
-  to the service. `Services/Building` is the template: `BuildService` over
-  `AgentClient`, `BuildAllowance`, `ModelGate` and `AgentInput`. In
-  `Services/Meta`, `MetaService` keeps the face (`IMetaService`) and the
-  lambda's turn, and hands hosting, history, lifetime, removal and the DTOs to
-  units of their own. A rule another service needs too - what a version may
-  hold, who may change a lambda - goes into a unit both call, not a static of
-  the service they reach into.
-- **Outside its folder, a service is taken only by its interfaces - decided by
-  the owner, enforced by `ServiceBoundaryTests`.** That holds for the API, MCP
-  and every other service alike; the units of a service have no interface and
-  stay in its folder (`Services/<Name>`). A folder has an interface per
-  audience: the service the API and MCP call (`IDatabaseService`,
-  `ISecretService`), and where other services work through a lower layer, that
-  layer's own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`,
-  `ILogBook`). What another folder needs of a unit is added to the service's
-  interface (`IMetaService.GetFacts`, `ISourceService.StarAsync`), not taken from
-  the unit. An exception is an entry in the test with its reason; today only
-  the platform's composition (`LambdaPlatform`, its builder and
-  `PlatformLogging`) has one. The test reads every component's assembly - a
-  component is outside every folder of the services.
-- Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
-  misbehaving; **it is not a sandbox.** Do not describe it as one.
-- Database: EF Core over the database integration, migrated by Evolve from
-  `Data/Migrations/V<n>__*.sql` on SQLite and `Data/PostgreSql/V<n>__*.sql` on
-  PostgreSQL (the analytics likewise). **A change to the platform's schema is
-  a migration in every set**, each numbered on its own - the PostgreSQL set
-  started at the schema SQLite had reached, written once.
-  Existing migrations are never edited. **Before pushing a new migration check
-  the highest `V` on `origin/main`** - a duplicate fails every test in CI. New
-  files under `src/GenHTTP.Lambda.Core/Data/` are hidden by the `data/` rule in
-  `.gitignore` on Windows: check with `git status --ignored` and `git add -f`.
-- The frontends are React applications in an npm workspace at the root: the
-  kit (`src/Kit`) and a bundle per component in its `Frontend/` folder (see
-  Editions and components). The sites' public pages are prerendered per
-  language.
-- Links inside a lambda's front end are relative, never a full address: a
-  lambda answers at the root of its address - its host, or `/lambda/{key}/`
-  where lambdas answer by path - but a feature's preview below
-  `/features/{key}/` on the site, where a leading slash leaves it and the full
-  address is the live lambda.
-- The full view's sidebar is **grouped** (overview and documentation; sharing -
-  showcase, open source, domain - second, as the owner decided; develop -
-  change, drafts, code, tests; program and data - versions, database,
-  workspace, secrets; run - deployments, connectivity, stats, analytics,
-  logs). A new section joins the group it belongs to rather than the end of
-  the list. Where the window is too short, the sections scroll under the
-  lambda's name.
-- **On a phone the sections are a bar, never a row that scrolls sideways -
-  asked for by the owner** once there were twenty: a bar at the top of the
-  page names the section open and stays as the page moves, and opens every
-  section at once in the sidebar's groups, two columns of them, with the view
-  switch at the foot (`components/Navigation.tsx` in the kit, which draws the
-  sidebar from the same entries, and the operator's panel's as well). A dot a
-  section shows beside its name is summed up on the closed bar, the most
-  urgent one, so nothing waits out of sight. A draft's views are listed the
-  same way.
-- **Wired through the container**, not by hand and not in statics. A concern
-  that needs nothing but services is an `IDependentConcern`, registered as a
-  singleton and added with `Dependent.Concern<T>()`; only a concern built with
-  an argument of its own is built by hand (the lookup of a lambda, whose
-  locator differs per route). The scope they are resolved from is opened by
-  the outermost concern of the host (`AddDependencyInjection`, added by
-  `PlatformHosting`), so nothing dependent goes outside it. A component's own
-  singletons - the MCP tools, the pages of a bundle - are made once from the
-  platform's services by its builder (`ActivatorUtilities`); the container is
-  Core's and registers nothing of the components. What only a door needs -
-  HTTP or MCP - stays at the door (`WorkspaceFiles`); what both doors share
-  is the services' (`OperationLog`, `LambdaAccess`, the analytics' wire
-  shape), never one door reaching into the other. What is done with the data
-  (base64, a version's facts) is the service's. What is one per process, the
-  console, is installed by a service the platform owns (`ConsoleCapture`), so
-  tests own it as well.
+- The services are one project, `GenHTTP.Lambda.Core`, behind interfaces.
+  `Meta` alone speaks to the database, with hand-mapped DTOs. Code lives on the
+  file system (`Storage`), never in the database.
+- **A service orchestrates; the concerns it would mix are units of their own.**
+  A protocol, a count, a check goes into a class beside the service in its
+  folder - not a class per method. `Services/Building` is the template. A rule
+  another service needs too goes into a unit both call, not a static of one
+  service.
+- **Outside its folder a service is taken only by its interfaces (owner)**,
+  enforced by `ServiceBoundaryTests`, for the API, MCP and every other service
+  and component. Units have no interface and stay in `Services/<Name>`. What
+  another folder needs of a unit is added to the service's interface. An
+  exception is an entry in the test with its reason.
+- Compiled lambdas run in the server process. The `CodeGuard` raises the cost
+  of misbehaving; **it is not a sandbox.** Do not describe it as one.
+- **Platform schema**: EF Core migrated by Evolve from
+  `Data/Migrations/V<n>__*.sql` (SQLite) and `Data/PostgreSql/V<n>__*.sql`;
+  **a schema change is a migration in every set**, each numbered on its own.
+  Existing migrations are never edited. **Before pushing a migration check the
+  highest `V` on `origin/main`** - a duplicate fails every test. New files under
+  `src/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
+  Windows: `git add -f`.
+- Frontends: React in an npm workspace at the root - the kit and a bundle per
+  component; public pages prerendered per language.
+- **Links in a lambda's front end are relative**: a lambda answers at the root
+  of its address or below `/lambda/{key}/`, a preview below `/features/{key}/`.
+- The full view's sidebar is **grouped** (overview and docs; sharing; develop;
+  program and data; run). A new section joins its group, not the end. On a
+  phone the sections are a bar that opens all of them, never a sideways
+  scrolling row **(owner)** (`components/Navigation.tsx`, shared with the
+  panel).
+- **Wired through the container**, not by hand or statics: a concern needing
+  only services is an `IDependentConcern` added with `Dependent.Concern<T>()`.
+  The scope is opened by the host's outermost concern. A component's
+  singletons are made once by its builder (`ActivatorUtilities`); the
+  container is Core's and registers nothing of the components. What only one
+  door needs stays at the door (`WorkspaceFiles`). What is one per process
+  (the console) is installed by a service the platform owns (`ConsoleCapture`).
 
 ### Integrations
 
-**Asked for by the owner:** what the platform keeps its data in is an
-integration that can be exchanged - the database, the files, the secrets - so
-that PostgreSQL, object storage like S3 or Vault can take the place of the
-defaults without the rules changing. Observability and logging are not
-integrations (yet - the owner's words: "not for now").
+**(owner)** The database, the files and the secrets are integrations that can
+be exchanged (PostgreSQL, S3, Vault…) without the rules changing. Observability
+and logging are not integrations, for now.
 
-- **Three kinds, one of each per installation**, behind the contracts of
+- One of each kind per installation, behind the contracts in
   `GenHTTP.Lambda.Integrations` (`IDatabaseProvider`, `IFileProvider`,
-  `ISecretProvider`), a project that takes nothing of the platform's. A host
-  chooses them on the platform's builder (`.Database(...)`, `.Files(...)`,
-  `.Secrets(...)`, each an `IIntegrationBuilder<T>` built with an
-  `IntegrationContext`), and the platform has its own for what it is given
-  nothing for: SQLite files (`GenHTTP.Lambda.Integrations.Sqlite`), local
-  directories (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) and secrets
-  sealed in its own records (`DatabaseSecrets`, named so by the owner, in
-  Core's `Integrations/` folder, since it needs the platform's database and
-  is kept wherever that is). An integration with a system of its own is a
-  project of its own. **Moving data from one to
-  another is not done - decided by the owner**: an installation chooses as it
-  starts.
-- **An integration keeps; the platform decides - decided by the owner** ("the
-  layer should not include business logic"). Whether a lambda has a kind of
-  data, its room, what a name or a value may be, how many secrets, what a
-  workspace refuses, who may read what - all of it stays in the services
-  (`DatabaseVault`, `SecretVault`, `WorkspaceService`, `LambdaWorkspace`),
-  which ask the integration only once they have decided. Addressed by ids
-  (`DataScope`), never by keys.
-- **The contracts are asynchronous - decided by the owner.** Every member that
-  reaches the infrastructure returns a `ValueTask` and takes a
-  `CancellationToken`, building one included (`IIntegrationBuilder.BuildAsync`);
-  what an integration says of itself (`Describe`, `Guide`) and what only
-  configures (`ConfigureStore`, `ConfigureContext`, `Binding`, `Quote`, `Tree`)
-  stays synchronous. How an integration answers is its own: SQLite and the
-  local files are synchronous inside, PostgreSQL awaits Npgsql, and
-  `DatabaseSecrets` awaits the platform's records wherever they are kept (see
-  Serving, and the threads it runs on). A whole database or workspace is
-  copied or exported through `Offload` by the platform, so no integration
-  needs a hop of its own.
-- **Kinds, dialects and stores are enums, never strings - decided by the
-  owner**: `IntegrationKind`, `DatabaseDialect`, `DatabaseStore`, `FileStore`,
-  and the server's `DatabaseProvider` for `LAMBDA_DATABASE`. Where one becomes a
-  name - a file, a schema, a directory, the admin API's JSON, an environment
-  variable - a mapper where it is needed spells it out (`StoreFile`,
-  `PostgreSqlNames.Schema`, `StoreDirectory`, `IntegrationResponse.KindOf`,
-  `DatabaseSettings.Parse` and `NameOf`), never `ToString()`: what data is kept
-  under does not follow a rename in the code.
-- **Used by the platform itself as well - asked for by the owner.** The
-  platform's records (`DatabaseStore.Platform`, `LambdaDbContext`) and its
-  analytics (`DatabaseStore.Analytics`) are kept by the database integration
-  too, in the dialect it speaks (`IDatabaseProvider.Dialect`), and both are
-  migrated as the platform starts - see Database below; the branding's name
-  and the guide's section are rows of those records.
-  **No picture is kept in a database - decided by the owner**: the logo and
-  the showcase's pictures are files of the files integration (`FileStore`,
-  `branding/logo`, `showcase/{lambda}`), their rows saying what each is and
-  how large. Those kept in rows before are moved out once as the platform
-  starts (`PictureMove`) and read from the row until then; the emptied
-  columns are dropped in a later release, in both sets of migrations. The
-  brand is read once as the platform starts and held in memory, since every
-  page shows it.
-- **Towards a lambda, no change when an integration changes - asked for by the
-  owner.** Its database through `Database.GetConnectionAsync()` and
-  `UseDatabase` (see Databases), its secrets through `Secret.ReadAsync`, and
-  its files through the generated `Workspace` class, which **calls functions
-  the platform hands it and touches no directory itself - decided by the
-  owner**: an S3 provider needs no change to lambdas. **`Workspace.Root` went with it
-  - decided by the owner**: a path means nothing on object storage. Of the
-  code on genhttp.dev, one lambda named it, in a line that printed it, which
-  its owner changes; nothing brings it back. `Resources.Root` stays:
-  resources are the version's own files, written to disk on every deploy, and
-  not an integration's.
-- **An integration may add to the guide** (`IIntegration.Guide`): lines at the
-  end of the section of its kind - what SQLite refuses, what PostgreSQL folds
-  and copies. What it adds counts against the guide's 28 KB like the rest.
-- **The operator sees which are used - asked for by the owner, on both
-  editions**: the panel's **Integrations** section (group Platform, read
-  only, cards) over `GET /admin/integrations`, from what each says of itself
-  (`Describe`) - never a password, a key or a connection string. **Terse,
-  and each named by its assembly - asked for by the owner**, who found the
-  panel wordy and "the platform's own" unclear: a card is the kind, the name,
-  the assembly and the facts, with no sentence about either. The usage
-  report names them (`database`, `files`, `secrets`), never where they are.
-- **PostgreSQL is the community edition's - decided by the owner**: genhttp.dev
-  keeps SQLite, and its host refuses `LAMBDA_DATABASE=postgresql`
-  (`LambdaSettings.FromEnvironment(..., databases)` takes what a host offers).
-  Chosen with it, open to change: one database the operator gives
-  (`LAMBDA_POSTGRES_CONNECTION`), the schemas `platform` and `analytics`, a
-  schema per lambda (`lambda_{id}`) and per draft (`lambda_{id}_feature_{f}`),
-  owned by the installation's user, and a role per lambda (`{prefix}_{id}`)
-  that may use and create in its own schemas and nothing else - its password
-  made anew on every start and kept nowhere; a pool per lambda and draft
-  (`LAMBDA_POSTGRES_POOL_SIZE`, 10); the room governed by opening read-only
-  connections once a database is past it, since PostgreSQL cannot hold a
-  schema to a size; a draft's copy made from the catalog in one repeatable
-  read transaction (tables, sequences, keys, views - not functions, triggers
-  or types). The provider for EF Core 11 ran as a release candidate, taken
-  with the owner's consent, until 11.0.0 was released with Npgsql 11.
-- A new kind of integration, or a new one of a kind, keeps to this: the
-  contract says what it keeps and nothing it decides, the services keep the
-  rules, the guide and the panel are told through `Guide` and `Describe`, and
-  `docs/reference.md` (Integrations) says how to add one.
+  `ISecretProvider`), which takes nothing of the platform's. A host chooses
+  them on the builder (`.Database(...)`, `.Files(...)`, `.Secrets(...)`);
+  defaults are SQLite, `LocalFiles` and `DatabaseSecrets` (in Core, since it
+  needs the platform's database). **Data is never moved between integrations
+  (owner)**.
+- **An integration keeps; the platform decides (owner).** Whether a lambda has
+  a kind of data, its room, names, values, counts, who reads what - all in the
+  services (`DatabaseVault`, `SecretVault`, `WorkspaceService`,
+  `LambdaWorkspace`). Addressed by ids (`DataScope`), never keys.
+- **The contracts are asynchronous (owner)**: every member that reaches
+  infrastructure returns a `ValueTask` and takes a `CancellationToken`; what
+  describes (`Describe`, `Guide`) or configures stays synchronous. Whole
+  copies and exports go through `Offload` in the platform.
+- **Kinds, dialects and stores are enums, never strings (owner)**; where one
+  becomes a name (file, schema, directory, JSON, env var) a mapper spells it
+  out, never `ToString()`: stored names must not follow a code rename.
+- **The platform uses them too (owner)**: its records and analytics are kept by
+  the database integration in its dialect. **No picture is kept in a database
+  (owner)**: the logo and showcase pictures are files of the files integration.
+- **Towards a lambda nothing changes when an integration does (owner)**:
+  `Database.GetConnectionAsync()`/`UseDatabase`, `Secret.ReadAsync`, and the
+  generated `Workspace` class, which calls functions the platform hands it and
+  touches no directory - so there is no `Workspace.Root` **(owner)**.
+  `Resources.Root` stays: resources are the version's files on disk.
+- An integration may add lines to the guide (`IIntegration.Guide`), counted
+  in its budget.
+- **The panel's Integrations section (owner)**: terse cards (kind, name,
+  assembly, facts) from `Describe` - never a password, key or connection
+  string. The usage report names them, never where they are.
+- **PostgreSQL is the community edition's (owner)**; genhttp.dev keeps SQLite.
+  Its shape is **(open)**: one database (`LAMBDA_POSTGRES_CONNECTION`), schemas
+  `platform`, `analytics`, one per lambda and per draft, a role per lambda
+  reaching its own schemas only (password made anew each start, kept
+  nowhere), a pool per lambda, room enforced by read-only connections once
+  over it, drafts copied from the catalog in one repeatable-read transaction.
+- A new integration keeps to this, and `docs/reference.md` (Integrations) says
+  how to add one.
 
 ### Serving, and the threads it runs on
 
 On Ioxide a request runs on a **reactor**: one thread per core that owns that
-core's connections and resumes each request inline where its I/O completed.
-Whatever a request does there, every other connection of that core waits for.
-.NET `async` works on it - ioxide's synchronization context posts what an
-await continues with back to the reactor - and a task that has completed when
-it is awaited never leaves the thread. Kestrel and GenHTTP's internal engine
-serve on the thread pool, where a thread that waits on the network is a
-thread taken from every other request. So:
+core's connections and resumes requests inline. Whatever a request does there,
+every other connection of that core waits for. `async` works on it (awaits are
+posted back to the reactor; a completed task never leaves the thread). Kestrel
+and the internal engine serve on the thread pool, where a blocked thread is
+taken from every other request. So:
 
-- **Async is fine in integrations - decided by the owner**, turning around the
-  synchronous design they had at first. Their contracts return `ValueTask`s
-  (see Integrations), so one that waits on the network - PostgreSQL, object
-  storage, a vault - awaits it, which Kestrel and the internal engine make use
-  of. On Ioxide, take care: an integration meant for it answers on the thread
-  it is asked on, as SQLite and the local files do - synchronous inside,
-  every task they return completed - and the platform's own secrets with the
-  records they are kept in, so nothing leaves the reactor. PostgreSQL through Npgsql works on Ioxide, its
-  continuations posted back to the reactor, but does not complete there; an
-  integration on Ioxide's own PostgreSQL client would, and is not needed for
-  now (the owner's words).
-- **Whatever reaches an integration awaits it**: the vaults, the services over
-  them, the resources and MCP tools that call those, the background jobs, and
-  the platform's start (`LambdaPlatformBuilder.BuildAsync`, which builds the
-  integrations, migrates both stores, moves the pictures and reads the brand).
-  A method is `async` where it awaits an integration, compiling, packing, a
-  request body or the network; anything else stays a plain method returning
-  a plain value.
-- **The platform's own records are awaited - asked for by the owner**, as
-  the integrations are. Entity Framework over `LambdaDbContext` -
-  `CreateDbContextAsync` and `await using`, `ToListAsync`,
-  `FirstOrDefaultAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`,
-  `FindAsync` - and every method up the chain: the services and their
-  interfaces (`…Async`), the resources and MCP tools (their names kept, since
-  operation ids and tool names are made of them), the jobs and the request
-  path. Over SQLite each of those steps completes before the task is handed
-  out - Microsoft.Data.Sqlite does the work on the thread that asks - so a
-  request awaiting the records never leaves its reactor on Ioxide; over
-  PostgreSQL it waits for the server without holding a thread. So does
-  `DatabaseSecrets`, which keeps the secrets in those records, and so does
-  what the platform sends over a connection an integration opened - the
-  analytics, the editor's look into a lambda's database. Evolve, which
-  migrates both stores as the platform starts, stays synchronous: nothing is
-  served yet. Do not add a synchronous path beside the asynchronous one.
-- **What is read on every request is read from memory, loaded awaited.**
-  The limits, the operator's switches, the brand, the guide's section, the
-  domains served and the blocked addresses are read once as the platform
-  starts (`LambdaPlatform.PrepareAsync`, before anything is served) and kept
-  in memory, written through on a change; their reads stay plain properties
-  and methods, and asking one before it was loaded is an error, not a query.
-  What answers to a key (`ResolutionCache`) and the vaults' snapshots answer
-  with a task that has completed, and only the first request after a write
-  awaits the records to load again.
-- **Lambdas are taught the asynchronous form - decided by the owner.**
-  `await Database.GetConnectionAsync()`, `Workspace.ReadTextAsync` and the
-  rest, `await Secret.ReadAsync(...)`, and EF's `ToListAsync` and
-  `SaveChangesAsync` in routes that are async: the demos, the guide, the MCP
-  instructions, the tool descriptions, the briefs and a repository's
-  `AGENTS.md` say so. The plain forms stay - `GetConnection()`, `ReadText`,
-  `Secret.Read` - as a layer that keeps code written before working: the same
-  functions through `Synchronous`, which takes the synchronization context off
-  the thread before the work starts - so what it awaits resumes on the pool
-  rather than being posted to the reactor it blocks - and hands over the
-  result at once where the task completed already, which SQLite, the local
-  files and the platform's secrets always do. Only the functions handed to a
-  compiled lambda go through it; the platform's code awaits. A workspace's
-  tree (`Tree`, `Files`, `App`) is made rather than read, and has a plain
-  form only.
-- **Enforced when it compiles, and noticed as it runs.** `src/BannedSymbols.txt`
-  (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's
-  synchronous methods (`CreateDbContext`, `SaveChanges`, `Find`,
-  `ExecuteUpdate`, `ExecuteDelete`, the transactions and raw SQL), waiting for
-  a task, the `File.*Async` helpers and `Task.Run`, each with the reason;
-  `Synchronous` and `Offload` are the places that suppress it. It lists every
-  overload by its id, generated from the assemblies; a new overload in a new
-  version of EF is added the same way. A query enumerated synchronously -
-  `ToList()`, `foreach`, a spread over it - binds to LINQ and compiles, so
-  `SynchronousRecords`, an interceptor beside `DatabaseChanges`, logs a
-  warning for it once per statement and counts it, and every test fixture
-  fails on the count. It refuses nothing: the query still answers.
-- **Serving a lambda does not touch the database.** What answers to a key, an
-  id or a preview key is held by `ResolutionCache`, and every write to the
-  platform's database makes it stale (`DatabaseChanges`, an EF interceptor,
-  counting the awaited writes as the synchronous ones). So every write goes
-  through EF; one that does not is never seen by the caches.
-- **Long work leaves the reactor in one hop**, through `Offload`: compiling and
-  binding with Roslyn, packing, copying or exporting a whole workspace or
-  database - which an integration that answers at once does on the thread it
-  is asked on, however it is awaited - and reading a lambda's own database for
-  the editor (slow by design: the statements are the lambda's). Not in many
-  small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
-  buffer), and not in place. A manifest is read and written in place, and so
-  is the C# of a version and content a save keeps that comes to little;
-  content that is large - a request's resources, an archive, a push - is
-  hashed and written away from the reactor in one hop, and copying the
-  resources out to be served is part of the deployment's. `Task.Run` is
-  refused, so every hop is marked in `Offload` and can be given a scheduler of
-  its own there; work started in the background rather than awaited (the
-  scheduler's jobs, seeding the demos, warming up the lambdas) is not a hop and suppresses RS0030
-  where it starts, saying why.
-- **A lock held across an await is a `SemaphoreSlim` taken with
-  `WaitAsync`, never with `Wait()`; a plain lock (`Lock`) is never held
-  across one.** A lambda's and a feature's turns are semaphores
-  (`Infrastructure/Turns.cs`, striped), since what they enclose awaits the
-  records; so are the writes of the limits, the settings, the guide, the
-  domains and the address blocks, copying a feature's data, writing the
-  analytics, changing the brand and making a lambda's role on PostgreSQL. One
-  nobody holds is taken at once, without leaving the thread. A semaphore is
-  not re-entrant: what holds a turn never asks for another of the same kind,
-  and turns nest one way only - a feature's before its lambda's (a merge
-  saves the version in the feature's turn). What compiles under a lambda's or
-  a feature's turn still compiles first and takes the turn to write down what
-  it came to (`MetaService.DeployAsync`, `FeatureService.DeployAsync`,
-  `MergeAsync`), so a save of the same lambda does not wait seconds for it;
-  serving compares the build it finds with what is online and builds again
-  where they differ, so the order two deployments finish in does not matter.
-  What an integration copies or removes waits for the turn to be over - a
-  merged or deleted feature's copy of the data is removed once its row is
-  gone, and what is left behind the sweep removes.
+- **Async is fine in integrations (owner).** One that waits on the network
+  awaits it. An integration meant for Ioxide answers on the asking thread,
+  every task completed (SQLite, local files, the platform's secrets), so
+  nothing leaves the reactor.
+- **Whatever reaches an integration, the records, compiling, packing, a body or
+  the network is `async` and awaited**, up the chain: vaults, services and
+  their interfaces (`…Async`), resources and MCP tools (names kept - operation
+  ids and tool names come from them), jobs, the platform's start
+  (`LambdaPlatformBuilder.BuildAsync`). Anything else stays plain. **The
+  platform's records are awaited (owner)** - `CreateDbContextAsync`, `await
+  using`, `ToListAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`. Evolve at
+  start stays synchronous. Do not add a synchronous path beside an async one.
+- **What every request reads is read from memory**, loaded awaited before
+  anything is served (`LambdaPlatform.PrepareAsync`) and written through on
+  change: limits, switches, brand, guide section, domains, address blocks.
+  Reading one before it was loaded is an error, not a query.
+- **Serving a lambda does not touch the database**: `ResolutionCache` answers
+  keys, made stale by every write (`DatabaseChanges`, an EF interceptor) - so
+  every write goes through EF.
+- **Lambdas are taught the async form (owner)**: `await
+  Database.GetConnectionAsync()`, `Workspace.ReadTextAsync`, `await
+  Secret.ReadAsync`, EF's async methods in async routes. The plain forms stay
+  for old code, through `Synchronous`, which takes the synchronization context
+  off before waiting. Only functions handed to lambdas go through it.
+- **Enforced when compiling, noticed when running**: `src/BannedSymbols.txt`
+  (RS0030) bans EF's synchronous methods, waiting on tasks, `File.*Async`
+  helpers and `Task.Run`, every overload by id; only `Synchronous` and
+  `Offload` suppress it (and background starts, saying why). A query
+  enumerated synchronously compiles, so `SynchronousRecords` logs and counts
+  it, and every test fixture fails on the count.
+- **Long work leaves the reactor in one hop through `Offload`**: Roslyn,
+  packing, copying or exporting a workspace or database, hashing large content,
+  reading a lambda's database for the editor. Not many small async steps
+  (`File.ReadAllTextAsync`), not in place. Small things (a manifest, a
+  version's C#) are done in place.
+- **A lock held across an await is a `SemaphoreSlim` with `WaitAsync`**, never
+  `Wait()` or a plain `Lock`. Lambda and feature turns are striped semaphores
+  (`Infrastructure/Turns.cs`); not re-entrant, so what holds a turn never asks
+  for another of its kind, and they nest one way only: a feature's before its
+  lambda's. Compiling happens before taking the turn, which only records the
+  result; serving rebuilds where the build differs from what is online.
+  Integration copies and removals wait until the turn is over.
 - **Never wait on a task** (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`):
-  on a reactor its continuation is posted to the very thread that is waiting,
-  and that core deadlocks for good. Lambdas are held to the same by the code
-  guard (`CodeGuard.InspectWaiting`), and agents are told so. The one wait
-  there is, `Synchronous`, takes the synchronization context off first.
-- **No lock that every request takes may be held for more than a moment.** The
-  log ring's is the one every request takes: an append happens under it, and a
-  reader walks back from the newest line only as far as its cursor.
-- **The console's lock comes first.** The console takes the lock of
-  `Console.Out` - the tee's, once it is installed - underneath every write to
-  its stream, and a print through the tee holds it before it reaches the real
-  console's writer. So whatever writes to the real console directly takes
-  `Console.Out` first (`LogBookProvider`); the other order deadlocked the
-  server on startup.
-- What is read off a version is read once: a version never changes
-  (`VersionFactsCache`) - and only its C# and its documentation are read for
-  it.
+  on a reactor that core deadlocks for good. The code guard holds lambdas to it
+  (`CodeGuard.InspectWaiting`).
+- **No lock every request takes is held for more than a moment** (the log
+  ring's: append under it, readers walk back only to their cursor).
+- **The console's lock comes first**: whatever writes to the real console takes
+  `Console.Out` first (`LogBookProvider`); the other order deadlocked startup.
+- What is read off a version is read once (`VersionFactsCache`).
 
 ### Logging what was done
 
-Every API call that changes something, and every MCP tool call, logs at
-information level **what it did** once it has done it - the operation and its
-arguments, not the request. A new endpoint or tool gets its line in the same
-change; the helpers are in `OperationLog`.
+Every API call that changes something and every MCP tool call logs at
+information level **what it did**, once done - the operation and arguments,
+not the request. A new endpoint or tool gets its line in the same change
+(`OperationLog`).
 
-- **Terse, in the style backends log in - decided.** Past-tense verb first,
-  then what it was done to and its key, then the arguments as pairs:
-  `Published source of lambda {Lambda} license {License}`,
-  `Deployed lambda {Lambda} version {Version}`,
-  `Failed to merge feature '{Feature}' of lambda {Lambda}`. A line says what is
-  known, not why or what it might mean. A name that may hold spaces - a
-  feature's, a title - is quoted. The services log in the same shape.
-- **The same property everywhere**: `{Lambda}` is a public key, `{Feature}` a
-  feature's name, then `{Version}`, `{Path}`, `{Name}` (a secret's). A
-  service that only has the id writes `lambda #{LambdaId}`. One template per
-  case, never a fragment built beforehand (`of {Owner}`), so a structured sink
-  can filter on each.
-- A lambda is named by its **public key** (`PublicKeyOfAsync`), a feature by its
-  **name** (`NameOfAsync`, or the name a service hands back). Never the editor key,
-  never a feature's key.
-- **Never a model as a whole.** A record's `ToString()` prints every property,
-  and `LambdaInfo` carries the editor key, others code and specifications.
-  Name the properties a line logs.
-- Arguments that are sensitive or long are left out: secret values (the name
-  only), code, file contents, pictures, specifications, descriptions.
-- **The one exception: the prompts of the build agent** - on `/build` and in the
-  editor's Change section - are logged in full, because the owner wants to know
-  what people ask for. The privacy page says so; keep it saying so.
-- API reads are not logged (the editor polls), apart from exports and
-  downloads; an agent's reads through MCP are.
-- A refused request is not logged here - its request line has the status.
-- **The MCP module's own lines are filtered below warnings** (`PlatformLogging`): it
-  writes one per tool call beside the tool's own, and one per refusal. A tool
-  that fails is an error, and is written down.
+- **Terse, backend style**: past-tense verb, the object and its key, arguments
+  as pairs - `Deployed lambda {Lambda} version {Version}`, `Failed to merge
+  feature '{Feature}' of lambda {Lambda}`. Names that may hold spaces quoted.
+  Services log the same way.
+- **The same properties everywhere**: `{Lambda}` a public key
+  (`PublicKeyOfAsync`; `lambda #{LambdaId}` where only the id is known),
+  `{Feature}` a feature's name, `{Version}`, `{Path}`, `{Name}`. One template
+  per case, never a prebuilt fragment. Never the editor key or a feature's key.
+- **Never a model as a whole** (`ToString()` of a record prints the editor
+  key); name the properties.
+- No secret values, code, file contents, pictures, specifications or
+  descriptions. **The exception: the build agent's prompts are logged in full
+  (owner)**; the privacy page says so.
+- API reads are not logged (but exports and downloads); MCP reads are. Refusals
+  are not logged here (the request line has the status). The MCP module's own
+  lines are filtered below warnings (`PlatformLogging`).
 
 ### Frameworks: GenHTTP and Ioxide
 
-- We run on GenHTTP and its Ioxide engine. **If you find a bug in either, flag it
-  clearly** - say what it is, where, and a reproduction - **instead of working
-  around it**, so it can be fixed at the source. Tell the owner in your answer;
-  do not bury it in a comment.
-- **Use what the framework offers the way it is meant to be used - decided by
-  the owner** ("embrace it"). When GenHTTP brings a module for something the
-  platform does by hand, move onto it rather than keep a protocol of our own
-  beside it; what it lacks is a bug or a feature to ask for at the source.
-- **The MCP endpoint is GenHTTP's MCP module.** `/mcp` is `McpEndpoint` over
-  `GenHTTP.Modules.Mcp`, the tools are the methods of `McpTools` marked
-  `[Tool]` - their `[Summary]` the description, their typed parameters the
-  arguments - and a fixed limit of an argument is an attribute on it (`[Range]`,
-  `[MaxLength]`, `[AllowedValues]`), advertised and checked by the module, not
-  a check of our own. The module takes every exception but its sealed
-  `ProviderException` for a fault, so a refusal of the platform
-  (`LambdaException`) is turned into an error that says why in a sentence
-  (`Refusing`), never left to be logged as a crash. Its protocol - versions,
-  notifications, origins - is the framework's and is not tested here; what we
-  configure (`LAMBDA_MCP_ORIGINS`, the instructions) is.
-- **Do not write tests for the frameworks.** Test GenHTTP Lambda only.
-- The framework source is normally checked out beside this repository
-  (`../GenHTTP`). Read it instead of decompiling the NuGet packages.
-- Known and already dealt with: GenHTTP releases the request headers once a body
-  is bound, so check headers in a concern in front of the resource, not inside
-  a body-taking method (see `AdminAuthentication`). Since 11.3 the framework
-  binds path and query parameters before the body whatever their order, so
-  the order of a method's parameters no longer matters. A new instance of the same kind of
-  problem is a bug to flag, not to work around again.
+- **If you find a bug in GenHTTP or Ioxide, flag it clearly** - what, where, a
+  reproduction - **instead of working around it**, in your answer to the owner,
+  not a comment.
+- **Use what the framework offers the way it is meant (owner)** ("embrace
+  it"): where GenHTTP has a module for something done by hand, move onto it.
+- **The MCP endpoint is GenHTTP's MCP module**: tools are `[Tool]` methods of
+  `McpTools`, `[Summary]` their description; fixed argument limits are
+  attributes (`[Range]`, `[MaxLength]`, `[AllowedValues]`), not checks of our
+  own. A `LambdaException` is turned into an error that says why
+  (`Refusing`), never a crash.
+- **Do not write tests for the frameworks.**
+- The framework source is beside this repository (`../GenHTTP`); read it rather
+  than decompiling packages.
+- GenHTTP releases request headers once a body is bound: check headers in a
+  concern in front of the resource (`AdminAuthentication`). A new instance of
+  this kind of problem is a bug to flag.
 
 ## Testing
 
 - **Every feature has functional tests written as acceptance criteria**: start
-  the real application (`LambdaFixture`), do what a user or agent does through
-  the API, MCP or a deployed lambda, and assert what they would see. Name tests
-  after the behaviour (`AFeatureStartsAsACopyOfTheNewestVersion`).
-- **Prefer these over unit tests with mocks.** There are none with mocks in this
-  repository today; keep it that way. A fake is acceptable only for something
-  outside our process (`FakeAgent` stands in for the build agent's runner;
-  `YieldingIntegrations` for infrastructure on another machine - the platform's
-  own integrations yielding before every call, the platform's records before
-  every statement, the secrets in memory - so what awaits an integration or
-  the records, and the plain calls' bridge, are tested on tasks that have not
-  completed; the platform's own never hand one out).
-- **A fixture fails its test where the platform asked for its records
-  synchronously** (`SynchronousRecords`, see Serving, and the threads it runs
-  on), so whatever a test exercises is proven awaited - on SQLite here and on
-  PostgreSQL in CI. A test that reads or writes the records itself awaits
-  them as well.
-- Each test has its own temporary data directory and runs in parallel.
-- MSTest, `TreatWarningsAsErrors` is on.
+  the real application (`LambdaFixture`), act as a user or agent through the
+  API, MCP or a deployed lambda, assert what they would see. Name tests after
+  the behaviour (`AFeatureStartsAsACopyOfTheNewestVersion`).
+- **No mocks.** A fake only for what is outside our process: `FakeAgent` for
+  the build agent's runner, `YieldingIntegrations` for infrastructure on
+  another machine (yielding before every call, so awaiting and the plain
+  calls' bridge are tested on incomplete tasks).
+- A fixture fails where the platform asked for its records synchronously
+  (`SynchronousRecords`); tests that touch the records await them too.
+- Each test has its own data directory and runs in parallel. MSTest,
+  `TreatWarningsAsErrors`.
+- The fixture composes the components like the cloud host, with stand-in
+  bundles (`LambdaFixture.BundleOf`); path addressing via `Addressing =
+  LambdaAddressing.Paths`. PostgreSQL is tested against a real server where
+  `LAMBDA_TEST_POSTGRES` names one (CI starts one; inconclusive without).
 
 ```bash
 dotnet build GenHTTP.Lambda.slnx -c Release
@@ -2052,54 +1118,33 @@ dotnet test GenHTTP.Lambda.slnx -c Release
 npm run build      # at the root: type checks and builds every bundle; CI runs it too
 ```
 
-- The fixture puts the components together the way the cloud host does, on a
-  test host, with a stand-in bundle per component (`LambdaFixture.BundleOf`);
-  path addressing is tested with `Addressing = LambdaAddressing.Paths`
-  (`PathHostingTests`). The PostgreSQL integration is tested against a real
-  server where `LAMBDA_TEST_POSTGRES` names one (`TestDatabase`: a database
-  and a role prefix per test, dropped after) - CI starts one beside the tests,
-  and the tests are inconclusive without it. A server is outside the process,
-  so this is no fake. Build the frontend before the server when a page is
-  checked by hand: a project copies its bundle into the host's output when it
-  is built.
-
-On Windows the default Ioxide engine (io_uring) does not run: start the server
-with `LAMBDA_ENGINE=Kestrel`.
+On Windows Ioxide does not run: start the server with `LAMBDA_ENGINE=Kestrel`.
+Build the frontend before the server when checking a page by hand.
 
 ## Translations
 
 - **Everything a visitor or owner sees is translated into all supported
-  languages, except the admin panel** (`/admin`, its bundle in
-  `src/GenHTTP.Lambda.Administration/Frontend`), which is English only; the
-  shell around it reads the kit's words. That includes both sites (the cloud's
-  front page, `/build`, `/ship`, `/self-hosting` and legal pages; the
-  community's front page, `/build` and `/ship`), the workspace, the showcase, the published sources, the create
-  page, the editor, the runner's hosting pages, the page metadata in every
-  table of pages and the words of the link previews (`cards.text.js`).
-- **Every bundle has its own catalog** (`<component>/Frontend/src/locales/<language>/`),
-  and the kit's (`src/Kit/src/locales`) holds what several share: the shell,
-  what is said in many places, connecting an agent, the workspace of
-  `/build` (on `/build`, so formal in Italian and Spanish), the showcase and
-  the licenses. A bundle's site catalog is the kit's words
-  with its own (`defineSite`); the kit's components read the kit's part.
-- Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Kit/src/i18n/languages.ts`,
-  mirrored in `GenHTTP.Lambda.Web/SiteLanguages.cs`). English is the source;
-  every other catalog is typed as it, so a missing string fails the frontend
-  build. A new language is added in both places, in every catalog, in every
-  table of pages and in the social images.
-- **What a profile says its own way** is a section's `profiles`
-  (`profiles: { enterprise: { … } }`), only the sentences that differ, with a
-  doc comment saying for whom; it is translated like any other sentence.
-- The editor's words are a file per section and language
-  (`src/GenHTTP.Lambda.Editing/Frontend/src/locales/<language>/`), named
-  after its key, and an `index.ts` that puts them together - so a change to
-  one section touches one file per language. A language's grammar helpers for
-  the editor live beside them in `language.ts`. A new section gets its file in
-  English, its line in every `index.ts`, and its translations from `apply`,
-  which creates the other languages' files.
-- **Use the register that is normal for a product in that country**, and stay in
-  it. Professional, never chummy or slangy; do not carry English idioms over
-  literally. The form each language uses today:
+  languages, except the admin panel** (English only). That includes both
+  sites, the workspace, showcase, sources, editor, the runner's hosting pages,
+  page metadata in every table of pages, and link previews (`cards.text.js`).
+- **Every bundle has its own catalog** (`<component>/Frontend/src/locales/`);
+  the kit's (`src/Kit/src/locales`) holds what several share (the workspace of
+  `/build` among it, so formal in Italian and Spanish). Site catalogs combine
+  both (`defineSite`).
+- Languages: `id de en es fr it nl pl pt pt-pt tr ja ko`
+  (`src/Kit/src/i18n/languages.ts`, mirrored in
+  `GenHTTP.Lambda.Web/SiteLanguages.cs`). English is the source; every other
+  catalog is typed as it, so a missing string fails the build. A new language
+  goes into both lists, every catalog, every table of pages and the social
+  images.
+- A profile's own wording is a section's `profiles`, only what differs, with a
+  doc comment saying for whom.
+- The editor's words are a file per section and language plus an `index.ts`; a
+  new section gets its English file, its line in every `index.ts`, and the
+  rest from `apply`.
+- **Use the register normal for a product in that country**, professional,
+  never chummy; do not carry English idioms over. The form each language uses
+  today:
 
 | Language | Form | Notes |
 |---|---|---|
@@ -2116,189 +1161,133 @@ with `LAMBDA_ENGINE=Kestrel`.
 | ko | polite (해요체 / 하세요) | |
 | id | formal - *Anda* | |
 
-  The informal choices for it, es, nl, pl and pt-pt are deliberate. If you change
-  a language's form, change this table in the same commit; if you add a language,
-  add its row. The translation script reads this table into every request, so
-  keep its shape: one row per language, code | form | notes.
-- The forms above describe the copy as written today. A request shows the
-  sentences beside a new one, so a translator matches them rather than this
-  table alone.
+  The informal choices are deliberate. Changing a form or adding a language
+  changes this table in the same commit. **The translation script parses this
+  table**: keep one row per language, `code | form | notes`, and no other
+  three-column table in this file whose first cell is a language code.
 
 ### How a change is translated
 
-Nobody reads a whole catalog to translate a sentence. A script hands each
-translator only what changed, and puts the answers back:
+A script hands each translator only what changed and puts the answers back:
 
-1. Write the English - the `en` folder of a catalog and the English titles
-   and descriptions of a table of pages (the script lists them all: `CATALOGS`
-   and `TABLES` in `src/Kit/scripts/translations.mjs`; a new catalog or table
-   is added there). A new sentence whose place is not plain from its key gets
-   a doc comment saying where it appears: the translator sees the comment,
-   never the page.
-2. `npm run translations -- extract` (at the root) compares the English
-   with the base of the branch and writes requests into `.translations/`: per
-   language its register from the table above, its fixed words from
-   `src/Kit/src/locales/glossary.json`, and each new or changed sentence with what the
-   English said before and what the language says now. A large round is split
-   into parts.
+1. Write the English (the `en` catalogs and the English titles and
+   descriptions of the tables of pages; the script lists them in `CATALOGS` and
+   `TABLES` of `src/Kit/scripts/translations.mjs`). A sentence whose place is
+   not plain from its key gets a doc comment saying where it appears.
+2. `npm run translations -- extract` (at the root) writes requests into
+   `.translations/`: the register above, the glossary
+   (`src/Kit/src/locales/glossary.json`), each changed sentence with the old
+   English and the current translation.
 3. One `translator` agent (`.claude/agents/translator.md`) per request, all at
-   once, each told only the path of its request. It reads that file and writes
-   its answer beside it - nothing else.
-4. `npm run translations -- apply` puts the answers into the catalogs, refuses
-   one that lost a parameter, an interpolation, a call of the kit or a link,
-   removes what English no longer has, and gives French its non-breaking spaces.
-   Then `npm run build`, and read the diff of the languages you know.
+   once, each told only its request's path.
+4. `npm run translations -- apply` puts the answers in, refuses one that lost a
+   parameter, interpolation, kit call or link, removes what English dropped,
+   and gives French its non-breaking spaces. Then `npm run build`.
 
-- **The translator runs on Sonnet - decided by the owner.** The model is pinned
-  in the agent's definition; do not override it with the Agent tool's `model`.
-  A prepared request is a small job, and Sonnet does it well at a fraction of
-  the cost.
-- **The fixed words of each language are in `glossary.json`.** A term that
-  changes in a language changes there first, then in its catalogs; a new term of
-  the platform gets a row in every language.
-- What a branch has already translated counts as done. To ask again after
-  changing English once more, commit and extract with `--base HEAD`.
-  `--stale` also asks for every sentence whose English changed in a later
-  commit than its translation, and `--redo <path>` for a sentence or a section
-  to be checked against the English. `check` compares every language with
-  English - CI fails on a sentence that lost a parameter or a link, and prints
-  the rest for a person to look at - and `show <file> <path>` prints one
-  sentence in every language.
+- **The translator runs on Sonnet (owner)**, pinned in its definition; do not
+  override it with the Agent tool's `model`.
+- Fixed words per language are in `glossary.json`; a term changes there first.
+- What a branch translated counts as done; after changing English again,
+  commit and extract with `--base HEAD`. `--stale`, `--redo <path>`, `check`
+  (CI fails on lost parameters or links) and `show <file> <path>` exist.
 
 ## Documentation
 
-**The documentation must contain every feature and be kept up to date in the
-same change that changes the feature.** There are four places, and a feature
-touches all that apply:
+**The documentation contains every feature and changes in the same change as
+the feature.** The places, each touched where it applies:
 
 1. `docs/reference.md` - routes, API, configuration, operations, how it fits
-   together. Where the other documents say "the reference", they mean it.
-2. `README.md` - short, and leading to the documentation - **decided by the
-   owner**: what GenHTTP Lambda *is* (self-hosted hosting for the apps coding
-   agents build, one container, hundreds of apps), the teaser picture of the
-   cloud's front page (`https://genhttp.dev/media/platform/build-dark.webp`),
-   the documentation's entry points, a quick start of two commands, why it
-   exists and what it is for, what to know first (not a sandbox; the usage
-   report), and how to build it from source. Everything else - configuration,
-   HTTPS, backups, the build agent, security - is the documentation's, and
-   the README links there rather than repeating it. Its tone is that of a
-   professional project README - decided by the owner - plain technical
-   English, not the style of this file.
-   **The user documentation** is at <https://community.genhttp.run/docs/>, in
-   the lambda `community` on genhttp.dev rather than in this repository: the
-   concepts and every door - MCP, git, the API, the editor, the panel, the
-   configuration, custom hosts and integrations - as contracts, with
-   screenshots of a real installation. A change people would notice is
-   followed there.
-3. `platform_guide`, the MCP instructions and the tool descriptions
-   (`GenHTTP.Lambda.Mcp`) - for agents; and `AGENTS.md` in every lambda's
-   repository (`Resources/Export/Agents.md.txt`) for an agent working in a
-   clone.
-4. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
-   see below.
+   together ("the reference").
+2. The user documentation at <https://community.genhttp.run/docs/> (the lambda
+   `community` on genhttp.dev): concepts and every door as contracts, with
+   screenshots. A change people would notice is followed there.
+3. For agents: `platform_guide`, the MCP instructions and tool descriptions
+   (`GenHTTP.Lambda.Mcp`), `AGENTS.md` of every lambda's repository
+   (`Resources/Export/Agents.md.txt`), and the build agent's briefs.
+4. The API description (Scalar at `/api/v1/scalar/`).
 
-**There is no guide on the sites any more - decided by the owner.** `/docs`
-described what agents use, and they have `platform_guide`; an owner has the
-editor, in the words of the simple view. A link to `/docs` from before finds
-nothing, as `/enterprise` did - a choice made with the removal, not the
-owner's; `/.well-known/ai-catalog.json` names the API's description instead. The cloud's front page, which shows the features, says
-*what* an app gets, not how: when a feature an owner would notice is added, or
-the editor's look changes, its section and its picture change with it.
+`README.md` is **short and leads to the documentation (owner)**: what GenHTTP
+Lambda is, the teaser picture, the entry points, a two-command quick start, why
+it exists, what to know first (not a sandbox; the usage report), building from
+source. Its tone is a professional project README, not this file's. There is
+no guide on the sites **(owner)**: agents have `platform_guide`, owners the
+editor.
 
-The same rule is worded the same way in all of them. Where an older rule
-here says "the README" for a feature, it means the reference and the
-documentation.
+### Rules said to agents in several places
 
-The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
-something online, how a lambda that exists is changed, and the rules an agent
-would otherwise break before it reads the guide (where data goes, the
-database, waiting for tasks, relative paths, secrets, documentation, pages
-meant to be found), and what only the REST API does - the showcase, which an
-agent that sees no tool for it would otherwise say cannot be done. The rest
-is in `platform_guide` and the tool descriptions; do not repeat it there.
+These rules reach agents through more than one door. Change them in every
+place at once, worded the same: the MCP instructions (a line, where the rule
+would be broken before the guide is read), the named `platform_guide` section,
+the tool descriptions where they apply, the build agent's brief, a
+repository's `AGENTS.md`, and the reference.
 
-**`platform_guide` is written for agents, not people - asked for by the
-owner**, after agents complained it was too large (65 KB, which clients wrote
-to a file; issue 140). It is written as a whole and reads from beginning to
-end (`GuideDocument` in `Services/Guide`): terse, no words only a person
-needs, each rule said once where the agent decides it, and no internal
-detail that has no consequence for the agent. What a tool's description or a
-demo already says is not repeated. Chosen with it, open to change: it is one
-Markdown string rather than an object, so the MCP module sends it once as
-text instead of twice with every quote escaped; its sections are headings
-named as the pointers say ("platform_guide, connectivity"), and a renamed one
-renames every pointer; a test holds it under 28 KB
-(`TheGuideFitsIntoOneToolResult`), so a new rule makes room for itself. **28 KB
-- raised from 24 by the owner** (2026-11-20, when the showcase lost its tool
-and its section had to say how to send a picture): the number is a budget of
-ours, not a client's limit, there so the guide stays one result an agent reads
-in full rather than a file it is handed.
+| Rule | `platform_guide` section |
+|---|---|
+| Code and resources, the platform builds nothing | `code`, `resources` |
+| A lambda that exists is changed in a feature | - |
+| Documentation and tests, in proportion | `documentationAndTests` |
+| Pages meant to be found | `beingFound` |
+| Pushing, not polling | `liveUpdates` |
+| The "Made with" line | `backlink` |
+| Connectivity: the browser first, ask with a purpose | `connectivity` |
+| Asynchronous database, workspace and secrets | - |
+| The showcase through the REST API | `showcase` |
+| Analytics (also the privacy page and the cloud's front page) | `analytics` |
+| Blocking (also the API's introduction, the terms, the privacy page) | `lifecycle` |
 
-**The operator writes rules for agents into the guide - decided by the
-owner, on both editions.** The panel's **Guide** section (group Platform)
-shows the guide exactly as an agent reads it and takes a section of the
-operator's own, through `/admin/guide` behind the admin token
-(`Services/Guide`, which MCP and the API both read, so neither door reaches
-into the other). Chosen with it, open to change: one section, a title and a
-Markdown text; **it comes last, after the platform's own sections - decided by
-the owner**: what the platform requires matters most to an agent, and an
-operator mostly writes how lambdas are built here. It says agents follow it
-wherever the guide leaves them the choice, and that it changes nothing the
-platform requires or refuses (the code guard, connectivity, limits, blocks);
-its title may not be
-one of the platform's sections, which pointers name, and its text takes no
-`#` or `##` headings, no open code block and at most 6 KB in UTF-8, so a full
-guide stays under 34 KB; it is read only where there is an admin token, as the branding is
-only where it may be changed. The rules reach agents through `platform_guide`
-only - not the MCP instructions, nor a repository's `AGENTS.md`.
+### MCP instructions and `platform_guide`
+
+- **The MCP instructions (`McpEndpoint`) are short**: from nothing to something
+  online, how an existing lambda is changed, the rules an agent would break
+  before reading the guide, and what only the REST API does (the showcase).
+  The rest is in `platform_guide` and the tool descriptions - not repeated.
+- **`platform_guide` is written for agents, not people (owner)**: one Markdown
+  document read from start to end (`GuideDocument` in `Services/Guide`), terse,
+  each rule said once where the agent decides it, no internal detail without
+  consequence for the agent, nothing a tool description or demo already says.
+  Its headings are the names the pointers use ("platform_guide,
+  connectivity"); renaming one renames every pointer. **A test holds it under
+  28 KB (owner)** (`TheGuideFitsIntoOneToolResult`): a new rule makes room for
+  itself.
+- **The operator adds rules for agents (owner)** in the panel's **Guide**
+  section (`/admin/guide`): one section, a title and Markdown, **last, after
+  the platform's own (owner)**. It applies where the guide leaves the agent the
+  choice and changes nothing the platform requires. Its title may not be one of
+  the platform's sections; no `#`/`##` headings, no open code block, at most 6
+  KB. It reaches agents through `platform_guide` only.
+- Limits the operator sets are never written as numbers in the guide, tool
+  descriptions or API description: say where to read them (`GET /system`,
+  `limits`). Fixed ones may be.
 
 ### The API description
 
-The OpenAPI document (`/api/v1/openapi.json`, browsed in Scalar) is written for
-whoever calls the API - an agent or a developer writing a client - with
-GenHTTP's documentation attributes beside the code they describe.
+The OpenAPI document (`/api/v1/openapi.json`) is written for whoever calls the
+API, with GenHTTP's documentation attributes beside the code.
 
-- **Behaviour, not just what - decided by the owner.** An operation says what
-  it changes and what it leaves alone, every way it is refused and why
-  (`[Response]` with `ErrorResponse` for the platform's own refusals), what it
-  answers with (`[return: Summary]`, `[Response]` for 201, 202 and 422), and
-  bodies and downloads that are not JSON (`[RequestBody]`,
-  `ContentType`, `[ResponseHeader]`). Read the service before writing it.
-- **The attributes for the caller, the XML comments for the maintainer.** A
-  `[Summary]` and `[Remarks]` say what the caller needs; `<remarks>` keep the
-  *why* for whoever changes the code. The same sentence is not in both: a
-  record's fields are described by `[Summary]` on its parameters, not by
-  `<param>`.
-- **A summary is a short label** - Scalar lists the operations by it - and
-  the rest goes into the remarks.
-- **Tags are concepts, not classes**, in the order and groups of
-  `ApiDocumentation` (`x-tagGroups`); a tag shared by several resources is
-  described on one of them. The introduction everybody reads first is
-  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`. The wording every route shares (the editor
-  key, a demo's refusal) is a constant of `ApiDocumentation`.
-- **Limits the operator sets are never written as numbers**: say where to
-  read them (`GET /system`, the summary's `limits`). Fixed ones (100 secrets,
-  32 KB a value) may be. The same holds for the MCP tools, whose descriptions
-  are fixed when the endpoint starts: a limit of the panel is named where to
-  read it (`platform_guide`), never written into one.
-- **Authentication describes itself.** The admin token's concern declares the
-  `adminToken` security scheme and the 401 and 403 it answers; an operation
-  behind it says nothing about the token of its own. Everywhere else the
-  editor key in the path is the credential, and no operation names a scheme.
-- `ApiDocumentationTests` refuses an operation without a summary, a parameter,
-  answer, model or field without a description, a call about a lambda that
-  does not say how an unknown key is answered, and a tag in no group. A new
-  endpoint or field is documented in the same change.
+- **Behaviour, not just shape (owner)**: what an operation changes and leaves
+  alone, every refusal and why (`[Response]` with `ErrorResponse`), what it
+  answers (`[return: Summary]`, `[Response]` for 201, 202, 422), non-JSON
+  bodies and downloads. Read the service before writing it.
+- **Attributes for the caller, XML comments for the maintainer**; the same
+  sentence is not in both. A summary is a short label; the rest goes into
+  remarks.
+- **Tags are concepts, not classes**, ordered and grouped in `ApiDocumentation`
+  (`x-tagGroups`). The introduction is
+  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
+  constant of `ApiDocumentation`.
+- **Authentication describes itself**: the admin token's concern declares the
+  `adminToken` scheme and its 401/403; elsewhere the editor key in the path is
+  the credential.
+- `ApiDocumentationTests` refuses anything undocumented; a new endpoint or field
+  is documented in the same change.
 
 ## Working conventions
 
-- The code is written to be read: XML documentation with `<remarks>` that say
+- Code is written to be read: XML documentation with `<remarks>` that say
   *why*, `#region` blocks per concern, braces on their own line. Match the file
   you are in.
-- Comments say why, not what. Write prose, not marketing.
-- Tailwind for styling, both light and dark themes, phones included.
-- Check a change you cannot test in the browser by running the app (see above)
-  and looking at it; type checks and tests are not proof that a UI works.
-- PR screenshots go through the `pr-screenshots` skill - uploaded to
-  pr-screenshots.genhttp.run and embedded in the PR body - decided by the
-  owner; the `pr-assets` branch was deleted.
+- Comments say why, not what. Prose, not marketing.
+- Tailwind, light and dark themes, phones included.
+- Check a UI change by running the app and looking at it; type checks and tests
+  are no proof that a UI works.
+- PR screenshots go through the `pr-screenshots` skill **(owner)**.
