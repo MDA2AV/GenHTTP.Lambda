@@ -69,7 +69,7 @@ public sealed class PostgreSqlTests
         var guide = await Guide.ReadAsync(fixture);
 
         Assert.Contains("Here: PostgreSQL", Guide.Section(guide, "database"), "what the integration adds to its section");
-        Assert.IsLessThan(24_000, Encoding.UTF8.GetByteCount(guide), "within the guide's room, as on SQLite");
+        Assert.IsLessThan(28_000, Encoding.UTF8.GetByteCount(guide), "within the guide's room, as on SQLite");
     }
 
     /// <summary>

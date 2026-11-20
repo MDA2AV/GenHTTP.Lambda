@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Isso não é uma imagem PNG, JPEG, GIF ou WebP.',
   tooLarge: (size, limit) => `Essa imagem tem ${size}; o máximo é ${limit}.`,
   unreadable: 'Não foi possível ler esse ficheiro.',
-  hint: (tool) => (
-    <>
-      A montra lista as lambdas que os donos quiseram mostrar, primeiro as usadas há menos tempo. Só quem tem a chave
-      de edição pode lá pôr uma lambda ou retirá-la, e ela só aparece enquanto estiver online. Um agente pode fazer o
-      mesmo com a ferramenta {tool}.
-    </>
-  ),
+  hint: 'A montra lista as lambdas que os donos quiseram mostrar, primeiro as usadas há menos tempo. Só quem tem a chave de edição pode lá pôr uma lambda ou retirá-la, e ela só aparece enquanto estiver online.',
   open: 'Abrir a montra',
   switch: 'Mostrar esta lambda na montra',
   listedNow: 'Está na montra. Quem passar por lá pode abri-la.',

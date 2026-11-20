@@ -27,7 +27,6 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
-using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -79,7 +78,7 @@ namespace GenHTTP.Lambda.Mcp;
 /// <see cref="OperationLog"/> for what is left out.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
-                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, IAnalyticsService analytics,
+                              IDatabaseService databases, ISourceService sources, IAnalyticsService analytics,
                               IConnectivityService connectivity,
                               ITelemetryService telemetry, ILogBook book,
                               LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IGuideService guide, ILogger<McpTools> logger)
@@ -281,16 +280,6 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                                           [Summary("The name, as stored - names are case sensitive.")] string name,
                                           [Summary("Delete from this feature's copy instead.")] string? feature = null)
         => RefusingAsync(() => RemoveSecretAsync(privateKey, name, feature));
-
-    [Tool("showcase", Title = "Showcase a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Summary("List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. " + ShowcaseLimits.Tone)]
-    public ValueTask<object> Showcase(IRequest request,
-                                      [Summary(PrivateKey)] string privateKey,
-                                      [Summary("What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'."), MaxLength(ShowcaseLimits.MaxTitle)] string? title = null,
-                                      [Summary("One to three plain sentences on what a visitor can do with it."), MaxLength(ShowcaseLimits.MaxDescription)] string? description = null,
-                                      [Summary("The picture, base64: PNG, JPEG, GIF or WebP, up to the size platform_guide names under showcase. Needed for a new entry; left out, the current one is kept.")] string? image = null,
-                                      [Summary("Take the lambda off the showcase instead.")] bool remove = false)
-        => RefusingAsync(() => ChangeShowcaseAsync(privateKey, title, description, image, remove, RequestOrigin.Of(request)));
 
     [Tool("open_source", Title = "Publish a lambda's source code", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Summary("Publish a lambda's source code at /source/{publicKey} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, resources, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.")]
@@ -1772,79 +1761,6 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     #region Other
 
     /// <summary>
-    /// Reads, writes or removes the showcase entry of a lambda.
-    /// </summary>
-    /// <remarks>
-    /// One tool rather than three: it is used rarely, and each tool listed is
-    /// read by every agent on every conversation whether it showcases
-    /// anything or not.
-    /// </remarks>
-    private async ValueTask<object> ChangeShowcaseAsync(string privateKey, string? title, string? description, string? encoded, bool remove, string origin)
-    {
-        if (remove)
-        {
-            await showcases.RemoveAsync(privateKey);
-
-            logger.LogInformation("Removed lambda {Lambda} from showcase", await meta.PublicKeyOfAsync(privateKey));
-
-            return new { ok = true, showcased = false };
-        }
-
-        ShowcaseInfo? entry;
-
-        if (title == null && description == null && encoded == null)
-        {
-            entry = await showcases.GetAsync(privateKey);
-
-            logger.LogInformation("Read showcase entry of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
-        }
-        else
-        {
-            byte[]? image = null;
-
-            if (!string.IsNullOrEmpty(encoded))
-            {
-                try
-                {
-                    image = Convert.FromBase64String(encoded);
-                }
-                catch (FormatException)
-                {
-                    return ToolResult.Error("The image is not valid base64.");
-                }
-            }
-
-            // a change of one field keeps the others, as the tool promises
-            var current = await showcases.GetAsync(privateKey);
-
-            entry = await showcases.SaveAsync(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
-
-            logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", entry.PublicKey, entry.Title);
-        }
-
-        if (entry == null)
-        {
-            return new
-            {
-                ok = true,
-                showcased = false,
-                note = "Not in the showcase. Pass title, description and image to add it - only if the user asked for that."
-            };
-        }
-
-        return new
-        {
-            ok = true,
-            showcased = true,
-            entry.Title,
-            entry.Description,
-            entry.Online,
-            page = $"{origin}/showcase",
-            note = entry.Online ? null : "Listed once the lambda is online again - deploy it."
-        };
-    }
-
-    /// <summary>
     /// Reads what was counted of a lambda's visitors, and switches counting on.
     /// </summary>
     private async ValueTask<object> ReadAnalyticsAsync(string privateKey, int? days, bool enable)
@@ -1897,8 +1813,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Reads, publishes or takes down the source of a lambda.
     /// </summary>
     /// <remarks>
-    /// One tool, like the showcase, for the same reason: it is used rarely,
-    /// and every tool listed is read by every agent in every conversation.
+    /// One tool rather than three: it is used rarely, and every tool listed is
+    /// read by every agent in every conversation.
     /// </remarks>
     private async ValueTask<object> ChangeSourceAsync(string privateKey, string? license, string? author, bool remove, string origin)
     {

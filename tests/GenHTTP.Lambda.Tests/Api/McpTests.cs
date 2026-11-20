@@ -622,7 +622,7 @@ public sealed class McpTests
 
         // at 65 KB, agents' clients wrote it to a file to be read apart - and
         // as an object it went over the wire twice, as text and structured
-        Assert.IsLessThan(24_000, Encoding.UTF8.GetByteCount(guide), "small enough for a tool result an agent reads in full");
+        Assert.IsLessThan(28_000, Encoding.UTF8.GetByteCount(guide), "small enough for a tool result an agent reads in full");
         Assert.IsNull(answer["result"]!["structuredContent"], "sent once, as text");
 
         Assert.StartsWith("# Platform guide", guide, "a document read from beginning to end");

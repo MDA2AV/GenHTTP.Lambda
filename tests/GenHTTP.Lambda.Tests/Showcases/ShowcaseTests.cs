@@ -344,7 +344,25 @@ public sealed class ShowcaseTests
     }
 
     [TestMethod]
-    public async Task AnAgentCanShowcaseALambda()
+    public async Task AnAgentIsSentToTheApiRatherThanATool()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // as base64 in a tool call the picture was too large for the agents
+        // that tried, so there is no tool to try: the guide sends them to the
+        // API with the picture in a file
+        CollectionAssert.DoesNotContain(await ToolsAsync(fixture), "showcase");
+
+        var showcase = Guide.Section(await Guide.ReadAsync(fixture), "showcase");
+
+        Assert.Contains("api/v1/lambdas/{privateKey}/showcase", showcase, "where to send it");
+        Assert.Contains("never goes through a tool call, your output or a command line", showcase, "a picture does not fit into one");
+        Assert.Contains("curl -T entry.json", showcase, "it goes from a file");
+        Assert.Contains("the user does it in the editor's Showcase section", showcase, "and an agent that cannot make requests says where the user does it");
+    }
+
+    [TestMethod]
+    public async Task APictureAsLargeAsTheLimitIsTaken()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -352,26 +370,21 @@ public sealed class ShowcaseTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        var added = await ToolAsync(fixture, new JsonObject
-        {
-            ["privateKey"] = lambda.PrivateKey,
-            ["title"] = "Guestbook",
-            ["description"] = "Leave a line for the couple.",
-            ["image"] = Convert.ToBase64String(Png)
-        });
+        var own = await (await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/showcase")).GetContentAsync<OwnShowcaseResponse>();
 
-        Assert.IsTrue(added["showcased"]!.GetValue<bool>());
-        Assert.AreEqual(1, (await ListAsync(fixture)).Total);
+        // a screenshot that does not compress, as large as it may be
+        var picture = new byte[own.Limits.ImageBytes];
 
-        var changed = await ToolAsync(fixture, new JsonObject { ["privateKey"] = lambda.PrivateKey, ["title"] = "Wedding guestbook" });
+        Random.Shared.NextBytes(picture);
+        Png.CopyTo(picture, 0);
 
-        Assert.AreEqual("Wedding guestbook", changed["title"]!.GetValue<string>());
-        Assert.AreEqual("Leave a line for the couple.", changed["description"]!.GetValue<string>(), "what is not named stays as it is");
+        var saved = await PutAsync(fixture, lambda.PrivateKey, new ShowcaseRequest("Greeting", "Says hello to whoever opens it.", Convert.ToBase64String(picture)));
 
-        var removed = await ToolAsync(fixture, new JsonObject { ["privateKey"] = lambda.PrivateKey, ["remove"] = true });
+        Assert.AreEqual(picture.Length, saved.ImageBytes);
 
-        Assert.IsFalse(removed["showcased"]!.GetValue<bool>());
-        Assert.AreEqual(0, (await ListAsync(fixture)).Total);
+        using var image = await fixture.GetAsync(saved.ImagePath);
+
+        CollectionAssert.AreEqual(picture, await image.Content.ReadAsByteArrayAsync());
     }
 
     #region Helpers
@@ -419,19 +432,19 @@ public sealed class ShowcaseTests
         return await response.GetContentAsync<Page<ShowcaseResponse>>();
     }
 
-    private static async Task<JsonObject> ToolAsync(LambdaFixture fixture, JsonObject arguments)
+    private static async Task<List<string>> ToolsAsync(LambdaFixture fixture)
     {
         using var response = await fixture.SendAsync(HttpMethod.Post, "/mcp", new JsonObject
         {
             ["jsonrpc"] = "2.0",
             ["id"] = 1,
-            ["method"] = "tools/call",
-            ["params"] = new JsonObject { ["name"] = "showcase", ["arguments"] = arguments }
+            ["method"] = "tools/list",
+            ["params"] = new JsonObject()
         });
 
         var answer = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
 
-        return (JsonObject)answer["result"]!["structuredContent"]!;
+        return [.. answer["result"]!["tools"]!.AsArray().Select(t => t!["name"]!.GetValue<string>())];
     }
 
     #endregion

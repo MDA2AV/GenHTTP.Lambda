@@ -25,8 +25,8 @@ public static class GuideChecks
 
     /// <summary>
     /// How large the text may be in UTF-8. Every agent reads it with every
-    /// call to the guide, beside a platform's guide held under 24 KB - so the
-    /// two stay under 30 KB, which a client hands the model as it is.
+    /// call to the guide, beside a platform's guide held under 28 KB - so the
+    /// two stay under 34 KB, which a client hands the model as it is.
     /// </summary>
     public const int MaxTextBytes = 6 * 1024;
 

@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Non è un’immagine PNG, JPEG, GIF o WebP.',
   tooLarge: (size, limit) => `Pesa ${size}; un’immagine può pesare al massimo ${limit}.`,
   unreadable: 'Impossibile leggere il file.',
-  hint: (tool) => (
-    <>
-      La vetrina mostra le lambda che i proprietari hanno deciso di far vedere, prima quelle usate di recente. Solo chi
-      ha la chiave di modifica può metterci una lambda o toglierla, e la lambda compare solo finché è online. Un agente
-      può fare lo stesso con lo strumento {tool}.
-    </>
-  ),
+  hint: 'La vetrina mostra le lambda che i proprietari hanno deciso di far vedere, prima quelle usate di recente. Solo chi ha la chiave di modifica può metterci una lambda o toglierla, e la lambda compare solo finché è online.',
   open: 'Apri la vetrina',
   switch: 'Mostra questa lambda in vetrina',
   listedNow: 'In vetrina. Chiunque la sfogli può aprirla.',

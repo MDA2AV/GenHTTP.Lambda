@@ -15,13 +15,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'Dat is geen PNG-, JPEG-, GIF- of WebP-afbeelding.',
   tooLarge: (size, limit) => `Dat is ${size}; een afbeelding mag maximaal ${limit} zijn.`,
   unreadable: 'Dat bestand kon niet worden gelezen.',
-  hint: (tool) => (
-    <>
-      De showcasepagina toont lambda's die hun eigenaars willen laten zien, recent gebruikte eerst. Alleen wie de
-      editorsleutel heeft, kan een lambda erop zetten of eraf halen, en hij staat er alleen zolang hij online is. Een
-      agent kan hetzelfde met de tool {tool}.
-    </>
-  ),
+  hint: 'De showcasepagina toont lambda\'s die hun eigenaars willen laten zien, recent gebruikte eerst. Alleen wie de editorsleutel heeft, kan een lambda erop zetten of eraf halen, en hij staat er alleen zolang hij online is.',
   open: 'Showcase openen',
   switch: 'Deze lambda op de showcasepagina tonen',
   listedNow: 'Staat erop. Iedereen die door de showcase bladert, kan hem openen.',

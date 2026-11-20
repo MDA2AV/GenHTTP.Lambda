@@ -16,13 +16,7 @@ export const showcase: EditorMessages['showcase'] = {
   wrongType: 'To nie jest obrazek PNG, JPEG, GIF ani WebP.',
   tooLarge: (size, limit) => `Ten plik ma ${size}, a obrazek może mieć najwyżej ${limit}.`,
   unreadable: 'Nie udało się odczytać pliku.',
-  hint: (tool) => (
-    <>
-      Galeria pokazuje lambdy, które ich właściciele postanowili pokazać – najpierw te ostatnio używane. Tylko osoba z
-      kluczem edytora może dodać lambdę do galerii albo ją z niej usunąć, a lambda jest tam widoczna tylko wtedy, gdy
-      jest online. Agent może zrobić to samo narzędziem {tool}.
-    </>
-  ),
+  hint: 'Galeria pokazuje lambdy, które ich właściciele postanowili pokazać – najpierw te ostatnio używane. Tylko osoba z kluczem edytora może dodać lambdę do galerii albo ją z niej usunąć, a lambda jest tam widoczna tylko wtedy, gdy jest online.',
   open: 'Otwórz galerię',
   switch: 'Pokaż tę lambdę w galerii',
   listedNow: 'Widoczna w galerii. Każdy, kto przegląda galerię, może ją otworzyć.',

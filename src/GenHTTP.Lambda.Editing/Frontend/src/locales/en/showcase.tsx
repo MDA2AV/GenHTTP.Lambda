@@ -17,13 +17,8 @@ export const showcase = {
   wrongType: 'That is not a PNG, JPEG, GIF or WebP image.',
   tooLarge: (size: string, limit: string) => `That is ${size}; a picture can be ${limit} at most.`,
   unreadable: 'That file could not be read.',
-  hint: (tool: Node) => (
-    <>
-      The showcase page lists lambdas their owners chose to show, the ones in use lately first. Only whoever holds the
-      editor key can put a lambda there or take it down, and it is only listed while it is online. An agent can do the
-      same with its {tool} tool.
-    </>
-  ),
+  hint:
+    'The showcase page lists lambdas their owners chose to show, the ones in use lately first. Only whoever holds the editor key can put a lambda there or take it down, and it is only listed while it is online.',
   open: 'Open the showcase',
   switch: 'Show this lambda on the showcase page',
   listedNow: 'Listed now. Anyone browsing the showcase can open it.',
