@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { LambdaFile } from '@genhttp-lambda/kit/api';
 import { encodeBytes } from '@genhttp-lambda/kit/bytes';
 import { pictureType, renderMarkdown } from '@genhttp-lambda/kit/markdown';
-import { monaco } from '../monaco';
+import { loadMonaco } from '../monacoLoader';
 import { MarkdownPage } from '@genhttp-lambda/kit/components/MarkdownPage';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
@@ -15,7 +15,8 @@ import type { Theme } from '@genhttp-lambda/kit/theme';
  * The editor has the files of the version at hand, so a relative link to
  * another page opens that page here, and a relative picture - a diagram
  * beside the page - is shown from the version rather than fetched. Code blocks
- * are coloured by the editor's own grammars.
+ * are coloured by the editor's own grammars - which loads Monaco, so only a
+ * page that has one does.
  */
 export function Markdown({ source, name, files, theme, onOpen }: {
   source: string;
@@ -52,21 +53,32 @@ export function Markdown({ source, name, files, theme, onOpen }: {
 
   // code blocks coloured by the editor's own grammars once they are on the page
   useEffect(() => {
-    const blocks = holder.current?.querySelectorAll<HTMLElement>('pre > code[data-language]') ?? [];
+    const blocks = [...(holder.current?.querySelectorAll<HTMLElement>('pre > code[data-language]') ?? [])];
 
     let alive = true;
 
-    monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
+    if (blocks.length > 0) {
+      loadMonaco()
+        .then(({ monaco }) => {
+          if (!alive) {
+            return;
+          }
 
-    blocks.forEach((block) => {
-      const text = block.textContent ?? '';
+          monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
 
-      monaco.editor
-        .colorize(text, block.dataset.language!, { tabSize: 4 })
-        // monaco escapes the source as it renders it
-        .then((coloured) => alive && (block.innerHTML = coloured))
+          blocks.forEach((block) => {
+            const text = block.textContent ?? '';
+
+            monaco.editor
+              .colorize(text, block.dataset.language!, { tabSize: 4 })
+              // monaco escapes the source as it renders it
+              .then((coloured) => alive && (block.innerHTML = coloured))
+              .catch(() => undefined);
+          });
+        })
+        // uncoloured is still readable
         .catch(() => undefined);
-    });
+    }
 
     return () => {
       alive = false;

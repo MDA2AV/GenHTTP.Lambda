@@ -53,7 +53,7 @@ import { SharedWordsContext } from '@genhttp-lambda/kit/ui/words';
 import { useEditorT } from '../i18n';
 import { useLanguage } from '@genhttp-lambda/kit/i18n';
 import { Link as SiteLink, localize } from '@genhttp-lambda/kit/i18n/links';
-import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
+import { whenMonaco } from '../monacoLoader';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import { askPlatform } from '@genhttp-lambda/kit/site';
@@ -275,11 +275,12 @@ export function Editor({ theme }: Props) {
   const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
 
   // completions come from the server, so they always match what compiles -
-  // asked once with whatever else on the page wants to know the platform
+  // asked once with whatever else on the page wants to know the platform, and
+  // handed to the editor once one is shown (see monacoLoader.ts)
   useEffect(() => {
     askPlatform()
       .then((platform) => {
-        registerCompletions(platform.completions);
+        whenMonaco((monaco) => monaco.registerCompletions(platform.completions));
         setLambdaUrl(platform.lambdaUrl);
       })
       .catch(() => undefined);
@@ -287,10 +288,12 @@ export function Editor({ theme }: Props) {
 
   // the compiler colours this lambda's code, so the provider needs its key
   useEffect(() => {
-    registerSemantics(async (code) => (await api.semantics(privateKey, code)).tokens);
+    whenMonaco((monaco) => {
+      monaco.registerSemantics(async (code) => (await api.semantics(privateKey, code)).tokens);
 
-    registerResolver(async (code, line, column) =>
-      (await api.completions(privateKey, code, line, column)).completions);
+      monaco.registerResolver(async (code, line, column) =>
+        (await api.completions(privateKey, code, line, column)).completions);
+    });
   }, [privateKey]);
 
   /*

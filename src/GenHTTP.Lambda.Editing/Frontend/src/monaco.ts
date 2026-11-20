@@ -1,7 +1,50 @@
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
-// a custom build: the full editor, but only the C# grammar
-import 'monaco-editor/esm/vs/editor/editor.all.js';
+// a custom build: what the code view uses of the editor, not all of it
+// (editor.all.js). Left out: the diff editor, which the history does not use
+// (it colours each side itself, see Changes.tsx), and whatever needs a
+// language service the editor does not have - code actions and lenses,
+// formatting, inline completions and edits, inlay and parameter hints,
+// rename, document symbols, go to symbol (go to definition is the platform's
+// own action, see MonacoEditor.tsx), colour pickers, linked editing. Also
+// font zoom, transposing, in-place replace, anchor selection, section
+// headers, drop or paste into the editor and the tokenization inspector.
+import 'monaco-editor/esm/vs/editor/browser/coreCommands.js';
+import 'monaco-editor/esm/vs/editor/browser/widget/codeEditor/codeEditorWidget.js';
+import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js';
+import 'monaco-editor/esm/vs/editor/contrib/caretOperations/browser/caretOperations.js';
+import 'monaco-editor/esm/vs/editor/contrib/clipboard/browser/clipboard.js';
+import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment.js';
+import 'monaco-editor/esm/vs/editor/contrib/contextmenu/browser/contextmenu.js';
+import 'monaco-editor/esm/vs/editor/contrib/cursorUndo/browser/cursorUndo.js';
+import 'monaco-editor/esm/vs/editor/contrib/dnd/browser/dnd.js';
+import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js';
+import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js';
+import 'monaco-editor/esm/vs/editor/contrib/gotoError/browser/gotoError.js';
+import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js';
+import 'monaco-editor/esm/vs/editor/contrib/indentation/browser/indentation.js';
+import 'monaco-editor/esm/vs/editor/contrib/lineSelection/browser/lineSelection.js';
+import 'monaco-editor/esm/vs/editor/contrib/linesOperations/browser/linesOperations.js';
+import 'monaco-editor/esm/vs/editor/contrib/links/browser/links.js';
+import 'monaco-editor/esm/vs/editor/contrib/longLinesHelper/browser/longLinesHelper.js';
+import 'monaco-editor/esm/vs/editor/contrib/multicursor/browser/multicursor.js';
+import 'monaco-editor/esm/vs/editor/contrib/placeholderText/browser/placeholderText.contribution.js';
+import 'monaco-editor/esm/vs/editor/contrib/semanticTokens/browser/documentSemanticTokens.js';
+import 'monaco-editor/esm/vs/editor/contrib/semanticTokens/browser/viewportSemanticTokens.js';
+import 'monaco-editor/esm/vs/editor/contrib/smartSelect/browser/smartSelect.js';
+import 'monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetController2.js';
+import 'monaco-editor/esm/vs/editor/contrib/stickyScroll/browser/stickyScrollContribution.js';
+import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js';
+import 'monaco-editor/esm/vs/editor/contrib/toggleTabFocusMode/browser/toggleTabFocusMode.js';
+import 'monaco-editor/esm/vs/editor/contrib/unicodeHighlighter/browser/unicodeHighlighter.js';
+import 'monaco-editor/esm/vs/editor/contrib/unusualLineTerminators/browser/unusualLineTerminators.js';
+import 'monaco-editor/esm/vs/editor/contrib/wordHighlighter/browser/wordHighlighter.js';
+import 'monaco-editor/esm/vs/editor/contrib/wordOperations/browser/wordOperations.js';
+import 'monaco-editor/esm/vs/editor/contrib/wordPartOperations/browser/wordPartOperations.js';
+import 'monaco-editor/esm/vs/editor/contrib/readOnlyMessage/browser/contribution.js';
+import 'monaco-editor/esm/vs/editor/common/standaloneStrings.js';
+import 'monaco-editor/esm/vs/base/browser/ui/codicons/codiconStyles.js';
+// only the C# grammar of the languages Monaco ships, and the highlighting below
 import 'monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution';
 
 // the grammars a shipped asset is likely to be. Highlighting only - there is
@@ -25,50 +68,6 @@ import { language as csharp } from 'monaco-editor/esm/vs/basic-languages/csharp/
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
 import type { Completion, Diagnostic } from '@genhttp-lambda/kit/api';
-
-/**
- * Which grammar a file is written in, by what it is called.
- *
- * Anything unrecognised is plain text rather than a guess: colouring markup as
- * if it were code is worse than not colouring it.
- */
-const GRAMMARS: Record<string, string> = {
-  cs: 'csharp',
-  html: 'html',
-  htm: 'html',
-  css: 'css',
-  js: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  jsx: 'javascript',
-  ts: 'typescript',
-  mts: 'typescript',
-  cts: 'typescript',
-  tsx: 'typescript',
-  json: 'json',
-  jsonc: 'json',
-  vue: 'html',
-  svelte: 'html',
-  astro: 'html',
-  scss: 'scss',
-  less: 'less',
-  yml: 'yaml',
-  yaml: 'yaml',
-  toml: 'ini',
-  ini: 'ini',
-  xml: 'xml',
-  csproj: 'xml',
-  svg: 'html',
-  txt: 'plaintext',
-  md: 'markdown',
-  sh: 'shell',
-};
-
-export function languageFor(name: string): string {
-  const dot = name.lastIndexOf('.');
-
-  return (dot < 0 ? '' : GRAMMARS[name.slice(dot + 1).toLowerCase()]) ?? 'plaintext';
-}
 
 self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),

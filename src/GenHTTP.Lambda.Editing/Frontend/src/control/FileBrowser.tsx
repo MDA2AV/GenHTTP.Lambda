@@ -5,7 +5,7 @@ import { decode, download, encodeBytes, readable } from '@genhttp-lambda/kit/byt
 import { CodeEditor } from '../components/CodeEditor';
 import { IconChevronDown, IconDownload, IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useEditorT } from '../i18n';
-import { languageFor } from '../monaco';
+import { languageFor } from '../grammars';
 import type { Control } from './context';
 import { bytes } from '@genhttp-lambda/kit/ui/format';
 import { Ago, pill } from '@genhttp-lambda/kit/ui/ui';

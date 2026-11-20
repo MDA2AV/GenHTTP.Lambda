@@ -10,7 +10,7 @@ import { IconAlert, IconChevronDown, IconDownload, IconLayers, IconPlay, IconPlu
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en';
-import { languageFor } from '../monaco';
+import { languageFor } from '../grammars';
 import { CloneMenu } from './CloneMenu';
 import type { Control, DataKind } from './context';
 import { GroupList, Tree, sizeOf } from './FileBrowser';
