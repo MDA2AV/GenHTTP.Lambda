@@ -282,6 +282,23 @@ public sealed class SitePrerenderTests
         Assert.DoesNotContain("site-facts", body);
     }
 
+    [TestMethod]
+    public async Task TheRenderedPagesAreSentAPageAtATimeAndNeverWhole()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        foreach (var file in (string[])["/prerender.json", "/pages.json"])
+        {
+            using var response = await fixture.GetAsync(file);
+
+            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, $"{file} is the server's to read");
+        }
+
+        using var index = await fixture.GetAsync("/index.html");
+
+        Assert.AreEqual(HttpStatusCode.OK, index.StatusCode, "while the rest of the bundle is served as it was");
+    }
+
     private static async Task ShowAsync(LambdaFixture fixture, string publicKey, string title, string description)
     {
         var lambda = await fixture.CreateLambdaAsync(publicKey);
