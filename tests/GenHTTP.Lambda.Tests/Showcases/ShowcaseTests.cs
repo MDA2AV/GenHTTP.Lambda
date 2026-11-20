@@ -353,6 +353,10 @@ public sealed class ShowcaseTests
         // API with the picture in a file
         CollectionAssert.DoesNotContain(await ToolsAsync(fixture), "showcase");
 
+        // and an agent that sees no tool would say it cannot be done, unless
+        // it is told where to look before it reads the guide
+        Assert.Contains("lists a lambda on the showcase, which no tool does", await InstructionsAsync(fixture));
+
         var showcase = Guide.Section(await Guide.ReadAsync(fixture), "showcase");
 
         Assert.Contains("api/v1/lambdas/{privateKey}/showcase", showcase, "where to send it");
@@ -430,6 +434,21 @@ public sealed class ShowcaseTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
         return await response.GetContentAsync<Page<ShowcaseResponse>>();
+    }
+
+    private static async Task<string> InstructionsAsync(LambdaFixture fixture)
+    {
+        using var response = await fixture.SendAsync(HttpMethod.Post, "/mcp", new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 1,
+            ["method"] = "initialize",
+            ["params"] = new JsonObject()
+        });
+
+        var answer = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+
+        return answer["result"]!["instructions"]!.GetValue<string>().ReplaceLineEndings(" ");
     }
 
     private static async Task<List<string>> ToolsAsync(LambdaFixture fixture)

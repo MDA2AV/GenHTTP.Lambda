@@ -2512,9 +2512,9 @@ for publishing its code - only when its owner asks for it - `analytics` for
 reading who visits a lambda, and switching that on when the user asks, and
 `list_demos` for reading something that already works. No tool lists a lambda
 on the showcase: its picture, base64 in a tool call, was too large for the
-agents that tried, so `platform_guide` (`showcase`) sends them to
-`PUT /lambdas/{privateKey}/showcase` with the body written to a file, and the
-user to the editor where they cannot make requests. Where the installation
+agents that tried, so the instructions point to `platform_guide` (`showcase`),
+which sends them to `PUT /lambdas/{privateKey}/showcase` with the body written
+to a file, and the user to the editor where they cannot make requests. Where the installation
 may be branded and has an admin token, `customize_installation` names it and
 gives it a logo, for an agent its operator handed the token (see
 [Branding](#branding)). `platform_guide` is the one to call first. It answers

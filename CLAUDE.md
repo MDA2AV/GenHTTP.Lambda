@@ -1006,8 +1006,9 @@ New functionality is developed in a **feature** (a *draft* in the editor):
   agents that tried; they gave up rather than find the REST API, which took it
   all along. So agents are sent to `PUT /lambdas/{privateKey}/showcase` with
   the body written to a file, never through a tool call, their output or a
-  command line (`platform_guide`, `showcase`, which shows how), and an agent
-  that cannot make requests sends the user to the editor's Showcase section.
+  command line (`platform_guide`, `showcase`, which shows how, and a line of
+  the MCP instructions that points there), and an agent that cannot make
+  requests sends the user to the editor's Showcase section.
   Do not bring the tool back for the picture's sake.
 - **The code belongs to whoever created the lambda.** We do not interfere with
   it. They can export it as a runnable C# project (`GET …/export`) and run it
@@ -2022,7 +2023,8 @@ The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
 would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
-meant to be found). The rest
+meant to be found), and what only the REST API does - the showcase, which an
+agent that sees no tool for it would otherwise say cannot be done. The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
 
 **`platform_guide` is written for agents, not people - asked for by the
