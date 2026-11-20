@@ -233,9 +233,18 @@ together the GenHTTP way, and there are two hosts - two editions:
     own way under `profiles` - only what differs - and the kit's catalogs
     hand every page the words of the installation's profile (`profile.ts`,
     `wordsFor`), so no component asks which it is. Only `enterprise` has
-    words of its own: the ideas and the placeholder on `/build`, the asks on
-    the community's `/ship`, and the examples in the editor's Change box,
-    new draft and showcase. `home` says what the cloud says.
+    words of its own: the ideas and the placeholder on `/build` and its
+    intro on the community site, the asks on the community's `/ship`, and
+    the examples in the editor's Change box, new draft and showcase. `home`
+    says what the cloud says.
+  - **The community's front page addresses an enterprise installation's
+    colleagues, not its operator - decided by the owner**: people who do
+    not write code, come to have their tools built (`EnterpriseLanding`,
+    chosen in `Landing` by the profile): what they can build, how it goes,
+    what they ask first, in the simple view's words. The menu, with `/build`
+    and `/ship`, stays as it is (the owner's words). Home keeps the page for
+    whoever runs it. Its tab title stays the one `pages.json` gives `/`,
+    which knows no profiles.
   - **What is built is an app, on every installation - decided by the
     owner**: the menu says "Create an app" and the build box speaks of an
     app, where both said website. The cloud's own `/build` page is written
@@ -2021,8 +2030,8 @@ with `LAMBDA_ENGINE=Kestrel`.
 |---|---|---|
 | de | formal - *Sie* | factual and precise, no marketing jokes |
 | fr | formal - *vous* | |
-| it | informal - *tu* everywhere except `/build`, which is formal (*Lei*) | the no-code page is the only one that addresses non-developers |
-| es | informal - *tú* everywhere except `/build`, which is formal (*usted*) | as Italian |
+| it | informal - *tu* everywhere except `/build` and an enterprise installation's front page, which are formal (*Lei*) | the pages that address non-developers |
+| es | informal - *tú* everywhere except `/build` and an enterprise installation's front page, which are formal (*usted*) | as Italian |
 | nl | informal - *je* | |
 | pl | informal - *ty* | |
 | pt | *você* (Brazil) | no colloquialisms |

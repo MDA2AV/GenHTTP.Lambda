@@ -3152,6 +3152,10 @@ What it changes:
   `/build`; the requests to copy on the community's `/ship`; and the
   examples in the editor's Change box, in the fields of a new draft and in
   the showcase's title and description. `home` reads as genhttp.dev does.
+- **The front page.** The community's addresses an enterprise installation's
+  colleagues rather than whoever runs it: what people build there, how it
+  goes and what they ask first, in the words of the editor's simple view.
+  The menu is the same.
   What is built is an app on every installation: the menu says "Create an
   app", and the box speaks of one.
 - **Prerendered for each.** The community site is prerendered once more for

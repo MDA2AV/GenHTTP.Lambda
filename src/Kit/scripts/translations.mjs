@@ -916,6 +916,7 @@ const PAGE_OF_FILE = {
   'cloud/privacy.tsx': '/privacy - legal',
   'cloud/imprint.tsx': '/imprint - legal',
   'community/landing.tsx': '/ - the front page of an installation somebody runs for themselves, for developers - technical, but in plain words',
+  'community/enterpriseLanding.tsx': '/ - the front page of an installation an organization runs for its people, for colleagues who do not write code: the simple view\'s words, no developer words (formal in Italian and Spanish, as on /build)',
   'community/build.tsx': '/build of an installation somebody runs for themselves - plain words',
   'community/ship.tsx': '/ship of an installation somebody runs for themselves: connecting one\'s own agent, for developers - technical, but in plain words',
   'kit/buildBox.tsx': '/build - building a new website in the workspace, for people who do not code (on /build: formal in Italian and Spanish)',

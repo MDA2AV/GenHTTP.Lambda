@@ -9,4 +9,10 @@ export const build: Messages['build'] = {
       Oder {ship('verbinden Sie Ihren eigenen Agenten')} oder {create('schreiben Sie den Code selbst')}.
     </>
   ),
+  profiles: {
+    enterprise: {
+      intro:
+        'Sagen Sie dem Agenten in Ihren eigenen Worten, was Sie brauchen. Er baut die App, stellt sie hier online und behält sie in Ihrer Liste – damit Sie später auf dieselbe Weise Fragen dazu stellen und Änderungen anfordern können.',
+    },
+  },
 };
