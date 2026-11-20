@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
@@ -183,6 +184,20 @@ public sealed class ProfileTests
     }
 
     [TestMethod]
+    public async Task AnOrganizationsGuideStillFitsIntoOneToolResult()
+    {
+        // the longest sentence, on the community edition, with terms as the cloud's budget is measured
+        await using var fixture = await CommunityAsync(configure: o => o with { Terms = "Do no harm to the server or to others." });
+
+        await ChangeAsync(fixture, new { profile = "enterprise" });
+
+        var guide = await Guide.ReadAsync(fixture);
+
+        Assert.Contains("Who it is for: an organization and its people.", guide);
+        Assert.IsLessThan(28_000, Encoding.UTF8.GetByteCount(guide), "within the budget TheGuideFitsIntoOneToolResult holds the cloud's to");
+    }
+
+    [TestMethod]
     public async Task OnTheCloudTheGuideSaysTheAppsAreForThePublic()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -273,10 +288,11 @@ public sealed class ProfileTests
     /// The community edition with its panel, and the index page and the
     /// table of pages of a site built for it.
     /// </summary>
-    private static Task<LambdaFixture> CommunityAsync(Action<LambdaOptions>? bundles = null, string? directory = null)
+    private static Task<LambdaFixture> CommunityAsync(Action<LambdaOptions>? bundles = null, string? directory = null,
+                                                      Func<LambdaOptions, LambdaOptions>? configure = null)
         => LambdaFixture.CreateCommunityAsync(options =>
         {
-            options = LambdaFixture.WithPanel(options);
+            options = LambdaFixture.WithPanel(configure?.Invoke(options) ?? options);
 
             if (directory != null)
             {

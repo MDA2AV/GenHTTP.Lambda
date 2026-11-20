@@ -101,8 +101,7 @@ public sealed partial class SitePrerender
     /// The index page with the content of the given page in it, or as it is if
     /// there is none to put there.
     /// </summary>
-    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request, Brand? brand = null,
-                                               InstallationProfile profile = InstallationProfile.Home)
+    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request, InstallationProfile profile, Brand? brand = null)
     {
         brand ??= Brand.Platform;
 

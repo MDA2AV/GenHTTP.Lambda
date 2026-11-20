@@ -188,7 +188,7 @@ internal sealed class SitePagesHandler(Bundle bundle, SiteMeta meta, SitePrerend
                 markup = SiteMeta.InHead(markup, more);
             }
 
-            markup = await prerender.RenderAsync(markup, page, request, brand, settings.Get().Profile);
+            markup = await prerender.RenderAsync(markup, page, request, settings.Get().Profile, brand);
 
             return Answer(request, PageBranding.Apply(markup, brand), "text/html; charset=utf-8");
         }
