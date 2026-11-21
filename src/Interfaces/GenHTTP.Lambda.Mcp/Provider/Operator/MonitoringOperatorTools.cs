@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Runtime;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
@@ -26,15 +25,10 @@ namespace GenHTTP.Lambda.Mcp;
 /// every sample, the busiest lambdas rather than all of them, a page of log
 /// lines with a cursor to carry on from. The log holds what visitors sent and
 /// what lambdas printed - text of strangers', which the instructions tell the
-/// agent to read as data.
-///
-/// A request line names the path as it was requested, editor keys included:
-/// the log is behind the admin token, so the panel shows it as it is. An
-/// answer here goes into an agent's transcript as well, and no other answer of
-/// this endpoint holds an editor key, so the keys in a line's paths are
-/// masked. The operator who needs one reads the panel's log.
+/// agent to read as data, and the editor keys in their paths are masked
+/// (<see cref="EditorKeyMask"/>).
 /// </remarks>
-public sealed partial class MonitoringOperatorTools(ITelemetryService telemetry, IMetaService meta, ILogBook book, IRunLog runs, LambdaOptions options,
+public sealed class MonitoringOperatorTools(ITelemetryService telemetry, IMetaService meta, ILogBook book, IRunLog runs, LambdaOptions options,
                                             ILogger<MonitoringOperatorTools> logger)
 {
 
@@ -185,8 +179,8 @@ public sealed partial class MonitoringOperatorTools(ITelemetryService telemetry,
             lines = lines.Select(l => new
             {
                 l.Seq, l.At, l.Level, l.Source, l.Lambda,
-                text = Masked(l.Text),
-                detail = Masked(l.Detail is { Length: > DetailLimit } trace ? trace[..DetailLimit] + " [cut]" : l.Detail),
+                text = EditorKeyMask.Apply(l.Text),
+                detail = EditorKeyMask.Apply(Cut(l.Detail)),
                 l.Client, l.Agent, l.Country, l.Place,
                 repeats = l.Repeats > 1 ? l.Repeats : (int?)null,
                 l.Domain
@@ -219,17 +213,10 @@ public sealed partial class MonitoringOperatorTools(ITelemetryService telemetry,
     }
 
     /// <summary>
-    /// The text with the editor keys in its paths - of the editor, its git
-    /// repositories and the API - put out of sight.
+    /// A line's detail - a stack trace, as a rule - as far as one answer
+    /// carries it.
     /// </summary>
-    private static string? Masked(string? text) => text == null ? null : EditorKeys().Replace(text, "$1(editor key)");
-
-    /// <summary>
-    /// An editor key where a path takes one: 32 characters of the alphabet
-    /// keys are made of, after <c>/editor/</c> or <c>/lambdas/</c>.
-    /// </summary>
-    [GeneratedRegex("(/(?:editor|lambdas)/)[bcdfghjkmnpqrstvwxyz23456789]{32}\\b")]
-    private static partial Regex EditorKeys();
+    internal static string? Cut(string? detail) => detail is { Length: > DetailLimit } trace ? trace[..DetailLimit] + " [cut]" : detail;
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

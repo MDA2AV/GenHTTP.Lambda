@@ -11,7 +11,7 @@ using GenHTTP.Lambda.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace GenHTTP.Lambda.Tests.Api;
+namespace GenHTTP.Lambda.Tests.Operator;
 
 /// <summary>
 /// The operator's MCP endpoint at <c>/admin/mcp</c>: what the panel shows and
@@ -48,6 +48,33 @@ public sealed class OperatorMcpTests
 
         Assert.Contains("list_lambdas", tools);
         Assert.Contains("customize_installation", tools, "the community edition lets the operator brand it");
+    }
+
+    [TestMethod]
+    public async Task NoBrowserPageDrivesTheEndpoint()
+    {
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => LambdaFixture.WithPanel(o) with { McpOrigins = ["https://apps.example.com"] });
+
+        using var request = fixture.Host.GetRequest("/admin/mcp", HttpMethod.Post);
+
+        request.Headers.Add("Accept", "application/json, text/event-stream");
+        request.Headers.Add("X-Admin-Token", LambdaFixture.OperatorToken);
+        request.Headers.Add("Origin", "https://apps.example.com");
+        request.Content = new StringContent(List().ToJsonString(), Encoding.UTF8, "application/json");
+
+        using var response = await fixture.Host.GetResponseAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode, "not even one of the origins the public endpoint allows");
+
+        using var open = fixture.Host.GetRequest("/mcp", HttpMethod.Post);
+
+        open.Headers.Add("Accept", "application/json, text/event-stream");
+        open.Headers.Add("Origin", "https://apps.example.com");
+        open.Content = new StringContent(List().ToJsonString(), Encoding.UTF8, "application/json");
+
+        using var allowed = await fixture.Host.GetResponseAsync(open);
+
+        Assert.AreEqual(HttpStatusCode.OK, allowed.StatusCode, "where the public endpoint lets it in");
     }
 
     [TestMethod]
@@ -289,6 +316,9 @@ public sealed class OperatorMcpTests
 
         Assert.AreEqual(read["lambda"]!["newest"]!.GetValue<int>(), read["lambda"]!["online"]!.GetValue<int>(), "what was put online last");
         Assert.AreEqual(1, read["editorAddresses"]!["count"]!.GetValue<int>(), "the address it was made from, to block");
+        Assert.IsGreaterThan(0L, read["keeps"]!["versionAllowance"]!.GetValue<long>(), "what it keeps against what it may");
+        Assert.IsGreaterThan(0L, read["keeps"]!["codeBytes"]!.GetValue<long>());
+        Assert.IsNotNull(read["problems"]!.AsArray(), "what went wrong lately, as the panel's page shows it");
 
         var moved = await CallAsync(fixture, "change_tier", new JsonObject { ["publicKey"] = "shop", ["tier"] = "Production" });
 
@@ -297,6 +327,26 @@ public sealed class OperatorMcpTests
         var domain = await CallAsync(fixture, "change_domain", new JsonObject { ["publicKey"] = "shop", ["domain"] = "shop.example.com" });
 
         Assert.AreEqual("shop.example.com", domain["lambda"]!["domain"]!.GetValue<string>());
+
+        var narrowed = await CallAsync(fixture, "list_lambdas", new JsonObject
+        {
+            ["tier"] = "Production",
+            ["state"] = "online",
+            ["view"] = "full",
+            ["uses"] = new JsonArray("domain"),
+            ["sort"] = "changed"
+        });
+
+        Assert.AreEqual("shop", narrowed["lambdas"]![0]!["publicKey"]!.GetValue<string>(), "every filter the panel has");
+        Assert.AreEqual(1, narrowed["matched"]!.GetValue<int>());
+
+        var other = await CallAsync(fixture, "list_lambdas", new JsonObject { ["tier"] = "Sandbox" });
+
+        Assert.AreEqual(0, other["matched"]!.GetValue<int>());
+
+        var unknown = await ToolAsync(fixture, "list_lambdas", new JsonObject { ["uses"] = new JsonArray("rockets") });
+
+        Assert.Contains("There is no feature 'rockets'", unknown["result"]!["content"]![0]!["text"]!.GetValue<string>(), "a refusal that names what there is");
 
         var offline = await CallAsync(fixture, "undeploy_lambda", new JsonObject { ["publicKey"] = "shop" });
 
