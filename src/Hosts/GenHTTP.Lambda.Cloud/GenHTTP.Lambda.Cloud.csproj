@@ -13,15 +13,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
+        <ProjectReference Include="../../Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../../Serving/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <ProjectReference Include="../../Serving/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <ProjectReference Include="../../Interfaces/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <ProjectReference Include="../../Interfaces/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+        <ProjectReference Include="../../Serving/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+        <ProjectReference Include="../../Applications/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <ProjectReference Include="../../Applications/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <ProjectReference Include="../../Applications/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
     </ItemGroup>
 
     <ItemGroup>

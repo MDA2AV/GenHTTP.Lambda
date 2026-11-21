@@ -4,7 +4,7 @@
 # and the pages of the site that are its own. Started by deploy/cloud/docker-compose.yml.
 #
 # Built from the root of the repository:
-#   docker build -f src/GenHTTP.Lambda.Cloud/Dockerfile .
+#   docker build -f src/Hosts/GenHTTP.Lambda.Cloud/Dockerfile .
 
 # The bundles of the components with pages, from the npm workspace at the
 # root: the kit they share, and each component's own frontend. Built where the
@@ -15,19 +15,19 @@ WORKDIR /repo
 
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY src/Kit/package.json src/Kit/
-COPY src/GenHTTP.Lambda.Editing/Frontend/package.json src/GenHTTP.Lambda.Editing/Frontend/
-COPY src/GenHTTP.Lambda.Administration/Frontend/package.json src/GenHTTP.Lambda.Administration/Frontend/
-COPY src/GenHTTP.Lambda.Sources/Frontend/package.json src/GenHTTP.Lambda.Sources/Frontend/
-COPY src/GenHTTP.Lambda.Cloud/Frontend/package.json src/GenHTTP.Lambda.Cloud/Frontend/
-COPY src/GenHTTP.Lambda.Community/Frontend/package.json src/GenHTTP.Lambda.Community/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Editing/Frontend/package.json src/Applications/GenHTTP.Lambda.Editing/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Administration/Frontend/package.json src/Applications/GenHTTP.Lambda.Administration/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Sources/Frontend/package.json src/Applications/GenHTTP.Lambda.Sources/Frontend/
+COPY src/Hosts/GenHTTP.Lambda.Cloud/Frontend/package.json src/Hosts/GenHTTP.Lambda.Cloud/Frontend/
+COPY src/Hosts/GenHTTP.Lambda.Community/Frontend/package.json src/Hosts/GenHTTP.Lambda.Community/Frontend/
 
 RUN npm ci
 
 COPY src/Kit/ src/Kit/
-COPY src/GenHTTP.Lambda.Editing/Frontend/ src/GenHTTP.Lambda.Editing/Frontend/
-COPY src/GenHTTP.Lambda.Administration/Frontend/ src/GenHTTP.Lambda.Administration/Frontend/
-COPY src/GenHTTP.Lambda.Sources/Frontend/ src/GenHTTP.Lambda.Sources/Frontend/
-COPY src/GenHTTP.Lambda.Cloud/Frontend/ src/GenHTTP.Lambda.Cloud/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Editing/Frontend/ src/Applications/GenHTTP.Lambda.Editing/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Administration/Frontend/ src/Applications/GenHTTP.Lambda.Administration/Frontend/
+COPY src/Applications/GenHTTP.Lambda.Sources/Frontend/ src/Applications/GenHTTP.Lambda.Sources/Frontend/
+COPY src/Hosts/GenHTTP.Lambda.Cloud/Frontend/ src/Hosts/GenHTTP.Lambda.Cloud/Frontend/
 
 RUN npm run build -w @genhttp-lambda/editor -w @genhttp-lambda/admin -w @genhttp-lambda/sources -w @genhttp-lambda/cloud
 
@@ -39,33 +39,33 @@ WORKDIR /repo
 
 COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/Directory.Build.props src/BannedSymbols.txt src/
-COPY src/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj src/GenHTTP.Lambda.Integrations/
-COPY src/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj src/GenHTTP.Lambda.Integrations.Sqlite/
-COPY src/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj src/GenHTTP.Lambda.Integrations.Local/
-COPY src/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj src/GenHTTP.Lambda.Core/
-COPY src/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj src/GenHTTP.Lambda.Web/
-COPY src/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj src/GenHTTP.Lambda.Execution/
-COPY src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj src/GenHTTP.Lambda.Api/
-COPY src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj src/GenHTTP.Lambda.Mcp/
-COPY src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj src/GenHTTP.Lambda.Server/
-COPY src/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj src/GenHTTP.Lambda.Editing/
-COPY src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj src/GenHTTP.Lambda.Administration/
-COPY src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj src/GenHTTP.Lambda.Sources/
-COPY src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj src/GenHTTP.Lambda.Cloud/
+COPY src/Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj src/Integrations/GenHTTP.Lambda.Integrations/
+COPY src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/
+COPY src/Integrations/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj src/Integrations/GenHTTP.Lambda.Integrations.Local/
+COPY src/Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj src/Platform/GenHTTP.Lambda.Core/
+COPY src/Serving/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj src/Serving/GenHTTP.Lambda.Web/
+COPY src/Serving/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj src/Serving/GenHTTP.Lambda.Execution/
+COPY src/Interfaces/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj src/Interfaces/GenHTTP.Lambda.Api/
+COPY src/Interfaces/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj src/Interfaces/GenHTTP.Lambda.Mcp/
+COPY src/Serving/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj src/Serving/GenHTTP.Lambda.Server/
+COPY src/Applications/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj src/Applications/GenHTTP.Lambda.Editing/
+COPY src/Applications/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj src/Applications/GenHTTP.Lambda.Administration/
+COPY src/Applications/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj src/Applications/GenHTTP.Lambda.Sources/
+COPY src/Hosts/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj src/Hosts/GenHTTP.Lambda.Cloud/
 
-RUN dotnet restore src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj
+RUN dotnet restore src/Hosts/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj
 
 COPY src/ src/
-COPY --from=frontend /repo/src/GenHTTP.Lambda.Editing/bundle src/GenHTTP.Lambda.Editing/bundle
-COPY --from=frontend /repo/src/GenHTTP.Lambda.Administration/bundle src/GenHTTP.Lambda.Administration/bundle
-COPY --from=frontend /repo/src/GenHTTP.Lambda.Sources/bundle src/GenHTTP.Lambda.Sources/bundle
-COPY --from=frontend /repo/src/GenHTTP.Lambda.Cloud/bundle src/GenHTTP.Lambda.Cloud/bundle
+COPY --from=frontend /repo/src/Applications/GenHTTP.Lambda.Editing/bundle src/Applications/GenHTTP.Lambda.Editing/bundle
+COPY --from=frontend /repo/src/Applications/GenHTTP.Lambda.Administration/bundle src/Applications/GenHTTP.Lambda.Administration/bundle
+COPY --from=frontend /repo/src/Applications/GenHTTP.Lambda.Sources/bundle src/Applications/GenHTTP.Lambda.Sources/bundle
+COPY --from=frontend /repo/src/Hosts/GenHTTP.Lambda.Cloud/bundle src/Hosts/GenHTTP.Lambda.Cloud/bundle
 
 # The .NET 11 async runtime is on by default; this is the way to build without
 # it, which is the first thing to try when something asynchronous misbehaves.
 ARG RUNTIME_ASYNC=true
 
-RUN dotnet publish src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj --no-restore -c Release -o /app \
+RUN dotnet publish src/Hosts/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj --no-restore -c Release -o /app \
     -p:RuntimeAsync=$RUNTIME_ASYNC
 
 # The runtime the server ships on, chiseled: no shell, no package manager,

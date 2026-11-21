@@ -1,10 +1,10 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "../../..",
+    "baseUrl": "../../../..",
     "paths": {
       "@genhttp-lambda/kit/*": ["src/Kit/src/*"]
     }
   },
-  "include": ["src", "vite.config.ts", "../../Kit/src"]
+  "include": ["src", "vite.config.ts", "../../../Kit/src"]
 }

@@ -6,7 +6,7 @@
   "description": "The front page of an installation somebody runs for themselves, with the guide and the showcase.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --ssr src/prerender.tsx --outDir .prerender && node ../../Kit/scripts/prerender.mjs ../bundle",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/prerender.tsx --outDir .prerender && node ../../../Kit/scripts/prerender.mjs ../bundle",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

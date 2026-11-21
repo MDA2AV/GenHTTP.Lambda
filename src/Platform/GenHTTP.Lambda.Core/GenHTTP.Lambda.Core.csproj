@@ -34,9 +34,9 @@
 
     <ItemGroup>
         <!-- what the platform keeps its data in, and the database and files it has unless its host chooses others -->
-        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
+        <ProjectReference Include="../../Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+        <ProjectReference Include="../../Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
+        <ProjectReference Include="../../Integrations/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
     </ItemGroup>
 
     <ItemGroup>

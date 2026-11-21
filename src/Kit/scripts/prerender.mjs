@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
  * where the server reads it (Web/SitePrerender.cs).
  *
  * Run from the site's frontend, with the folder its bundle was built into:
- *   node ../../Kit/scripts/prerender.mjs ../bundle
+ *   node ../../../Kit/scripts/prerender.mjs ../bundle
  */
 
 const site = process.cwd();

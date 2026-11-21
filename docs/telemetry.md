@@ -78,4 +78,4 @@ A report is a single JSON document, sent with `POST` and
 `Content-Type: application/json`. Its `schema` field is the version of the
 format; fields are added over time, never renamed. The types that make it up
 are in
-[`UsageReport.cs`](../src/GenHTTP.Lambda.Core/Services/UsageReports/UsageReport.cs).
+[`UsageReport.cs`](../src/Platform/GenHTTP.Lambda.Core/Services/UsageReports/UsageReport.cs).

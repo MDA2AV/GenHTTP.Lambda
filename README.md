@@ -89,15 +89,16 @@ return Inline.Create()
 GenHTTP Lambda is a set of components - the platform's services, the REST API,
 the MCP endpoint, the runner that serves the apps, the editor, the
 administration panel and the published sources - which a host composes the
-way any GenHTTP application is composed. `src/GenHTTP.Lambda.Community` is
-the community edition's host, `src/GenHTTP.Lambda.Cloud` genhttp.dev's;
+way any GenHTTP application is composed, in folders by role below `src/`.
+`src/Hosts/GenHTTP.Lambda.Community` is the community edition's host,
+`src/Hosts/GenHTTP.Lambda.Cloud` genhttp.dev's;
 [A host of your own](https://community.genhttp.run/docs/extending/custom-host/)
 shows how to write another. Building and running from source requires the
 .NET 11 SDK and Node 26:
 
 ```bash
 npm install && npm run build                              # the frontends
-dotnet run --project src/GenHTTP.Lambda.Community -c Release
+dotnet run --project src/Hosts/GenHTTP.Lambda.Community -c Release
 ```
 
 - [docs/reference.md](docs/reference.md) - routes, the API, configuration,
