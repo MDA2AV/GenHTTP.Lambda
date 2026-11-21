@@ -41,6 +41,36 @@ view where a human and an agent use the same screen for the same job; if a
 feature makes one's job harder to make the other's easier, find the interface
 that serves each.
 
+## How the work is done
+
+**(owner)** This is an ambitious project. Take the time a change needs - read,
+try, look at the result, rework it; tokens are not the constraint, the quality
+of the result is.
+
+- **Great UI/UX is expected (owner)**, not a screen that merely works: clear,
+  calm, consistent with the rest of the platform, pleasant on a phone and in
+  both themes.
+- **The user's perspective first (owner)**: before drafting a page, a section
+  or a flow, decide who uses it - a no-code viber, a home user, a colleague on
+  an enterprise installation, a developer, an operator - and ask what they want
+  to see, in which words, and how they would go about it. Then draft. Question
+  the functionality itself where it would serve them badly.
+- **Every change to the public surface is documented in the community
+  documentation (owner)** - the lambda `community` on genhttp.dev
+  (<https://community.genhttp.run/docs/>) - as part of the same change or PR,
+  besides the places listed under Documentation. The public surface is
+  whatever somebody can see or use: pages and the editor, the REST API, MCP,
+  git, integrations, configuration. What nobody can interact with - internals,
+  refactorings, performance - is not documented there.
+- **Into the draft `next` (owner)**: changes to the documentation lambda go
+  into its draft (feature) named `next`, merged with the next release - never
+  a draft per change. Start it from the newest version where there is none;
+  bring it up to date (`update_feature`) where it is out of date.
+- **Re-read the whole page when changing documentation (owner)**: a page reads
+  as written in one go, never patched. Rework the page where the change
+  touches it - order, wording, what is now said twice - not only the paragraph
+  added.
+
 ## Two target groups
 
 | | No-code "vibers" | Developers |
@@ -1216,7 +1246,8 @@ the feature.** The places, each touched where it applies:
    together ("the reference").
 2. The user documentation at <https://community.genhttp.run/docs/> (the lambda
    `community` on genhttp.dev): concepts and every door as contracts, with
-   screenshots. A change people would notice is followed there.
+   screenshots. A change people would notice is followed there, in the draft
+   `next`, each page changed re-read whole (see How the work is done).
 3. For agents: `platform_guide`, the MCP instructions and tool descriptions
    (`GenHTTP.Lambda.Mcp`), `AGENTS.md` of every lambda's repository
    (`Resources/Export/Agents.md.txt`), and the build agent's briefs.
