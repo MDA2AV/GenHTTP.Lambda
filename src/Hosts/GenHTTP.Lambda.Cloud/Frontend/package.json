@@ -6,7 +6,7 @@
   "description": "The pages of genhttp.dev that are its host’s own.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --ssr src/prerender.tsx --outDir .prerender && node ../../Kit/scripts/prerender.mjs ../bundle",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/prerender.tsx --outDir .prerender && node ../../../Kit/scripts/prerender.mjs ../bundle",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

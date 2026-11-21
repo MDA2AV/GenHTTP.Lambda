@@ -13,7 +13,7 @@
 
     <ItemGroup>
 
-        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../../Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
 
         <!-- LAMBDA_ENGINE=Internal and Kestrel, for Windows and containers
              where io_uring does not run - the community image runs on the

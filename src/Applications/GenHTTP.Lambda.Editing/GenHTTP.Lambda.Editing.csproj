@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
-        <ProjectReference Include="../GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <ProjectReference Include="../../Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
+        <ProjectReference Include="../../Serving/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
     </ItemGroup>
 
     <ItemGroup>

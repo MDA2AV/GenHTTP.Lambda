@@ -52,10 +52,10 @@ const WORK = path.join(REPOSITORY, '.translations');
 /** The catalogs of the frontends by name, each a folder per language. */
 const CATALOGS = {
   kit: 'src/Kit/src/locales',
-  editor: 'src/GenHTTP.Lambda.Editing/Frontend/src/locales',
-  sources: 'src/GenHTTP.Lambda.Sources/Frontend/src/locales',
-  cloud: 'src/GenHTTP.Lambda.Cloud/Frontend/src/locales',
-  community: 'src/GenHTTP.Lambda.Community/Frontend/src/locales',
+  editor: 'src/Applications/GenHTTP.Lambda.Editing/Frontend/src/locales',
+  sources: 'src/Applications/GenHTTP.Lambda.Sources/Frontend/src/locales',
+  cloud: 'src/Hosts/GenHTTP.Lambda.Cloud/Frontend/src/locales',
+  community: 'src/Hosts/GenHTTP.Lambda.Community/Frontend/src/locales',
 };
 
 /** How a new file of a catalog is typed, where its English names no type of its own. */
@@ -69,10 +69,10 @@ const CATALOG_TYPES = {
 
 /** The tables of page titles, by how the requests and answers name them. */
 const TABLES = {
-  'cloud/pages.json': 'src/GenHTTP.Lambda.Cloud/Frontend/src/pages.json',
-  'community/pages.json': 'src/GenHTTP.Lambda.Community/Frontend/src/pages.json',
-  'sources/pages.json': 'src/GenHTTP.Lambda.Sources/Frontend/src/pages.json',
-  'hosting/hosting.json': 'src/GenHTTP.Lambda.Execution/Resources/hosting.json',
+  'cloud/pages.json': 'src/Hosts/GenHTTP.Lambda.Cloud/Frontend/src/pages.json',
+  'community/pages.json': 'src/Hosts/GenHTTP.Lambda.Community/Frontend/src/pages.json',
+  'sources/pages.json': 'src/Applications/GenHTTP.Lambda.Sources/Frontend/src/pages.json',
+  'hosting/hosting.json': 'src/Serving/GenHTTP.Lambda.Execution/Resources/hosting.json',
 };
 
 const GLOSSARY = path.join(REPOSITORY, CATALOGS.kit, 'glossary.json');
