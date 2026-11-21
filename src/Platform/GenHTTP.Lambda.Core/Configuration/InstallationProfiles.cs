@@ -24,6 +24,12 @@ public static class InstallationProfiles
     /// <summary>
     /// The profile a name stands for, whatever its case.
     /// </summary>
+    /// <summary>
+    /// The profile a caller named, or a refusal that names the profiles there are.
+    /// </summary>
+    public static InstallationProfile Read(string name)
+        => TryParse(name, out var profile) ? profile.Value : throw Services.Meta.LambdaException.Invalid($"'{name}' is not a profile: cloud, home or enterprise.");
+
     public static bool TryParse(string? name, [NotNullWhen(true)] out InstallationProfile? profile)
     {
         profile = name?.Trim().ToLowerInvariant() switch

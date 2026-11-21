@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta;
+
 namespace GenHTTP.Lambda.Services.Building;
 
 /// <summary>
@@ -50,5 +52,51 @@ public sealed record AgentSettings(bool Builds, bool Changes, IReadOnlyList<Mode
     /// <summary>Who may have the given model.</summary>
     public ModelAccess AccessOf(AgentModel model)
         => Models.FirstOrDefault(m => m.Model == model)?.Access ?? ModelAccess.Off;
+
+    /// <summary>
+    /// These settings with what a caller changed, by the names the platform
+    /// gives the models, accesses and efforts - or a refusal that names the
+    /// one there is none of. Whether the result may be saved is the service's
+    /// to say.
+    /// </summary>
+    /// <param name="models">Who may have each model; a model this does not name is offered to nobody</param>
+    public AgentSettings With(bool? builds = null, bool? changes = null, IReadOnlyList<(string Name, string Access)>? models = null, string? model = null,
+                              IReadOnlyList<string>? efforts = null, string? effort = null)
+    {
+        var offered = Models;
+
+        if (models != null)
+        {
+            offered =
+            [
+                .. models.Select(m => new ModelSetting(
+                    AgentCatalog.TryModel(m.Name, out var named) ? named : throw LambdaException.Invalid($"There is no model '{m.Name}' here."),
+                    AgentCatalog.TryAccess(m.Access, out var access) ? access : throw LambdaException.Invalid($"Who may have a model is 'open', 'password' or 'off', not '{m.Access}'.")))
+            ];
+        }
+
+        var chosen = Efforts;
+
+        if (efforts != null)
+        {
+            chosen = [.. efforts.Select(e => AgentCatalog.TryEffort(e, out var named) ? named : throw LambdaException.Invalid($"There is no effort '{e}' here."))];
+        }
+
+        var defaultModel = DefaultModel;
+
+        if (model != null && !AgentCatalog.TryModel(model, out defaultModel))
+        {
+            throw LambdaException.Invalid($"There is no model '{model}' here.");
+        }
+
+        var defaultEffort = DefaultEffort;
+
+        if (effort != null && !AgentCatalog.TryEffort(effort, out defaultEffort))
+        {
+            throw LambdaException.Invalid($"There is no effort '{effort}' here.");
+        }
+
+        return new AgentSettings(builds ?? Builds, changes ?? Changes, offered, defaultModel, chosen, defaultEffort);
+    }
 
 }

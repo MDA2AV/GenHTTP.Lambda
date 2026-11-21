@@ -3,6 +3,7 @@ using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Diagnostics;
 
 using GenHTTP.Modules.Webservices;

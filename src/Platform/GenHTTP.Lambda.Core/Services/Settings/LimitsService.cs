@@ -197,6 +197,18 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     /// <summary>
+    /// What a save changed, by the key each limit is stored under: what it was
+    /// - nothing, where it was never saved - and what it is.
+    /// </summary>
+    public static IEnumerable<(string Key, string? Before, string After)> Changes(ProductLimits previous, ProductLimits saved)
+    {
+        var before = Flatten(previous).ToDictionary(l => l.Key, l => l.Value);
+
+        return Flatten(saved).Where(l => before.GetValueOrDefault(l.Key) != l.Value)
+                             .Select(l => (l.Key, before.GetValueOrDefault(l.Key), l.Value));
+    }
+
+    /// <summary>
     /// Every limit by the key it is stored under, as it is stored.
     /// </summary>
     public static IEnumerable<(string Key, string Value)> Flatten(ProductLimits limits)

@@ -151,6 +151,14 @@ public interface IMetaService
     ValueTask<LambdaInfo> BlockAsync(string privateKey, string? reason);
 
     /// <summary>
+    /// Blocks a lambda, and the addresses given with it for two weeks - every
+    /// address read before anything is done, so one that cannot be blocked
+    /// (malformed, or one of the installation's own networks) leaves the lambda
+    /// as it was too.
+    /// </summary>
+    ValueTask<LambdaInfo> BlockAsync(string privateKey, string? reason, IReadOnlyList<string> addresses);
+
+    /// <summary>
     /// Lifts the block of a lambda. It stays offline until its owner, or the
     /// operator, puts it online again.
     /// </summary>

@@ -31,41 +31,6 @@ public sealed record AgentSettingsRequest(
     /// </summary>
     /// <exception cref="LambdaException">It names a model, an access or an effort there is none of</exception>
     public AgentSettings Over(AgentSettings current)
-    {
-        var models = current.Models;
-
-        if (Models != null)
-        {
-            models =
-            [
-                .. Models.Select(m => new ModelSetting(
-                    AgentCatalog.TryModel(m.Name, out var model) ? model : throw LambdaException.Invalid($"There is no model '{m.Name}' here."),
-                    AgentCatalog.TryAccess(m.Access, out var access) ? access : throw LambdaException.Invalid($"Who may have a model is 'open', 'password' or 'off', not '{m.Access}'.")))
-            ];
-        }
-
-        var efforts = current.Efforts;
-
-        if (Efforts != null)
-        {
-            efforts = [.. Efforts.Select(e => AgentCatalog.TryEffort(e, out var effort) ? effort : throw LambdaException.Invalid($"There is no effort '{e}' here."))];
-        }
-
-        var defaultModel = current.DefaultModel;
-
-        if (Model != null && !AgentCatalog.TryModel(Model, out defaultModel))
-        {
-            throw LambdaException.Invalid($"There is no model '{Model}' here.");
-        }
-
-        var defaultEffort = current.DefaultEffort;
-
-        if (Effort != null && !AgentCatalog.TryEffort(Effort, out defaultEffort))
-        {
-            throw LambdaException.Invalid($"There is no effort '{Effort}' here.");
-        }
-
-        return new AgentSettings(Builds ?? current.Builds, Changes ?? current.Changes, models, defaultModel, efforts, defaultEffort);
-    }
+        => current.With(Builds, Changes, Models?.Select(m => (m.Name, m.Access)).ToList(), Model, Efforts, Effort);
 
 }

@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
 
