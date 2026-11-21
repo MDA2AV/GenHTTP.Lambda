@@ -40,6 +40,8 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS backend
 WORKDIR /repo
 
 COPY global.json Directory.Build.props Directory.Packages.props ./
+# the repository's own rules, which every project is compiled with
+COPY analyzers/GenHTTP.Lambda.Analyzers/GenHTTP.Lambda.Analyzers.csproj analyzers/GenHTTP.Lambda.Analyzers/
 COPY src/Directory.Build.props src/BannedSymbols.txt src/
 COPY src/Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj src/Integrations/GenHTTP.Lambda.Integrations/
 COPY src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/
@@ -58,6 +60,7 @@ COPY src/Hosts/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj src/Host
 
 RUN dotnet restore src/Hosts/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj
 
+COPY analyzers/ analyzers/
 COPY src/ src/
 COPY --from=frontend /repo/src/Applications/GenHTTP.Lambda.Editing/bundle src/Applications/GenHTTP.Lambda.Editing/bundle
 COPY --from=frontend /repo/src/Applications/GenHTTP.Lambda.Administration/bundle src/Applications/GenHTTP.Lambda.Administration/bundle
