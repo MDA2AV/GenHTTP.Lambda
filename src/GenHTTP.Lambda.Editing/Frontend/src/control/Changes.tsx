@@ -2,7 +2,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import type { LambdaFile } from '@genhttp-lambda/kit/api';
 import { useEditorT } from '../i18n';
-import { languageFor, monaco } from '../monaco';
+import { languageFor } from '../grammars';
+import { loadMonaco } from '../monacoLoader';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 import { compare, type DiffLine, type FileDiff } from './diff';
 import { isResource } from './written';
@@ -110,8 +111,8 @@ export function ChangeList({ before, after, theme, empty, folded = false }: {
 /**
  * Each side coloured as a whole by the editor's own grammar and theme, then
  * cut into lines - a line coloured on its own would not know it sits inside a
- * comment or a string that began above it. Monaco is already loaded for the
- * code view, so this costs nothing more than the tokenising.
+ * comment or a string that began above it. Loads Monaco where nothing has
+ * yet, as the code view would.
  */
 function useColoured(code: string, language: string, theme: Theme): string[] | null {
   const [lines, setLines] = useState<string[] | null>(null);
@@ -121,11 +122,13 @@ function useColoured(code: string, language: string, theme: Theme): string[] | n
 
     setLines(null);
 
-    // the theme is global to monaco; the code view sets it the same way
-    monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
+    loadMonaco()
+      .then(({ monaco }) => {
+        // the theme is global to monaco; the code view sets it the same way
+        monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
 
-    monaco.editor
-      .colorize(code.replace(/\r\n/g, '\n'), language, { tabSize: 4 })
+        return monaco.editor.colorize(code.replace(/\r\n/g, '\n'), language, { tabSize: 4 });
+      })
       .then((html) => alive && setLines(html.split('<br/>')))
       .catch(() => {
         // uncoloured is still readable
