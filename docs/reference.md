@@ -1525,8 +1525,11 @@ version, so the commits are made on the pool, in the lambda's turn - a
 semaphore, one request at a time per lambda. The server packs what a clone
 asks for, and applies a push, while it writes its answer, so that answer is
 written on the pool into a pipe the reactor copies to the connection
-(`OffloadedContent`). A push is unpacked in memory, up to
-`LAMBDA_GIT_MAX_PUSH_BYTES`, and only two are applied at once.
+(`OffloadedContent`). A push of up to `LAMBDA_GIT_MAX_PUSH_BYTES` is received
+whole before it is applied - up to a megabyte in memory, beyond that in a
+temporary file of the system's temporary directory (`/tmp` in the images),
+which its files are read from and which is deleted once it was applied - and
+only two are applied at once.
 
 ## How it is put together
 
@@ -2076,7 +2079,7 @@ variable (see [Branding](#branding)).
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
 | `LAMBDA_SOURCE_CACHE_BYTES`         | `2147483648`     | what the published sources may take on disk, packed; the least recently read go first |
-| `LAMBDA_GIT_MAX_PUSH_BYTES`         | `268435456`      | how large a `git push` may be; it is unpacked in memory |
+| `LAMBDA_GIT_MAX_PUSH_BYTES`         | `268435456`      | how large a `git push` may be; beyond a megabyte it waits in a temporary file |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |

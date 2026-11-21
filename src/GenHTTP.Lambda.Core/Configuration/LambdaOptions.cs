@@ -205,9 +205,10 @@ public sealed record LambdaOptions
     /// How large a single <c>git push</c> to a lambda may be.
     /// </summary>
     /// <remarks>
-    /// A push is read into memory and unpacked there before anything is
-    /// decided about it, which is the git module's way and what makes it
-    /// atomic - so this protects the process, like a buffer, rather than
+    /// A push is received whole before anything is decided about it, which
+    /// is the git module's way and what makes it atomic - up to a megabyte in
+    /// memory, beyond that in a temporary file its files are read from - so
+    /// this protects the process and its disk, like a buffer, rather than
     /// being a promise of a tier: what a version may hold is checked after
     /// it was unpacked, against the tier of the lambda. Room for the first
     /// push of a lambda in production that ships all the resources it may.

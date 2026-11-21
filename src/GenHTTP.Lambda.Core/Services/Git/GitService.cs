@@ -26,8 +26,8 @@ namespace GenHTTP.Lambda.Services.Git;
 /// and applying a push both decide what the next commit follows. The turn is
 /// waited for asynchronously, since it is held across reading every version
 /// of a lambda read for the first time, and across compiling what is pushed.
-/// Pushes are few, but unpacked in memory and compiled, so only two are
-/// applied at once on the whole server.
+/// Pushes are few, but every file they bring is read and what they make is
+/// compiled, so only two are applied at once on the whole server.
 /// </remarks>
 public sealed class GitService(IMetaService meta, IFeatureService features, ISourceService sources, GitStore store, GitHistory history, GitPushes pushes,
                                 IBrandingService branding, LambdaOptions options) : IGitService

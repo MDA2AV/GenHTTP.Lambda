@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -111,6 +113,40 @@ public sealed class PushTests
         await git.RunAsync("several", "fetch", "--tags");
 
         Assert.AreEqual(await git.ReadAsync("several", "rev-parse", "main~1"), await git.ReadAsync("several", "rev-parse", "v3^{commit}"));
+    }
+
+    /// <remarks>
+    /// The git module keeps a push of more than a megabyte in a temporary
+    /// file and reads the pushed files from it only while the push is
+    /// applied - so this one is read from there, and must be all there.
+    /// </remarks>
+    [TestMethod]
+    public async Task APushOfSeveralMegabytesIsKeptWhole()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var git = new GitClient();
+
+        var lambda = await fixture.CreateLambdaAsync("large");
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "large");
+
+        // random text barely compresses, so the pack stays above a megabyte
+        var content = Convert.ToBase64String(RandomNumberGenerator.GetBytes(3 * 1024 * 1024));
+
+        git.Write("large", "resources/large.txt", content);
+
+        await git.CommitAsync("large", "Ships a large file");
+
+        var pushed = await git.RunAsync("large", "push");
+
+        Assert.Contains("Saved version 2: Ships a large file", pushed.Said);
+
+        Assert.AreEqual(content, (await fixture.VersionAsync(lambda, 2)).Files.Single(f => f.Name == "resources/large.txt").Code);
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "again");
+
+        Assert.AreEqual(content, git.Read("again", "resources/large.txt"), "a new clone gets the file as it was pushed");
     }
 
     [TestMethod]
