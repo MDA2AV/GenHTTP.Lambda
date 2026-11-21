@@ -2052,7 +2052,7 @@ variable (see [Branding](#branding)).
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
-| `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide`, `kestrel` or `internal` (see below) |
+| `LAMBDA_ENGINE`                     | `internal`       | `internal`, `kestrel` or `ioxide` (see below) |
 | `LAMBDA_HTTP_PROTOCOLS`             | `Http1`          | the HTTP versions both ports answer on; `Http1AndHttp2` tries HTTP/2 again |
 | `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `4096`           | reads of 32 KB a connection may have waiting on io_uring |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
@@ -2101,13 +2101,14 @@ variable (see [Branding](#branding)).
 | `LAMBDA_CERTIFICATE_DIRECTORY`      | -                | further certificates, one folder per name   |
 | `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
-The io_uring engine is the default and the faster one, but container runtimes
-block the syscall in their default seccomp profile - so the community image
-defaults to `LAMBDA_ENGINE=internal`, GenHTTP's own engine on .NET sockets,
-and the cloud's image to `kestrel`. Set it back to `ioxide` where io_uring is
-available and allowed; genhttp.dev does, in `deploy/cloud/docker-compose.yml`.
-The internal engine speaks HTTP/1.1 only, whatever `LAMBDA_HTTP_PROTOCOLS`
-says beyond it.
+The server runs on GenHTTP's own engine on .NET sockets (`internal`) unless
+told otherwise, and so does an unknown value: it runs wherever .NET does. The
+io_uring engine (`ioxide`) is the faster one, but it runs on Linux only and
+container runtimes block the syscall in their default seccomp profile, so it
+is chosen only where it is known to work - genhttp.dev does, in
+`deploy/cloud/docker-compose.yml`. The cloud's image sets `kestrel`. The
+internal engine speaks HTTP/1.1 only, whatever `LAMBDA_HTTP_PROTOCOLS` says
+beyond it.
 
 It runs the server on io_uring under `deploy/cloud/seccomp-ioxide.json`, which is
 the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
