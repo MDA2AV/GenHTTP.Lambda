@@ -297,7 +297,8 @@ export function BrandingSection({ access }: { access: Access }) {
             <p className="text-[13px] text-slate-600 dark:text-slate-400">
               An agent you give the admin token changes the same: <code className="font-mono text-[12px]">PUT /api/v1/admin/branding</code>{' '}
               with the name and <code className="font-mono text-[12px]">PUT /api/v1/admin/branding/logo</code> with the picture as the
-              body, or the MCP tool <code className="font-mono text-[12px]">customize_installation</code>.
+              body, or <code className="font-mono text-[12px]">customize_installation</code> on the operator&apos;s MCP endpoint,{' '}
+              <code className="font-mono text-[12px]">/admin/mcp</code>.
             </p>
           </Card>
         </form>

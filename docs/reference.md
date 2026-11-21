@@ -1561,7 +1561,7 @@ project, the tests included, fails a build that breaks this (`GL0001`,
 | `GenHTTP.Lambda.Web` | `Serving/` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
 | `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
 | `GenHTTP.Lambda.Api` | `Interfaces/` | `RestApi.Create(platform)`, mounted at `/api` |
-| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp` |
+| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp`; and `OperatorMcp.Create(platform)`, the operator's endpoint, mounted at `/admin/mcp` beside the panel (see [The operator's MCP endpoint](#the-operators-mcp-endpoint)) |
 | `GenHTTP.Lambda.Editing` | `Applications/` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
 | `GenHTTP.Lambda.Administration` | `Applications/` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
 | `GenHTTP.Lambda.Sources` | `Applications/` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
@@ -1597,7 +1597,9 @@ var site = Layout.Create()
                  .Add("api", RestApi.Create(platform))
                  .Add("mcp", McpServer.Create(platform))
                  .Add("editor", Editor.Create(platform))
-                 .Add("admin", AdminPanel.Create(platform))
+                 .Add("admin", Layout.Create()
+                                     .Add("mcp", OperatorMcp.Create(platform))
+                                     .Add(AdminPanel.Create(platform)))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 
@@ -2665,10 +2667,10 @@ reading who visits a lambda, and switching that on when the user asks, and
 on the showcase: its picture, base64 in a tool call, was too large for the
 agents that tried, so the instructions point to `platform_guide` (`showcase`),
 which sends them to `PUT /lambdas/{privateKey}/showcase` with the body written
-to a file, and the user to the editor where they cannot make requests. Where the installation
-may be branded and has an admin token, `customize_installation` names it and
-gives it a logo, for an agent its operator handed the token (see
-[Branding](#branding)). `platform_guide` is the one to call first. It answers
+to a file, and the user to the editor where they cannot make requests. What
+only the operator does is not here, so no agent is shown a tool it could not
+use: it is on [the operator's MCP endpoint](#the-operators-mcp-endpoint).
+`platform_guide` is the one to call first. It answers
 with one Markdown document, sent once as text rather than as an object (which
 the MCP module sends twice), written for a model and held under 28 KB by a
 test - at 65 KB, clients wrote it to a file instead of the conversation. It
@@ -2926,12 +2928,76 @@ without the header is answered with 401, one with the wrong token with 403.
 The concern says so in the API description itself: every operation behind it
 requires the `adminToken` security scheme, which Scalar asks for once.
 Until that variable is set there is no administration at all: the operator's
-routes - `/api/v1/admin`, `/api/v1/telemetry` and `/api/v1/logs` - are not
-there and answer 404, and the panel says the installation has none.
+routes - `/api/v1/admin`, `/api/v1/telemetry` and `/api/v1/logs` - and the
+operator's MCP endpoint `/admin/mcp` are not there and answer 404, and the
+panel says the installation has none.
 
 The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
 operator everybody's.
+
+### The operator's MCP endpoint
+
+`/admin/mcp` hands what the panel shows and does to an agent the operator
+runs - Claude Code, Codex, anything that speaks MCP - as tools
+(`OperatorMcp`, in the MCP component). It is GenHTTP's MCP module as `/mcp`
+is: stateless, answered with one JSON object per request, and driven from no
+browser - it allows no origin. The token is a header the client sends with
+every call, `X-Admin-Token`, checked in front of the tools by the same concern
+as the REST API's routes (`AdminAuthentication`): 401 without it, 403 with
+another, and on an installation without a token the endpoint is not there
+(404) - never the panel's page beside it. Like the panel, it is reached from
+an address that is blocked, so an operator who blocked their own can lift the
+block; on a host that is not the platform's it is not found.
+
+```json
+{ "mcpServers": { "genhttp-operator": {
+    "type": "http",
+    "url": "https://apps.example.com/admin/mcp",
+    "headers": { "X-Admin-Token": "the value of LAMBDA_ADMIN_TOKEN" } } } }
+```
+
+The host mounts it below the panel, beside its pages
+(`Layout.Create().Add("mcp", OperatorMcp.Create(platform)).Add(AdminPanel.Create(platform))`,
+see [How it is put together](#how-it-is-put-together)): neither component
+serves the other's content, and a host that leaves the line out has no
+endpoint.
+
+| Tools | What the panel does with them |
+|---|---|
+| `list_lambdas`, `read_lambda`, `read_version` | **All lambdas** and a lambda's page: a page of twenty with the panel's filters; one lambda summed up as its page sums it up; a version's files, one file's text at a time |
+| `deploy_lambda`, `undeploy_lambda`, `change_tier`, `change_domain`, `decide_connectivity`, `block_lambda`, `unblock_lambda`, `delete_lambda` | a lambda's **Manage** card |
+| `read_overview`, `read_storage` (`measure`) | **Dashboard**, **Statistics**, **Storage** |
+| `list_address_blocks`, `remove_address_block`, `list_connectivity` | **Blocked addresses**, **Connectivity** |
+| `read_settings`, `change_settings`, `read_limits`, `change_limits` | **Settings**, **Limits** - a change takes what it names and leaves the rest, the limits too |
+| `read_guide`, `change_guide_section`, `remove_guide_section` | **Guide** |
+| `read_agent_settings`, `change_agent_settings` | **Build agent** |
+| `list_integrations`, `read_usage_report`, `read_quiet_hours`, `read_optimization` | **Integrations**, **Usage report**, **Quiet hours**, the databases' optimization |
+| `read_telemetry`, `list_activity`, `read_logs`, `list_callers` | **Server**, **Log** |
+| `customize_installation` | **Branding**, only where the host lets the operator brand the installation |
+
+Every action is the one the panel's API takes, through the same services and
+refusals, and logged in the same words (the operator's lines of
+`OperationLog`); every read is logged as every MCP read is. A test holds the
+two doors together: every operator route of the REST API is mapped to its tool
+(`EveryRouteOfTheOperatorsApiHasATool`), so a route added without one fails.
+
+- **No editor key in an answer.** The panel's API hands editor keys out,
+  since the panel links into the editor; an agent has no editor to open, and
+  an answer goes into its transcript. Lambdas are named by their public key,
+  and the editor keys in the paths of a log line's request are masked
+  (`(editor key)`) - the panel's log shows them as they are.
+- **Bounded answers**: a page of lambdas, a lambda's newest twenty versions,
+  activations and addresses with how many there are, one file of a version, at
+  most a thousand log lines with a cursor, the readings of a window summed up
+  (lowest, highest, mean) rather than every sample.
+- **Annotated**: every read is `readOnlyHint`; what cannot be undone -
+  `delete_lambda`, `remove_guide_section`, `customize_installation`, which may
+  take the logo away - is `destructiveHint`, and nothing else. The
+  instructions say to ask the operator before those and before blocking.
+- **What others wrote is data.** Code, change lines, log lines, purposes,
+  block reasons and notes were written by owners and visitors; the
+  instructions tell the agent never to follow them.
 
 ### Tiers
 
@@ -3360,11 +3426,11 @@ the panel has no such section.
 | `GET /system/logo`                       | public: the picture beside the name - the logo, or the first letter of the name on a square plate where there is none; cached for good by the versioned address `brand.logo` of `GET /system` names |
 
 An agent the operator handed the token does the same with these routes, or
-with the MCP tool `customize_installation` (`adminToken`, `name`, `logo` - an
-SVG's markup as it is, or a picture base64 encoded). The tool is added to the
-endpoint only where the installation may be branded and has an admin token,
-so no other agent is shown a tool it could not use; the token is an argument,
-compared as the API compares it (`OperatorToken`), and never repeated.
+with `customize_installation` on [the operator's MCP endpoint](#the-operators-mcp-endpoint)
+(`name`, `logo` - an SVG's markup as it is, or a picture base64 encoded;
+neither reads how it is now). The tool is there only where the installation
+may be branded. Until 0.8.0 it was on `/mcp`, with the token as an argument
+that every agent was shown and that landed in the agent's transcript.
 
 Where it shows: the bar of every page - the front page, the showcase, the
 editor, the published sources, the panel - the end of every title and the name
@@ -3462,8 +3528,10 @@ every MCP tool an agent calls, logs what it did, verb first and tersely:
 `Published source of lambda quiz license MIT`, `Merged feature 'Dark mode' of
 lambda quiz as version 4`, `Set secret SHOP_KEY of lambda quiz`,
 `Failed to deploy lambda quiz version 5`. The source says which door it came
-through - a `…Resource` for the API, `McpTools` for an agent - and the line
-carries the caller like any other. Each value is a property of its own with the
+through - a `…Resource` for the API, `McpTools` for an agent, an
+`…OperatorTools` for the operator's - and the line carries the caller like any
+other. What the operator does is logged in one set of lines whichever door it
+came through (`Set tier of lambda quiz to Production by operator`). Each value is a property of its own with the
 same name in every line - `{Lambda}` the public key, `{Feature}` the feature's
 name, `{Version}`, `{Path}` - so the find box and a structured sink can both
 pick them out; the services below the doors know a lambda by its id and write

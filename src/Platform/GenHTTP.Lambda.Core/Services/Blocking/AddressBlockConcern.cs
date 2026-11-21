@@ -29,8 +29,9 @@ public sealed class AddressBlockConcern(IHandler content, IAddressBlocks blocks,
 {
 
     /// <summary>
-    /// What the panel is made of, on the platform's own host: its bundle, below
-    /// its own path (see PlatformRoutes), and what of the API it calls.
+    /// What the panel is made of, on the platform's own host: its bundle and
+    /// the operator's MCP endpoint, below its own path (see PlatformRoutes),
+    /// and what of the API it calls.
     /// </summary>
     private static readonly string[] Panel = ["/" + PlatformRoutes.Admin, PlatformRoutes.ApiBase + "/admin", PlatformRoutes.ApiBase + "/telemetry",
                                               PlatformRoutes.ApiBase + "/logs", PlatformRoutes.ApiBase + "/system"];

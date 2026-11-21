@@ -332,17 +332,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// exception but its own <see cref="ProviderException"/>, logged as an
     /// error. Anything else is left to it: that is a fault, and logged as one.
     /// </remarks>
-    private static async ValueTask<object> RefusingAsync(Func<ValueTask<object>> tool)
-    {
-        try
-        {
-            return await tool();
-        }
-        catch (LambdaException e)
-        {
-            return ToolResult.Error(e.Message);
-        }
-    }
+    private static ValueTask<object> RefusingAsync(Func<ValueTask<object>> tool) => Refusing.Async(tool);
 
     /// <summary>
     /// An answer that says the tool did not do what it was asked, with what
