@@ -23,7 +23,7 @@
 # 2.1.329 is the first pinned that knows Fable 5.2, Sonnet 5.5 and Haiku 5.5:
 # a version that does not know a model may ask for it with settings the
 # model refuses.
-FROM node:22-slim
+FROM node:26-trixie-slim
 
 ARG CLAUDE_VERSION=2.1.329
 
@@ -39,7 +39,10 @@ RUN apt-get update \
  && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_VERSION} \
+# the CLI's install script puts its native binary in place, and npm runs only
+# the scripts it was told to - it warns today and refuses once it is strict -
+# so this one is allowed by name and version, and nothing else is
+RUN npm install -g --allow-scripts=@anthropic-ai/claude-code@${CLAUDE_VERSION} @anthropic-ai/claude-code@${CLAUDE_VERSION} \
  && npm cache clean --force
 
 # nothing here runs as root

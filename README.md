@@ -93,7 +93,7 @@ way any GenHTTP application is composed. `src/GenHTTP.Lambda.Community` is
 the community edition's host, `src/GenHTTP.Lambda.Cloud` genhttp.dev's;
 [A host of your own](https://community.genhttp.run/docs/extending/custom-host/)
 shows how to write another. Building and running from source requires the
-.NET 11 SDK and Node 22:
+.NET 11 SDK and Node 26:
 
 ```bash
 npm install && npm run build                              # the frontends

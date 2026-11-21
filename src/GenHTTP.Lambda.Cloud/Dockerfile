@@ -9,7 +9,7 @@
 # The bundles of the components with pages, from the npm workspace at the
 # root: the kit they share, and each component's own frontend. Built where the
 # image is built, whatever it is for - a bundle is the same on every machine.
-FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS frontend
+FROM --platform=$BUILDPLATFORM node:26-trixie-slim AS frontend
 
 WORKDIR /repo
 
