@@ -60,7 +60,7 @@ public sealed class GuideResource(IGuideService guide, ILogger<GuideResource> lo
     {
         var section = await guide.ChangeAsync(body.Title, body.Text);
 
-        logger.LogInformation("Changed guide section '{Title}' bytes {Bytes} by operator", section.Title, section.Bytes);
+        logger.GuideSectionChanged(section);
 
         return GuideSectionResponse.Of(section);
     }
@@ -73,7 +73,7 @@ public sealed class GuideResource(IGuideService guide, ILogger<GuideResource> lo
     {
         if (await guide.RemoveAsync() is { } removed)
         {
-            logger.LogInformation("Removed guide section '{Title}' by operator", removed.Title);
+            logger.GuideSectionRemoved(removed);
         }
     }
 

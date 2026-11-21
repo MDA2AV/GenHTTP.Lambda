@@ -317,7 +317,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var changed = await meta.ChangeTierAsync(privateKey, TierDescription.Parse(body.Tier));
 
-        logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", changed.PublicKey, changed.Tier);
+        logger.TierChanged(changed.PublicKey, changed.Tier);
 
         return await DetailAsync(privateKey, request);
     }
@@ -336,7 +336,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var changed = await meta.ChangeDomainAsync(privateKey, body.Domain);
 
-        logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", changed.PublicKey, changed.Domain ?? "(none)");
+        logger.DomainChanged(changed.PublicKey, changed.Domain);
 
         return await DetailAsync(privateKey, request);
     }
@@ -369,7 +369,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEnding.Admin);
 
-        logger.LogInformation("Undeployed lambda {Lambda} by operator", lambda.PublicKey);
+        logger.Undeployed(lambda.PublicKey);
 
         return Summarize(lambda);
     }
@@ -383,7 +383,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     {
         await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey), VersionOrigin.Admin);
 
-        logger.LogInformation("Deleted lambda {Lambda} by operator", publicKey);
+        logger.Deleted(publicKey);
     }
 
     #endregion
@@ -415,21 +415,9 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var addresses = body?.Addresses ?? [];
 
-        // read before anything is done, so an address that cannot be
-        // blocked leaves the lambda as it was too
-        foreach (var address in addresses)
-        {
-            NetworkAddress.ReadBlockable(address, options.UnblockableNetworks);
-        }
+        var blocked = await meta.BlockAsync(privateKey, body?.Reason, addresses);
 
-        var blocked = await meta.BlockAsync(privateKey, body?.Reason);
-
-        if (addresses.Count > 0)
-        {
-            await blocks.BlockAsync(addresses, body?.Reason, blocked.PublicKey);
-        }
-
-        logger.LogInformation("Blocked lambda {Lambda} addresses {Addresses} by operator", blocked.PublicKey, addresses.Count);
+        logger.Blocked(blocked.PublicKey, addresses.Count);
 
         return await DetailAsync(privateKey, request);
     }
@@ -449,7 +437,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         var lambda = await meta.UnblockAsync(privateKey);
 
-        logger.LogInformation("Unblocked lambda {Lambda} by operator", lambda.PublicKey);
+        logger.Unblocked(lambda.PublicKey);
 
         return await DetailAsync(privateKey, request);
     }
@@ -478,7 +466,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             throw LambdaException.NotFound($"There is no block #{id}. It may have been lifted already, or let go of by itself.");
         }
 
-        logger.LogInformation("Removed address block #{Block} by operator", id);
+        logger.AddressBlockRemoved(id);
     }
 
     private static AddressBlockResponse Describe(AddressBlock block)
@@ -537,7 +525,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         await connectivity.DecideAsync(privateKey, body.Allow, body.Note);
 
-        logger.LogInformation(body.Allow ? "Allowed connectivity for lambda {Lambda} by operator" : "Declined connectivity for lambda {Lambda} by operator", publicKey);
+        logger.ConnectivityDecided(publicKey, body.Allow);
 
         return await DetailAsync(privateKey, request);
     }
@@ -572,15 +560,12 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         if (body.Profile != null)
         {
-            profile = InstallationProfiles.TryParse(body.Profile, out var named)
-                    ? named.Value
-                    : throw LambdaException.Invalid($"'{body.Profile}' is not a profile: cloud, home or enterprise.");
+            profile = InstallationProfiles.Read(body.Profile);
         }
 
         var saved = await settings.SaveAsync(new SiteSettings(body.OptimizeDatabases ?? current.OptimizeDatabases, profile));
 
-        logger.LogInformation("Updated settings optimizeDatabases {OptimizeDatabases} profile {Profile} by operator", saved.OptimizeDatabases,
-                              InstallationProfiles.NameOf(saved.Profile));
+        logger.SettingsChanged(saved);
 
         return SettingsResponse.Of(settings);
     }
@@ -696,12 +681,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             body.BuildsPerDay
         ));
 
-        var before = LimitsService.Flatten(previous).ToDictionary(l => l.Key, l => l.Value);
-
-        foreach (var (key, value) in LimitsService.Flatten(saved).Where(l => before.GetValueOrDefault(l.Key) != l.Value))
-        {
-            logger.LogInformation("Changed limit {Limit} from {Previous} to {Value} by operator", key, before.GetValueOrDefault(key) ?? "(none)", value);
-        }
+        logger.LimitsChanged(previous, saved);
 
         return Describe(saved);
     }

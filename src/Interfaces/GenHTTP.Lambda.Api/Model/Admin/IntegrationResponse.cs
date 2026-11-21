@@ -18,17 +18,6 @@ public sealed record IntegrationResponse(
 {
 
     public static IntegrationResponse Of(IntegrationState state)
-        => new(KindOf(state.Info.Kind), state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
-
-    /// <summary>
-    /// What a kind of integration is called on the wire, which the panel reads.
-    /// </summary>
-    private static string KindOf(IntegrationKind kind) => kind switch
-    {
-        IntegrationKind.Database => "database",
-        IntegrationKind.Files => "files",
-        IntegrationKind.Secrets => "secrets",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "There is no such kind of integration.")
-    };
+        => new(IntegrationKindNames.Name(state.Info.Kind), state.Info.Name, state.Assembly, [.. state.Info.Details.Select(d => new IntegrationDetailResponse(d.Label, d.Value))]);
 
 }

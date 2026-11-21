@@ -40,23 +40,6 @@ public static class TierDescription
     /// called before, are read as them still, so a script written against an
     /// earlier release keeps working; nothing answers with them.
     /// </remarks>
-    public static LambdaTier Parse(string tier)
-    {
-        var name = tier.Trim();
-
-        if (name.Equals("Free", StringComparison.OrdinalIgnoreCase))
-        {
-            return LambdaTier.Sandbox;
-        }
-
-        if (name.Equals("Premium", StringComparison.OrdinalIgnoreCase))
-        {
-            return LambdaTier.Production;
-        }
-
-        return LambdaTierNames.TryRead(name, out var parsed)
-            ? parsed
-            : throw LambdaException.Invalid($"There is no tier called '{tier}'. There are: {string.Join(", ", Enum.GetValues<LambdaTier>().Select(LambdaTierNames.Name))}.");
-    }
+    public static LambdaTier Parse(string tier) => LambdaTierNames.Read(tier);
 
 }

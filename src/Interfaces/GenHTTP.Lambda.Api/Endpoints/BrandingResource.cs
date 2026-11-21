@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -53,10 +54,7 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     {
         var (brand, previous) = await branding.RenameAsync(body.Name);
 
-        if (previous != brand.Given)
-        {
-            logger.LogInformation("Changed branding name from '{Previous}' to '{Name}' by operator", previous ?? Brand.PlatformName, brand.Name);
-        }
+        logger.BrandingRenamed(previous, brand);
 
         return BrandingResponse.Of(brand);
     }
@@ -73,7 +71,7 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
 
         if (had)
         {
-            logger.LogInformation("Reset branding by operator");
+            logger.BrandingReset();
         }
     }
 
@@ -95,7 +93,7 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
 
         var brand = await branding.ChangeLogoAsync(content);
 
-        logger.LogInformation("Uploaded branding logo type {Type} bytes {Bytes} by operator", brand.Logo!.Type, brand.Logo.Content.Length);
+        logger.LogoUploaded(brand);
 
         return BrandingResponse.Of(brand);
     }
@@ -112,7 +110,7 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
 
         if (had)
         {
-            logger.LogInformation("Removed branding logo by operator");
+            logger.LogoRemoved();
         }
     }
 

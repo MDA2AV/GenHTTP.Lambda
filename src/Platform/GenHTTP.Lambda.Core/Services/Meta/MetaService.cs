@@ -2,6 +2,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
@@ -66,6 +67,8 @@ public sealed class MetaService : IMetaService
 
     private LambdaOptions Options { get; }
 
+    private IAddressBlocks Blocks { get; }
+
     private ILimitsService Limits { get; }
 
     private ILogBook Book { get; }
@@ -117,7 +120,7 @@ public sealed class MetaService : IMetaService
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
         LambdaOptions options, ILimitsService limits, ILogBook book, IDatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
         LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, LambdaListing listing, VersionFactsCache facts, EventReader events,
-        EditorAddresses editors, DatabaseChanges changes, ILogger<MetaService> logger)
+        EditorAddresses editors, DatabaseChanges changes, IAddressBlocks blocks, ILogger<MetaService> logger)
     {
         ByKey = new ResolutionCache<string>(changes);
         ById = new ResolutionCache<long>(changes);
@@ -141,6 +144,7 @@ public sealed class MetaService : IMetaService
         Facts = facts;
         Events = events;
         Editors = editors;
+        Blocks = blocks;
         Logger = logger;
     }
 
@@ -677,6 +681,23 @@ public sealed class MetaService : IMetaService
     /// Without a cancellation token: a block half written would leave the
     /// lambda frozen and its drafts online, or the other way round.
     /// </remarks>
+    public async ValueTask<LambdaInfo> BlockAsync(string privateKey, string? reason, IReadOnlyList<string> addresses)
+    {
+        foreach (var address in addresses)
+        {
+            NetworkAddress.ReadBlockable(address, Options.UnblockableNetworks);
+        }
+
+        var blocked = await BlockAsync(privateKey, reason);
+
+        if (addresses.Count > 0)
+        {
+            await Blocks.BlockAsync(addresses, reason, blocked.PublicKey);
+        }
+
+        return blocked;
+    }
+
     public async ValueTask<LambdaInfo> BlockAsync(string privateKey, string? reason)
     {
         await using var database = await Databases.CreateDbContextAsync();
