@@ -10,9 +10,9 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// check every door that lets the operator in makes the same way.
 /// </summary>
 /// <remarks>
-/// The REST API asks for it in a header (<c>AdminAuthentication</c>), an MCP
-/// tool as an argument; both compare here, so neither reaches into the
-/// other. In fixed time: the length of the token is not a secret, but which
+/// Asked for in the header <c>X-Admin-Token</c> by <see cref="AdminAuthentication"/>,
+/// in front of the REST API's operator routes and the operator's MCP endpoint
+/// alike. In fixed time: the length of the token is not a secret, but which
 /// byte differs is.
 /// </remarks>
 public static class OperatorToken

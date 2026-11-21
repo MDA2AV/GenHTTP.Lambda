@@ -40,7 +40,9 @@ var site = Layout.Create()
                  .Add(PlatformRoutes.Api, RestApi.Create(platform))
                  .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                  .Add(PlatformRoutes.Editor, Editor.Create(platform))
-                 .Add(PlatformRoutes.Admin, AdminPanel.Create(platform))
+                 .Add(PlatformRoutes.Admin, Layout.Create()
+                                                  .Add(PlatformRoutes.Mcp, OperatorMcp.Create(platform))
+                                                  .Add(AdminPanel.Create(platform)))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 

@@ -228,7 +228,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
                          .Add(PlatformRoutes.Api, RestApi.Create(platform).Compiled(compiled))
                          .Add(PlatformRoutes.Mcp, McpServer.Create(platform))
                          .Add(PlatformRoutes.Editor, Editor.Create(platform).Bundle(BundleOf(options, "editor")))
-                         .Add(PlatformRoutes.Admin, AdminPanel.Create(platform).Bundle(BundleOf(options, "admin")))
+                         .Add(PlatformRoutes.Admin, Layout.Create()
+                                                          .Add(PlatformRoutes.Mcp, OperatorMcp.Create(platform))
+                                                          .Add(AdminPanel.Create(platform).Bundle(BundleOf(options, "admin"))))
                          .Add(SourcePages.Create(platform).Bundle(BundleOf(options, "sources")))
                          .Add(edition == Edition.Cloud
                                   ? Website.Create(platform).Bundle(BundleOf(options, "site"))
