@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Building;
+
 namespace GenHTTP.Lambda.Data.Entities;
 
 /// <summary>
@@ -33,6 +35,22 @@ public sealed class DeploymentEntity
     /// Where it came from.
     /// </summary>
     public VersionOrigin? Origin { get; set; }
+
+    /// <summary>
+    /// Who wrote it, where the platform knows it: the build agent, on a job it
+    /// issued a ticket for.
+    /// </summary>
+    public VersionWriter? Writer { get; set; }
+
+    /// <summary>
+    /// The model the build agent ran on, by the name it was offered by.
+    /// </summary>
+    public AgentModel? AgentModel { get; set; }
+
+    /// <summary>
+    /// The effort the build agent ran at.
+    /// </summary>
+    public AgentEffort? AgentEffort { get; set; }
 
     public LambdaEntity? Lambda { get; set; }
 

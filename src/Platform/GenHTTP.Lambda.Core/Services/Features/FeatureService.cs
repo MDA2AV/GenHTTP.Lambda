@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -376,6 +377,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         entity.Specification = VersionInput.Tidy(note?.Specification, VersionNote.MaxSpecification) ?? entity.Specification;
         entity.Change = VersionInput.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;
 
+        // who wrote what it holds now - every door saves through here, so a
+        // save the build agent did not make clears what it had written
+        entity.Writer = note?.Author?.Writer;
+        entity.AgentModel = note?.Author?.Model;
+        entity.AgentEffort = note?.Author?.Effort;
+
         var now = DateTime.UtcNow;
 
         entity.Revision++;
@@ -715,9 +722,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var origin = note?.Origin ?? VersionOrigin.Api;
 
+        // written by whoever saved into the feature last, whoever merges it:
+        // the owner putting the build agent's draft online makes the agent's
+        // work a version
         var merged = new VersionNote(string.IsNullOrWhiteSpace(note?.Specification) ? entity.Specification : note.Specification,
                                      string.IsNullOrWhiteSpace(note?.Change) ? entity.Change ?? $"Merges the feature '{entity.Name}'" : note.Change,
-                                     origin);
+                                     origin, AuthorOf(entity));
 
         // refused if a version was saved since the feature was based on its
         // newest, by the same turn every save of the lambda takes - the
@@ -857,10 +867,17 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
          + $"compare it with version {feature.BaseVersion}, and change the feature to match - then move its base to {newest} "
          + $"(update_feature with base: {newest}, or PATCH the feature with base) and merge again.";
 
+    /// <summary>
+    /// Who wrote what a feature holds, where the platform knows it.
+    /// </summary>
+    private static VersionAuthor? AuthorOf(FeatureEntity feature)
+        => feature is { Writer: { } writer, AgentModel: { } model, AgentEffort: { } effort } ? new VersionAuthor(writer, model, effort) : null;
+
     private static FeatureInfo Describe(FeatureEntity feature, int? newest)
         => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, VersionOriginNames.Name(feature.Origin),
                feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
-               feature.Previewed, feature.Revision);
+               feature.Previewed, feature.Revision, VersionWriterNames.Name(feature.Writer), AgentCatalog.NameOf(feature.AgentModel),
+               AgentCatalog.NameOf(feature.AgentEffort));
 
     /// <summary>
     /// Whether a key is one this service could have handed out: 32 lower case

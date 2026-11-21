@@ -274,6 +274,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
         services.AddSingleton<AgentClient>();
+        services.AddSingleton<AgentTickets>();
         services.AddSingleton<AgentSettingsStore>();
         services.AddSingleton<BuildAllowance>();
         services.AddSingleton<ModelGate>();

@@ -87,6 +87,7 @@ public sealed class AgentClient : IDisposable
     /// Hands the runner a build.
     /// </summary>
     /// <param name="choice">The model and effort it runs on, and whether it runs without a clock</param>
+    /// <param name="ticket">What its calls carry, so what it saves is known to be the build agent's (see <see cref="AgentTickets"/>)</param>
     /// <returns>
     /// The build it took, or nothing where it took one but answered with
     /// nothing that could be read
@@ -94,9 +95,9 @@ public sealed class AgentClient : IDisposable
     /// <exception cref="ProviderException">
     /// It did not take the build: it refused, or it could not be reached
     /// </exception>
-    public ValueTask<BuildStarted?> StartBuildAsync(string prompt, AgentChoice choice)
+    public ValueTask<BuildStarted?> StartBuildAsync(string prompt, AgentChoice choice, string ticket)
         // no key travels with it: this endpoint only ever creates
-        => StartAsync<BuildStarted>(new { prompt, model = choice.ModelName, effort = choice.EffortName, unbounded = choice.Unbounded },
+        => StartAsync<BuildStarted>(new { prompt, model = choice.ModelName, effort = choice.EffortName, unbounded = choice.Unbounded, ticket },
                                     "The build agent would not take that.",
                                     "The build agent is not answering. Try again in a moment.");
 
@@ -151,6 +152,7 @@ public sealed class AgentClient : IDisposable
     /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
     /// <param name="choice">The model and effort it runs on, and whether it runs without a clock</param>
     /// <param name="history">The conversation the message was sent with, cut to size</param>
+    /// <param name="ticket">What its calls carry, so what it saves is known to be the build agent's (see <see cref="AgentTickets"/>)</param>
     /// <returns>
     /// The change it took, or nothing where it took one but answered with
     /// nothing that could be read
@@ -160,7 +162,7 @@ public sealed class AgentClient : IDisposable
     /// </exception>
     public ValueTask<ChangeProgress?> StartChangeAsync(long lambda, string privateKey, int? before, string prompt, bool deploy,
                                                        AgentChoice choice, string? language, string? feature,
-                                                       IReadOnlyList<ConversationTurn>? history)
+                                                       IReadOnlyList<ConversationTurn>? history, string ticket)
         => StartAsync<ChangeProgress>(new
                                       {
                                           prompt,
@@ -173,7 +175,8 @@ public sealed class AgentClient : IDisposable
                                           language,
                                           before,
                                           feature,
-                                          history
+                                          history,
+                                          ticket
                                       },
                                       "The agent would not take that.",
                                       "The agent is not answering. Try again in a moment.");

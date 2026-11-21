@@ -111,7 +111,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
           <span>
             {said.started} <Ago at={feature.created} />
           </span>
-          <AgentMark origin={feature.origin} git={!simple} />
+          <AgentMark origin={feature.origin} git={!simple} written={feature} detail={!simple} />
           <span aria-hidden="true">·</span>
           <span>
             {said.changed} <Ago at={feature.modified} />

@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -70,7 +71,10 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
             Created = now,
             Specification = specification,
             Change = change,
-            Origin = note.Origin
+            Origin = note.Origin,
+            Writer = note.Author?.Writer,
+            AgentModel = note.Author?.Model,
+            AgentEffort = note.Author?.Effort
         });
 
         lambda.Modified = now;
@@ -81,7 +85,8 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         await PruneAsync(database, lambda);
 
-        return new LambdaVersionInfo(version, now, specification, change, VersionOriginNames.Name(note.Origin));
+        return new LambdaVersionInfo(version, now, specification, change, VersionOriginNames.Name(note.Origin), VersionWriterNames.Name(note.Author?.Writer),
+                                     AgentCatalog.NameOf(note.Author?.Model), AgentCatalog.NameOf(note.Author?.Effort));
     }
 
     /// <summary>

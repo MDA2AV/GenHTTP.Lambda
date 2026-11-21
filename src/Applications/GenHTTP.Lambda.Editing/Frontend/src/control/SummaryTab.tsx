@@ -114,7 +114,7 @@ export function SummaryTab({ control }: { control: Control }) {
               </p>
               <p className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
                 <span>{said.version(latest.version)}</span>
-                <AgentMark origin={latest.origin} git />
+                <AgentMark origin={latest.origin} git written={latest} detail />
                 <Ago at={latest.created} />
                 {latest.version !== lambda.activeVersion && <span className="text-amber-600 dark:text-amber-400">{said.notOnline}</span>}
               </p>
@@ -150,7 +150,7 @@ export function SummaryTab({ control }: { control: Control }) {
                     >
                       {feature.name}
                     </button>
-                    <AgentMark origin={feature.origin} />
+                    <AgentMark origin={feature.origin} written={feature} detail />
                     <span className="flex shrink-0 items-center gap-1.5 text-slate-500" title={feature.online ? said.previewOnline : said.previewOffline}>
                       <LiveDot live={feature.online} />
                       <span className="sr-only">{feature.online ? said.previewOnline : said.previewOffline}</span>

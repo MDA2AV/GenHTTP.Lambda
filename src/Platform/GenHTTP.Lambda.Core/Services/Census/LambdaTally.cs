@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -80,6 +81,16 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
                     .ThenBy(g => g.Key, StringComparer.Ordinal)
                     .ToDictionary(g => g.Key ?? "unknown", g => g.Sum(o => o.Count));
 
+        // what the build agent wrote of those, by model and by effort
+        var written = await database.Deployments.AsNoTracking()
+                                    .Where(d => d.Created >= recent && d.Writer == VersionWriter.BuildAgent && !demos.Contains(d.Lambda!.Tier))
+                                    .GroupBy(d => new { d.AgentModel, d.AgentEffort })
+                                    .Select(g => new { g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
+                                    .ToListAsync(cancellation);
+
+        var models = AgentCatalog.Models.ToDictionary(m => m.Name, m => written.Where(w => w.AgentModel == m.Model).Sum(w => w.Count));
+        var efforts = AgentCatalog.Efforts.ToDictionary(e => e.Name, e => written.Where(w => w.AgentEffort == e.Effort).Sum(w => w.Count));
+
         var product = limits.Get();
 
         var horizon = now + LambdaQuery.ExpiringWithin;
@@ -123,6 +134,8 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
             lambdas.Count(l => l.View == EditorView.Full),
             versions,
             saved,
+            models,
+            efforts,
             lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).Min(l => l.ConnectivityChanged)
         );
     }

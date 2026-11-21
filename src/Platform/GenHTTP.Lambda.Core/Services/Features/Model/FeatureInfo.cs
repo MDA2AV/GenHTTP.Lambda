@@ -18,6 +18,9 @@ namespace GenHTTP.Lambda.Services.Features;
 /// <param name="Current">Whether its preview is online and serves what the feature holds now, rather than an earlier save</param>
 /// <param name="Previewed">When its preview was last put online, while it is</param>
 /// <param name="Revision">How many times its files were saved, counting the ones it began with</param>
+/// <param name="Writer">Who wrote what it holds - its last save - where the platform knows it: build-agent</param>
+/// <param name="Model">The model the build agent ran on</param>
+/// <param name="Effort">The effort it ran at</param>
 public sealed record FeatureInfo(
     string Key,
     string Name,
@@ -32,7 +35,10 @@ public sealed record FeatureInfo(
     bool Online,
     bool Current,
     DateTime? Previewed,
-    int Revision
+    int Revision,
+    string? Writer = null,
+    string? Model = null,
+    string? Effort = null
 )
 {
 
