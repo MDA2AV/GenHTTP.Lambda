@@ -35,5 +35,11 @@ public sealed record FeatureResponse(
     [Summary("Where its preview answers on this site, whether it is online or not: `/features/{key}/`")]
     string PreviewPath,
     [Summary("How many times its files were saved, counting the ones it began with. Passed back with a save, it keeps that save from replacing one made elsewhere.")]
-    int Revision
+    int Revision,
+    [Summary("Who wrote what it holds - its last save - where the platform knows it: `build-agent`, the installation's own agent, on a job it was given; absent for anybody else's work, an agent of somebody's own included")]
+    string? Writer = null,
+    [Summary("The model the build agent wrote it on, by its name in `build.offer.models` of `GET /system` (`opus`); absent unless `writer` is there")]
+    string? Model = null,
+    [Summary("The effort the build agent wrote it at: `low`, `medium`, `high`, `xhigh` or `max`; absent unless `writer` is there")]
+    string? Effort = null
 );

@@ -13,7 +13,8 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="Specification">What the user wants from the version and why, in their words where possible</param>
 /// <param name="Change">What the version changed, in a line</param>
 /// <param name="Origin">Which door it came through</param>
-public sealed record VersionNote(string? Specification = null, string? Change = null, VersionOrigin? Origin = null)
+/// <param name="Author">Who wrote it, where the platform knows it - the build agent, on a job it issued a ticket for</param>
+public sealed record VersionNote(string? Specification = null, string? Change = null, VersionOrigin? Origin = null, VersionAuthor? Author = null)
 {
 
     /// <summary>

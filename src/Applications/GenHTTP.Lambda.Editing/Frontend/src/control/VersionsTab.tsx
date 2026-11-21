@@ -105,7 +105,7 @@ function Row({
               {said.online}
             </span>
           )}
-          <AgentMark origin={version.origin} git />
+          <AgentMark origin={version.origin} git written={version} detail />
           <Ago at={version.created} className="hidden w-24 text-right sm:inline" />
         </span>
 

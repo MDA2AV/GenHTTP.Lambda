@@ -237,14 +237,15 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
             : LambdaArchive.UnpackAsync(body, maxBytes, basis, staging);
 
     internal static VersionResponse Describe(LambdaVersionInfo version)
-        => new(version.Version, version.Created, version.Specification, version.Change, version.Origin);
+        => new(version.Version, version.Created, version.Specification, version.Change, version.Origin, version.Writer, version.Model, version.Effort);
 
     /// <summary>
     /// A version with the files of a folder, or all of them when none is
     /// named - read away from the reactor, being as large as a version.
     /// </summary>
     internal static async ValueTask<VersionContentResponse> DescribeAsync(LambdaVersionContent content, string? folder = null)
-        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, await SentAsync(Below(content.Files, folder)));
+        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, await SentAsync(Below(content.Files, folder)),
+               content.Writer, content.Model, content.Effort);
 
     /// <summary>
     /// The files below a folder, or all of them when none is named - before

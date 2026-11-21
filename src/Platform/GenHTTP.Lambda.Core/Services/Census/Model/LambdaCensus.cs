@@ -30,6 +30,8 @@ namespace GenHTTP.Lambda.Services.Census;
 /// <param name="Full">How many open in the full view</param>
 /// <param name="Versions">How many versions are kept, all together</param>
 /// <param name="Saved">Versions saved in the last thirty days, by where they came from</param>
+/// <param name="AgentModels">Of those, what the build agent wrote, by the model it ran on: every model by name</param>
+/// <param name="AgentEfforts">The same, by the effort it ran at: every effort by name</param>
 /// <param name="RequestedSince">Since when the lambda that asks to connect to other servers the longest waits, or nothing while none waits</param>
 public sealed record LambdaCensus(
     DateTime Taken,
@@ -51,5 +53,7 @@ public sealed record LambdaCensus(
     int Full,
     int Versions,
     IReadOnlyDictionary<string, int> Saved,
+    IReadOnlyDictionary<string, int> AgentModels,
+    IReadOnlyDictionary<string, int> AgentEfforts,
     DateTime? RequestedSince
 );

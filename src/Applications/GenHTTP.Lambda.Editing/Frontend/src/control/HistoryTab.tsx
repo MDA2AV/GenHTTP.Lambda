@@ -56,7 +56,7 @@ export function HistoryTab({ control }: { control: Control }) {
                   </p>
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
                     <Ago at={version.created} />
-                    <AgentMark origin={version.origin} />
+                    <AgentMark origin={version.origin} written={version} />
                     {online && <OnlineMark />}
                   </p>
                 </div>

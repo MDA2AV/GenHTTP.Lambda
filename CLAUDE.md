@@ -156,6 +156,20 @@ calling APIs, keeping data, accounts, merely alarming-sounding - are not
 declined. Keep `PURPOSE`, `AGENTS.md` ("What not to build") and the docs
 saying the same.
 
+**What it writes is known to be its own.** The server issues every job a
+random ticket (`AgentTickets`, in memory, a day, never logged), which the
+runner puts into the agent's connection to the MCP endpoint as a header
+(`X-Lambda-Agent`). What a call carrying it saves records its writer
+(`VersionWriter.BuildAgent`) and the model and effort of the job - taken from
+what the server issued, never from what the runner or the agent says - on the
+version, and on a draft for its last save, which the version it is merged into
+takes over whoever merges it. Every other save into a draft clears it. An
+agent of somebody's own has no writer: MCP says nothing about the model, and
+nothing the platform could trust about the client. The editor marks it with
+the model's family and the effort (`AgentMark`), the panel and the usage
+report count it by model and effort; `/source`, git and the export say
+nothing of it.
+
 **Models and efforts (owner)**: chosen from two dropdowns under the box on
 `/build`, the workspace and the Change section (`components/AgentChoice.tsx`):
 Opus at high effort by default, Sonnet and Haiku beside it, Fable behind a

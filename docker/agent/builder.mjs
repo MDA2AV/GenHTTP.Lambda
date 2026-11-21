@@ -65,10 +65,19 @@ const GUIDE = await readFile('/app/AGENTS.md', 'utf8').catch(() => '');
  * change carries an editor key in its brief, which is a credential too. "-e
  * NAME" with no value tells docker to take it from our own environment. The
  * purpose (PURPOSE below) goes the same way, only to keep it in one place.
+ *
+ * The ticket the server issued for the job goes into the agent's connection
+ * to the MCP endpoint as a header, sent with every call, so the server knows
+ * what the job saves is the build agent's - and on which model and effort,
+ * which it remembers itself and never takes from here. Never logged.
  */
 const INSIDE = `set -e
 printf '%s' "$AGENT_GUIDE" > /work/AGENTS.md
-printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s"}}}' "$AGENT_MCP" > /work/mcp.json
+if [ -n "$AGENT_TICKET" ]; then
+  printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s","headers":{"X-Lambda-Agent":"%s"}}}}' "$AGENT_MCP" "$AGENT_TICKET" > /work/mcp.json
+else
+  printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s"}}}' "$AGENT_MCP" > /work/mcp.json
+fi
 exec claude -p "$AGENT_BRIEF" --append-system-prompt "$AGENT_PURPOSE" --mcp-config /work/mcp.json "$@"`;
 const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
 
@@ -658,6 +667,7 @@ function enqueue(order) {
     before: order.before,
     feature: order.feature,
     history: order.history,
+    ticket: order.ticket,
     steps: [],
     created: Date.now(),
     result: null
@@ -801,7 +811,7 @@ async function run(job) {
     '--cap-drop', 'ALL',
     '--tmpfs', '/work:rw,size=64m,mode=0700,uid=1002,gid=1002',
     '--workdir', '/work',
-    '-e', 'AGENT_BRIEF', '-e', 'AGENT_PURPOSE', '-e', 'AGENT_GUIDE', '-e', 'AGENT_MCP',
+    '-e', 'AGENT_BRIEF', '-e', 'AGENT_PURPOSE', '-e', 'AGENT_GUIDE', '-e', 'AGENT_MCP', '-e', 'AGENT_TICKET',
     /*
      * What it signs in with, and nothing else: the one credential AUTH chose,
      * and the other set empty rather than left out, which is stronger than
@@ -820,7 +830,8 @@ async function run(job) {
       AGENT_BRIEF: brief,
       AGENT_PURPOSE: PURPOSE,
       AGENT_GUIDE: GUIDE,
-      AGENT_MCP: MCP_URL
+      AGENT_MCP: MCP_URL,
+      AGENT_TICKET: job.ticket ?? ''
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -1635,7 +1646,10 @@ createServer(async (req, res) => {
       language: Object.hasOwn(LANGUAGES, body.language) ? body.language : undefined,
       before: Number.isInteger(body.before) ? body.before : undefined,
       feature: feature || undefined,
-      history: key ? historyOf(body.history) : undefined
+      history: key ? historyOf(body.history) : undefined,
+      // the server's own, random: anything else is left out rather than
+      // written into the agent's configuration
+      ticket: /^[0-9a-f]{32}$/.test(String(body.ticket ?? '')) ? body.ticket : undefined
     });
 
     return send(res, 202, { id: job.id, queued: laneOf(job).queue.length, ...(key ? progress(job) : {}) });

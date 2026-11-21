@@ -116,6 +116,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
         deployments.Property(d => d.Origin).HasColumnName("origin").HasConversion<short>();
+        deployments.Property(d => d.Writer).HasColumnName("writer").HasConversion<short>();
+        deployments.Property(d => d.AgentModel).HasColumnName("agent_model").HasConversion<short>();
+        deployments.Property(d => d.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
 
@@ -236,6 +239,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         features.Property(f => f.Change).HasColumnName("change");
         features.Property(f => f.BaseVersion).HasColumnName("base_version");
         features.Property(f => f.Origin).HasColumnName("origin").HasConversion<short>();
+        features.Property(f => f.Writer).HasColumnName("writer").HasConversion<short>();
+        features.Property(f => f.AgentModel).HasColumnName("agent_model").HasConversion<short>();
+        features.Property(f => f.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
         features.Property(f => f.Created).HasColumnName("created");
         features.Property(f => f.Modified).HasColumnName("modified");
         features.Property(f => f.Preview).HasColumnName("preview");

@@ -421,7 +421,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
     internal static FeatureResponse Describe(FeatureInfo feature)
         => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.Base, feature.Newest, feature.Mergeable,
-               feature.Origin, feature.Created, feature.Modified, feature.Online, feature.Current, feature.Previewed, feature.Path, feature.Revision);
+               feature.Origin, feature.Created, feature.Modified, feature.Online, feature.Current, feature.Previewed, feature.Path, feature.Revision,
+               feature.Writer, feature.Model, feature.Effort);
 
     private static FeaturePreviewResponse Describe(FeatureDeployment deployment)
         => new(deployment.Success, Describe(deployment.Feature), deployment.Diagnostics);
