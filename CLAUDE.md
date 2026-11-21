@@ -1353,8 +1353,9 @@ API, with GenHTTP's documentation attributes beside the code.
   DTOs is a folder (`Api/Model/Admin/`, a service's `Model/`). Nested types,
   and `file` types only their file uses, stay with their owner; the parts of a
   partial type may add a suffix (`McpTools.Lambdas.cs`). The build enforces it
-  for every project (`analyzers/`, `GL0001` and `GL0002`). **The tests follow
-  the same rule**, foldered by area.
+  for every `GenHTTP.Lambda.*` project (`analyzers/`, `GL0001` and `GL0002`),
+  not for a host somebody builds in a checkout of their own. **The tests
+  follow the same rule**, foldered by area.
 - **The top level of a project is its public surface (owner)**: builders,
   contracts, whatever a host or another component uses. The implementation is
   in sub-folders - `Provider/` the way GenHTTP's modules keep theirs, the REST
