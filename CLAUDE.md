@@ -160,11 +160,11 @@ agent builds and changes apps at all.
 **(owner)** The platform is a set of components that hosts put together the
 GenHTTP way. Two hosts, two editions:
 
-- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
+- **Cloud** (`src/Hosts/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
   of the hosting domain, the marketing site (front page of features, `/build`,
   `/ship`, `/self-hosting`), legal pages, terms, contact and abuse mailbox,
   structured data (`CloudInstallation`, `CloudStructuredData`).
-- **Community** (`src/GenHTTP.Lambda.Community`), the Docker image
+- **Community** (`src/Hosts/GenHTTP.Lambda.Community`), the Docker image
   `genhttp/lambda`: every feature of the cloud, the build agent included,
   behind a simpler front page for developers, the same `/build` and `/ship`,
   and the showcase - translated, crisp, selling nothing. No terms, legal pages
@@ -301,6 +301,17 @@ needs is given to its builder, not read from the environment.
 | SQLite (default database) | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
 | Local directories (default files) | `GenHTTP.Lambda.Integrations.Local` | the platform's own | `.Files(...)` |
 | PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
+
+- **The folders below `src/` are the roles (owner)**, and the solution's
+  folders are the same: `Platform/` (Core), `Integrations/` (the contracts and
+  every integration), `Interfaces/` (API, MCP), `Applications/` (editor, panel,
+  sources), `Serving/` (Execution, Web, Server), `Hosts/` (cloud, community),
+  and `Kit/`. A new project joins the folder of its role - an integration
+  `Integrations/`, a door for programs or agents `Interfaces/`, a component
+  with pages people use `Applications/`, a host `Hosts/` - and keeps its
+  `GenHTTP.Lambda.*` name. Moving one moves every path that names it
+  (project references, the slnx, the Dockerfiles, the npm workspaces, the
+  ignore files, the translation script, the workflows, the docs).
 
 - **A host's `Program.cs` is the composition, short and plain**: read the
   settings, build the platform, lay out the components, hand it to the runner
@@ -930,7 +941,7 @@ Read the reference's "How it is put together" before touching services.
   **a schema change is a migration in every set**, each numbered on its own.
   Existing migrations are never edited. **Before pushing a migration check the
   highest `V` on `origin/main`** - a duplicate fails every test. New files under
-  `src/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
+  `src/Platform/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
   Windows: `git add -f`.
 - Frontends: React in an npm workspace at the root - the kit and a bundle per
   component; public pages prerendered per language.
@@ -983,6 +994,17 @@ and logging are not integrations, for now.
 - **Kinds, dialects and stores are enums, never strings (owner)**; where one
   becomes a name (file, schema, directory, JSON, env var) a mapper spells it
   out, never `ToString()`: stored names must not follow a code rename.
+- **A column of a few known values is an enum with explicit numbers, stored as
+  a small integer (owner)** - the tier, the editor view, connectivity, where a
+  version, deployment or feature came from, why an activation ended, an
+  event's kind, and the analytics' devices, browsers and systems
+  (`AnalyticsCodes`). A member keeps its number for good; a new one takes the
+  next. **The wire stays strings**: the API, MCP, editor and panel get each
+  name from its mapper beside the enum (`LambdaTierNames`,
+  `VersionOriginNames`, …), never `ToString()` or `Enum.Parse`. A number no
+  member has reads as the least it could mean - a tier as the sandbox, a view
+  as the full one (`StoredValues`) - or as nothing recorded. Open sets stay
+  text: pages, referrers, countries, crawler names.
 - **The platform uses them too (owner)**: its records and analytics are kept by
   the database integration in its dialect. **No picture is kept in a database
   (owner)**: the logo and showcase pictures are files of the files integration.
@@ -1289,7 +1311,7 @@ API, with GenHTTP's documentation attributes beside the code.
   remarks.
 - **Tags are concepts, not classes**, ordered and grouped in `ApiDocumentation`
   (`x-tagGroups`). The introduction is
-  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
+  `src/Interfaces/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
   constant of `ApiDocumentation`.
 - **Authentication describes itself**: the admin token's concern declares the
   `adminToken` scheme and its 401/403; elsewhere the editor key in the path is
@@ -1302,6 +1324,22 @@ API, with GenHTTP's documentation attributes beside the code.
 - Code is written to be read: XML documentation with `<remarks>` that say
   *why*, `#region` blocks per concern, braces on their own line. Match the file
   you are in.
+- **One top-level type per file, named after it (owner)** - records, enums,
+  interfaces and delegates too - so a type is found by its name. A group of
+  DTOs is a folder (`Api/Model/Admin/`, a service's `Model/`). Nested types,
+  and `file` types only their file uses, stay with their owner; the parts of a
+  partial type may add a suffix (`McpTools.Lambdas.cs`). The build enforces it
+  for every `GenHTTP.Lambda.*` project (`analyzers/`, `GL0001` and `GL0002`),
+  not for a host somebody builds in a checkout of their own. **The tests
+  follow the same rule**, foldered by area.
+- **The top level of a project is its public surface (owner)**: builders,
+  contracts, whatever a host or another component uses. The implementation is
+  in sub-folders - `Provider/` the way GenHTTP's modules keep theirs, the REST
+  resources in `Endpoints/`, the platform's `Services/`, `Data/`,
+  `Infrastructure/`. A host stays flat: it is its composition. Folders never
+  change a namespace, which follows the project. No folder is called `Logs`,
+  `Log`, `Data`/`data` (Windows), `bin` or `obj` - the root `.gitignore` hides
+  it.
 - Comments say why, not what. Prose, not marketing.
 - Tailwind, light and dark themes, phones included.
 - Check a UI change by running the app and looking at it; type checks and tests

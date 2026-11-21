@@ -1,0 +1,375 @@
+using GenHTTP.Lambda.Data.Entities;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+namespace GenHTTP.Lambda.Data;
+
+/// <summary>
+/// Entity framework access to the platform's store of the lambdas' meta data,
+/// in whichever database the installation keeps it. The schema itself is
+/// maintained by Evolve, see <see cref="Migrator" />.
+/// </summary>
+public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) : DbContext(options)
+{
+
+    public DbSet<LambdaEntity> Lambdas => Set<LambdaEntity>();
+
+    public DbSet<DeploymentEntity> Deployments => Set<DeploymentEntity>();
+
+    public DbSet<EventEntity> Events => Set<EventEntity>();
+
+    public DbSet<ActivationEntity> Activations => Set<ActivationEntity>();
+
+    public DbSet<ShowcaseEntity> Showcases => Set<ShowcaseEntity>();
+
+    public DbSet<SourceEntity> Sources => Set<SourceEntity>();
+
+    public DbSet<SettingEntity> Settings => Set<SettingEntity>();
+
+    public DbSet<DataStoreEntity> DataStores => Set<DataStoreEntity>();
+
+    public DbSet<FeatureEntity> Features => Set<FeatureEntity>();
+
+    public DbSet<SecretEntity> Secrets => Set<SecretEntity>();
+
+    public DbSet<EditorAddressEntity> EditorAddresses => Set<EditorAddressEntity>();
+
+    public DbSet<AddressBlockEntity> AddressBlocks => Set<AddressBlockEntity>();
+
+    public DbSet<BrandingPictureEntity> BrandingPictures => Set<BrandingPictureEntity>();
+
+    public DbSet<QuietHoursEntity> QuietHours => Set<QuietHoursEntity>();
+
+    public DbSet<DatabaseOptimizationEntity> DatabaseOptimizations => Set<DatabaseOptimizationEntity>();
+
+    public DbSet<BlobEntity> Blobs => Set<BlobEntity>();
+
+    /// <summary>
+    /// Every date is written in UTC, and read back as UTC.
+    /// </summary>
+    /// <remarks>
+    /// SQLite keeps a date as text and forgets which zone it was in, so it
+    /// came back unspecified and went out as JSON without a zone - which a
+    /// browser reads as its own local time, and a version saved a minute ago
+    /// in Vienna was shown as two hours old. Written as UTC as well, since
+    /// PostgreSQL keeps a time with its zone and refuses one that has none;
+    /// SQLite writes the same text either way.
+    /// </remarks>
+    protected override void ConfigureConventions(ModelConfigurationBuilder builder)
+    {
+        builder.Properties<DateTime>().HaveConversion<UtcConverter>();
+        builder.Properties<DateTime?>().HaveConversion<NullableUtcConverter>();
+    }
+
+    private sealed class UtcConverter() : ValueConverter<DateTime, DateTime>(
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+
+    private sealed class NullableUtcConverter() : ValueConverter<DateTime?, DateTime?>(
+        value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null,
+        value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null);
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        var lambdas = builder.Entity<LambdaEntity>();
+
+        lambdas.ToTable("lambdas");
+
+        lambdas.HasKey(l => l.Id);
+
+        lambdas.Property(l => l.Id).HasColumnName("id");
+        lambdas.Property(l => l.PublicKey).HasColumnName("public_key");
+        lambdas.Property(l => l.PrivateKey).HasColumnName("private_key");
+        lambdas.Property(l => l.Tier).HasColumnName("tier").HasConversion(tier => (short)tier, number => StoredValues.Tier(number));
+        lambdas.Property(l => l.TierChanged).HasColumnName("tier_changed");
+        lambdas.Property(l => l.ActiveVersion).HasColumnName("active_version");
+        lambdas.Property(l => l.Created).HasColumnName("created");
+        lambdas.Property(l => l.Modified).HasColumnName("modified");
+        lambdas.Property(l => l.Deployed).HasColumnName("deployed");
+        lambdas.Property(l => l.LastSeen).HasColumnName("last_seen");
+        lambdas.Property(l => l.AnalyticsSince).HasColumnName("analytics_since");
+        lambdas.Property(l => l.Domain).HasColumnName("domain");
+        lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion(view => (short)view, number => StoredValues.View(number));
+        lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
+        lambdas.Property(l => l.Blocked).HasColumnName("blocked");
+        lambdas.Property(l => l.BlockReason).HasColumnName("block_reason");
+        lambdas.Property(l => l.Connectivity).HasColumnName("connectivity").HasConversion<short>();
+        lambdas.Property(l => l.ConnectivityChanged).HasColumnName("connectivity_changed");
+        lambdas.Property(l => l.ConnectivityPurpose).HasColumnName("connectivity_purpose");
+        lambdas.Property(l => l.ConnectivityNote).HasColumnName("connectivity_note");
+
+        lambdas.HasIndex(l => l.PublicKey).IsUnique();
+        lambdas.HasIndex(l => l.PrivateKey).IsUnique();
+        lambdas.HasIndex(l => l.Domain).IsUnique().HasFilter("domain IS NOT NULL");
+
+        var deployments = builder.Entity<DeploymentEntity>();
+
+        deployments.ToTable("deployments");
+
+        deployments.HasKey(d => d.Id);
+
+        deployments.Property(d => d.Id).HasColumnName("id");
+        deployments.Property(d => d.LambdaId).HasColumnName("lambda_id");
+        deployments.Property(d => d.Version).HasColumnName("version");
+        deployments.Property(d => d.Created).HasColumnName("created");
+        deployments.Property(d => d.Specification).HasColumnName("specification");
+        deployments.Property(d => d.Change).HasColumnName("change");
+        deployments.Property(d => d.Origin).HasColumnName("origin").HasConversion<short>();
+
+        deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
+
+        var events = builder.Entity<EventEntity>();
+
+        events.ToTable("events");
+
+        events.HasKey(e => e.Id);
+
+        events.Property(e => e.Id).HasColumnName("id");
+        events.Property(e => e.Kind).HasColumnName("kind").HasConversion(kind => (short)kind, number => (LambdaEvent)number);
+        events.Property(e => e.LambdaId).HasColumnName("lambda_id");
+        events.Property(e => e.PublicKey).HasColumnName("public_key");
+        events.Property(e => e.Occurred).HasColumnName("occurred");
+
+        events.HasIndex(e => e.Occurred);
+        events.HasIndex(e => new { e.Kind, e.Occurred });
+
+        var activations = builder.Entity<ActivationEntity>();
+
+        activations.ToTable("activations");
+
+        activations.HasKey(a => a.Id);
+
+        activations.Property(a => a.Id).HasColumnName("id");
+        activations.Property(a => a.LambdaId).HasColumnName("lambda_id");
+        activations.Property(a => a.Version).HasColumnName("version");
+        activations.Property(a => a.Started).HasColumnName("started");
+        activations.Property(a => a.Origin).HasColumnName("origin").HasConversion<short>();
+        activations.Property(a => a.Ended).HasColumnName("ended");
+        activations.Property(a => a.EndedBy).HasColumnName("ended_by").HasConversion<short>();
+
+        activations.HasIndex(a => new { a.LambdaId, a.Started });
+
+        activations.HasOne(a => a.Lambda)
+                   .WithMany()
+                   .HasForeignKey(a => a.LambdaId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+        var showcases = builder.Entity<ShowcaseEntity>();
+
+        showcases.ToTable("showcases");
+
+        showcases.HasKey(s => s.LambdaId);
+
+        showcases.Property(s => s.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        showcases.Property(s => s.Title).HasColumnName("title");
+        showcases.Property(s => s.Description).HasColumnName("description");
+        showcases.Property(s => s.Image).HasColumnName("image");
+        showcases.Property(s => s.ImageBytes).HasColumnName("image_bytes");
+        showcases.Property(s => s.ImageType).HasColumnName("image_type");
+        showcases.Property(s => s.Created).HasColumnName("created");
+        showcases.Property(s => s.Updated).HasColumnName("updated");
+
+        showcases.HasOne(s => s.Lambda)
+                 .WithOne()
+                 .HasForeignKey<ShowcaseEntity>(s => s.LambdaId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+        var sources = builder.Entity<SourceEntity>();
+
+        sources.ToTable("sources");
+
+        sources.HasKey(s => s.LambdaId);
+
+        sources.Property(s => s.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        sources.Property(s => s.Published).HasColumnName("published");
+        sources.Property(s => s.License).HasColumnName("license");
+        sources.Property(s => s.Author).HasColumnName("author");
+        sources.Property(s => s.Stars).HasColumnName("stars");
+        sources.Property(s => s.About).HasColumnName("about");
+        sources.Property(s => s.AboutVersion).HasColumnName("about_version");
+        sources.Property(s => s.PublishedAt).HasColumnName("published_at");
+        sources.Property(s => s.Updated).HasColumnName("updated");
+
+        sources.HasOne(s => s.Lambda)
+               .WithOne()
+               .HasForeignKey<SourceEntity>(s => s.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        var settings = builder.Entity<SettingEntity>();
+
+        settings.ToTable("settings");
+
+        settings.HasKey(s => s.Key);
+
+        settings.Property(s => s.Key).HasColumnName("key");
+        settings.Property(s => s.Value).HasColumnName("value");
+
+        var stores = builder.Entity<DataStoreEntity>();
+
+        stores.ToTable("data_stores");
+
+        stores.HasKey(s => new { s.LambdaId, s.Kind });
+
+        stores.Property(s => s.LambdaId).HasColumnName("lambda_id");
+        stores.Property(s => s.Kind).HasColumnName("kind");
+        stores.Property(s => s.Enabled).HasColumnName("enabled");
+        stores.Property(s => s.Changed).HasColumnName("changed");
+
+        stores.HasOne(s => s.Lambda)
+              .WithMany()
+              .HasForeignKey(s => s.LambdaId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+        var features = builder.Entity<FeatureEntity>();
+
+        features.ToTable("features");
+
+        features.HasKey(f => f.Id);
+
+        features.Property(f => f.Id).HasColumnName("id");
+        features.Property(f => f.LambdaId).HasColumnName("lambda_id");
+        features.Property(f => f.Key).HasColumnName("key");
+        features.Property(f => f.Name).HasColumnName("name");
+        features.Property(f => f.Branch).HasColumnName("branch");
+        features.Property(f => f.Specification).HasColumnName("specification");
+        features.Property(f => f.Change).HasColumnName("change");
+        features.Property(f => f.BaseVersion).HasColumnName("base_version");
+        features.Property(f => f.Origin).HasColumnName("origin").HasConversion<short>();
+        features.Property(f => f.Created).HasColumnName("created");
+        features.Property(f => f.Modified).HasColumnName("modified");
+        features.Property(f => f.Preview).HasColumnName("preview");
+        features.Property(f => f.Previewed).HasColumnName("previewed");
+        features.Property(f => f.Revision).HasColumnName("revision");
+        features.Property(f => f.PreviewOf).HasColumnName("preview_of");
+
+        features.HasIndex(f => f.Key).IsUnique();
+        features.HasIndex(f => f.LambdaId);
+        features.HasIndex(f => new { f.LambdaId, f.Branch }).IsUnique();
+
+        features.HasOne(f => f.Lambda)
+                .WithMany()
+                .HasForeignKey(f => f.LambdaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+        var secrets = builder.Entity<SecretEntity>();
+
+        secrets.ToTable("secrets");
+
+        secrets.HasKey(s => s.Id);
+
+        secrets.Property(s => s.Id).HasColumnName("id");
+        secrets.Property(s => s.LambdaId).HasColumnName("lambda_id");
+        secrets.Property(s => s.FeatureId).HasColumnName("feature_id");
+        secrets.Property(s => s.Name).HasColumnName("name");
+        secrets.Property(s => s.Value).HasColumnName("value");
+        secrets.Property(s => s.Created).HasColumnName("created");
+        secrets.Property(s => s.Changed).HasColumnName("changed");
+
+        secrets.HasIndex(s => new { s.LambdaId, s.FeatureId, s.Name });
+
+        secrets.HasOne<LambdaEntity>()
+               .WithMany()
+               .HasForeignKey(s => s.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        secrets.HasOne<FeatureEntity>()
+               .WithMany()
+               .HasForeignKey(s => s.FeatureId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        var editors = builder.Entity<EditorAddressEntity>();
+
+        editors.ToTable("editor_addresses");
+
+        editors.HasKey(e => new { e.LambdaId, e.Address });
+
+        editors.Property(e => e.LambdaId).HasColumnName("lambda_id");
+        editors.Property(e => e.Address).HasColumnName("address");
+        editors.Property(e => e.FirstSeen).HasColumnName("first_seen");
+        editors.Property(e => e.LastSeen).HasColumnName("last_seen");
+
+        editors.HasOne<LambdaEntity>()
+               .WithMany()
+               .HasForeignKey(e => e.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        var blocks = builder.Entity<AddressBlockEntity>();
+
+        blocks.ToTable("address_blocks");
+
+        blocks.HasKey(b => b.Id);
+
+        blocks.Property(b => b.Id).HasColumnName("id");
+        blocks.Property(b => b.Address).HasColumnName("address");
+        blocks.Property(b => b.Reason).HasColumnName("reason");
+        blocks.Property(b => b.PublicKey).HasColumnName("public_key");
+        blocks.Property(b => b.Created).HasColumnName("created");
+
+        blocks.HasIndex(b => b.Address).IsUnique();
+
+        var pictures = builder.Entity<BrandingPictureEntity>();
+
+        pictures.ToTable("branding_pictures");
+
+        pictures.HasKey(p => p.Purpose);
+
+        pictures.Property(p => p.Purpose).HasColumnName("purpose");
+        pictures.Property(p => p.Type).HasColumnName("type");
+        pictures.Property(p => p.Content).HasColumnName("content");
+        pictures.Property(p => p.Updated).HasColumnName("updated");
+
+        // keyed by the lambda, or 0 for the installation as a whole - a key
+        // that is given rather than made, which EF would otherwise take 0 for
+        var quiet = builder.Entity<QuietHoursEntity>();
+
+        quiet.ToTable("quiet_hours");
+
+        quiet.HasKey(q => q.LambdaId);
+
+        quiet.Property(q => q.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        quiet.Property(q => q.Hours).HasColumnName("hours");
+        quiet.Property(q => q.Covered).HasColumnName("covered");
+        quiet.Property(q => q.Since).HasColumnName("since");
+        quiet.Property(q => q.Updated).HasColumnName("updated");
+
+        var optimizations = builder.Entity<DatabaseOptimizationEntity>();
+
+        optimizations.ToTable("database_optimizations");
+
+        optimizations.HasKey(o => o.LambdaId);
+
+        optimizations.Property(o => o.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        optimizations.Property(o => o.Optimized).HasColumnName("optimized");
+        optimizations.Property(o => o.Millis).HasColumnName("millis");
+        optimizations.Property(o => o.SizeBefore).HasColumnName("size_before");
+        optimizations.Property(o => o.SizeAfter).HasColumnName("size_after");
+        optimizations.Property(o => o.Steps).HasColumnName("steps");
+        optimizations.Property(o => o.Skipped).HasColumnName("skipped");
+        optimizations.Property(o => o.Failure).HasColumnName("failure");
+
+        var blobs = builder.Entity<BlobEntity>();
+
+        blobs.ToTable("blobs");
+
+        blobs.HasKey(b => new { b.LambdaId, b.Hash });
+
+        blobs.Property(b => b.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        blobs.Property(b => b.Hash).HasColumnName("hash");
+        blobs.Property(b => b.Size).HasColumnName("size");
+        blobs.Property(b => b.Chars).HasColumnName("chars");
+        blobs.Property(b => b.GitSha1).HasColumnName("git_sha1");
+        blobs.Property(b => b.GitSha256).HasColumnName("git_sha256");
+
+        blobs.HasOne(b => b.Lambda)
+             .WithMany()
+             .HasForeignKey(b => b.LambdaId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+        deployments.HasOne(d => d.Lambda)
+                   .WithMany(l => l.Deployments)
+                   .HasForeignKey(d => d.LambdaId)
+                   .OnDelete(DeleteBehavior.Cascade);
+    }
+
+}

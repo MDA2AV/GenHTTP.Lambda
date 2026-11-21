@@ -17,4 +17,16 @@
 
     </PropertyGroup>
 
+    <!--
+        The repository's own rules (analyzers/), for every project of it, the
+        tests included: one top-level type per file, named after it. Handed to
+        the compiler only, never referenced or shipped. Only the platform's
+        projects (GenHTTP.Lambda.*) are held to them: a host somebody builds
+        in a checkout of their own is theirs to lay out.
+    -->
+    <ItemGroup Condition="$(MSBuildProjectName.StartsWith('GenHTTP.Lambda.')) and '$(MSBuildProjectName)' != 'GenHTTP.Lambda.Analyzers'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)analyzers/GenHTTP.Lambda.Analyzers/GenHTTP.Lambda.Analyzers.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    </ItemGroup>
+
 </Project>

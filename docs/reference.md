@@ -2,14 +2,14 @@
 
 The technical reference of GenHTTP Lambda: its routes, the API, the
 configuration, how it is operated and how it is put together. It covers both
-editions - the cloud edition that runs genhttp.dev (`src/GenHTTP.Lambda.Cloud`)
+editions - the cloud edition that runs genhttp.dev (`src/Hosts/GenHTTP.Lambda.Cloud`)
 and the community edition anybody runs on a server of their own
-(`src/GenHTTP.Lambda.Community`, the image `genhttp/lambda`). Both are the same
+(`src/Hosts/GenHTTP.Lambda.Community`, the image `genhttp/lambda`). Both are the same
 platform, put together by two hosts, and where they differ it says so. How to
 run the community edition is in the [README](../README.md); the decisions
 behind all of it are in [CLAUDE.md](../CLAUDE.md). Paths of the platform's
 code - `Services/`, `Data/`, `Resources/`, `Infrastructure/` - are below
-`src/GenHTTP.Lambda.Core/`.
+`src/Platform/GenHTTP.Lambda.Core/`.
 
 Write a C# snippet that returns a GenHTTP `IHandler`, press deploy, and get a
 public URL that serves it. The snippet is compiled with Roslyn at runtime and
@@ -36,7 +36,7 @@ lambdas - lives in a named volume mounted at `/data` (or, the databases, in
 below it, at `/lambda/{key}/` (see
 [Where the lambdas answer](#where-the-lambdas-answer)). `samples/community`
 does the same with Docker Compose, the build agent beside it as a profile.
-The image is built from `src/GenHTTP.Lambda.Community/Dockerfile` and
+The image is built from `src/Hosts/GenHTTP.Lambda.Community/Dockerfile` and
 published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
 `.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
 hand. Both host images run the server as the unprivileged `lambda` (uid and
@@ -50,7 +50,7 @@ counts - a redirect where TLS is set up, a 401 where a host puts a login in
 front.
 
 genhttp.dev is the cloud edition: `deploy/cloud/docker-compose.yml` builds it
-from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
+from `src/Hosts/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
 [Redeploying](#redeploying)), and its lambdas answer at subdomains of
 `LAMBDA_HOSTING_URL`, one each.
 
@@ -64,8 +64,8 @@ into its output when it is built - so the frontends are built first:
 npm install && npm run build                      # every bundle, into <project>/bundle/
 
 # the server, on http://localhost:8080/ - the community edition or the cloud one
-dotnet run --project src/GenHTTP.Lambda.Community
-dotnet run --project src/GenHTTP.Lambda.Cloud
+dotnet run --project src/Hosts/GenHTTP.Lambda.Community
+dotnet run --project src/Hosts/GenHTTP.Lambda.Cloud
 ```
 
 A host serves the bundles it was built with: build it again after building a
@@ -332,7 +332,7 @@ the community edition to subdomains.
   The hosting domain itself, and `www.` in front of it, has a page of its own
   that says what is hosted there and leads to the site, in the language the
   browser prefers. Their words are the runner's own, in
-  `src/GenHTTP.Lambda.Execution/Resources/hosting.json` (`hosting:/` and
+  `src/Serving/GenHTTP.Lambda.Execution/Resources/hosting.json` (`hosting:/` and
   `hosting:/:key`), and translated with the rest. Both link the site's legal
   notice and privacy policy, named as the site names them, where it has them
   (`LambdaOptions.LegalPages`, which genhttp.dev sets). Neither is one of
@@ -1275,7 +1275,10 @@ feature's preview.
   `lambdas`, and a table of facts per statistic - `days` (the totals),
   `pages`, `referrers`, `countries`, `devices`, `browsers`, `systems`,
   `crawlers` - keyed by lambda, year, month and day (and value), so a
-  lambda's days are a range of the key. Migrated by Evolve from
+  lambda's days are a range of the key. A device, browser or system is kept
+  as a small number (`VisitorDevice`, `VisitorBrowser`, `VisitorSystem`,
+  named by `AnalyticsCodes`; 0 is other), the open sets - pages, referrers,
+  countries, crawlers - as their text. Migrated by Evolve from
   `Services/Analytics/Migrations`. Only the switch is in `lambda.db`
   (`lambdas.analytics_since`), read with everything else that serves a
   request. Deleting a lambda deletes its rows.
@@ -1358,7 +1361,7 @@ requests or wikis, and no way to act on the lambda from there; somebody who
 wants to build on it downloads it, and `platform_guide` tells an agent how a
 download becomes a lambda again. A small notice says what a lambda is and
 leads to `/build`. The pages are a component of their own (`SourcePages`, its
-bundle in `src/GenHTTP.Lambda.Sources/Frontend`), in a frame of their own
+bundle in `src/Applications/GenHTTP.Lambda.Sources/Frontend`), in a frame of their own
 without the site's menu,
 fetched with their words and highlighter only by whoever opens them, in every
 language under the same addresses as every other public page. They are not
@@ -1536,24 +1539,35 @@ only two are applied at once.
 A set of .NET 11 projects below `src/`, hosted by `GenHTTP.Full.Ioxide`: the
 platform, the components over it - each with a builder in front, the way
 GenHTTP's modules are made (`X.Create(...)`) - and two hosts that put them
-together.
+together. They are grouped into folders by role, and the solution's folders
+are the same: `Platform/` (the services), `Integrations/` (what the data is
+kept in), `Interfaces/` (the doors programs and agents use), `Applications/`
+(the components with pages people use), `Serving/` (what serves them all),
+`Hosts/` (the two editions), and `Kit/`, the source the frontends share.
+Within a project a file declares one top-level type, named after it, and the
+top level holds what others use - the builders and contracts - with the
+implementation below it (`Provider/`, the API's `Endpoints/`, the platform's
+`Services/`). `analyzers/GenHTTP.Lambda.Analyzers`, which the root
+`Directory.Build.props` hands to the compiler of every `GenHTTP.Lambda.*`
+project, the tests included, fails a build that breaks this (`GL0001`,
+`GL0002`); a host of somebody's own built in a checkout is not held to it.
 
-| Project | What it is |
-|---|---|
-| `GenHTTP.Lambda.Core` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
-| `GenHTTP.Lambda.Web` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
-| `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
-| `GenHTTP.Lambda.Api` | `RestApi.Create(platform)`, mounted at `/api` |
-| `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)`, mounted at `/mcp` |
-| `GenHTTP.Lambda.Editing` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
-| `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
-| `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
-| `GenHTTP.Lambda.Integrations` | the contracts of what the platform keeps its data in - `IDatabaseProvider`, `IFileProvider`, `ISecretProvider` - and nothing of the platform's (see [Integrations](#integrations)) |
-| `GenHTTP.Lambda.Integrations.Sqlite` | the database every installation has unless it chooses another: SQLite files in the data directory (`SqliteDatabase.Create()`) |
-| `GenHTTP.Lambda.Integrations.PostgreSql` | one PostgreSQL database, a schema per lambda (`PostgreSqlDatabase.Create(connection)`); referenced by the community host only |
-| `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
-| `GenHTTP.Lambda.Cloud` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
-| `GenHTTP.Lambda.Community` | the host of the community edition: `Program.cs`, which lets its operator brand it, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
+| Project | Below `src/` | What it is |
+|---|---|---|
+| `GenHTTP.Lambda.Core` | `Platform/` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
+| `GenHTTP.Lambda.Web` | `Serving/` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
+| `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
+| `GenHTTP.Lambda.Api` | `Interfaces/` | `RestApi.Create(platform)`, mounted at `/api` |
+| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp` |
+| `GenHTTP.Lambda.Editing` | `Applications/` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
+| `GenHTTP.Lambda.Administration` | `Applications/` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
+| `GenHTTP.Lambda.Sources` | `Applications/` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
+| `GenHTTP.Lambda.Integrations` | `Integrations/` | the contracts of what the platform keeps its data in - `IDatabaseProvider`, `IFileProvider`, `ISecretProvider` - and nothing of the platform's (see [Integrations](#integrations)) |
+| `GenHTTP.Lambda.Integrations.Sqlite` | `Integrations/` | the database every installation has unless it chooses another: SQLite files in the data directory (`SqliteDatabase.Create()`) |
+| `GenHTTP.Lambda.Integrations.PostgreSql` | `Integrations/` | one PostgreSQL database, a schema per lambda (`PostgreSqlDatabase.Create(connection)`); referenced by the community host only |
+| `GenHTTP.Lambda.Server` | `Serving/` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
+| `GenHTTP.Lambda.Cloud` | `Hosts/` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
+| `GenHTTP.Lambda.Community` | `Hosts/` | the host of the community edition: `Program.cs`, which lets its operator brand it, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
 
 A host's `Program.cs` is the whole composition. The community edition's:
 
@@ -2029,7 +2043,17 @@ integration may speak (`IDatabaseProvider.Dialect`): `Data/Migrations` and
 `Services/Analytics/Migrations` for SQLite, `Data/PostgreSql` and
 `Services/Analytics/PostgreSql` for PostgreSQL, each numbered on its own. A
 change to the schema is a migration in every set. The analytics' commands are
-written once, in SQL both accept.
+written once, in SQL both accept. A column of one of a few known values holds
+a small number (`INTEGER` in SQLite, `smallint` in PostgreSQL): the tier,
+editor view and connectivity of a lambda, the origin of a version, a
+deployment and a feature, why an activation ended, an event's kind - the
+members of the enums in `Data/Entities`, which keep their numbers for good.
+What the API and MCP call them is spelled out beside each (`LambdaTierNames`,
+`VersionOriginNames`, …), so the names on the wire are those of before; a
+number no member has reads as the sandbox, the full view
+(`Data/StoredValues.cs`) or nothing recorded. V30 (V5 in PostgreSQL) converted
+the names an installation had saved, and cannot be undone by an older
+release.
 
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder
@@ -2049,14 +2073,14 @@ files only through the platform, and nothing hands it a path.
 ## Configuration
 
 Everything is read from the environment on startup, by
-[`LambdaSettings.FromEnvironment()`](../src/GenHTTP.Lambda.Server/LambdaSettings.cs) -
+[`LambdaSettings.FromEnvironment()`](../src/Serving/GenHTTP.Lambda.Server/LambdaSettings.cs) -
 the only place below the hosts that reads it - apart from the limits of the
 tiers, which are the product's promises rather than the server's
 configuration and are set in the administration panel while it runs (see
 [Limits](#limits)); a host gives their defaults (`LambdaOptions.Sandbox`,
 `Production`, `System`, `DefaultTier`), as genhttp.dev gives the sandbox and
 production the labels *Free* and *Premium*. The variables are read into two: the platform's options
-([`LambdaOptions`](../src/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
+([`LambdaOptions`](../src/Platform/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
 which every component is built with, and the host's (`ServerSettings`), which
 only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
 `LAMBDA_RECEIVE_BUFFERS`, `LAMBDA_RECEIVE_QUEUE_ENTRIES`, `LAMBDA_TLS_PORT`,

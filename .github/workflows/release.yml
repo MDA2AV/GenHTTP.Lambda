@@ -2,7 +2,7 @@ name: Release
 
 # Publishes the community edition and its build agent to Docker Hub:
 #
-#   genhttp/lambda         the server (src/GenHTTP.Lambda.Community/Dockerfile)
+#   genhttp/lambda         the server (src/Hosts/GenHTTP.Lambda.Community/Dockerfile)
 #   genhttp/lambda-agent   the build agent and its egress proxy (docker/agent)
 #
 # for amd64 and arm64, tagged with the version and as latest. Runs for a tag
@@ -36,7 +36,7 @@ jobs:
         include:
           - image: genhttp/lambda
             context: .
-            file: src/GenHTTP.Lambda.Community/Dockerfile
+            file: src/Hosts/GenHTTP.Lambda.Community/Dockerfile
           - image: genhttp/lambda-agent
             context: docker/agent
             file: docker/agent/Dockerfile
