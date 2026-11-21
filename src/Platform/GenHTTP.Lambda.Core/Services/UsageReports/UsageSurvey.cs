@@ -377,7 +377,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
                         .Count(d => long.TryParse(Path.GetFileName(d), out var id) && lambdas.Contains(id));
     }
 
-    private static Dictionary<string, int> CountOrigins(IEnumerable<(string? Origin, int Count)> origins)
+    private static Dictionary<string, int> CountOrigins(IEnumerable<(VersionOrigin? Origin, int Count)> origins)
     {
         var counted = new Dictionary<string, int> { ["mcp"] = 0, ["api"] = 0, ["git"] = 0, ["template"] = 0, ["other"] = 0 };
 
@@ -385,10 +385,10 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
         {
             var name = origin switch
             {
-                VersionOrigins.Agent => "mcp",
-                VersionOrigins.Api => "api",
-                VersionOrigins.Git => "git",
-                VersionOrigins.Template => "template",
+                VersionOrigin.Agent => "mcp",
+                VersionOrigin.Api => "api",
+                VersionOrigin.Git => "git",
+                VersionOrigin.Template => "template",
                 _ => "other"
             };
 

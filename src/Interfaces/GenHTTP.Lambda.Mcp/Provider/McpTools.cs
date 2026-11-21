@@ -544,7 +544,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private async ValueTask<object> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, SaveRequest save, string origin, int? read = null)
     {
-        var note = new VersionNote(save.Specification, save.Change, VersionOrigins.Agent);
+        var note = new VersionNote(save.Specification, save.Change, VersionOrigin.Agent);
 
         // said where the next save is decided, and as a request rather than a
         // refusal - like the note below: the code matters more
@@ -671,7 +671,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> CreateFeatureAsync(string privateKey, string name, string? specification, int? @base, string origin)
     {
-        var created = await features.CreateAsync(privateKey, new FeatureDraft(name, specification, @base, VersionOrigins.Agent));
+        var created = await features.CreateAsync(privateKey, new FeatureDraft(name, specification, @base, VersionOrigin.Agent));
 
         logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
@@ -701,7 +701,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> MergeFeatureAsync(string privateKey, string feature, string? specification, string? change, bool deploy)
     {
-        var note = new VersionNote(specification, change, VersionOrigins.Agent);
+        var note = new VersionNote(specification, change, VersionOrigin.Agent);
 
         var merged = await features.MergeAsync(privateKey, feature, note, deploy);
 
@@ -996,7 +996,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             info = await connectivity.RequestAsync(privateKey, purpose);
 
             logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", await meta.PublicKeyOfAsync(privateKey),
-                                  info.Status?.ToString() ?? (info.Included ? "Included" : "None"));
+                                  ConnectivityStatusNames.Name(info.Status) ?? (info.Included ? "Included" : "None"));
         }
         else
         {
@@ -1027,7 +1027,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var known = info ?? ConnectivityInfo.None;
 
-        return new { known.Allowed, known.Included, status = known.Status?.ToString(), known.Changed, known.Purpose, known.Note };
+        return new { known.Allowed, known.Included, status = ConnectivityStatusNames.Name(known.Status), known.Changed, known.Purpose, known.Note };
     }
 
     /// <summary>
@@ -1214,7 +1214,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<object> DeployVersionAsync(string privateKey, int? version, string origin, string? reminder = null, string? documentation = null)
     {
-        var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
+        var result = await meta.DeployAsync(privateKey, version, VersionOrigin.Agent);
 
         logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), version);
 
@@ -1765,7 +1765,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ownDomain = policy.OwnDomain,
             offlineWhenUnused = policy.ExpiresWhenUnused,
             above = lambda.Above is { } above
-                ? new { tier = above.Tier.ToString(), label = above.Label, buildBytes = above.MaxVersionBytes, dataBytes = above.MaxDataBytes, ownDomain = above.OwnDomain, offlineWhenUnused = above.ExpiresWhenUnused }
+                ? new { tier = LambdaTierNames.Name(above.Tier), label = above.Label, buildBytes = above.MaxVersionBytes, dataBytes = above.MaxDataBytes, ownDomain = above.OwnDomain, offlineWhenUnused = above.ExpiresWhenUnused }
                 : null
         };
     }

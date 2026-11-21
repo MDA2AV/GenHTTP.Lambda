@@ -77,13 +77,13 @@ public interface IMetaService
     /// Builds the given version (or the latest one) and makes it the active deployment.
     /// </summary>
     /// <param name="origin">Who is putting it online, for the deployment history</param>
-    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default);
+    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
     /// <param name="endedBy">Why, for the deployment history: stopped by the owner unless said otherwise</param>
-    ValueTask<LambdaInfo> UndeployAsync(string privateKey, string? endedBy = null);
+    ValueTask<LambdaInfo> UndeployAsync(string privateKey, ActivationEnding? endedBy = null);
 
     /// <summary>
     /// Every stretch of time the lambda was online, newest first.
@@ -135,7 +135,7 @@ public interface IMetaService
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
     /// <param name="origin">Who is asking: the operator may delete a lambda they blocked, its owner may not</param>
-    ValueTask DeleteAsync(string privateKey, string? origin = null);
+    ValueTask DeleteAsync(string privateKey, VersionOrigin? origin = null);
 
     /// <summary>
     /// Blocks the lambda: takes it and the previews of its features offline,

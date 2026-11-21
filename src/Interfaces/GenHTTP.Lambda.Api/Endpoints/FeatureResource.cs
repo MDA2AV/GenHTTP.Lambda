@@ -91,7 +91,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<FeatureResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey, CreateFeatureRequest request)
     {
-        var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigins.Api));
+        var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigin.Api));
 
         logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
@@ -360,7 +360,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     public async ValueTask<Result<FeatureMergeResponse>> Merge([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                                MergeFeatureRequest? request)
     {
-        var note = new VersionNote(request?.Specification, request?.Change, VersionOrigins.Api);
+        var note = new VersionNote(request?.Specification, request?.Change, VersionOrigin.Api);
 
         var merged = await features.MergeAsync(privateKey, feature, note, request?.Deploy == true);
 

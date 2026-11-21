@@ -994,6 +994,17 @@ and logging are not integrations, for now.
 - **Kinds, dialects and stores are enums, never strings (owner)**; where one
   becomes a name (file, schema, directory, JSON, env var) a mapper spells it
   out, never `ToString()`: stored names must not follow a code rename.
+- **A column of a few known values is an enum with explicit numbers, stored as
+  a small integer (owner)** - the tier, the editor view, connectivity, where a
+  version, deployment or feature came from, why an activation ended, an
+  event's kind, and the analytics' devices, browsers and systems
+  (`AnalyticsCodes`). A member keeps its number for good; a new one takes the
+  next. **The wire stays strings**: the API, MCP, editor and panel get each
+  name from its mapper beside the enum (`LambdaTierNames`,
+  `VersionOriginNames`, …), never `ToString()` or `Enum.Parse`. A number no
+  member has reads as the least it could mean - a tier as the sandbox, a view
+  as the full one (`StoredValues`) - or as nothing recorded. Open sets stay
+  text: pages, referrers, countries, crawler names.
 - **The platform uses them too (owner)**: its records and analytics are kept by
   the database integration in its dialect. **No picture is kept in a database
   (owner)**: the logo and showcase pictures are files of the files integration.

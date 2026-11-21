@@ -164,7 +164,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
         // was allowed, the newest first, to be looked at again
         return [.. lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).OrderBy(l => l.ConnectivityChanged)
                           .Concat(lambdas.Where(l => l.Connectivity == ConnectivityStatus.Allowed).OrderByDescending(l => l.ConnectivityChanged))
-                          .Select(l => new ConnectivityListing(l.PublicKey, l.Tier.ToString(), l.ActiveVersion, l.Blocked, Describe(l),
+                          .Select(l => new ConnectivityListing(l.PublicKey, LambdaTierNames.Name(l.Tier), l.ActiveVersion, l.Blocked, Describe(l),
                                                          Connects(l.Id, l.ActiveVersion, latest.GetValueOrDefault(l.Id))))];
     }
 

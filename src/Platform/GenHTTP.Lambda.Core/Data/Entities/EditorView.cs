@@ -8,7 +8,8 @@ namespace GenHTTP.Lambda.Data.Entities;
 /// A default rather than a rule: whoever opens the editor can switch, and the
 /// switch is remembered in their browser, never here - so an administrator
 /// looking at somebody's lambda in the full view leaves it simple for its
-/// owner. The name is what is stored, as with the tier.
+/// owner. Stored as its number, as the tier is, and named by
+/// <see cref="EditorViewNames"/>; a number no member has reads as the full view.
 /// </remarks>
 public enum EditorView
 {
@@ -18,13 +19,13 @@ public enum EditorView
     /// deployments and the logs. For somebody who writes the code, or
     /// wants to see it.
     /// </summary>
-    Full,
+    Full = 0,
 
     /// <summary>
     /// The app, how it is doing and a box to ask for a change - for
     /// somebody who had it built from a sentence and does not want to know
     /// what a version or a deployment is.
     /// </summary>
-    Simple
+    Simple = 1
 
 }

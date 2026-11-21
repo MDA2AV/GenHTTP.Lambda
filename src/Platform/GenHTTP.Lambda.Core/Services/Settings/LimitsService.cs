@@ -201,7 +201,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// </summary>
     public static IEnumerable<(string Key, string Value)> Flatten(ProductLimits limits)
     {
-        yield return ($"{Prefix}default-tier", limits.DefaultTier.ToString());
+        yield return ($"{Prefix}default-tier", LambdaTierNames.Name(limits.DefaultTier));
 
         foreach (var (tier, values) in Tiers(limits))
         {
@@ -313,7 +313,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
         var defaults = DefaultsOf(options);
 
         return new ProductLimits(
-            stored.TryGetValue($"{Prefix}default-tier", out var tier) && Enum.TryParse<LambdaTier>(tier, out var parsed) ? parsed : defaults.DefaultTier,
+            stored.TryGetValue($"{Prefix}default-tier", out var tier) && LambdaTierNames.TryRead(tier, out var parsed) ? parsed : defaults.DefaultTier,
             ReadTier(stored, "sandbox", defaults.Sandbox),
             ReadTier(stored, "production", defaults.Production),
             ReadTier(stored, "system", defaults.System),

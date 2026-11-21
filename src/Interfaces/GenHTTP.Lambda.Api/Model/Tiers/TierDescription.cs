@@ -17,7 +17,7 @@ public static class TierDescription
 {
 
     public static TierResponse Of(TierPolicy policy, TierPolicy? above) => new(
-        policy.Tier.ToString(),
+        LambdaTierNames.Name(policy.Tier),
         policy.Label,
         policy.MaxVersionBytes,
         policy.MaxDataBytes,
@@ -26,7 +26,7 @@ public static class TierDescription
         policy.OwnDomain,
         policy.ExpiresWhenUnused,
         policy.Installation,
-        above?.Tier.ToString(),
+        above == null ? null : LambdaTierNames.Name(above.Tier),
         above?.Label
     );
 
@@ -54,9 +54,9 @@ public static class TierDescription
             return LambdaTier.Production;
         }
 
-        return Enum.TryParse<LambdaTier>(name, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed) && !int.TryParse(name, out _)
+        return LambdaTierNames.TryRead(name, out var parsed)
             ? parsed
-            : throw LambdaException.Invalid($"There is no tier called '{tier}'. There are: {string.Join(", ", Enum.GetNames<LambdaTier>())}.");
+            : throw LambdaException.Invalid($"There is no tier called '{tier}'. There are: {string.Join(", ", Enum.GetValues<LambdaTier>().Select(LambdaTierNames.Name))}.");
     }
 
 }

@@ -201,7 +201,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         var versions = await database.Deployments.AsNoTracking()
                                      .Where(d => d.LambdaId == row.Id)
                                      .OrderByDescending(d => d.Version)
-                                     .Select(d => new SourceVersion(d.Version, d.Created, d.Change, d.Origin))
+                                     .Select(d => new SourceVersion(d.Version, d.Created, d.Change, VersionOriginNames.Name(d.Origin)))
                                      .ToListAsync(cancellation);
 
         var only = database.Sources.Where(s => s.LambdaId == row.Id).Select(s => s.LambdaId);
