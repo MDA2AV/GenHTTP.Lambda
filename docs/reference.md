@@ -39,7 +39,9 @@ does the same with Docker Compose, the build agent beside it as a profile.
 The image is built from `src/GenHTTP.Lambda.Community/Dockerfile` and
 published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
 `.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
-hand.
+hand. Both host images run the server as the unprivileged `lambda` (uid and
+gid 1001), which owns `/data` and its home; the application in `/app` belongs
+to root, so the server cannot change what it runs.
 
 genhttp.dev is the cloud edition: `deploy/cloud/docker-compose.yml` builds it
 from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
