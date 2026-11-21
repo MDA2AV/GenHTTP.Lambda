@@ -160,11 +160,11 @@ agent builds and changes apps at all.
 **(owner)** The platform is a set of components that hosts put together the
 GenHTTP way. Two hosts, two editions:
 
-- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
+- **Cloud** (`src/Hosts/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
   of the hosting domain, the marketing site (front page of features, `/build`,
   `/ship`, `/self-hosting`), legal pages, terms, contact and abuse mailbox,
   structured data (`CloudInstallation`, `CloudStructuredData`).
-- **Community** (`src/GenHTTP.Lambda.Community`), the Docker image
+- **Community** (`src/Hosts/GenHTTP.Lambda.Community`), the Docker image
   `genhttp/lambda`: every feature of the cloud, the build agent included,
   behind a simpler front page for developers, the same `/build` and `/ship`,
   and the showcase - translated, crisp, selling nothing. No terms, legal pages
@@ -301,6 +301,17 @@ needs is given to its builder, not read from the environment.
 | SQLite (default database) | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
 | Local directories (default files) | `GenHTTP.Lambda.Integrations.Local` | the platform's own | `.Files(...)` |
 | PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
+
+- **The folders below `src/` are the roles (owner)**, and the solution's
+  folders are the same: `Platform/` (Core), `Integrations/` (the contracts and
+  every integration), `Interfaces/` (API, MCP), `Applications/` (editor, panel,
+  sources), `Serving/` (Execution, Web, Server), `Hosts/` (cloud, community),
+  and `Kit/`. A new project joins the folder of its role - an integration
+  `Integrations/`, a door for programs or agents `Interfaces/`, a component
+  with pages people use `Applications/`, a host `Hosts/` - and keeps its
+  `GenHTTP.Lambda.*` name. Moving one moves every path that names it
+  (project references, the slnx, the Dockerfiles, the npm workspaces, the
+  ignore files, the translation script, the workflows, the docs).
 
 - **A host's `Program.cs` is the composition, short and plain**: read the
   settings, build the platform, lay out the components, hand it to the runner
@@ -930,7 +941,7 @@ Read the reference's "How it is put together" before touching services.
   **a schema change is a migration in every set**, each numbered on its own.
   Existing migrations are never edited. **Before pushing a migration check the
   highest `V` on `origin/main`** - a duplicate fails every test. New files under
-  `src/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
+  `src/Platform/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
   Windows: `git add -f`.
 - Frontends: React in an npm workspace at the root - the kit and a bundle per
   component; public pages prerendered per language.
@@ -1289,7 +1300,7 @@ API, with GenHTTP's documentation attributes beside the code.
   remarks.
 - **Tags are concepts, not classes**, ordered and grouped in `ApiDocumentation`
   (`x-tagGroups`). The introduction is
-  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
+  `src/Interfaces/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
   constant of `ApiDocumentation`.
 - **Authentication describes itself**: the admin token's concern declares the
   `adminToken` scheme and its 401/403; elsewhere the editor key in the path is
