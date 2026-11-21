@@ -1,3 +1,5 @@
+using System.Numerics;
+
 using GenHTTP.Api.Infrastructure;
 
 namespace GenHTTP.Lambda.Server;
@@ -42,24 +44,61 @@ public sealed record ServerSettings
     public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
 
     /// <summary>
+    /// How many reads of 32 KB each reactor of the io_uring engine shares
+    /// between its connections.
+    /// </summary>
+    /// <remarks>
+    /// The engine's own default is 4096 - 128 MB a reactor, and there is a
+    /// reactor per core. The kernel takes them in turn, so over a day of
+    /// traffic every one of them is written to and stays in memory: up to
+    /// half a gigabyte on four cores, for reads of which a few are ever
+    /// waiting at once. A request is read within a moment; what holds reads is a body
+    /// read more slowly than it arrives. When they run out the engine waits
+    /// for them to come back rather than dropping anybody, so fewer only
+    /// means that one large upload makes the other connections of its reactor
+    /// wait sooner - after 32 MB here instead of 128. A power of two.
+    /// </remarks>
+    public int ReceiveBuffers { get; init; } = 1024;
+
+    /// <summary>
     /// How many reads a connection may have waiting on the io_uring engine
     /// before the engine drops it.
     /// </summary>
     /// <remarks>
-    /// Each read is up to 32 KB. The engine does not slow a sender down while
-    /// a request is read more slowly than it arrives: it keeps what came in
-    /// and, once this many reads are waiting, closes the connection. Its own
-    /// default of 64 is two megabytes, which a JSON body of a few megabytes
-    /// outruns while it is being parsed - uploads of 24 MB were dropped even
-    /// at 5 MB/s. The reads come out of the ones a reactor shares between its
-    /// connections, 4096 of them, and when those run out the engine waits for
-    /// them to come back rather than dropping anybody. At 4096 a connection is
-    /// therefore only ever slowed down: 200 MB went through at the full speed
-    /// of the loopback, where 1024 dropped 100 MB sent at 50 MB/s. The price
-    /// is that one large upload can hold the reads of its reactor while it is
-    /// consumed, and the other connections on that reactor wait for them.
+    /// The engine does not slow a sender down while a request is read more
+    /// slowly than it arrives: it keeps what came in and, once this many reads
+    /// are waiting, closes the connection. Its own default of 64 is two
+    /// megabytes, which a JSON body of a few megabytes outruns while it is
+    /// being parsed - uploads of 24 MB were dropped even at 5 MB/s. What
+    /// slows the sender down instead is the reactor running out of
+    /// <see cref="ReceiveBuffers"/>, so a connection may always have more
+    /// reads waiting than its reactor has - see <see cref="Receiving"/>.
+    /// With 1024 reads against 4096 shared, 100 MB sent at 50 MB/s was
+    /// dropped; with 4096 against 4096, 200 MB went through at the full speed
+    /// of the loopback.
     /// </remarks>
-    public int ReceiveQueueEntries { get; init; } = 4096;
+    public int ReceiveQueueEntries { get; init; } = 2048;
+
+    /// <summary>
+    /// The reads each reactor shares, and the reads a connection may have
+    /// waiting, as the io_uring engine is given them.
+    /// </summary>
+    /// <remarks>
+    /// Both are rounded up to powers of two, which the engine requires. A
+    /// connection may have at least twice the reads its reactor shares
+    /// waiting, whatever was asked for: with all of them on one connection
+    /// its queue must still not fill up, or the engine drops it instead of
+    /// slowing it down - and the end of a connection takes a place in the
+    /// queue as well. Each place is 24 bytes, allocated with the connection.
+    /// </remarks>
+    public (int Buffers, int QueueEntries) Receiving()
+    {
+        var buffers = (int)BitOperations.RoundUpToPowerOf2((uint)Math.Clamp(ReceiveBuffers, 64, 32768));
+
+        var queue = (int)BitOperations.RoundUpToPowerOf2((uint)Math.Clamp(ReceiveQueueEntries, 64, 65536));
+
+        return (buffers, Math.Max(queue, buffers * 2));
+    }
 
     /// <summary>
     /// The port the server offers TLS on. Zero leaves the secure endpoint off.

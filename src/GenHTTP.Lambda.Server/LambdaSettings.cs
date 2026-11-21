@@ -106,6 +106,7 @@ public sealed record LambdaSettings(LambdaOptions Platform, ServerSettings Serve
             Port = platform.Port,
             Engine = ReadEngine("LAMBDA_ENGINE", server.Engine),
             Protocols = ReadProtocols("LAMBDA_HTTP_PROTOCOLS", server.Protocols),
+            ReceiveBuffers = ReadInt("LAMBDA_RECEIVE_BUFFERS", server.ReceiveBuffers),
             ReceiveQueueEntries = ReadInt("LAMBDA_RECEIVE_QUEUE_ENTRIES", server.ReceiveQueueEntries),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", server.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),

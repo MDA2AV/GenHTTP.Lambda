@@ -2056,9 +2056,9 @@ production the labels *Free* and *Premium*. The variables are read into two: the
 ([`LambdaOptions`](../src/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
 which every component is built with, and the host's (`ServerSettings`), which
 only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
-`LAMBDA_RECEIVE_QUEUE_ENTRIES`, `LAMBDA_TLS_PORT`, the `LAMBDA_CERTIFICATE`
-variables and `LAMBDA_ACME_DIRECTORY`. `LAMBDA_PORT` goes into both, since the
-platform makes addresses on localhost with it. A host adds what is its own:
+`LAMBDA_RECEIVE_BUFFERS`, `LAMBDA_RECEIVE_QUEUE_ENTRIES`, `LAMBDA_TLS_PORT`,
+the `LAMBDA_CERTIFICATE` variables and `LAMBDA_ACME_DIRECTORY`. `LAMBDA_PORT`
+goes into both, since the platform makes addresses on localhost with it. A host adds what is its own:
 genhttp.dev's terms and legal pages, which no variable sets, and its contact
 and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
 (`CloudInstallation`); the community edition's, that its operator may give it
@@ -2070,7 +2070,8 @@ variable (see [Branding](#branding)).
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
 | `LAMBDA_ENGINE`                     | `internal`       | `internal`, `kestrel` or `ioxide` (see below) |
 | `LAMBDA_HTTP_PROTOCOLS`             | `Http1`          | the HTTP versions both ports answer on; `Http1AndHttp2` tries HTTP/2 again |
-| `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `4096`           | reads of 32 KB a connection may have waiting on io_uring |
+| `LAMBDA_RECEIVE_BUFFERS`            | `1024`           | reads of 32 KB each io_uring reactor shares between its connections |
+| `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `2048`           | reads a connection may have waiting on io_uring; never fewer than twice `LAMBDA_RECEIVE_BUFFERS` |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
@@ -2138,13 +2139,22 @@ than it arrives. It keeps what came in, and once `LAMBDA_RECEIVE_QUEUE_ENTRIES`
 reads are waiting it drops the connection with `recv queue overflow` on stderr.
 Its own default of 64 is two megabytes, which a JSON body of a few megabytes
 outruns while it is being parsed - an upload of 24 MB was dropped even at
-5 MB/s. The reads come out of the 4096 each reactor shares, and when those run
-out it waits for them rather than dropping anybody - so the default here is
-4096, at which a connection is only ever slowed down: 200 MB went through at
-the full speed of the loopback, where 1024 dropped 100 MB sent at 50 MB/s. The
-price is that one large upload can hold the reads of its reactor while it is
-consumed, and the other connections on that reactor wait for them. Kestrel and
-the internal engine slow the sender down and need none of this.
+5 MB/s. The reads come out of the `LAMBDA_RECEIVE_BUFFERS` each reactor shares,
+and when those run out it waits for them rather than dropping anybody - so a
+connection may always have at least twice as many waiting as its reactor
+shares, and is only ever slowed down: with 4096 against 4096, 200 MB went
+through at the full speed of the loopback, where 1024 against 4096 dropped
+100 MB sent at 50 MB/s. A shorter queue is raised to that, and both numbers
+are rounded up to powers of two, which the engine requires.
+
+There is a reactor per core, and the kernel takes a reactor's reads in turn,
+so over time every one of them is written to and stays in memory: 32 KB each,
+at most 32 MB a core at the default of 1024, where the engine's own 4096 come
+to as much as half a gigabyte on four cores. A request is read within a
+moment, so a reactor seldom has more than a few reads waiting; what holds them
+is a body read more slowly than it arrives, and while one large upload holds
+all of them the other connections of its reactor wait. Kestrel and the
+internal engine slow the sender down and need none of this.
 
 A workspace file sent as it is, to `…/files/:path/content`, is written to the
 disk as it arrives: 200 MB went through with the server growing by 160 MB,
