@@ -1,19 +1,24 @@
 namespace GenHTTP.Lambda.Data.Entities;
 
 /// <summary>The ways a stretch of being online ends.</summary>
-public static class ActivationEndings
+/// <remarks>
+/// Stored as its number, as <see cref="VersionOrigin"/> is; named by
+/// <see cref="ActivationEndingNames"/>. A number no member has reads as not
+/// recorded.
+/// </remarks>
+public enum ActivationEnding
 {
 
     /// <summary>Another deployment took its place.</summary>
-    public const string Replaced = "replaced";
+    Replaced = 1,
 
     /// <summary>The owner took it offline.</summary>
-    public const string Stopped = "stopped";
+    Stopped = 2,
 
     /// <summary>Nobody used it for long enough and the sweep took it down.</summary>
-    public const string Expired = "expired";
+    Expired = 3,
 
     /// <summary>The operator took it offline.</summary>
-    public const string Admin = "admin";
+    Admin = 4
 
 }

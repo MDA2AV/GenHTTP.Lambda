@@ -13,8 +13,8 @@ public sealed class EventEntity
 
     public long Id { get; set; }
 
-    /// <summary>One of <see cref="LambdaEvents" />.</summary>
-    public string Kind { get; set; } = "";
+    /// <summary>What happened.</summary>
+    public LambdaEvent Kind { get; set; }
 
     /// <summary>
     /// Which lambda, where there still is one.

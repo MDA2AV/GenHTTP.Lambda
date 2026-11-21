@@ -81,7 +81,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.Id).HasColumnName("id");
         lambdas.Property(l => l.PublicKey).HasColumnName("public_key");
         lambdas.Property(l => l.PrivateKey).HasColumnName("private_key");
-        lambdas.Property(l => l.Tier).HasColumnName("tier").HasConversion<string>();
+        lambdas.Property(l => l.Tier).HasColumnName("tier").HasConversion(tier => (short)tier, number => StoredValues.Tier(number));
         lambdas.Property(l => l.TierChanged).HasColumnName("tier_changed");
         lambdas.Property(l => l.ActiveVersion).HasColumnName("active_version");
         lambdas.Property(l => l.Created).HasColumnName("created");
@@ -90,11 +90,11 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.LastSeen).HasColumnName("last_seen");
         lambdas.Property(l => l.AnalyticsSince).HasColumnName("analytics_since");
         lambdas.Property(l => l.Domain).HasColumnName("domain");
-        lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion<string>();
+        lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion(view => (short)view, number => StoredValues.View(number));
         lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
         lambdas.Property(l => l.Blocked).HasColumnName("blocked");
         lambdas.Property(l => l.BlockReason).HasColumnName("block_reason");
-        lambdas.Property(l => l.Connectivity).HasColumnName("connectivity").HasConversion<string>();
+        lambdas.Property(l => l.Connectivity).HasColumnName("connectivity").HasConversion<short>();
         lambdas.Property(l => l.ConnectivityChanged).HasColumnName("connectivity_changed");
         lambdas.Property(l => l.ConnectivityPurpose).HasColumnName("connectivity_purpose");
         lambdas.Property(l => l.ConnectivityNote).HasColumnName("connectivity_note");
@@ -115,7 +115,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.Created).HasColumnName("created");
         deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
-        deployments.Property(d => d.Origin).HasColumnName("origin");
+        deployments.Property(d => d.Origin).HasColumnName("origin").HasConversion<short>();
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
 
@@ -126,7 +126,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         events.HasKey(e => e.Id);
 
         events.Property(e => e.Id).HasColumnName("id");
-        events.Property(e => e.Kind).HasColumnName("kind");
+        events.Property(e => e.Kind).HasColumnName("kind").HasConversion(kind => (short)kind, number => (LambdaEvent)number);
         events.Property(e => e.LambdaId).HasColumnName("lambda_id");
         events.Property(e => e.PublicKey).HasColumnName("public_key");
         events.Property(e => e.Occurred).HasColumnName("occurred");
@@ -144,9 +144,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         activations.Property(a => a.LambdaId).HasColumnName("lambda_id");
         activations.Property(a => a.Version).HasColumnName("version");
         activations.Property(a => a.Started).HasColumnName("started");
-        activations.Property(a => a.Origin).HasColumnName("origin");
+        activations.Property(a => a.Origin).HasColumnName("origin").HasConversion<short>();
         activations.Property(a => a.Ended).HasColumnName("ended");
-        activations.Property(a => a.EndedBy).HasColumnName("ended_by");
+        activations.Property(a => a.EndedBy).HasColumnName("ended_by").HasConversion<short>();
 
         activations.HasIndex(a => new { a.LambdaId, a.Started });
 
@@ -235,7 +235,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         features.Property(f => f.Specification).HasColumnName("specification");
         features.Property(f => f.Change).HasColumnName("change");
         features.Property(f => f.BaseVersion).HasColumnName("base_version");
-        features.Property(f => f.Origin).HasColumnName("origin");
+        features.Property(f => f.Origin).HasColumnName("origin").HasConversion<short>();
         features.Property(f => f.Created).HasColumnName("created");
         features.Property(f => f.Modified).HasColumnName("modified");
         features.Property(f => f.Preview).HasColumnName("preview");

@@ -1,4 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Census;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -25,6 +26,6 @@ public sealed record AdminLambdaStorage(
 {
 
     public static AdminLambdaStorage Of(LambdaStorage lambda)
-        => new(lambda.PublicKey, lambda.Tier.ToString(), lambda.DataBytes, lambda.AllowedBytes, lambda.VersionBytes, lambda.DraftBytes, lambda.OtherBytes, lambda.TotalBytes);
+        => new(lambda.PublicKey, LambdaTierNames.Name(lambda.Tier), lambda.DataBytes, lambda.AllowedBytes, lambda.VersionBytes, lambda.DraftBytes, lambda.OtherBytes, lambda.TotalBytes);
 
 }

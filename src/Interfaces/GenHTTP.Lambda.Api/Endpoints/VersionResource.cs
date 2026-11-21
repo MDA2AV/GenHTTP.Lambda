@@ -191,7 +191,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, bool? deploy,
                                                                      string? specification, string? change)
     {
-        var note = new VersionNote(specification, change, VersionOrigins.Api);
+        var note = new VersionNote(specification, change, VersionOrigin.Api);
 
         var version = await meta.SaveAsync(privateKey, files, note);
 
@@ -203,7 +203,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         if (deploy == true)
         {
-            var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigins.Api);
+            var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigin.Api);
 
             logger.Deployed(result, publicKey, version.Version);
 

@@ -699,7 +699,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Without a cancellation token: a version made of the feature and a
     /// feature left behind would be merged twice.
     /// </remarks>
-    private async ValueTask<(LambdaVersionInfo Version, long LambdaId, long FeatureId, string Origin)> MergedAsync(string privateKey, string feature, VersionNote? note,
+    private async ValueTask<(LambdaVersionInfo Version, long LambdaId, long FeatureId, VersionOrigin Origin)> MergedAsync(string privateKey, string feature, VersionNote? note,
                                                                                                                   IReadOnlyList<VersionFile> files, int revision)
     {
         var (database, lambda, entity, turn) = await LockedAsync(privateKey, feature);
@@ -713,7 +713,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             throw LambdaException.Conflict($"The feature '{entity.Name}' was saved while it was being checked, so what was checked is not what it holds now. Merge it again.");
         }
 
-        var origin = note?.Origin ?? VersionOrigins.Api;
+        var origin = note?.Origin ?? VersionOrigin.Api;
 
         var merged = new VersionNote(string.IsNullOrWhiteSpace(note?.Specification) ? entity.Specification : note.Specification,
                                      string.IsNullOrWhiteSpace(note?.Change) ? entity.Change ?? $"Merges the feature '{entity.Name}'" : note.Change,
@@ -858,7 +858,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
          + $"(update_feature with base: {newest}, or PATCH the feature with base) and merge again.";
 
     private static FeatureInfo Describe(FeatureEntity feature, int? newest)
-        => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, feature.Origin,
+        => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, VersionOriginNames.Name(feature.Origin),
                feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
                feature.Previewed, feature.Revision);
 

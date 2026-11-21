@@ -250,7 +250,7 @@ public sealed class MetaService : IMetaService
 
             // after the insert rather than before: the id the event refers to
             // is the one the database just handed out
-            await History.RecordAsync(database, entity, LambdaEvents.Created);
+            await History.RecordAsync(database, entity, LambdaEvent.Created);
 
             await database.SaveChangesAsync(CancellationToken.None);
 
@@ -275,7 +275,7 @@ public sealed class MetaService : IMetaService
         var demo = DemoCatalog.Find(template);
 
         var note = new VersionNote(Change: demo != null ? $"Started as a copy of the demo '{demo.Id}'" : "Started empty",
-                                   Origin: VersionOrigins.Template);
+                                   Origin: VersionOrigin.Template);
 
         await History.AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, note);
 
@@ -285,7 +285,7 @@ public sealed class MetaService : IMetaService
         }
     }
 
-    public async ValueTask DeleteAsync(string privateKey, string? origin = null)
+    public async ValueTask DeleteAsync(string privateKey, VersionOrigin? origin = null)
     {
         await using var database = await Databases.CreateDbContextAsync();
 
@@ -296,7 +296,7 @@ public sealed class MetaService : IMetaService
         // the operator may delete what they blocked, which is one of the two
         // ways out of a block, and a system lambda, which nobody else may;
         // a demo stays the installation's either way
-        if (origin == VersionOrigins.Admin && !policy.ReadOnly)
+        if (origin == VersionOrigin.Admin && !policy.ReadOnly)
         {
             await Removal.RemoveAsync(database, lambda);
 
@@ -378,7 +378,7 @@ public sealed class MetaService : IMetaService
         return await database.Deployments.AsNoTracking()
                              .Where(d => d.LambdaId == lambda.Id)
                              .OrderByDescending(d => d.Version)
-                             .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin))
+                             .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, VersionOriginNames.Name(d.Origin)))
                              .ToListAsync(cancellation);
     }
 
@@ -395,7 +395,7 @@ public sealed class MetaService : IMetaService
         var files = Storage.Read(lambda.Id, version)
                  ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, deployment.Origin);
+        return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, VersionOriginNames.Name(deployment.Origin));
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
@@ -408,7 +408,7 @@ public sealed class MetaService : IMetaService
                              .Where(a => a.LambdaId == lambda.Id)
                              .OrderByDescending(a => a.Started)
                              .ThenByDescending(a => a.Id)
-                             .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy))
+                             .Select(a => new LambdaActivation(a.Version, a.Started, VersionOriginNames.Name(a.Origin), a.Ended, ActivationEndingNames.Name(a.EndedBy)))
                              .ToListAsync(cancellation);
     }
 
@@ -457,7 +457,7 @@ public sealed class MetaService : IMetaService
     {
         VersionInput.Validate(files);
 
-        note ??= new VersionNote(Origin: VersionOrigins.Api);
+        note ??= new VersionNote(Origin: VersionOrigin.Api);
 
         long id;
 
@@ -533,7 +533,7 @@ public sealed class MetaService : IMetaService
     /// build it finds with the version online and builds again where they
     /// differ.
     /// </remarks>
-    public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default)
+    public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, CancellationToken cancellation = default)
     {
         long id;
 
@@ -587,7 +587,7 @@ public sealed class MetaService : IMetaService
     /// Without a cancellation token: what was built is written down once it
     /// was, or the version online and what serves it would differ.
     /// </remarks>
-    private async ValueTask<DeploymentResult> ActivatedAsync(string privateKey, int target, string? origin, CompilationOutcome outcome)
+    private async ValueTask<DeploymentResult> ActivatedAsync(string privateKey, int target, VersionOrigin? origin, CompilationOutcome outcome)
     {
         await using var database = await Databases.CreateDbContextAsync();
 
@@ -622,9 +622,9 @@ public sealed class MetaService : IMetaService
         lambda.Deployed = now;
         lambda.Modified = now;
 
-        await History.ActivateAsync(database, lambda.Id, target, now, origin ?? VersionOrigins.Api);
+        await History.ActivateAsync(database, lambda.Id, target, now, origin ?? VersionOrigin.Api);
 
-        await History.RecordAsync(database, lambda, LambdaEvents.Deployed);
+        await History.RecordAsync(database, lambda, LambdaEvent.Deployed);
 
         await database.SaveChangesAsync();
 
@@ -637,7 +637,7 @@ public sealed class MetaService : IMetaService
     /// Without a cancellation token: what is let go of is written down whoever
     /// leaves, so the lambda is not left online with nothing serving it.
     /// </remarks>
-    public async ValueTask<LambdaInfo> UndeployAsync(string privateKey, string? endedBy = null)
+    public async ValueTask<LambdaInfo> UndeployAsync(string privateKey, ActivationEnding? endedBy = null)
     {
         await using var database = await Databases.CreateDbContextAsync();
 
@@ -645,16 +645,16 @@ public sealed class MetaService : IMetaService
 
         using var turn = held;
 
-        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
+        LambdaGuard.EnsureEditable(lambda, Limits.PolicyOf(lambda.Tier), endedBy == ActivationEnding.Admin ? VersionOrigin.Admin : null);
 
         if (lambda.ActiveVersion != null)
         {
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            await History.CloseAsync(database, lambda.Id, DateTime.UtcNow, endedBy ?? ActivationEndings.Stopped);
+            await History.CloseAsync(database, lambda.Id, DateTime.UtcNow, endedBy ?? ActivationEnding.Stopped);
 
-            await History.RecordAsync(database, lambda, LambdaEvents.Undeployed);
+            await History.RecordAsync(database, lambda, LambdaEvent.Undeployed);
 
             await database.SaveChangesAsync();
 
@@ -705,9 +705,9 @@ public sealed class MetaService : IMetaService
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            await History.CloseAsync(database, lambda.Id, now, ActivationEndings.Admin);
+            await History.CloseAsync(database, lambda.Id, now, ActivationEnding.Admin);
 
-            await History.RecordAsync(database, lambda, LambdaEvents.Undeployed);
+            await History.RecordAsync(database, lambda, LambdaEvent.Undeployed);
         }
 
         // its drafts run its code as well, at addresses of their own

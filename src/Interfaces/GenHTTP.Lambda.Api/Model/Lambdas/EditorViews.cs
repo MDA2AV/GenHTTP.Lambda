@@ -23,7 +23,7 @@ public static class EditorViews
             return null;
         }
 
-        return Enum.TryParse<EditorView>(view.Trim(), true, out var parsed) && Enum.IsDefined(parsed)
+        return EditorViewNames.TryRead(view, out var parsed)
             ? parsed
             : throw LambdaException.Invalid($"There is no view called '{view.Trim()}'. It is either 'Full' or 'Simple'.");
     }

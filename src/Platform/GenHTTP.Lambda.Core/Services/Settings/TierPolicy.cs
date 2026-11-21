@@ -37,7 +37,7 @@ public sealed record TierPolicy(LambdaTier Tier, string? Label, long MaxVersionB
     /// <summary>
     /// What the tier is called where a person reads it in English: its label, or its name.
     /// </summary>
-    public string Name => Label ?? Tier.ToString();
+    public string Name => Label ?? LambdaTierNames.Name(Tier);
 
     /// <summary>
     /// Whether the operator may block a lambda in this tier.

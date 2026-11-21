@@ -63,7 +63,7 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<DeploymentOutcomeResponse>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, DeploymentRequest? request)
     {
-        var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigins.Api);
+        var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigin.Api);
 
         logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), request?.Version);
 
@@ -83,7 +83,7 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     [return: Summary("The lambda, offline")]
     public async ValueTask<LambdaResponse> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var lambda = await meta.UndeployAsync(privateKey, ActivationEndings.Stopped);
+        var lambda = await meta.UndeployAsync(privateKey, ActivationEnding.Stopped);
 
         logger.LogInformation("Undeployed lambda {Lambda}", lambda.PublicKey);
 

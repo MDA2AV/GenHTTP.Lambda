@@ -95,7 +95,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
             string.IsNullOrEmpty(tier) ? null : TierDescription.Parse(tier),
             Parse<LambdaState>(state, "state"),
             string.IsNullOrWhiteSpace(uses) ? null : [.. uses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(u => Parse<LambdaFeature>(u, "feature")!.Value)],
-            Parse<EditorView>(view, "view"),
+            View(view),
             created is > 0 ? TimeSpan.FromDays(created.Value) : null,
             Parse<LambdaOrder>(sort, "order") ?? LambdaOrder.Newest,
             demos
@@ -144,6 +144,21 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 l.Visited
             );
         })];
+    }
+
+    /// <summary>
+    /// The view of the listing's query by its name in any case, or a refusal that names the views there are.
+    /// </summary>
+    private static EditorView? View(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return EditorViewNames.TryRead(value, out var view)
+            ? view
+            : throw LambdaException.Invalid($"There is no view '{value}'. There are: {string.Join(", ", Enum.GetValues<EditorView>().Select(v => EditorViewNames.Name(v).ToLowerInvariant()))}.");
     }
 
     /// <summary>
@@ -335,7 +350,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     public async ValueTask<Result<DeploymentOutcomeResponse>> StartDeployment([Summary("The public key of the lambda")] string publicKey, DeploymentRequest? body)
     {
 
-        var result = await meta.DeployAsync(await meta.RequirePrivateKeyAsync(publicKey), body?.Version, VersionOrigins.Admin);
+        var result = await meta.DeployAsync(await meta.RequirePrivateKeyAsync(publicKey), body?.Version, VersionOrigin.Admin);
 
         logger.Deployed(result, publicKey, body?.Version);
 
@@ -352,7 +367,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     public async ValueTask<LambdaOverviewResponse> StopDeployment([Summary("The public key of the lambda")] string publicKey)
     {
 
-        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEndings.Admin);
+        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEnding.Admin);
 
         logger.LogInformation("Undeployed lambda {Lambda} by operator", lambda.PublicKey);
 
@@ -366,7 +381,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask Delete([Summary("The public key of the lambda")] string publicKey)
     {
-        await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey), VersionOrigins.Admin);
+        await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey), VersionOrigin.Admin);
 
         logger.LogInformation("Deleted lambda {Lambda} by operator", publicKey);
     }
@@ -698,7 +713,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
         => new(limits.BuildBytes, limits.DataBytes, limits.AnalyticsDays, limits.Connectivity, limits.Label);
 
     private static LimitsModel Describe(ProductLimits limits)
-        => new(limits.DefaultTier.ToString(), Describe(limits.Sandbox), Describe(limits.Production), Describe(limits.System), limits.Versions, limits.Features,
+        => new(LambdaTierNames.Name(limits.DefaultTier), Describe(limits.Sandbox), Describe(limits.Production), Describe(limits.System), limits.Versions, limits.Features,
                (int)limits.OfflineAfter.TotalHours, (int)limits.RemovedAfter.TotalHours, limits.ShowcaseImageBytes, limits.RequestsPerSecond, limits.BuildsPerDay);
 
     #endregion
@@ -730,7 +745,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                                                 (long)((a.Ended ?? now) - a.Started).TotalSeconds))],
             // the tiers the operator may move a lambda to, which is every one
             // but the demos': those are the seeder's to hand out
-            [.. limits.TiersWhere(p => p.Assignable).Select(t => t.ToString())],
+            [.. limits.TiersWhere(p => p.Assignable).Select(LambdaTierNames.Name)],
             lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
             [.. (await meta.GetEditorAddressesAsync(privateKey)).Select(Describe)],
             You(request),

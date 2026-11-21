@@ -33,11 +33,11 @@ internal static class LambdaGuard
     /// </remarks>
     /// <param name="policy">What its tier says about it</param>
     /// <param name="origin">Who is asking: the seeder and the operator may change a demo, nobody else</param>
-    public static void EnsureEditable(LambdaEntity lambda, TierPolicy policy, string? origin = null)
+    public static void EnsureEditable(LambdaEntity lambda, TierPolicy policy, VersionOrigin? origin = null)
     {
         EnsureUnblocked(lambda);
 
-        if (policy.ReadOnly && origin is not (VersionOrigins.System or VersionOrigins.Admin))
+        if (policy.ReadOnly && origin is not (VersionOrigin.System or VersionOrigin.Admin))
         {
             throw LambdaException.Forbidden(ReadOnly(lambda.PublicKey));
         }

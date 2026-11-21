@@ -40,9 +40,9 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
                                    .Select(g => new { Kind = g.Key, Count = g.Count() })
                                    .ToListAsync(cancellation);
 
-        var buckets = new Dictionary<string, int[]>();
+        var buckets = new Dictionary<LambdaEvent, int[]>();
 
-        foreach (var kind in LambdaEvents.All)
+        foreach (var kind in LambdaEventNames.All)
         {
             buckets[kind] = new int[span];
         }
@@ -71,8 +71,8 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
 
         return new EventHistory(
             labels,
-            [.. LambdaEvents.All.Select(kind => new EventSeries(
-                kind,
+            [.. LambdaEventNames.All.Select(kind => new EventSeries(
+                LambdaEventNames.Name(kind),
                 buckets[kind],
                 totals.FirstOrDefault(t => t.Kind == kind)?.Count ?? 0))]
         );

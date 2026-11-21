@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Data.Entities;
+
 namespace GenHTTP.Lambda.Services.Meta.Model;
 
 /// <summary>
@@ -11,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="Specification">What the user wants from the version and why, in their words where possible</param>
 /// <param name="Change">What the version changed, in a line</param>
 /// <param name="Origin">Which door it came through</param>
-public sealed record VersionNote(string? Specification = null, string? Change = null, string? Origin = null)
+public sealed record VersionNote(string? Specification = null, string? Change = null, VersionOrigin? Origin = null)
 {
 
     /// <summary>

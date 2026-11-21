@@ -75,13 +75,13 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         lambda.Modified = now;
 
-        await RecordAsync(database, lambda, LambdaEvents.Saved);
+        await RecordAsync(database, lambda, LambdaEvent.Saved);
 
         await database.SaveChangesAsync();
 
         await PruneAsync(database, lambda);
 
-        return new LambdaVersionInfo(version, now, specification, change, note.Origin);
+        return new LambdaVersionInfo(version, now, specification, change, VersionOriginNames.Name(note.Origin));
     }
 
     /// <summary>
@@ -121,9 +121,9 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// Starts a stretch of being online with a version, ending the one before.
     /// </summary>
     /// <param name="origin">Who put it online</param>
-    public async ValueTask ActivateAsync(LambdaDbContext database, long lambdaId, int version, DateTime now, string origin)
+    public async ValueTask ActivateAsync(LambdaDbContext database, long lambdaId, int version, DateTime now, VersionOrigin origin)
     {
-        await CloseAsync(database, lambdaId, now, ActivationEndings.Replaced);
+        await CloseAsync(database, lambdaId, now, ActivationEnding.Replaced);
 
         database.Activations.Add(new ActivationEntity
         {
@@ -138,7 +138,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// Ends whatever stretch of being online is still open.
     /// </summary>
     /// <param name="endedBy">Why it ended, one of <see cref="ActivationEndings"/></param>
-    public async ValueTask CloseAsync(LambdaDbContext database, long lambdaId, DateTime now, string endedBy)
+    public async ValueTask CloseAsync(LambdaDbContext database, long lambdaId, DateTime now, ActivationEnding endedBy)
     {
         var open = await database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended == null)
                                  .ToListAsync();
@@ -188,7 +188,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// counting those would bury the activity the figures are meant to show.
     /// </remarks>
     /// <param name="kind">What happened, one of <see cref="LambdaEvents"/></param>
-    public async ValueTask RecordAsync(LambdaDbContext database, LambdaEntity lambda, string kind)
+    public async ValueTask RecordAsync(LambdaDbContext database, LambdaEntity lambda, LambdaEvent kind)
     {
         if (limits.PolicyOf(lambda.Tier).ReadOnly)
         {
@@ -205,7 +205,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         // where it was changed from, for the operator who blocks it; a
         // lambda that is going has nothing left to block
-        if (kind != LambdaEvents.Deleted)
+        if (kind != LambdaEvent.Deleted)
         {
             await editors.NoteAsync(lambda.Id);
         }

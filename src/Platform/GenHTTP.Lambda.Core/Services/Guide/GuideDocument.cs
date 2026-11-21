@@ -443,7 +443,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
         LambdaTier.Sandbox => "the sandbox",
         LambdaTier.Production => "production",
         LambdaTier.System => "the system tier",
-        _ => $"the {tier.ToString().ToLowerInvariant()} tier"
+        _ => $"the {LambdaTierNames.Name(tier).ToLowerInvariant()} tier"
     };
 
     private static string Capital(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];

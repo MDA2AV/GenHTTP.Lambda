@@ -151,7 +151,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            await history.CloseAsync(database, lambda.Id, now, ActivationEndings.Expired);
+            await history.CloseAsync(database, lambda.Id, now, ActivationEnding.Expired);
 
             deployments.Evict(lambda.Id);
 

@@ -57,9 +57,9 @@ public sealed class FeatureEntity
     public int BaseVersion { get; set; }
 
     /// <summary>
-    /// Where it came from, one of <see cref="VersionOrigins" />.
+    /// Where it came from.
     /// </summary>
-    public string? Origin { get; set; }
+    public VersionOrigin? Origin { get; set; }
 
     public DateTime Created { get; set; }
 

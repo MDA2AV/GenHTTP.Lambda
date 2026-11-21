@@ -103,6 +103,8 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             var most = AnalyticsDimensions.MostOf(group.Key);
 
+            var numbered = AnalyticsCodes.IsNumbered(group.Key);
+
             await using var upsert = Command(connection, $"""
                 INSERT INTO {table} (lambda, year, month, day, value, hits, views, bot_views)
                 VALUES (@lambda, @year, @month, @day, @value, @hits, @views, @botViews)
@@ -141,7 +143,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
                     }
 
                     Day(upsert, cell.Lambda, cell.Day);
-                    upsert.Parameters["@value"].Value = value;
+                    upsert.Parameters["@value"].Value = numbered ? AnalyticsCodes.Code(group.Key, value) : value;
                     upsert.Parameters["@hits"].Value = hits;
                     upsert.Parameters["@views"].Value = views;
                     upsert.Parameters["@botViews"].Value = botViews;
@@ -278,12 +280,24 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             var listed = new List<AnalyticsValue>();
 
+            var numbered = AnalyticsCodes.IsNumbered(dimension);
+
             while (await reader.ReadAsync(cancellation))
             {
-                listed.Add(new AnalyticsValue(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3)));
+                var value = numbered ? AnalyticsCodes.Name(dimension, Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture)) : reader.GetString(0);
+
+                listed.Add(new AnalyticsValue(value, reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3)));
             }
 
-            breakdowns[dimension] = listed;
+            // a numbered dimension has fewer values than are listed, so all of
+            // them came back, ties in the order of their numbers and a number
+            // no member has beside other: summed by name, and put back in the
+            // order of their names, as they were listed before
+            breakdowns[dimension] = numbered
+                ? [.. listed.GroupBy(v => v.Value)
+                            .Select(g => new AnalyticsValue(g.Key, g.Sum(v => v.Hits), g.Sum(v => v.Views), g.Sum(v => v.BotViews)))
+                            .OrderByDescending(v => v.Views).ThenByDescending(v => v.Hits).ThenBy(v => v.Value, StringComparer.Ordinal)]
+                : listed;
         }
 
         return new AnalyticsReport(total, series, breakdowns);
