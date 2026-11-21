@@ -940,6 +940,10 @@ timer).
 
 Read the reference's "How it is put together" before touching services.
 
+- **Never one host, never one agent container (owner)**: both are to scale, so
+  add no state only one host or container holds. What already does (turns,
+  in-memory caches and queues, jobs) is known and will be resolved soon - not
+  in your change, and not a pattern to copy.
 - The services are one project, `GenHTTP.Lambda.Core`, behind interfaces.
   `Meta` alone speaks to the database, with hand-mapped DTOs. Code lives on the
   file system (`Storage`), never in the database.
