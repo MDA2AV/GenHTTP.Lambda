@@ -1,0 +1,16 @@
+using System.Text.Json.Serialization;
+
+using GenHTTP.Api.Content.Documentation;
+
+using GenHTTP.Lambda.Services.Deployment.Model;
+
+namespace GenHTTP.Lambda.Api.Model;
+
+[Summary("A file of a workspace, base64 encoded so anything can travel in JSON.")]
+public sealed record FileResponse(
+    [Summary("Its path within the workspace, with forward slashes")]
+    string Path,
+    [Summary("Its bytes, base64 encoded")]
+    [property: JsonConverter(typeof(LongStringConverter))] string Content,
+    [Summary("How many bytes it holds")]
+    int Size);
