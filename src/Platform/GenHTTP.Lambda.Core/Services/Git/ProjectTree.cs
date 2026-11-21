@@ -377,29 +377,3 @@ public static class ProjectTree
     #endregion
 
 }
-
-/// <summary>
-/// The tree of a commit the platform makes.
-/// </summary>
-/// <param name="Entries">Every file of the tree</param>
-/// <param name="Files">The lambda's files in it</param>
-/// <param name="Contents">What the platform's files hold, which may not be kept yet, by their blob</param>
-/// <param name="Own">The lambda's files, which may not be kept yet either, by their blob - read where they are needed</param>
-public sealed record LaidTree(IReadOnlyList<StoredEntry> Entries, IReadOnlyList<StoredFile> Files, IReadOnlyDictionary<string, byte[]> Contents,
-                              IReadOnlyDictionary<string, VersionFile> Own);
-
-/// <summary>
-/// The lambda a pushed tree holds.
-/// </summary>
-/// <param name="Files">The lambda's files, in its order - or nothing where the tree holds none</param>
-/// <param name="Stored">The same as a commit keeps them</param>
-/// <param name="Contents">What is kept for them besides the tree: the lambda.cs taken out of Project.cs</param>
-/// <param name="Project">Project.cs as pushed, to say where in it a problem the compiler found is</param>
-/// <param name="Complaint">Why the tree is no lambda</param>
-public sealed record ReadTree(IReadOnlyList<VersionFile>? Files, IReadOnlyList<StoredFile> Stored, IReadOnlyDictionary<string, byte[]> Contents,
-                                string? Project, string? Complaint)
-{
-
-    public static ReadTree Refused(string complaint) => new(null, [], new Dictionary<string, byte[]>(), null, complaint);
-
-}

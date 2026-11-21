@@ -8,23 +8,6 @@ using GenHTTP.Lambda.Services.Storage;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// How the files of a lambda are laid out in an archive.
-/// </summary>
-public enum ArchiveLayout
-{
-
-    /// <summary>Named as the lambda names them: lambda.cs, its code, resources/.</summary>
-    Lambda,
-
-    /// <summary>
-    /// Where a clone of the lambda has them: Project.cs for lambda.cs, the
-    /// other .cs files named the .NET way, and the rest as the lambda names it.
-    /// </summary>
-    Project
-
-}
-
-/// <summary>
 /// The files of a version as a zip archive, one entry per file.
 /// </summary>
 /// <remarks>
@@ -640,54 +623,5 @@ public static class LambdaArchive
     }
 
     #endregion
-
-}
-
-/// <summary>
-/// The files of an archive that was sent, each waiting in a file of its own
-/// beside the stores until the lambda keeps it - which moves it in.
-/// </summary>
-/// <remarks>
-/// Disposed of once the request is answered: what was kept was moved, and
-/// what is left - an archive that was refused, a file the lambda had - goes.
-/// </remarks>
-public sealed class StagedFiles : IDisposable
-{
-
-    private StagedFiles(string folder)
-    {
-        Folder = folder;
-    }
-
-    /// <summary>
-    /// The folder they wait in, one per archive.
-    /// </summary>
-    public string Folder { get; }
-
-    /// <summary>
-    /// The files, in the order of a lambda.
-    /// </summary>
-    public IReadOnlyList<VersionFile> Files { get; internal set; } = [];
-
-    internal static StagedFiles In(string staging)
-    {
-        var folder = Path.Combine(staging, Guid.NewGuid().ToString("n"));
-
-        Directory.CreateDirectory(folder);
-
-        return new StagedFiles(folder);
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            Directory.Delete(Folder, true);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            // still open somewhere: the next start empties the staging
-        }
-    }
 
 }

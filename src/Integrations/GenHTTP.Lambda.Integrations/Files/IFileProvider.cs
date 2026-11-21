@@ -148,34 +148,3 @@ public interface IFileProvider : IIntegration
     #endregion
 
 }
-
-/// <summary>
-/// The stores the platform keeps its own files in.
-/// </summary>
-/// <remarks>
-/// What a store is called where it is kept - a directory, a prefix - is the
-/// provider's to decide, and stays what it was once files are kept under it.
-/// </remarks>
-public enum FileStore
-{
-
-    /// <summary>
-    /// What the installation presents itself with: its logo.
-    /// </summary>
-    Branding,
-
-    /// <summary>
-    /// The pictures of the showcase, one per lambda that is listed there.
-    /// </summary>
-    Showcase
-
-}
-
-/// <summary>
-/// A file or folder of a workspace.
-/// </summary>
-/// <param name="Path">Relative to the workspace, its folders separated by slashes</param>
-/// <param name="Folder">Whether it is a folder</param>
-/// <param name="Length">How many bytes a file holds, none for a folder</param>
-/// <param name="Modified">When a file was last written, in UTC</param>
-public sealed record FileEntry(string Path, bool Folder, long Length, DateTime Modified);

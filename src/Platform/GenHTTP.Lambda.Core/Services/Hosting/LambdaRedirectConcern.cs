@@ -124,8 +124,3 @@ public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry regi
     #endregion
 
 }
-
-public sealed class LambdaRedirectConcernBuilder(IDomainRegistry registry, ILambdaAddresses addresses) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new LambdaRedirectConcern(content, registry, addresses);
-}

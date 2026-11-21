@@ -71,36 +71,3 @@ public sealed record LambdaVisit(
     public bool Preview => Lambda.Feature != null;
 
 }
-
-/// <summary>
-/// The client hints a Chromium browser sends with every request by default:
-/// its brands, whether it is on a phone, and its operating system.
-/// </summary>
-/// <remarks>
-/// Chromium froze most of its User-Agent - every Android phone is "Android 10;
-/// K" there - and says the rest here instead, so where they are sent they are
-/// the better answer. Kept as sent; like the agent, they are written by the
-/// sender and read with that in mind.
-/// </remarks>
-/// <param name="Brands">Sec-CH-UA, such as <c>"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"</c></param>
-/// <param name="Mobile">Sec-CH-UA-Mobile, <c>?1</c> on a phone</param>
-/// <param name="Platform">Sec-CH-UA-Platform, such as <c>"Android"</c></param>
-public sealed record ClientHints(string? Brands, string? Mobile, string? Platform);
-
-/// <summary>
-/// Carries the visit a request was to whatever reads it.
-/// </summary>
-public static class LambdaVisits
-{
-    private const string Key = "__LAMBDA_VISIT";
-
-    public static void SetVisit(this IRequest request, LambdaVisit visit) => request.Properties[Key] = visit;
-
-    /// <summary>
-    /// The visit the request was, once a lambda or a preview answered it, or
-    /// nothing before that and for a request that reached no lambda.
-    /// </summary>
-    public static LambdaVisit? GetVisit(this IRequest request)
-        => request.Properties.TryGet<LambdaVisit>(Key, out var visit) ? visit : null;
-
-}

@@ -96,8 +96,3 @@ public sealed class AddressBlockConcern(IHandler content, IAddressBlocks blocks,
     #endregion
 
 }
-
-public sealed class AddressBlockConcernBuilder(IAddressBlocks blocks, IDomainRegistry registry) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new AddressBlockConcern(content, blocks, registry);
-}
