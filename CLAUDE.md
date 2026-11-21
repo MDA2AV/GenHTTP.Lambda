@@ -933,7 +933,8 @@ Read the reference's "How it is put together" before touching services.
   `monacoLoader.ts` (the code view, a diff, a code block in a page); nothing
   imports `monaco.ts` directly, what only names a grammar reads
   `grammars.ts`, and the editor's contributions are listed one by one, not
-  `editor.all.js`. The simple view never downloads it.
+  `editor.all.js`. The simple view downloads it only for a code block on its
+  About page.
 - **Links in a lambda's front end are relative**: a lambda answers at the root
   of its address or below `/lambda/{key}/`, a preview below `/features/{key}/`.
 - The full view's sidebar is **grouped** (overview and docs; sharing; develop;
