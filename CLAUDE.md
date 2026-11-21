@@ -324,7 +324,12 @@ needs is given to its builder, not read from the environment.
   (`claim`, `owns`).
 - **Docker**: a Dockerfile per host (`src/<host>/Dockerfile`, built from the
   root). **The community image runs on GenHTTP's internal engine (owner)**:
-  io_uring is blocked by container runtimes' default seccomp profile. The
+  io_uring is blocked by container runtimes' default seccomp profile. **Both
+  host images are chiseled (owner)** (`aspnet:11.0-resolute-chiseled-extra`):
+  no shell, so the health check is the host's own binary (`--health`,
+  `HealthProbe`), and what a shell would make is made in a stage before; the
+  user stays uid and gid 1001 (the volumes and certificates of installations
+  from before), `/app` belongs to root. The
   cloud's operations are in `deploy/cloud`, so the root holds nothing only
   genhttp.dev needs. `.github/workflows/release.yml` publishes `genhttp/lambda`
   and `genhttp/lambda-agent` (amd64, arm64) on a `v*` tag or by hand only.

@@ -125,6 +125,18 @@ jobs:
 
           docker inspect -f '{{.State.Health.Status}}' lambda | grep -qx healthy
 
+          # the image has no shell to look with: the user the server runs as
+          # owns what it writes to - its data, its dumps, its home, where .NET
+          # keeps the certificate store - and root owns the server itself
+          created=$(docker create genhttp-lambda:ci)
+          owners=$(docker export "$created" | tar -tvf - | awk '$6 ~ /^(data|data\/dumps|home\/lambda|app)\/$/ { print $6, $2 }')
+          docker rm "$created" > /dev/null
+          echo "$owners"
+          for folder in data/ data/dumps/ home/lambda/; do
+            echo "$owners" | grep -qx "$folder 1001/1001" || { echo "$folder does not belong to 1001"; exit 1; }
+          done
+          echo "$owners" | grep -qx "app/ 0/0" || { echo "app/ does not belong to root"; exit 1; }
+
           # --fail-with-body so a rejected request shows why, not just an exit code
           call() { curl -s --fail-with-body "$@"; }
 
@@ -218,6 +230,18 @@ jobs:
           done
 
           docker inspect -f '{{.State.Health.Status}}' lambda | grep -qx healthy
+
+          # the image has no shell to look with: the user the server runs as
+          # owns what it writes to - its data, its dumps, its home, where .NET
+          # keeps the certificate store - and root owns the server itself
+          created=$(docker create genhttp/lambda:ci)
+          owners=$(docker export "$created" | tar -tvf - | awk '$6 ~ /^(data|data\/dumps|home\/lambda|app)\/$/ { print $6, $2 }')
+          docker rm "$created" > /dev/null
+          echo "$owners"
+          for folder in data/ data/dumps/ home/lambda/; do
+            echo "$owners" | grep -qx "$folder 1001/1001" || { echo "$folder does not belong to 1001"; exit 1; }
+          done
+          echo "$owners" | grep -qx "app/ 0/0" || { echo "app/ does not belong to root"; exit 1; }
 
           call() { curl -s --fail-with-body "$@"; }
 

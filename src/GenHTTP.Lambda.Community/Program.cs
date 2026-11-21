@@ -18,6 +18,12 @@ using GenHTTP.Modules.Layouting;
 // LAMBDA_DATABASE=postgresql
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
+// the image's health check: asks the server running beside it, and starts nothing
+if (HealthProbe.IsRequested(args))
+{
+    return await HealthProbe.CheckAsync(settings.Server);
+}
+
 // whoever runs it may give it a name and a logo of their own, in the panel,
 // and say whom it is for: themselves (home) or an organization (enterprise)
 await using var platform = await LambdaPlatform.Create()

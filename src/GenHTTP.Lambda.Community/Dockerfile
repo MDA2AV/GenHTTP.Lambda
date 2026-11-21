@@ -75,10 +75,35 @@ ARG VERSION=
 RUN dotnet publish src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj --no-restore -c Release -o /app \
     -p:RuntimeAsync=$RUNTIME_ASYNC ${VERSION:+-p:Version=$VERSION}
 
+# The runtime the server ships on, chiseled: no shell, no package manager,
+# nothing but what .NET needs to run - with ICU and the time zones (-extra),
+# for the languages the pages speak and the clocks the platform reads. Named
+# here so that the next stage makes its files for it.
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled-extra AS runtime
+
+# What the image would make with a shell, which it has none of: the user the
+# server runs as - uid and gid 1001, whom the volumes of installations from
+# before belong to, and the group certificates are made readable for - its
+# home, and the folder of the data.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS rootfs
+
+COPY --from=runtime /etc/passwd /etc/group /rootfs/etc/
+
+# the database, the stored code and the workspaces of the lambdas - and
+# dumps/, where the runtime writes a dump if the process dies (see
+# deploy/cloud/docker-compose.yml): createdump will not make the folder itself, and a
+# volume only takes it from the image when the volume is new
+# the home directory is not decoration: .NET keeps the certificate store it
+# builds TLS chains from underneath it, and a server that cannot read the
+# issuers of its own certificate cannot send them
+RUN echo "lambda:x:1001:1001::/home/lambda:/usr/sbin/nologin" >> /rootfs/etc/passwd \
+ && echo "lambda:x:1001:" >> /rootfs/etc/group \
+ && mkdir -p /rootfs/data/dumps /rootfs/home/lambda
+
 # What is actually shipped. The ASP.NET Core framework is required because
 # GenHTTP.Full ships the Kestrel engine next to the ioxide one; lambdas are
 # compiled with Roslyn at runtime and reference the assemblies found here.
-FROM mcr.microsoft.com/dotnet/aspnet:11.0
+FROM runtime
 
 # GenHTTP's internal engine rather than the (faster) io_uring one: container
 # runtimes block io_uring in their default seccomp profile, and a platform that
@@ -98,16 +123,9 @@ ENV HOME=/home/lambda \
 
 WORKDIR /app
 
-# the database, the stored code and the workspaces of the lambdas - and
-# dumps/, where the runtime writes a dump if the process dies (see
-# deploy/cloud/docker-compose.yml): createdump will not make the folder itself, and a
-# volume only takes it from the image when the volume is new
-# the home directory is not decoration: .NET keeps the certificate store it
-# builds TLS chains from underneath it, and a server that cannot read the
-# issuers of its own certificate cannot send them
-RUN useradd --uid 1001 --home-dir /home/lambda --create-home --shell /usr/sbin/nologin lambda \
- && mkdir -p /data/dumps \
- && chown -R lambda:lambda /data /home/lambda
+COPY --link --from=rootfs /rootfs/etc/passwd /rootfs/etc/group /etc/
+COPY --link --from=rootfs --chown=1001:1001 /rootfs/data /data
+COPY --link --from=rootfs --chown=1001:1001 /rootfs/home/lambda /home/lambda
 
 # the server, owned by root: it reads what is here and never writes beside
 # itself, so the user it runs as cannot change it either. Copied last and
@@ -121,11 +139,11 @@ VOLUME ["/data"]
 
 EXPOSE 8080 8443
 
-# a Host header is mandatory: GenHTTP answers a request without one with a 400.
-# 301 counts as healthy because a configured TLS endpoint makes the server
-# upgrade plain requests instead of answering them.
+# no shell to ask with: the server's own binary asks the server, and any
+# answer below a server error is healthy - a redirect where TLS is set up, a
+# 401 where a host puts the platform behind a login
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${LAMBDA_PORT} && printf "GET /api/v1/system HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -qE " (200|301) "'
+    CMD ["/app/GenHTTP.Lambda.Community", "--health"]
 
 # set LAMBDA_PUBLIC_URL to where the installation is reached, and
 # LAMBDA_ADMIN_TOKEN to use the panel at /admin
