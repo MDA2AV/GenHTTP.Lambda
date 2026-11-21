@@ -33,9 +33,29 @@ namespace GenHTTP.Lambda.Integrations;
 /// What says what it is - <see cref="Describe"/>, <see cref="Guide"/> - is
 /// read from memory and stays synchronous.
 /// </para>
+/// <para>
+/// Its life is GenHTTP's: built by its builder, which only configures it;
+/// prepared once (<see cref="PrepareAsync"/>), as the platform starts and
+/// before anything is asked of it; disposed of with the platform. It is
+/// disposed of whether or not it was prepared - an integration built before
+/// another failed to prepare is let go of as well.
+/// </para>
 /// </remarks>
-public interface IIntegration
+public interface IIntegration : IAsyncDisposable
 {
+
+    /// <summary>
+    /// Reaches the infrastructure for the first time: checks that it answers
+    /// and prepares what the integration keeps there, so a server that does
+    /// not answer stops the platform from starting rather than its first
+    /// request.
+    /// </summary>
+    /// <remarks>
+    /// Awaited once, in the order the integrations are built - the database,
+    /// the files, the secrets - before the platform's records are migrated.
+    /// One with nothing to prepare returns a completed task.
+    /// </remarks>
+    ValueTask PrepareAsync(CancellationToken cancellation = default);
 
     /// <summary>
     /// What the operator is shown about it: which it is and where it keeps

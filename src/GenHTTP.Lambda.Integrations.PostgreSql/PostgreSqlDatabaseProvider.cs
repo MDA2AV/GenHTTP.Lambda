@@ -52,7 +52,7 @@ namespace GenHTTP.Lambda.Integrations.PostgreSql;
 /// through Entity Framework, and so are the secrets it seals into them.
 /// </para>
 /// </remarks>
-internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisposable
+internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider
 {
     private static readonly long Patience = Stopwatch.Frequency * 5;
 
@@ -89,7 +89,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
 
     #region Initialization
 
-    private PostgreSqlDatabaseProvider(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize, ILogger<PostgreSqlDatabaseProvider> logger)
+    internal PostgreSqlDatabaseProvider(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize, ILogger<PostgreSqlDatabaseProvider> logger)
     {
         _connection = connection;
 
@@ -104,26 +104,18 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
     /// Connects to the server and prepares what the platform keeps there:
     /// the schemas of its stores, and the schema <c>public</c> closed.
     /// </summary>
-    public static async ValueTask<PostgreSqlDatabaseProvider> StartAsync(NpgsqlConnectionStringBuilder connection, string rolePrefix, int poolSize,
-                                                                         ILogger<PostgreSqlDatabaseProvider> logger, CancellationToken cancellation)
+    /// <remarks>
+    /// A server that does not answer stops the platform from starting, rather
+    /// than its first request. Where this fails, the platform disposes of the
+    /// provider, and with it whatever was opened so far.
+    /// </remarks>
+    public async ValueTask PrepareAsync(CancellationToken cancellation = default)
     {
-        var provider = new PostgreSqlDatabaseProvider(connection, rolePrefix, poolSize, logger);
+        await SecureAsync(cancellation);
 
-        try
+        foreach (var store in Enum.GetValues<DatabaseStore>())
         {
-            await provider.SecureAsync(cancellation);
-
-            foreach (var store in Enum.GetValues<DatabaseStore>())
-            {
-                await provider.PrepareStoreAsync(store, cancellation);
-            }
-
-            return provider;
-        }
-        catch
-        {
-            await provider.DisposeAsync();
-            throw;
+            await PrepareStoreAsync(store, cancellation);
         }
     }
 
@@ -206,7 +198,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
     /// </summary>
     public async ValueTask CreateAsync(DataScope scope, CancellationToken cancellation = default)
     {
-        var role = await PrepareAsync(scope.LambdaId, cancellation);
+        var role = await PrepareRoleAsync(scope.LambdaId, cancellation);
 
         await MakeSchemaAsync(PostgreSqlNames.Schema(scope), role, cancellation);
 
@@ -217,7 +209,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
 
     public async ValueTask<DbConnection> ConnectAsync(DataScope scope, long room, CancellationToken cancellation = default)
     {
-        await PrepareAsync(scope.LambdaId, cancellation);
+        await PrepareRoleAsync(scope.LambdaId, cancellation);
 
         var writing = await MeasureAsync(scope, cancellation) < room;
 
@@ -231,7 +223,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
             return null;
         }
 
-        var role = await PrepareAsync(scope.LambdaId, cancellation);
+        var role = await PrepareRoleAsync(scope.LambdaId, cancellation);
 
         var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString)
         {
@@ -281,7 +273,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
             return;
         }
 
-        var role = await PrepareAsync(source.LambdaId, cancellation);
+        var role = await PrepareRoleAsync(source.LambdaId, cancellation);
 
         var into = PostgreSqlNames.Schema(target);
 
@@ -443,7 +435,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
             return DatabaseOptimization.None;
         }
 
-        var role = await PrepareAsync(scope.LambdaId, cancellation);
+        var role = await PrepareRoleAsync(scope.LambdaId, cancellation);
 
         var connection = new NpgsqlConnectionStringBuilder(_connection.ConnectionString)
         {
@@ -601,7 +593,7 @@ internal sealed class PostgreSqlDatabaseProvider : IDatabaseProvider, IAsyncDisp
     /// holding a thread while it does.
     /// </remarks>
     /// <returns>The name of the role</returns>
-    private async ValueTask<string> PrepareAsync(long lambdaId, CancellationToken cancellation)
+    private async ValueTask<string> PrepareRoleAsync(long lambdaId, CancellationToken cancellation)
     {
         var role = PostgreSqlNames.Role(RolePrefix, lambdaId);
 

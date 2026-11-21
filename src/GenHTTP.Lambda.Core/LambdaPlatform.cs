@@ -615,11 +615,14 @@ public sealed class LambdaPlatformBuilder
     }
 
     /// <summary>
-    /// Builds what the host chose, and the platform's own where it chose nothing.
+    /// Builds what the host chose, and the platform's own where it chose
+    /// nothing, then prepares each - the database, the files, the secrets.
     /// </summary>
     /// <remarks>
-    /// Each built as soon as the one before it is, so whatever was built
-    /// before one that fails is let go of again.
+    /// Building only configures, so all are built before the first reaches
+    /// its infrastructure. One that fails to build or prepare stops the
+    /// platform from starting, and every one built is let go of again,
+    /// prepared or not.
     /// </remarks>
     private async ValueTask<PlatformIntegrations> BuildIntegrationsAsync(IntegrationContext context, CancellationToken cancellation)
     {
@@ -627,11 +630,16 @@ public sealed class LambdaPlatformBuilder
 
         try
         {
-            var database = Keep(built, await (_database ?? SqliteDatabase.Create()).BuildAsync(context, cancellation));
+            var database = Keep(built, (_database ?? SqliteDatabase.Create()).Build(context));
 
-            var files = Keep(built, await (_files ?? LocalFiles.Create()).BuildAsync(context, cancellation));
+            var files = Keep(built, (_files ?? LocalFiles.Create()).Build(context));
 
-            var secrets = _secrets is { } chosen ? Keep(built, await chosen.BuildAsync(context, cancellation)) : null;
+            var secrets = _secrets is { } chosen ? Keep(built, chosen.Build(context)) : null;
+
+            foreach (var integration in built)
+            {
+                await integration.PrepareAsync(cancellation);
+            }
 
             // a host naming the platform's own has not chosen another
             return new PlatformIntegrations(database, files, secrets);

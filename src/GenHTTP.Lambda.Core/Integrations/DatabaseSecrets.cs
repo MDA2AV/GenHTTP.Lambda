@@ -37,6 +37,22 @@ public sealed class DatabaseSecrets(IDbContextFactory<LambdaDbContext> databases
 
     private int _fingerprinted;
 
+    #region Lifecycle
+
+    /// <remarks>
+    /// The platform's own, made by the container once its records are
+    /// migrated - it keeps the secrets in them and has nothing else to reach.
+    /// </remarks>
+    public ValueTask PrepareAsync(CancellationToken cancellation = default) => ValueTask.CompletedTask;
+
+    /// <remarks>
+    /// Holds nothing open: the records are the platform's, and the container
+    /// lets go of them.
+    /// </remarks>
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    #endregion
+
     #region Functionality
 
     public async ValueTask<ISecretSet> LoadAsync(DataScope scope, CancellationToken cancellation = default)
