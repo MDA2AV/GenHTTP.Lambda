@@ -76,13 +76,23 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
 
-                var body = await client.GetStringAsync(source, cancellation);
-
                 // written beside and moved, so a download cut off halfway
                 // leaves yesterday's copy rather than half of today's
                 var scratch = name + ".writing";
 
-                File.WriteAllText(scratch, body);
+                /*
+                 * Streamed to the disk rather than read as a string: a
+                 * registry file is tens of megabytes, which as one string and
+                 * the buffers grown to hold it came to over a hundred
+                 * megabytes on the large object heap - left there after every
+                 * refresh, since nothing else makes the GC collect it.
+                 */
+                await using (var response = await client.GetStreamAsync(source, cancellation))
+                {
+                    await using var file = File.Create(scratch);
+
+                    await response.CopyToAsync(file, cancellation);
+                }
 
                 File.Move(scratch, name, true);
 

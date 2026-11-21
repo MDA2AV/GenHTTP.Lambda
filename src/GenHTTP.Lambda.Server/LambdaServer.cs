@@ -192,15 +192,23 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
 
     private static IServerHost CreateHost(ServerSettings settings) => settings.Engine switch
     {
-        LambdaEngine.Ioxide => GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
-        {
-            Tcp = new GenHTTP.Engine.Ioxide.TcpTransportOptions { RecvQueueEntries = settings.ReceiveQueueEntries }
-        }),
+        LambdaEngine.Ioxide => CreateIoxide(settings),
         LambdaEngine.Kestrel => GenHTTP.Engine.Kestrel.Host.Create(),
         // the engine that runs anywhere, never the one that asks the most of
         // where it runs
         _ => GenHTTP.Engine.Internal.Host.Create()
     };
+
+    private static IServerHost CreateIoxide(ServerSettings settings)
+    {
+        var (buffers, queue) = settings.Receiving();
+
+        return GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
+        {
+            Reactor = new GenHTTP.Engine.Ioxide.ReactorOptions { RecvSlots = buffers },
+            Tcp = new GenHTTP.Engine.Ioxide.TcpTransportOptions { RecvQueueEntries = queue }
+        });
+    }
 
     /// <remarks>
     /// Must be awaited rather than returned: the registrations have to stay
