@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Integrations;
-
 namespace GenHTTP.Lambda.Services.Integrations;
 
 /// <summary>

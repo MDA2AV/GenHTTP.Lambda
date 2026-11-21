@@ -1,6 +1,4 @@
 using GenHTTP.Api.Content.Documentation;
-
-using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Api.Model;

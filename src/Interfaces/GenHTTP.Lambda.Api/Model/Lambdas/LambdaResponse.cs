@@ -1,10 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Meta.Model;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("A lambda, as whoever holds its editor key sees it.")]

@@ -1,5 +1,3 @@
-using GenHTTP.Modules.Git;
-
 using GenHTTP.Lambda.Services.Deployment;
 
 namespace GenHTTP.Lambda.Services.Git;

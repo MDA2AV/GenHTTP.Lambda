@@ -1,8 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Telemetry;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What is running, and on what.")]

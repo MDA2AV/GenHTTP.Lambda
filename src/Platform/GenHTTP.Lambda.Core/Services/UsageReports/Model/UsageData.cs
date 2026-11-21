@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace GenHTTP.Lambda.Services.UsageReports;
 
 /// <param name="DatabaseBytes">What the lambdas' databases take, all together</param>

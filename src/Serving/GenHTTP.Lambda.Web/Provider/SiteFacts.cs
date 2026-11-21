@@ -1,18 +1,3 @@
-using System.Net;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-
-using GenHTTP.Api.Protocol;
-
-using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Infrastructure;
-using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Showcase;
-using GenHTTP.Lambda.Services.Settings;
-
-using Microsoft.Extensions.Logging;
-
 namespace GenHTTP.Lambda.Web;
 
 /// <summary>

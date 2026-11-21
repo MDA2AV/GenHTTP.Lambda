@@ -1,8 +1,4 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-using GenHTTP.Api.Protocol;
-
-using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Settings;

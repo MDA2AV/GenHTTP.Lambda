@@ -1,12 +1,4 @@
-using System.Collections.Concurrent;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
-using System.Security.Cryptography;
-
 using System.Data.Common;
-
-using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Databases;
@@ -14,9 +6,6 @@ using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
-
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 

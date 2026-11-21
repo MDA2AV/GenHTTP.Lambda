@@ -1,8 +1,4 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-using GenHTTP.Api.Protocol;
-
-using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Hosting;
@@ -10,7 +6,6 @@ using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.Files;
-using GenHTTP.Modules.IO;
 
 using Microsoft.Extensions.DependencyInjection;
 

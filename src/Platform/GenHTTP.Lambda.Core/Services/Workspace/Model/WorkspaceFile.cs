@@ -1,5 +1,3 @@
-using GenHTTP.Api.Content.Documentation;
-
 namespace GenHTTP.Lambda.Services.Workspace;
 
 /// <summary>

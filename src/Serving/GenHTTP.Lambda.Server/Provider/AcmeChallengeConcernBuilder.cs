@@ -1,8 +1,4 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-using GenHTTP.Api.Protocol;
-
-using GenHTTP.Modules.IO;
 
 namespace GenHTTP.Lambda.Server;
 

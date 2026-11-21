@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Settings;
 

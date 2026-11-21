@@ -1,8 +1,4 @@
-using System.Text.Json.Serialization;
-
 using GenHTTP.Api.Content.Documentation;
-
-using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
 

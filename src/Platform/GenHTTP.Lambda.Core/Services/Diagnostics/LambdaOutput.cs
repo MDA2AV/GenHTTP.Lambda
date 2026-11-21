@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace GenHTTP.Lambda.Services.Diagnostics;
 
 /// <summary>

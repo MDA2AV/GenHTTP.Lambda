@@ -1,9 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Settings;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What a tier lets a lambda have and how it keeps it, as this installation set it.")]

@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Building;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 /// <summary>

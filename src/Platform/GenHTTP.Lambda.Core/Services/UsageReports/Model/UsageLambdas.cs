@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace GenHTTP.Lambda.Services.UsageReports;
 
 /// <remarks>

@@ -1,5 +1,3 @@
-using GenHTTP.Api.Content.IO;
-
 namespace GenHTTP.Lambda.Integrations.Files;
 
 /// <summary>

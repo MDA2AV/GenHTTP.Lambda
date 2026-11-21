@@ -1,20 +1,3 @@
-using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-using GenHTTP.Api.Protocol;
-
-using GenHTTP.Lambda.Infrastructure;
-using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Settings;
-using GenHTTP.Lambda.Services.Showcase;
-using GenHTTP.Lambda.Services.Source;
-
-using GenHTTP.Modules.IO;
-using GenHTTP.Modules.Layouting;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace GenHTTP.Lambda.Web;
 
 /// <summary>

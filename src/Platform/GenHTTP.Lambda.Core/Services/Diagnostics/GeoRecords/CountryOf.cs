@@ -1,5 +1,3 @@
-using System.Net;
-
 using MaxMind.Db;
 
 namespace GenHTTP.Lambda.Services.Diagnostics;

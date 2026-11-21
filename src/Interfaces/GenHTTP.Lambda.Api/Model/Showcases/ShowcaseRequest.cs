@@ -1,8 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Showcase;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What a showcase entry should say.")]

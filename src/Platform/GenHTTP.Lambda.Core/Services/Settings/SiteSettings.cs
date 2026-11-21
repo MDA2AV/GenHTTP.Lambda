@@ -1,9 +1,4 @@
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Data;
-using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Meta;
-
-using Microsoft.EntityFrameworkCore;
 
 namespace GenHTTP.Lambda.Services.Settings;
 

@@ -1,10 +1,5 @@
-using System.Buffers;
-using System.Text;
-
 using GenHTTP.Api.Content.IO;
 using GenHTTP.Api.Protocol;
-
-using GenHTTP.Lambda.Services.Branding;
 
 namespace GenHTTP.Lambda.Web;
 

@@ -1,5 +1,3 @@
-using GenHTTP.Api.Protocol;
-
 namespace GenHTTP.Lambda.Services.Hosting;
 
 /// <summary>
