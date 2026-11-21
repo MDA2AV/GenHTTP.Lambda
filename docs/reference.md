@@ -1561,7 +1561,7 @@ project, the tests included, fails a build that breaks this (`GL0001`,
 | `GenHTTP.Lambda.Web` | `Serving/` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
 | `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
 | `GenHTTP.Lambda.Api` | `Interfaces/` | `RestApi.Create(platform)`, mounted at `/api` |
-| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp`; and `OperatorMcp.Create(platform)`, the operator's endpoint, mounted at `/admin/mcp` beside the panel (see [The operator's MCP endpoint](#the-operators-mcp-endpoint)) |
+| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp`; and `OperatorMcp.Create(platform)`, the operator's endpoint at `/admin/mcp`, a concern put in front of the panel (see [The operator's MCP endpoint](#the-operators-mcp-endpoint)) |
 | `GenHTTP.Lambda.Editing` | `Applications/` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
 | `GenHTTP.Lambda.Administration` | `Applications/` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
 | `GenHTTP.Lambda.Sources` | `Applications/` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
@@ -1597,9 +1597,7 @@ var site = Layout.Create()
                  .Add("api", RestApi.Create(platform))
                  .Add("mcp", McpServer.Create(platform))
                  .Add("editor", Editor.Create(platform))
-                 .Add("admin", Layout.Create()
-                                     .Add("mcp", OperatorMcp.Create(platform))
-                                     .Add(AdminPanel.Create(platform)))
+                 .Add("admin", AdminPanel.Create(platform).Add(OperatorMcp.Create(platform)))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 
@@ -2957,11 +2955,12 @@ block; on a host that is not the platform's it is not found.
     "headers": { "X-Admin-Token": "the value of LAMBDA_ADMIN_TOKEN" } } } }
 ```
 
-The host mounts it below the panel, beside its pages
-(`Layout.Create().Add("mcp", OperatorMcp.Create(platform)).Add(AdminPanel.Create(platform))`,
-see [How it is put together](#how-it-is-put-together)): neither component
-serves the other's content, and a host that leaves the line out has no
-endpoint.
+The host puts it in front of the panel, as a concern
+(`AdminPanel.Create(platform).Add(OperatorMcp.Create(platform))`, see
+[How it is put together](#how-it-is-put-together)): it takes `/admin/mcp` and
+hands every other path to the panel as it came - a layout at `/admin` would
+answer `/admin` with a redirect before the panel is asked. Neither serves the
+other's content, and a host that leaves it out has no endpoint.
 
 | Tools | What the panel does with them |
 |---|---|

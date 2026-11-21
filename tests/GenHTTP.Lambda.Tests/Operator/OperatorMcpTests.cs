@@ -102,7 +102,7 @@ public sealed class OperatorMcpTests
     {
         await using var fixture = await LambdaFixture.CreateCommunityAsync(LambdaFixture.WithPanel);
 
-        foreach (var path in new[] { "/admin/", "/admin/lambdas", "/admin/lambdas/some-key" })
+        foreach (var path in new[] { "/admin", "/admin/", "/admin/lambdas", "/admin/lambdas/some-key", "/admin/mcpx" })
         {
             using var page = await fixture.GetAsync(path);
 
