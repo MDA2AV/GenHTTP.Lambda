@@ -305,7 +305,7 @@ needs is given to its builder, not read from the environment.
 | Services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
 | REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
 | MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
-| Operator's MCP endpoint | `GenHTTP.Lambda.Mcp` | `OperatorMcp.Create(platform)` | `/admin/mcp`, beside the panel |
+| Operator's MCP endpoint | `GenHTTP.Lambda.Mcp` | `OperatorMcp.Create(platform)` | `/admin/mcp`, a concern in front of the panel |
 | Editor, create page, owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
 | Operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
 | Published sources, public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` |
@@ -941,10 +941,12 @@ REST API is: 401, 403, 404 without a token. What only the operator does is
 never on `/mcp`, where every agent would be shown it (`customize_installation`
 left it after 0.8.0).
 
-- **Mounted by the host beside the panel** (a layout at `/admin`: `mcp` to
-  `OperatorMcp`, the rest to `AdminPanel`); neither serves the other's content.
-  Without a token it answers nothing, so a request is not found rather than
-  handed to the panel's pages. No browser origin is allowed.
+- **Put in front of the panel by the host**, as a concern
+  (`AdminPanel.Create(platform).Add(OperatorMcp.Create(platform))`): it takes
+  `/admin/mcp` and hands every other path to the panel as it came - a layout
+  at `/admin` would redirect `/admin` first. Neither serves the other's
+  content. Without a token `/admin/mcp` is not found rather than handed to the
+  panel's pages. No browser origin is allowed.
 - **The panel's actions and reads, nothing of the owner's**, through the same
   services, refusals and log lines (the operator's region of `OperationLog`) as
   the API's operator routes. A rule both doors need moves into the services.
