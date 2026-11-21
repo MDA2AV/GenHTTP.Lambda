@@ -1,0 +1,97 @@
+using GenHTTP.Api.Content.Documentation;
+
+using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Diagnostics;
+
+using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
+
+namespace GenHTTP.Lambda.Api;
+
+/// <summary>
+/// What the server and the lambdas on it have been saying.
+/// </summary>
+/// <remarks>
+/// Behind the token, see <see cref="AdminAuthentication"/>: this is whatever a
+/// stranger's code decided to print, which can be anything it saw.
+/// </remarks>
+[Tag(ApiDocumentation.ServerLog)]
+[Summary("What the server and the lambdas on it have been saying.")]
+[Remarks("""
+         One ring of lines, held in memory and shared by everything on the installation: the requests, what lambdas printed,
+         and what the server said. Behind the token, since it holds whatever a stranger's code decided to print - and, where
+         the operator records them, the addresses of callers.
+         """)]
+public sealed class LogResource(ILogBook book, IRunLog runs, LambdaOptions options)
+{
+
+    #region Functionality
+
+    [ResourceMethod]
+    [Summary("Reads the log, oldest first")]
+    [Remarks("To follow it, pass the `cursor` of each answer as `since` of the next. Arriving without one reads only the tail, not the whole ring.")]
+    [return: Summary("The lines, and where to carry on from")]
+    public LogResponse Get([Summary("The `cursor` of the previous answer: only what came after it. Left out, the last 1000 lines.")] long? since,
+                           [Summary("Only the lines of the lambda of this public key")] string? lambda,
+                           [Summary("The lowest level to answer with: `trace`, `debug`, `info` (the default), `warn`, `error` or `critical`")] string? level,
+                           [Summary("Only the lines about the caller of this address")] string? client,
+                           [Summary("At most this many lines; by default 1000, or 2000 with `since`")] int? limit)
+    {
+        // a reader carrying a cursor wants what is new, which is little; one
+        // arriving without one wants a screenful of history, and how much of a
+        // screenful is its own business
+        var wanted = limit ?? (since.HasValue ? 2000 : 1000);
+
+        var (lines, cursor, missed) = book.Read(since ?? 0, Blank(lambda), Minimum(level), wanted, Blank(client));
+
+        return new LogResponse(
+            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent, l.Country, l.Place, l.Repeats, l.Domain)).ToList(),
+            cursor,
+            missed,
+            book.Capacity,
+            book.Written,
+            options.CaptureLambdaOutput,
+            options.LogClientAddress,
+            // a clean stop is not worth saying anything about; one that was not
+            // clean is the first thing an operator wants to know
+            runs.Previous is { Clean: false } last
+                ? new PreviousRun(last.Started, last.LastSeen, last.Minutes, last.Signalled,
+                                  last.Fault, last.WorkingSet, last.Requests, last.Sockets)
+                : null
+        );
+    }
+
+    /// <remarks>
+    /// Its own route rather than part of the tail, because it is a pass over
+    /// the whole ring and the tail is asked for every second and a half.
+    /// </remarks>
+    [ResourceMethod("callers")]
+    [Summary("Lists the callers in the log")]
+    [Remarks("Busiest first.")]
+    [return: Summary("The callers")]
+    public IReadOnlyList<LogCaller> GetCallers([Summary("At most this many callers")] int limit = 500)
+    {
+        return book.Callers(limit)
+                   .Select(c => new LogCaller(c.Client, c.Place, c.Country, c.Agent, c.Lines, c.Failed, c.First, c.Last))
+                   .ToList();
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
+    {
+        "trace" => LogLevel.Trace,
+        "debug" => LogLevel.Debug,
+        "warn" or "warning" => LogLevel.Warning,
+        "error" => LogLevel.Error,
+        "critical" => LogLevel.Critical,
+        _ => LogLevel.Information
+    };
+
+    #endregion
+
+}

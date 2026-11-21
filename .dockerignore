@@ -3,8 +3,8 @@
 **/node_modules
 **/dist
 # built by the images themselves, never taken from a checkout
-src/*/bundle
-src/*/Frontend/.prerender
+src/*/*/bundle
+src/*/*/Frontend/.prerender
 tests
 samples
 data

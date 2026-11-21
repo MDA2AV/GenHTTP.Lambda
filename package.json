@@ -6,11 +6,11 @@
   "description": "The frontends of GenHTTP Lambda: a kit they share, and one bundle per component that serves pages.",
   "workspaces": [
     "src/Kit",
-    "src/GenHTTP.Lambda.Editing/Frontend",
-    "src/GenHTTP.Lambda.Administration/Frontend",
-    "src/GenHTTP.Lambda.Sources/Frontend",
-    "src/GenHTTP.Lambda.Cloud/Frontend",
-    "src/GenHTTP.Lambda.Community/Frontend"
+    "src/Applications/GenHTTP.Lambda.Editing/Frontend",
+    "src/Applications/GenHTTP.Lambda.Administration/Frontend",
+    "src/Applications/GenHTTP.Lambda.Sources/Frontend",
+    "src/Hosts/GenHTTP.Lambda.Cloud/Frontend",
+    "src/Hosts/GenHTTP.Lambda.Community/Frontend"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

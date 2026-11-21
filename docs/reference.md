@@ -2,14 +2,14 @@
 
 The technical reference of GenHTTP Lambda: its routes, the API, the
 configuration, how it is operated and how it is put together. It covers both
-editions - the cloud edition that runs genhttp.dev (`src/GenHTTP.Lambda.Cloud`)
+editions - the cloud edition that runs genhttp.dev (`src/Hosts/GenHTTP.Lambda.Cloud`)
 and the community edition anybody runs on a server of their own
-(`src/GenHTTP.Lambda.Community`, the image `genhttp/lambda`). Both are the same
+(`src/Hosts/GenHTTP.Lambda.Community`, the image `genhttp/lambda`). Both are the same
 platform, put together by two hosts, and where they differ it says so. How to
 run the community edition is in the [README](../README.md); the decisions
 behind all of it are in [CLAUDE.md](../CLAUDE.md). Paths of the platform's
 code - `Services/`, `Data/`, `Resources/`, `Infrastructure/` - are below
-`src/GenHTTP.Lambda.Core/`.
+`src/Platform/GenHTTP.Lambda.Core/`.
 
 Write a C# snippet that returns a GenHTTP `IHandler`, press deploy, and get a
 public URL that serves it. The snippet is compiled with Roslyn at runtime and
@@ -36,7 +36,7 @@ lambdas - lives in a named volume mounted at `/data` (or, the databases, in
 below it, at `/lambda/{key}/` (see
 [Where the lambdas answer](#where-the-lambdas-answer)). `samples/community`
 does the same with Docker Compose, the build agent beside it as a profile.
-The image is built from `src/GenHTTP.Lambda.Community/Dockerfile` and
+The image is built from `src/Hosts/GenHTTP.Lambda.Community/Dockerfile` and
 published with the build agent's, `genhttp/lambda-agent` (`docker/agent`), by
 `.github/workflows/release.yml`, for amd64 and arm64, on a tag `v*` or by
 hand. Both host images run the server as the unprivileged `lambda` (uid and
@@ -50,7 +50,7 @@ counts - a redirect where TLS is set up, a 401 where a host puts a login in
 front.
 
 genhttp.dev is the cloud edition: `deploy/cloud/docker-compose.yml` builds it
-from `src/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
+from `src/Hosts/GenHTTP.Lambda.Cloud/Dockerfile`, with the build agent beside it (see
 [Redeploying](#redeploying)), and its lambdas answer at subdomains of
 `LAMBDA_HOSTING_URL`, one each.
 
@@ -64,8 +64,8 @@ into its output when it is built - so the frontends are built first:
 npm install && npm run build                      # every bundle, into <project>/bundle/
 
 # the server, on http://localhost:8080/ - the community edition or the cloud one
-dotnet run --project src/GenHTTP.Lambda.Community
-dotnet run --project src/GenHTTP.Lambda.Cloud
+dotnet run --project src/Hosts/GenHTTP.Lambda.Community
+dotnet run --project src/Hosts/GenHTTP.Lambda.Cloud
 ```
 
 A host serves the bundles it was built with: build it again after building a
@@ -332,7 +332,7 @@ the community edition to subdomains.
   The hosting domain itself, and `www.` in front of it, has a page of its own
   that says what is hosted there and leads to the site, in the language the
   browser prefers. Their words are the runner's own, in
-  `src/GenHTTP.Lambda.Execution/Resources/hosting.json` (`hosting:/` and
+  `src/Serving/GenHTTP.Lambda.Execution/Resources/hosting.json` (`hosting:/` and
   `hosting:/:key`), and translated with the rest. Both link the site's legal
   notice and privacy policy, named as the site names them, where it has them
   (`LambdaOptions.LegalPages`, which genhttp.dev sets). Neither is one of
@@ -386,7 +386,10 @@ the database's migrations among them (see [Code and resources](#code-and-resourc
 A version never changes once it is saved, which is
 what makes every one worth keeping - any of them can be compared with, and put back online
 exactly as it was. Saving files (`POST …/versions`, `write_code`) makes a new
-one.
+one. A version says where it came from (`origin`: the door it came
+through) and, where the platform knows it, who wrote it (`writer`, with the
+`model` and `effort` - the installation's build agent only; see
+[The build agent](#the-build-agent)).
 
 A **feature** is a change worked on beside the lambda. It branches off a
 version - the newest, unless another is named - with a copy of its files and a
@@ -1275,7 +1278,10 @@ feature's preview.
   `lambdas`, and a table of facts per statistic - `days` (the totals),
   `pages`, `referrers`, `countries`, `devices`, `browsers`, `systems`,
   `crawlers` - keyed by lambda, year, month and day (and value), so a
-  lambda's days are a range of the key. Migrated by Evolve from
+  lambda's days are a range of the key. A device, browser or system is kept
+  as a small number (`VisitorDevice`, `VisitorBrowser`, `VisitorSystem`,
+  named by `AnalyticsCodes`; 0 is other), the open sets - pages, referrers,
+  countries, crawlers - as their text. Migrated by Evolve from
   `Services/Analytics/Migrations`. Only the switch is in `lambda.db`
   (`lambdas.analytics_since`), read with everything else that serves a
   request. Deleting a lambda deletes its rows.
@@ -1358,7 +1364,7 @@ requests or wikis, and no way to act on the lambda from there; somebody who
 wants to build on it downloads it, and `platform_guide` tells an agent how a
 download becomes a lambda again. A small notice says what a lambda is and
 leads to `/build`. The pages are a component of their own (`SourcePages`, its
-bundle in `src/GenHTTP.Lambda.Sources/Frontend`), in a frame of their own
+bundle in `src/Applications/GenHTTP.Lambda.Sources/Frontend`), in a frame of their own
 without the site's menu,
 fetched with their words and highlighter only by whoever opens them, in every
 language under the same addresses as every other public page. They are not
@@ -1536,24 +1542,35 @@ only two are applied at once.
 A set of .NET 11 projects below `src/`, hosted by `GenHTTP.Full.Ioxide`: the
 platform, the components over it - each with a builder in front, the way
 GenHTTP's modules are made (`X.Create(...)`) - and two hosts that put them
-together.
+together. They are grouped into folders by role, and the solution's folders
+are the same: `Platform/` (the services), `Integrations/` (what the data is
+kept in), `Interfaces/` (the doors programs and agents use), `Applications/`
+(the components with pages people use), `Serving/` (what serves them all),
+`Hosts/` (the two editions), and `Kit/`, the source the frontends share.
+Within a project a file declares one top-level type, named after it, and the
+top level holds what others use - the builders and contracts - with the
+implementation below it (`Provider/`, the API's `Endpoints/`, the platform's
+`Services/`). `analyzers/GenHTTP.Lambda.Analyzers`, which the root
+`Directory.Build.props` hands to the compiler of every `GenHTTP.Lambda.*`
+project, the tests included, fails a build that breaks this (`GL0001`,
+`GL0002`); a host of somebody's own built in a checkout is not held to it.
 
-| Project | What it is |
-|---|---|
-| `GenHTTP.Lambda.Core` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
-| `GenHTTP.Lambda.Web` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
-| `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
-| `GenHTTP.Lambda.Api` | `RestApi.Create(platform)`, mounted at `/api` |
-| `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)`, mounted at `/mcp` |
-| `GenHTTP.Lambda.Editing` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
-| `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
-| `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
-| `GenHTTP.Lambda.Integrations` | the contracts of what the platform keeps its data in - `IDatabaseProvider`, `IFileProvider`, `ISecretProvider` - and nothing of the platform's (see [Integrations](#integrations)) |
-| `GenHTTP.Lambda.Integrations.Sqlite` | the database every installation has unless it chooses another: SQLite files in the data directory (`SqliteDatabase.Create()`) |
-| `GenHTTP.Lambda.Integrations.PostgreSql` | one PostgreSQL database, a schema per lambda (`PostgreSqlDatabase.Create(connection)`); referenced by the community host only |
-| `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
-| `GenHTTP.Lambda.Cloud` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
-| `GenHTTP.Lambda.Community` | the host of the community edition: `Program.cs`, which lets its operator brand it, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
+| Project | Below `src/` | What it is |
+|---|---|---|
+| `GenHTTP.Lambda.Core` | `Platform/` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
+| `GenHTTP.Lambda.Web` | `Serving/` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
+| `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
+| `GenHTTP.Lambda.Api` | `Interfaces/` | `RestApi.Create(platform)`, mounted at `/api` |
+| `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp`; and `OperatorMcp.Create(platform)`, the operator's endpoint at `/admin/mcp`, a concern put in front of the panel (see [The operator's MCP endpoint](#the-operators-mcp-endpoint)) |
+| `GenHTTP.Lambda.Editing` | `Applications/` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
+| `GenHTTP.Lambda.Administration` | `Applications/` | `AdminPanel.Create(platform)`, mounted at `/admin`: the operator's panel, pages only, over the REST API - of the platform it takes only how the installation presents itself, to name its page |
+| `GenHTTP.Lambda.Sources` | `Applications/` | `SourcePages.Create(platform)`, without a path of its own: the pages at `/{language}/source` and the public git repositories `/source/{key}.git` |
+| `GenHTTP.Lambda.Integrations` | `Integrations/` | the contracts of what the platform keeps its data in - `IDatabaseProvider`, `IFileProvider`, `ISecretProvider` - and nothing of the platform's (see [Integrations](#integrations)) |
+| `GenHTTP.Lambda.Integrations.Sqlite` | `Integrations/` | the database every installation has unless it chooses another: SQLite files in the data directory (`SqliteDatabase.Create()`) |
+| `GenHTTP.Lambda.Integrations.PostgreSql` | `Integrations/` | one PostgreSQL database, a schema per lambda (`PostgreSqlDatabase.Create(connection)`); referenced by the community host only |
+| `GenHTTP.Lambda.Server` | `Serving/` | `LambdaServer.Create(platform)`: the engine, the ports, TLS and ACME, the platform's concerns around every request (`PlatformHosting`), the signals and the note about the run; `ServerSettings`; `LambdaSettings.FromEnvironment()`, the only place below the hosts that reads the environment |
+| `GenHTTP.Lambda.Cloud` | `Hosts/` | the host of genhttp.dev: `Program.cs`, `Website` (its own pages), `CloudInstallation` (its terms, its contact and abuse mailboxes, its legal pages), `CloudStructuredData`, its `Dockerfile` |
+| `GenHTTP.Lambda.Community` | `Hosts/` | the host of the community edition: `Program.cs`, which lets its operator brand it, `LandingPage`, its `Dockerfile`, published as `genhttp/lambda` |
 
 A host's `Program.cs` is the whole composition. The community edition's:
 
@@ -1580,7 +1597,7 @@ var site = Layout.Create()
                  .Add("api", RestApi.Create(platform))
                  .Add("mcp", McpServer.Create(platform))
                  .Add("editor", Editor.Create(platform))
-                 .Add("admin", AdminPanel.Create(platform))
+                 .Add("admin", AdminPanel.Create(platform).Add(OperatorMcp.Create(platform)))
                  .Add(SourcePages.Create(platform))
                  .Add(LandingPage.Create(platform));
 
@@ -2029,7 +2046,17 @@ integration may speak (`IDatabaseProvider.Dialect`): `Data/Migrations` and
 `Services/Analytics/Migrations` for SQLite, `Data/PostgreSql` and
 `Services/Analytics/PostgreSql` for PostgreSQL, each numbered on its own. A
 change to the schema is a migration in every set. The analytics' commands are
-written once, in SQL both accept.
+written once, in SQL both accept. A column of one of a few known values holds
+a small number (`INTEGER` in SQLite, `smallint` in PostgreSQL): the tier,
+editor view and connectivity of a lambda, the origin of a version, a
+deployment and a feature, why an activation ended, an event's kind - the
+members of the enums in `Data/Entities`, which keep their numbers for good.
+What the API and MCP call them is spelled out beside each (`LambdaTierNames`,
+`VersionOriginNames`, …), so the names on the wire are those of before; a
+number no member has reads as the sandbox, the full view
+(`Data/StoredValues.cs`) or nothing recorded. V30 (V5 in PostgreSQL) converted
+the names an installation had saved, and cannot be undone by an older
+release.
 
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder
@@ -2049,14 +2076,14 @@ files only through the platform, and nothing hands it a path.
 ## Configuration
 
 Everything is read from the environment on startup, by
-[`LambdaSettings.FromEnvironment()`](../src/GenHTTP.Lambda.Server/LambdaSettings.cs) -
+[`LambdaSettings.FromEnvironment()`](../src/Serving/GenHTTP.Lambda.Server/LambdaSettings.cs) -
 the only place below the hosts that reads it - apart from the limits of the
 tiers, which are the product's promises rather than the server's
 configuration and are set in the administration panel while it runs (see
 [Limits](#limits)); a host gives their defaults (`LambdaOptions.Sandbox`,
 `Production`, `System`, `DefaultTier`), as genhttp.dev gives the sandbox and
 production the labels *Free* and *Premium*. The variables are read into two: the platform's options
-([`LambdaOptions`](../src/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
+([`LambdaOptions`](../src/Platform/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
 which every component is built with, and the host's (`ServerSettings`), which
 only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
 `LAMBDA_RECEIVE_BUFFERS`, `LAMBDA_RECEIVE_QUEUE_ENTRIES`, `LAMBDA_TLS_PORT`,
@@ -2638,10 +2665,10 @@ reading who visits a lambda, and switching that on when the user asks, and
 on the showcase: its picture, base64 in a tool call, was too large for the
 agents that tried, so the instructions point to `platform_guide` (`showcase`),
 which sends them to `PUT /lambdas/{privateKey}/showcase` with the body written
-to a file, and the user to the editor where they cannot make requests. Where the installation
-may be branded and has an admin token, `customize_installation` names it and
-gives it a logo, for an agent its operator handed the token (see
-[Branding](#branding)). `platform_guide` is the one to call first. It answers
+to a file, and the user to the editor where they cannot make requests. What
+only the operator does is not here, so no agent is shown a tool it could not
+use: it is on [the operator's MCP endpoint](#the-operators-mcp-endpoint).
+`platform_guide` is the one to call first. It answers
 with one Markdown document, sent once as text rather than as an object (which
 the MCP module sends twice), written for a model and held under 28 KB by a
 test - at 65 KB, clients wrote it to a file instead of the conversation. It
@@ -2899,12 +2926,77 @@ without the header is answered with 401, one with the wrong token with 403.
 The concern says so in the API description itself: every operation behind it
 requires the `adminToken` security scheme, which Scalar asks for once.
 Until that variable is set there is no administration at all: the operator's
-routes - `/api/v1/admin`, `/api/v1/telemetry` and `/api/v1/logs` - are not
-there and answer 404, and the panel says the installation has none.
+routes - `/api/v1/admin`, `/api/v1/telemetry` and `/api/v1/logs` - and the
+operator's MCP endpoint `/admin/mcp` are not there and answer 404, and the
+panel says the installation has none.
 
 The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
 operator everybody's.
+
+### The operator's MCP endpoint
+
+`/admin/mcp` hands what the panel shows and does to an agent the operator
+runs - Claude Code, Codex, anything that speaks MCP - as tools
+(`OperatorMcp`, in the MCP component). It is GenHTTP's MCP module as `/mcp`
+is: stateless, answered with one JSON object per request, and driven from no
+browser - it allows no origin. The token is a header the client sends with
+every call, `X-Admin-Token`, checked in front of the tools by the same concern
+as the REST API's routes (`AdminAuthentication`): 401 without it, 403 with
+another, and on an installation without a token the endpoint is not there
+(404) - never the panel's page beside it. Like the panel, it is reached from
+an address that is blocked, so an operator who blocked their own can lift the
+block; on a host that is not the platform's it is not found.
+
+```json
+{ "mcpServers": { "genhttp-operator": {
+    "type": "http",
+    "url": "https://apps.example.com/admin/mcp",
+    "headers": { "X-Admin-Token": "the value of LAMBDA_ADMIN_TOKEN" } } } }
+```
+
+The host puts it in front of the panel, as a concern
+(`AdminPanel.Create(platform).Add(OperatorMcp.Create(platform))`, see
+[How it is put together](#how-it-is-put-together)): it takes `/admin/mcp` and
+hands every other path to the panel as it came - a layout at `/admin` would
+answer `/admin` with a redirect before the panel is asked. Neither serves the
+other's content, and a host that leaves it out has no endpoint.
+
+| Tools | What the panel does with them |
+|---|---|
+| `list_lambdas`, `read_lambda`, `read_version` | **All lambdas** and a lambda's page: a page of twenty with the panel's filters; one lambda summed up as its page sums it up; a version's files, one file's text at a time |
+| `deploy_lambda`, `undeploy_lambda`, `change_tier`, `change_domain`, `decide_connectivity`, `block_lambda`, `unblock_lambda`, `delete_lambda` | a lambda's **Manage** card |
+| `read_overview`, `read_storage` (`measure`) | **Dashboard**, **Statistics**, **Storage** |
+| `list_address_blocks`, `remove_address_block`, `list_connectivity` | **Blocked addresses**, **Connectivity** |
+| `read_settings`, `change_settings`, `read_limits`, `change_limits` | **Settings**, **Limits** - a change takes what it names and leaves the rest, the limits too |
+| `read_guide`, `change_guide_section`, `remove_guide_section` | **Guide** |
+| `read_agent_settings`, `change_agent_settings` | **Build agent** |
+| `list_integrations`, `read_usage_report`, `read_quiet_hours`, `read_optimization` | **Integrations**, **Usage report**, **Quiet hours**, the databases' optimization |
+| `read_telemetry`, `list_activity`, `read_logs`, `list_callers` | **Server**, **Log** |
+| `customize_installation` | **Branding**, only where the host lets the operator brand the installation |
+
+Every action is the one the panel's API takes, through the same services and
+refusals, and logged in the same words (the operator's lines of
+`OperationLog`); every read is logged as every MCP read is. A test holds the
+two doors together: every operator route of the REST API is mapped to its tool
+(`EveryRouteOfTheOperatorsApiHasATool`), so a route added without one fails.
+
+- **No editor key in an answer.** The panel's API hands editor keys out,
+  since the panel links into the editor; an agent has no editor to open, and
+  an answer goes into its transcript. Lambdas are named by their public key,
+  and the editor keys in the paths of a log line's request are masked
+  (`(editor key)`) - the panel's log shows them as they are.
+- **Bounded answers**: a page of lambdas, a lambda's newest twenty versions,
+  activations and addresses with how many there are, one file of a version, at
+  most a thousand log lines with a cursor, the readings of a window summed up
+  (lowest, highest, mean) rather than every sample.
+- **Annotated**: every read is `readOnlyHint`; what cannot be undone -
+  `delete_lambda`, `remove_guide_section`, `customize_installation`, which may
+  take the logo away - is `destructiveHint`, and nothing else. The
+  instructions say to ask the operator before those and before blocking.
+- **What others wrote is data.** Code, change lines, log lines, purposes,
+  block reasons and notes were written by owners and visitors; the
+  instructions tell the agent never to follow them.
 
 ### Tiers
 
@@ -3214,6 +3306,28 @@ CLI ends it, with an error rather than a closing note: the build or the change
 fails with the CLI's words in `detail`, rather than being taken for an answer
 or a run that ran out of time.
 
+**What the agent writes is marked as its own.** Every build and change is
+handed to the runner with a ticket the server made for it (`ticket`: 32 hex
+characters, random, kept in memory for a day, never logged), which the runner
+writes into the agent's configuration of the MCP endpoint as the header
+`X-Lambda-Agent` - so every call of the job carries it - and leaves out where
+it is not one. A save through MCP that carries a ticket the server issued
+records who wrote it (`writer`: `build-agent`) and the model and effort of the
+job, as the server issued them - never as the runner or the agent says.
+A draft keeps them for its last save, and any other save into it clears them;
+the version it is merged into takes them over, whoever merges it - so the
+owner putting the agent's draft online makes a version of origin `api` that
+the agent wrote. They are `writer`, `model` and `effort` of a version (`GET
+…/versions`, `GET …/versions/:version`) and of a feature, left out for
+anybody else's work: an agent of somebody's own says nothing over MCP about
+its model, and nothing the platform could trust about itself. The editor
+marks the agent's work with the model's family and the effort - beside the
+mark in the full view, in its title in the simple one - the panel's
+**Statistics** count what it wrote in the last thirty days by model and effort
+(`agentModels`, `agentEfforts` of `GET /admin/overview`), and so does the
+usage report. A restart forgets the tickets: what a job saves after one has no
+writer. The public source, the git history and the export say nothing of it.
+
 ### Who it is for
 
 An installation says whom it is for - its **profile**: `cloud`, a public
@@ -3303,11 +3417,11 @@ the panel has no such section.
 | `GET /system/logo`                       | public: the picture beside the name - the logo, or the first letter of the name on a square plate where there is none; cached for good by the versioned address `brand.logo` of `GET /system` names |
 
 An agent the operator handed the token does the same with these routes, or
-with the MCP tool `customize_installation` (`adminToken`, `name`, `logo` - an
-SVG's markup as it is, or a picture base64 encoded). The tool is added to the
-endpoint only where the installation may be branded and has an admin token,
-so no other agent is shown a tool it could not use; the token is an argument,
-compared as the API compares it (`OperatorToken`), and never repeated.
+with `customize_installation` on [the operator's MCP endpoint](#the-operators-mcp-endpoint)
+(`name`, `logo` - an SVG's markup as it is, or a picture base64 encoded;
+neither reads how it is now). The tool is there only where the installation
+may be branded. Until 0.8.0 it was on `/mcp`, with the token as an argument
+that every agent was shown and that landed in the agent's transcript.
 
 Where it shows: the bar of every page - the front page, the showcase, the
 editor, the published sources, the panel - the end of every title and the name
@@ -3405,8 +3519,10 @@ every MCP tool an agent calls, logs what it did, verb first and tersely:
 `Published source of lambda quiz license MIT`, `Merged feature 'Dark mode' of
 lambda quiz as version 4`, `Set secret SHOP_KEY of lambda quiz`,
 `Failed to deploy lambda quiz version 5`. The source says which door it came
-through - a `…Resource` for the API, `McpTools` for an agent - and the line
-carries the caller like any other. Each value is a property of its own with the
+through - a `…Resource` for the API, `McpTools` for an agent, an
+`…OperatorTools` for the operator's - and the line carries the caller like any
+other. What the operator does is logged in one set of lines whichever door it
+came through (`Set tier of lambda quiz to Production by operator`). Each value is a property of its own with the
 same name in every line - `{Lambda}` the public key, `{Feature}` the feature's
 name, `{Version}`, `{Path}` - so the find box and a structured sink can both
 pick them out; the services below the doors know a lambda by its id and write

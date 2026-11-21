@@ -156,6 +156,12 @@ export interface VersionInfo {
   /** What the version changed, in a line. */
   change?: string | null;
   origin?: Origin | null;
+  /** Who wrote it, where the platform knows it: the agent of this installation, on a job it was given. */
+  writer?: 'build-agent' | null;
+  /** The model the agent ran on, by the name it was offered by: opus, sonnet, haiku, fable. */
+  model?: string | null;
+  /** The effort it ran at: low, medium, high, xhigh, max. */
+  effort?: string | null;
 }
 
 /** One stretch of time a version was online. */
@@ -876,6 +882,12 @@ export interface Feature {
   previewPath: string;
   /** How many times its files were saved, counting the ones it began with. */
   revision: number;
+  /** Who wrote what it holds - its last save - where the platform knows it: the agent of this installation, on a job it was given. */
+  writer?: 'build-agent' | null;
+  /** The model the agent ran on, by the name it was offered by: opus, sonnet, haiku, fable. */
+  model?: string | null;
+  /** The effort it ran at: low, medium, high, xhigh, max. */
+  effort?: string | null;
 }
 
 export interface FeatureContent {
@@ -1041,6 +1053,9 @@ export interface AdminCensus {
   versions: number;
   /** Versions saved in the last thirty days, by origin. */
   saved: Record<string, number>;
+  /** Of those, what the agent of this installation wrote, by model and by effort - every one, at zero where none. */
+  agentModels: Record<string, number>;
+  agentEfforts: Record<string, number>;
 }
 
 /** The volume of the data directory. */

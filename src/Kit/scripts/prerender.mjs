@@ -6,10 +6,10 @@ import { pathToFileURL } from 'node:url';
  * Renders the public pages of a site to markup, after its bundle has been
  * built: `vite build --ssr` bundles the site's src/prerender.tsx for node into
  * .prerender, and this runs it and puts the result next to the index page,
- * where the server reads it (Web/SitePrerender.cs).
+ * where the server reads it (Web/Provider/SitePrerender.cs).
  *
  * Run from the site's frontend, with the folder its bundle was built into:
- *   node ../../Kit/scripts/prerender.mjs ../bundle
+ *   node ../../../Kit/scripts/prerender.mjs ../bundle
  */
 
 const site = process.cwd();

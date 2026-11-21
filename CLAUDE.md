@@ -126,6 +126,20 @@ calling APIs, keeping data, accounts, merely alarming-sounding - are not
 declined. Keep `PURPOSE`, `AGENTS.md` ("What not to build") and the docs
 saying the same.
 
+**What it writes is known to be its own.** The server issues every job a
+random ticket (`AgentTickets`, in memory, a day, never logged), which the
+runner puts into the agent's connection to the MCP endpoint as a header
+(`X-Lambda-Agent`). What a call carrying it saves records its writer
+(`VersionWriter.BuildAgent`) and the model and effort of the job - taken from
+what the server issued, never from what the runner or the agent says - on the
+version, and on a draft for its last save, which the version it is merged into
+takes over whoever merges it. Every other save into a draft clears it. An
+agent of somebody's own has no writer: MCP says nothing about the model, and
+nothing the platform could trust about the client. The editor marks it with
+the model's family and the effort (`AgentMark`), the panel and the usage
+report count it by model and effort; `/source`, git and the export say
+nothing of it.
+
 **Models and efforts (owner)**: chosen from two dropdowns under the box on
 `/build`, the workspace and the Change section (`components/AgentChoice.tsx`):
 Opus at high effort by default, Sonnet and Haiku beside it, Fable behind a
@@ -160,11 +174,11 @@ agent builds and changes apps at all.
 **(owner)** The platform is a set of components that hosts put together the
 GenHTTP way. Two hosts, two editions:
 
-- **Cloud** (`src/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
+- **Cloud** (`src/Hosts/GenHTTP.Lambda.Cloud`) is genhttp.dev: lambdas at subdomains
   of the hosting domain, the marketing site (front page of features, `/build`,
   `/ship`, `/self-hosting`), legal pages, terms, contact and abuse mailbox,
   structured data (`CloudInstallation`, `CloudStructuredData`).
-- **Community** (`src/GenHTTP.Lambda.Community`), the Docker image
+- **Community** (`src/Hosts/GenHTTP.Lambda.Community`), the Docker image
   `genhttp/lambda`: every feature of the cloud, the build agent included,
   behind a simpler front page for developers, the same `/build` and `/ship`,
   and the showcase - translated, crisp, selling nothing. No terms, legal pages
@@ -222,8 +236,8 @@ GenHTTP way. Two hosts, two editions:
 ### Branding (community only)
 
 **(owner)** The operator gives the installation a name and a logo in the
-panel's **Branding** section (or `/admin/branding`, the MCP tool
-`customize_installation`) - never environment variables - and every page shows
+panel's **Branding** section (or `/admin/branding`, `customize_installation`
+on the operator's MCP endpoint) - never environment variables - and every page shows
 them instead of GenHTTP Lambda's: bar, titles, link previews, icon, manifest,
 `llms.txt`. The host decides whether it is offered (`LambdaOptions.Branding`);
 without it the routes, tool and section are absent and nothing stored is read.
@@ -291,6 +305,7 @@ needs is given to its builder, not read from the environment.
 | Services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
 | REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
 | MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
+| Operator's MCP endpoint | `GenHTTP.Lambda.Mcp` | `OperatorMcp.Create(platform)` | `/admin/mcp`, a concern in front of the panel |
 | Editor, create page, owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
 | Operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
 | Published sources, public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` |
@@ -301,6 +316,17 @@ needs is given to its builder, not read from the environment.
 | SQLite (default database) | `GenHTTP.Lambda.Integrations.Sqlite` | `SqliteDatabase.Create()` | `.Database(...)` |
 | Local directories (default files) | `GenHTTP.Lambda.Integrations.Local` | the platform's own | `.Files(...)` |
 | PostgreSQL, community only | `GenHTTP.Lambda.Integrations.PostgreSql` | `PostgreSqlDatabase.Create(connection)` | `.Database(...)` |
+
+- **The folders below `src/` are the roles (owner)**, and the solution's
+  folders are the same: `Platform/` (Core), `Integrations/` (the contracts and
+  every integration), `Interfaces/` (API, MCP), `Applications/` (editor, panel,
+  sources), `Serving/` (Execution, Web, Server), `Hosts/` (cloud, community),
+  and `Kit/`. A new project joins the folder of its role - an integration
+  `Integrations/`, a door for programs or agents `Interfaces/`, a component
+  with pages people use `Applications/`, a host `Hosts/` - and keeps its
+  `GenHTTP.Lambda.*` name. Moving one moves every path that names it
+  (project references, the slnx, the Dockerfiles, the npm workspaces, the
+  ignore files, the translation script, the workflows, the docs).
 
 - **A host's `Program.cs` is the composition, short and plain**: read the
   settings, build the platform, lay out the components, hand it to the runner
@@ -350,7 +376,8 @@ the log is behind the admin token. There are no accounts.
 `/admin` authenticates with `X-Admin-Token` (`AdminAuthentication`, GenHTTP's
 API key auth): 401 without, 403 wrong, 404 on an installation without a
 token. The token is the platform's (`LambdaOptions.AdminToken`) **(owner)**;
-the REST API's operator routes answer to it. **The editor has no admin section
+the REST API's operator routes and the operator's MCP endpoint answer to it,
+in that header - never as a tool argument. **The editor has no admin section
 (owner)**: what only the operator decides about a lambda (block, tier) is on
 its page in the panel. Telemetry is seen only by owners (their lambda's) and
 the operator.
@@ -906,6 +933,32 @@ timer).
   (`diskState`).
 - English only.
 
+### The operator's MCP endpoint
+
+**(owner)** `/admin/mcp` covers everything the panel does and shows, for an
+agent the operator runs, authenticated by the `X-Admin-Token` header as the
+REST API is: 401, 403, 404 without a token. What only the operator does is
+never on `/mcp`, where every agent would be shown it (`customize_installation`
+left it after 0.8.0).
+
+- **Put in front of the panel by the host**, as a concern
+  (`AdminPanel.Create(platform).Add(OperatorMcp.Create(platform))`): it takes
+  `/admin/mcp` and hands every other path to the panel as it came - a layout
+  at `/admin` would redirect `/admin` first. Neither serves the other's
+  content. Without a token `/admin/mcp` is not found rather than handed to the
+  panel's pages. No browser origin is allowed.
+- **The panel's actions and reads, nothing of the owner's**, through the same
+  services, refusals and log lines (the operator's region of `OperationLog`) as
+  the API's operator routes. A rule both doors need moves into the services.
+  `EveryRouteOfTheOperatorsApiHasATool` maps every operator route to its tool:
+  a new route gets its tool in the same change.
+- **No editor key in an answer** (lambdas by public key; keys masked in log
+  lines' paths), bounded answers (pages, the newest twenty, one file, a cursor,
+  readings summed up), what strangers wrote said to be data in the
+  instructions. A change takes what it names and leaves the rest.
+- **Annotations**: reads `ReadOnly`; `Destructive` exactly what cannot be
+  undone (deleting a lambda, removing the guide section, a logo taken away).
+
 ## Architecture
 
 Read the reference's "How it is put together" before touching services.
@@ -930,7 +983,7 @@ Read the reference's "How it is put together" before touching services.
   **a schema change is a migration in every set**, each numbered on its own.
   Existing migrations are never edited. **Before pushing a migration check the
   highest `V` on `origin/main`** - a duplicate fails every test. New files under
-  `src/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
+  `src/Platform/GenHTTP.Lambda.Core/Data/` are hidden by `.gitignore`'s `data/` on
   Windows: `git add -f`.
 - Frontends: React in an npm workspace at the root - the kit and a bundle per
   component; public pages prerendered per language.
@@ -983,6 +1036,17 @@ and logging are not integrations, for now.
 - **Kinds, dialects and stores are enums, never strings (owner)**; where one
   becomes a name (file, schema, directory, JSON, env var) a mapper spells it
   out, never `ToString()`: stored names must not follow a code rename.
+- **A column of a few known values is an enum with explicit numbers, stored as
+  a small integer (owner)** - the tier, the editor view, connectivity, where a
+  version, deployment or feature came from, why an activation ended, an
+  event's kind, and the analytics' devices, browsers and systems
+  (`AnalyticsCodes`). A member keeps its number for good; a new one takes the
+  next. **The wire stays strings**: the API, MCP, editor and panel get each
+  name from its mapper beside the enum (`LambdaTierNames`,
+  `VersionOriginNames`, …), never `ToString()` or `Enum.Parse`. A number no
+  member has reads as the least it could mean - a tier as the sandbox, a view
+  as the full one (`StoredValues`) - or as nothing recorded. Open sets stay
+  text: pages, referrers, countries, crawler names.
 - **The platform uses them too (owner)**: its records and analytics are kept by
   the database integration in its dialect. **No picture is kept in a database
   (owner)**: the logo and showcase pictures are files of the files integration.
@@ -1096,11 +1160,13 @@ not the request. A new endpoint or tool gets its line in the same change
   not a comment.
 - **Use what the framework offers the way it is meant (owner)** ("embrace
   it"): where GenHTTP has a module for something done by hand, move onto it.
-- **The MCP endpoint is GenHTTP's MCP module**: tools are `[Tool]` methods of
-  `McpTools`, `[Summary]` their description; fixed argument limits are
+- **The MCP endpoints are GenHTTP's MCP module**: tools are `[Tool]` methods of
+  `McpTools` (the operator's of the `…OperatorTools`), `[Summary]` their
+  description; fixed argument limits are
   attributes (`[Range]`, `[MaxLength]`, `[AllowedValues]`), not checks of our
-  own. A `LambdaException` is turned into an error that says why
-  (`Refusing`), never a crash.
+  own - an optional argument's `[AllowedValues]` lists `null`, which the
+  module validates too. A `LambdaException` is turned into an error that says
+  why (`Refusing`), never a crash.
 - **Do not write tests for the frameworks.**
 - The framework source is beside this repository (`../GenHTTP`); read it rather
   than decompiling packages.
@@ -1289,7 +1355,7 @@ API, with GenHTTP's documentation attributes beside the code.
   remarks.
 - **Tags are concepts, not classes**, ordered and grouped in `ApiDocumentation`
   (`x-tagGroups`). The introduction is
-  `src/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
+  `src/Interfaces/GenHTTP.Lambda.Api/Resources/Introduction.md`; shared wording is a
   constant of `ApiDocumentation`.
 - **Authentication describes itself**: the admin token's concern declares the
   `adminToken` scheme and its 401/403; elsewhere the editor key in the path is
@@ -1302,6 +1368,22 @@ API, with GenHTTP's documentation attributes beside the code.
 - Code is written to be read: XML documentation with `<remarks>` that say
   *why*, `#region` blocks per concern, braces on their own line. Match the file
   you are in.
+- **One top-level type per file, named after it (owner)** - records, enums,
+  interfaces and delegates too - so a type is found by its name. A group of
+  DTOs is a folder (`Api/Model/Admin/`, a service's `Model/`). Nested types,
+  and `file` types only their file uses, stay with their owner; the parts of a
+  partial type may add a suffix (`McpTools.Lambdas.cs`). The build enforces it
+  for every `GenHTTP.Lambda.*` project (`analyzers/`, `GL0001` and `GL0002`),
+  not for a host somebody builds in a checkout of their own. **The tests
+  follow the same rule**, foldered by area.
+- **The top level of a project is its public surface (owner)**: builders,
+  contracts, whatever a host or another component uses. The implementation is
+  in sub-folders - `Provider/` the way GenHTTP's modules keep theirs, the REST
+  resources in `Endpoints/`, the platform's `Services/`, `Data/`,
+  `Infrastructure/`. A host stays flat: it is its composition. Folders never
+  change a namespace, which follows the project. No folder is called `Logs`,
+  `Log`, `Data`/`data` (Windows), `bin` or `obj` - the root `.gitignore` hides
+  it.
 - Comments say why, not what. Prose, not marketing.
 - Tailwind, light and dark themes, phones included.
 - Check a UI change by running the app and looking at it; type checks and tests
