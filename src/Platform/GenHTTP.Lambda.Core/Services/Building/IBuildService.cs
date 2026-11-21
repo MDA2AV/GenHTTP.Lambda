@@ -22,7 +22,7 @@ public interface IBuildService
     /// on the model and effort of the job the ticket was issued for - or
     /// nobody known, where it is not a ticket this installation issued.
     /// </summary>
-    VersionAuthor? AuthorOf(string? ticket);
+    ValueTask<VersionAuthor?> AuthorOfAsync(string? ticket, CancellationToken cancellation = default);
 
     /// <summary>
     /// Whether this installation has an agent to build with.

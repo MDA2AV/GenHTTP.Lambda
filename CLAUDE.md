@@ -157,7 +157,8 @@ declined. Keep `PURPOSE`, `AGENTS.md` ("What not to build") and the docs
 saying the same.
 
 **What it writes is known to be its own.** The server issues every job a
-random ticket (`AgentTickets`, in memory, a day, never logged), which the
+random ticket (`AgentTickets`: kept in the platform's records as its SHA-256,
+never in a server's memory, for a day; never logged), which the
 runner puts into the agent's connection to the MCP endpoint as a header
 (`X-Lambda-Agent`). What a call carrying it saves records its writer
 (`VersionWriter.BuildAgent`) and the model and effort of the job - taken from

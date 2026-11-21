@@ -45,6 +45,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<BlobEntity> Blobs => Set<BlobEntity>();
 
+    public DbSet<AgentTicketEntity> AgentTickets => Set<AgentTicketEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -371,6 +373,17 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
              .WithMany()
              .HasForeignKey(b => b.LambdaId)
              .OnDelete(DeleteBehavior.Cascade);
+
+        var tickets = builder.Entity<AgentTicketEntity>();
+
+        tickets.ToTable("agent_tickets");
+
+        tickets.HasKey(t => t.Hash);
+
+        tickets.Property(t => t.Hash).HasColumnName("hash");
+        tickets.Property(t => t.Model).HasColumnName("model").HasConversion<short>();
+        tickets.Property(t => t.Effort).HasColumnName("effort").HasConversion<short>();
+        tickets.Property(t => t.Expires).HasColumnName("expires");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

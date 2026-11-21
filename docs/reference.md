@@ -3243,7 +3243,7 @@ or a run that ran out of time.
 
 **What the agent writes is marked as its own.** Every build and change is
 handed to the runner with a ticket the server made for it (`ticket`: 32 hex
-characters, random, kept in memory for a day, never logged), which the runner
+characters, random, never logged), which the runner
 writes into the agent's configuration of the MCP endpoint as the header
 `X-Lambda-Agent` - so every call of the job carries it - and leaves out where
 it is not one. A save through MCP that carries a ticket the server issued
@@ -3260,8 +3260,16 @@ marks the agent's work with the model's family and the effort - beside the
 mark in the full view, in its title in the simple one - the panel's
 **Statistics** count what it wrote in the last thirty days by model and effort
 (`agentModels`, `agentEfforts` of `GET /admin/overview`), and so does the
-usage report. A restart forgets the tickets: what a job saves after one has no
-writer. The public source, the git history and the export say nothing of it.
+usage report. The public source, the git history and the export say nothing
+of it.
+
+The tickets are kept in the platform's records (`agent_tickets`), not in the
+memory of the server that issued them, so a ticket outlives a restart and is
+known to whichever server the job's calls reach. Only a ticket's SHA-256 is
+kept, with the model and effort of its job and when it expires: a day after it
+was issued, since a job without a clock runs for hours, not days. A save
+carrying something that is not a ticket costs no lookup; an expired one marks
+nothing, and the expired ones are removed hourly (`AgentTicketJob`).
 
 ### Who it is for
 

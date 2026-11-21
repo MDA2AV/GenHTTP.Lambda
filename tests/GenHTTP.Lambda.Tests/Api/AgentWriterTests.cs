@@ -1,15 +1,21 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Databases;
+using GenHTTP.Lambda.Services.Background;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -239,12 +245,102 @@ public sealed class AgentWriterTests
         Assert.DoesNotContain("build-agent", body);
     }
 
+    [TestMethod]
+    public async Task ATicketOutlivesARestartOfTheServer()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
+
+        await using var agent = FakeAgent.Start();
+
+        string ticket, privateKey;
+
+        await using (var first = await WithAgentAsync(agent, directory))
+        {
+            privateKey = (await first.CreateLambdaAsync("restarted")).PrivateKey;
+
+            ticket = await TicketAsync(first, agent, privateKey, "haiku", "high");
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        // a server that never issued it in its own memory - another one, or
+        // the same one after a restart - knows the ticket from the records
+        await using var second = await WithAgentAsync(agent, directory);
+
+        await CallToolAsync(second, "write_code", new JsonObject { ["privateKey"] = privateKey, ["files"] = Files() }, ticket);
+
+        var newest = (await VersionsAsync(second, privateKey))[0]!;
+
+        Assert.AreEqual("build-agent", newest["writer"]!.GetValue<string>());
+        Assert.AreEqual("haiku", newest["model"]!.GetValue<string>());
+        Assert.AreEqual("high", newest["effort"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task OnlyAHashOfATicketIsKept()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("hashed");
+
+        var ticket = await TicketAsync(fixture, agent, lambda.PrivateKey, "opus", "low");
+
+        await using var database = await Databases(fixture).CreateDbContextAsync();
+
+        var kept = await database.AgentTickets.AsNoTracking().ToListAsync();
+
+        Assert.HasCount(1, kept);
+        Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(ticket))), kept[0].Hash,
+                        "what the records hold cannot be presented as the ticket");
+        Assert.AreEqual(AgentModel.Opus, kept[0].Model);
+        Assert.AreEqual(AgentEffort.Low, kept[0].Effort);
+    }
+
+    [TestMethod]
+    public async Task AnExpiredTicketMarksNothingAndIsRemoved()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("expired");
+
+        var ticket = await TicketAsync(fixture, agent, lambda.PrivateKey, "sonnet", "medium");
+
+        await using (var database = await Databases(fixture).CreateDbContextAsync())
+        {
+            await database.AgentTickets.ExecuteUpdateAsync(t => t.SetProperty(e => e.Expires, DateTime.UtcNow.AddMinutes(-1)));
+        }
+
+        await CallToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["files"] = Files() }, ticket);
+
+        Assert.IsNull((await VersionsAsync(fixture, lambda.PrivateKey))[0]!["writer"], "a ticket a day old is nobody's");
+
+        var job = fixture.Platform.Services.GetServices<IBackgroundJob>().OfType<AgentTicketJob>().Single();
+
+        await job.ExecuteAsync(CancellationToken.None);
+
+        await using (var database = await Databases(fixture).CreateDbContextAsync())
+        {
+            Assert.IsFalse(await database.AgentTickets.AnyAsync(), "and the job takes it away");
+        }
+    }
+
     #endregion
 
     #region Helpers
 
-    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent)
-        => LambdaFixture.CreateAsync(o => o with { AgentUrl = agent.Url, AgentToken = "a secret", AdminToken = LambdaFixture.OperatorToken });
+    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, string? directory = null)
+        => LambdaFixture.CreateAsync(o => o with
+        {
+            AgentUrl = agent.Url,
+            AgentToken = "a secret",
+            AdminToken = LambdaFixture.OperatorToken,
+            DataDirectory = directory ?? o.DataDirectory
+        });
+
+    private static IDbContextFactory<LambdaDbContext> Databases(LambdaFixture fixture)
+        => fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
     private static JsonArray Files() => new(new JsonObject { ["name"] = "lambda.cs", ["code"] = Snippet });
 

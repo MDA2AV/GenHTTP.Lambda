@@ -47,8 +47,8 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
                                  ILogger<BuildService> logger) : IBuildService
 {
 
-    public VersionAuthor? AuthorOf(string? ticket)
-        => tickets.Resolve(ticket) is { } job ? new VersionAuthor(VersionWriter.BuildAgent, job.Model, job.Effort) : null;
+    public async ValueTask<VersionAuthor?> AuthorOfAsync(string? ticket, CancellationToken cancellation = default)
+        => await tickets.ResolveAsync(ticket, cancellation) is { } job ? new VersionAuthor(VersionWriter.BuildAgent, job.Model, job.Effort) : null;
 
     /// <summary>Whether this installation has an agent to build with.</summary>
     public bool Available => agent.Available;
@@ -123,9 +123,11 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         BuildStarted? started;
 
+        var ticket = await tickets.IssueAsync(choice);
+
         try
         {
-            started = await agent.StartBuildAsync(wanted, choice, tickets.Issue(choice));
+            started = await agent.StartBuildAsync(wanted, choice, ticket);
         }
         catch (ProviderException)
         {
@@ -233,10 +235,12 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         ChangeProgress? job;
 
+        var ticket = await tickets.IssueAsync(choice);
+
         try
         {
             job = await agent.StartChangeAsync(lambda, privateKey, before, wanted, deploy, choice,
-                                               AgentInput.Language(language), feature, AgentInput.History(history), tickets.Issue(choice));
+                                               AgentInput.Language(language), feature, AgentInput.History(history), ticket);
         }
         catch (ProviderException)
         {

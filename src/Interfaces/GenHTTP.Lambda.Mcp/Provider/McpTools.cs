@@ -131,7 +131,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                                        [Summary("What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. For a feature, it describes the whole feature, not the last fix. Optional, up to 500 characters.")] string? change = null,
                                        [Summary(DeployField)] bool deploy = false,
                                        [Summary(CheckField)] bool check = false)
-        => RefusingAsync(() => WriteAsync(privateKey, files, new SaveRequest(feature, specification, change, deploy, check, AuthorOf(request)), RequestOrigin.Of(request)));
+        => RefusingAsync(() => WriteAsync(privateKey, files, new SaveRequest(feature, specification, change, deploy, check, TicketOf(request)), RequestOrigin.Of(request)));
 
     [Tool("change_code", Title = "Change some files", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Summary("Change some files: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. With feature, the change is saved into that feature - the way to work on a lambda that exists: change it as often as you like, deploy: true to try it at the feature's preview address, merge_feature when it is right. Without feature, the newest version is changed and saved as a new version. Update what the change affects in docs/ and tests/ in the same change - an edit of a passage is enough. check: true compiles without publishing. Code that does not compile is saved but never goes online.")]
@@ -145,7 +145,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                                         [Summary("Text replacements, applied after files and remove.")] List<CodeEdit>? edits = null,
                                         [Summary(DeployField)] bool deploy = false,
                                         [Summary(CheckField)] bool check = false)
-        => RefusingAsync(() => ChangeAsync(privateKey, files, remove, edits, new SaveRequest(feature, specification, change, deploy, check, AuthorOf(request)), RequestOrigin.Of(request)));
+        => RefusingAsync(() => ChangeAsync(privateKey, files, remove, edits, new SaveRequest(feature, specification, change, deploy, check, TicketOf(request)), RequestOrigin.Of(request)));
 
     [Tool("create_feature", Title = "Start a feature", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Summary("Start a feature: a place to change a lambda without touching what it has online. It branches off a version - the newest unless base names another - with a copy of its files (its documentation and tests included) and a copy of the lambda's data, and gets an address of its own to try it at. Change it with change_code or write_code and feature (deploy: true puts it online at its preview address), test it there, and merge_feature once it does what was asked. The lambda goes on serving its visitors from the version online the whole time.")]
@@ -546,7 +546,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private async ValueTask<object> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, SaveRequest save, string origin, int? read = null)
     {
-        var note = new VersionNote(save.Specification, save.Change, VersionOrigin.Agent, save.Author);
+        var note = new VersionNote(save.Specification, save.Change, VersionOrigin.Agent, await builds.AuthorOfAsync(save.Ticket));
 
         // said where the next save is decided, and as a request rather than a
         // refusal - like the note below: the code matters more
@@ -1981,16 +1981,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                                   [Summary("What to put in its place.")] string Replace);
 
     /// <summary>
+    /// The ticket a call carries where it comes from a job of the build agent,
+    /// read as the call comes in; whose it is, is asked as it saves.
+    /// </summary>
+    private static string? TicketOf(IRequest request) => request.Header.Headers.GetEntry(IBuildService.TicketHeader);
+
+    /// <summary>
     /// What a save is asked to do besides storing the files.
     /// </summary>
     /// <param name="Feature">The feature to save into, or nothing for a new version</param>
-    /// <summary>
-    /// Who writes what a call saves: the build agent, where it carries the
-    /// ticket of one of its jobs, or nobody known.
-    /// </summary>
-    private VersionAuthor? AuthorOf(IRequest request) => builds.AuthorOf(request.Header.Headers.GetEntry(IBuildService.TicketHeader));
-
-    private sealed record SaveRequest(string? Feature, string? Specification, string? Change, bool Deploy, bool Check, VersionAuthor? Author);
+    /// <param name="Ticket">The ticket of the build agent's job the call carries, if any: what it saves is then the build agent's</param>
+    private sealed record SaveRequest(string? Feature, string? Specification, string? Change, bool Deploy, bool Check, string? Ticket);
 
     private static List<LambdaFile> Files(IEnumerable<CodeFile> files)
         => files.Select(f => new LambdaFile(f.Name, f.Code, f.Encoding)).ToList();
