@@ -64,8 +64,8 @@ node_modules/
 # The built bundles, which "npm run build" puts beside the project of each
 # component and the projects copy into a host's output - the images and CI
 # build them from source
-src/*/bundle/
-src/*/Frontend/.prerender/
+src/*/*/bundle/
+src/*/*/Frontend/.prerender/
 .translations/
 
 # Runtime data: the SQLite database, the stored code and the lambda workspaces

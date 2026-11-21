@@ -1,24 +1,34 @@
 <Solution>
-    <Folder Name="/src/">
-        <Project Path="src/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
+    <Folder Name="/src/" />
+    <Folder Name="/src/Platform/">
+        <Project Path="src/Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
     </Folder>
-    <Folder Name="/integrations/">
-        <Project Path="src/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj" />
+    <Folder Name="/src/Integrations/">
+        <Project Path="src/Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+        <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
+        <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
+        <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj" />
     </Folder>
-    <Folder Name="/hosts/">
-        <Project Path="src/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
-        <Project Path="src/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />
+    <Folder Name="/src/Interfaces/">
+        <Project Path="src/Interfaces/GenHTTP.Lambda.Api/GenHTTP.Lambda.Api.csproj" />
+        <Project Path="src/Interfaces/GenHTTP.Lambda.Mcp/GenHTTP.Lambda.Mcp.csproj" />
+    </Folder>
+    <Folder Name="/src/Applications/">
+        <Project Path="src/Applications/GenHTTP.Lambda.Editing/GenHTTP.Lambda.Editing.csproj" />
+        <Project Path="src/Applications/GenHTTP.Lambda.Administration/GenHTTP.Lambda.Administration.csproj" />
+        <Project Path="src/Applications/GenHTTP.Lambda.Sources/GenHTTP.Lambda.Sources.csproj" />
+    </Folder>
+    <Folder Name="/src/Serving/">
+        <Project Path="src/Serving/GenHTTP.Lambda.Execution/GenHTTP.Lambda.Execution.csproj" />
+        <Project Path="src/Serving/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj" />
+        <Project Path="src/Serving/GenHTTP.Lambda.Server/GenHTTP.Lambda.Server.csproj" />
+    </Folder>
+    <Folder Name="/src/Hosts/">
+        <Project Path="src/Hosts/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
+        <Project Path="src/Hosts/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />
+    </Folder>
+    <Folder Name="/analyzers/">
+        <Project Path="analyzers/GenHTTP.Lambda.Analyzers/GenHTTP.Lambda.Analyzers.csproj" />
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/GenHTTP.Lambda.Tests/GenHTTP.Lambda.Tests.csproj" />

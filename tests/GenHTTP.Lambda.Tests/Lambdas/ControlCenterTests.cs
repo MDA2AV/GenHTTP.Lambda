@@ -201,7 +201,7 @@ public sealed class ControlCenterTests
 
         var history = await HistoryAsync(fixture, lambda.PrivateKey);
 
-        Assert.AreEqual(ActivationEndings.Expired, history[0].EndedBy);
+        Assert.AreEqual("expired", history[0].EndedBy);
     }
 
     [TestMethod]

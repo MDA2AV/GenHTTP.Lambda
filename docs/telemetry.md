@@ -40,7 +40,14 @@ on next.
   analytics, showcase, published source, custom domain, connectivity (allowed
   and requested) and git;
 - the number of versions saved in the last 30 days, by origin: an agent over
-  MCP, the REST API or the editor, a git push, or a new app.
+  MCP, the REST API or the editor, a git push, or a new app;
+- of those, how many the installation's own build agent wrote - through MCP,
+  or as a draft of its own that was put online - and how many on each model
+  (`opus`, `sonnet`, `haiku`, `fable`) and at each effort (`low` to `max`), by
+  the names the panel offers them by. An agent of somebody's own tells the
+  platform nothing it could trust, so its versions are counted by origin only.
+  Whether a build agent is configured, and whether building and changing apps
+  with it is switched on, is among the options above.
 
 The demo apps, which every installation has, are not counted.
 
@@ -78,4 +85,5 @@ A report is a single JSON document, sent with `POST` and
 `Content-Type: application/json`. Its `schema` field is the version of the
 format; fields are added over time, never renamed. The types that make it up
 are in
-[`UsageReport.cs`](../src/GenHTTP.Lambda.Core/Services/UsageReports/UsageReport.cs).
+[`Services/UsageReports/Model`](../src/Platform/GenHTTP.Lambda.Core/Services/UsageReports/Model/),
+starting with `UsageReport.cs`.

@@ -45,7 +45,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bundles
-          path: src/*/bundle
+          path: src/*/*/bundle
           retention-days: 7
 
   backend:
@@ -102,7 +102,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/GenHTTP.Lambda.Cloud/Dockerfile
+          file: src/Hosts/GenHTTP.Lambda.Cloud/Dockerfile
           load: true
           tags: genhttp-lambda:ci
           cache-from: type=gha,scope=cloud
@@ -208,7 +208,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: src/GenHTTP.Lambda.Community/Dockerfile
+          file: src/Hosts/GenHTTP.Lambda.Community/Dockerfile
           load: true
           tags: genhttp/lambda:ci
           cache-from: type=gha,scope=community
