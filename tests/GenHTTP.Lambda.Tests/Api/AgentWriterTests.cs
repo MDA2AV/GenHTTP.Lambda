@@ -3,12 +3,15 @@ using System.Text;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Tests.Api;
 
@@ -48,6 +51,9 @@ public sealed class AgentWriterTests
         Assert.AreEqual("build-agent", newest["writer"]!.GetValue<string>());
         Assert.AreEqual("sonnet", newest["model"]!.GetValue<string>(), "the model of the job, as the server issued it");
         Assert.AreEqual("low", newest["effort"]!.GetValue<string>());
+
+        Assert.IsFalse(fixture.Book.Read(0, null, LogLevel.Trace, 50_000).Lines.Any(l => l.Text.Contains(ticket, StringComparison.Ordinal)),
+                       "no line logs the ticket");
 
         var template = (await VersionsAsync(fixture, lambda.PrivateKey))[^1]!;
 
@@ -154,7 +160,17 @@ public sealed class AgentWriterTests
     }
 
     [TestMethod]
-    public async Task TheReportAndThePanelCountWhatTheBuildAgentWroteByModelAndEffort()
+    public Task TheReportAndThePanelCountWhatTheBuildAgentWroteByModelAndEffort() => CountedAsync(null);
+
+    [TestMethod]
+    public async Task TheReportAndThePanelCountWhatTheBuildAgentWroteOnPostgreSql()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await CountedAsync(database.Integration);
+    }
+
+    private static async Task CountedAsync(IIntegrationBuilder<IDatabaseProvider>? database)
     {
         await using var agent = FakeAgent.Start();
         await using var collector = FakeCollector.Start();
@@ -165,7 +181,7 @@ public sealed class AgentWriterTests
             AgentToken = "a secret",
             AdminToken = LambdaFixture.OperatorToken,
             UsageReportUrl = collector.Url
-        });
+        }, database);
 
         var lambda = await fixture.CreateLambdaAsync("counted");
 
