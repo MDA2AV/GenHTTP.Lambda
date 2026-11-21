@@ -60,28 +60,3 @@ public interface ISecretProvider : IIntegration
     ValueTask DeleteAllAsync(long lambdaId, CancellationToken cancellation = default);
 
 }
-
-/// <summary>
-/// What a lambda reads its secrets from, held in memory once loaded.
-/// </summary>
-public interface ISecretSet
-{
-
-    /// <summary>
-    /// How many secrets there are.
-    /// </summary>
-    int Count { get; }
-
-    /// <summary>
-    /// The value of a secret, or nothing where there is none of that name.
-    /// </summary>
-    string? Read(string name);
-
-}
-
-/// <summary>
-/// A secret, as anybody but its lambda sees it: by its name.
-/// </summary>
-/// <param name="Created">When it was first stored, in UTC</param>
-/// <param name="Changed">When its value was last replaced, in UTC</param>
-public sealed record SecretEntry(string Name, DateTime Created, DateTime Changed);

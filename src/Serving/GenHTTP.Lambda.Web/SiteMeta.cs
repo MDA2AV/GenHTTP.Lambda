@@ -638,26 +638,3 @@ public sealed class SiteMeta
     #endregion
 
 }
-
-/// <summary>
-/// A page a search engine should find, in one of its languages, and what it
-/// should say about it there - with the path of the picture a link preview
-/// shows, if it has one of its own.
-/// </summary>
-/// <param name="Language">The language it is shown in</param>
-/// <param name="Path">Its path without a language, as <c>pages.json</c> spells it</param>
-/// <param name="Languages">Every language the page is written in, its own included</param>
-/// <param name="ImageType">What the picture is, where its name does not say - an owner's picture on the showcase</param>
-public sealed record SitePage(string Language, string Path, string Title, string Description, IReadOnlyList<string> Languages, string? Image = null,
-                              string? ImageType = null);
-
-/// <summary>
-/// A page as <c>pages.json</c> has it: its picture, and its words by language.
-/// </summary>
-public sealed record SiteEntry(string? Image, Dictionary<string, SiteText> Text);
-
-/// <summary>
-/// The name and description of a page in one language, and the picture of
-/// its link preview in that language, if it has one drawn in it.
-/// </summary>
-public sealed record SiteText(string Title, string Description, string? Image = null);

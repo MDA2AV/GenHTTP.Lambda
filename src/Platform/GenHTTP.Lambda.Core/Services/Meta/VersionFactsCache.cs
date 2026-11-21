@@ -11,37 +11,6 @@ using GenHTTP.Lambda.Services.Storage;
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
-/// What the overview of a lambda says about one of its versions: how large it
-/// is, what its code reaches for and what its documentation says.
-/// </summary>
-/// <param name="CodeFiles">Every file of its code: the C# it is compiled from and whatever else it is kept with</param>
-/// <param name="CodeBytes">What those weigh</param>
-/// <param name="ResourceFiles">The files it reads and serves while it runs</param>
-/// <param name="ResourceBytes">What those weigh, decoded</param>
-/// <param name="UsesNetwork">Whether its code connects to other servers, which it may only with connectivity</param>
-public sealed record VersionFacts(int CodeFiles, long CodeBytes, int ResourceFiles, long ResourceBytes, bool ServesResources, bool ServesWorkspace,
-                                  bool UsesWorkspace, bool UsesDatabase, bool UsesNetwork, DocumentationSummary Documentation);
-
-/// <summary>
-/// What a version says about itself: the pages of its code kept in
-/// <c>docs/</c> and <c>tests/</c>.
-/// </summary>
-[Summary("What a version says about itself, in `docs/` and `tests/`.")]
-public sealed record DocumentationSummary(
-    [Summary("The first paragraph of `docs/product.md`, as plain text - what the app is, in a sentence or two")]
-    string? About,
-    [Summary("Whether it has `docs/product.md`: what the app is, for whom, and why")]
-    bool Product,
-    [Summary("Whether it has `docs/decisions.md`: which technical decisions were made, and why")]
-    bool Decisions,
-    [Summary("Whether it has `tests/README.md`: how it is tested")]
-    bool Tests,
-    [Summary("How many files its documentation and tests come to")]
-    int Files,
-    [Summary("What those weigh, which counts towards what a version may come to like the rest of its code")]
-    long Bytes);
-
-/// <summary>
 /// The facts of the versions whose overview was asked for lately, read off
 /// the versions themselves.
 /// </summary>

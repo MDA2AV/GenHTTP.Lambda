@@ -116,20 +116,3 @@ public static class ProjectPaths
     #endregion
 
 }
-
-/// <summary>
-/// What a path of a project is to the lambda it was made from.
-/// </summary>
-/// <param name="Name">The file of the lambda it is, where it is one - as the path says, which may differ from the name the lambda gives it in case</param>
-public sealed record ProjectPath(ProjectPathKind Kind, string? Name);
-
-public enum ProjectPathKind
-{
-
-    /// <summary>A file of the lambda: its code, or one of its resources.</summary>
-    Lambda,
-
-    /// <summary>What the platform puts around a lambda to make it a project.</summary>
-    Generated
-
-}

@@ -46,8 +46,3 @@ public sealed class LambdaResolutionConcern(IHandler content, ILambdaLocator loc
     #endregion
 
 }
-
-public sealed class LambdaResolutionConcernBuilder(ILambdaLocator locator) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new LambdaResolutionConcern(content, locator);
-}

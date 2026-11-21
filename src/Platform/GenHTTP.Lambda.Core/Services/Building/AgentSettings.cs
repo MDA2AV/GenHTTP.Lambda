@@ -52,24 +52,3 @@ public sealed record AgentSettings(bool Builds, bool Changes, IReadOnlyList<Mode
         => Models.FirstOrDefault(m => m.Model == model)?.Access ?? ModelAccess.Off;
 
 }
-
-/// <summary>
-/// Who may have one model of the build agent.
-/// </summary>
-public sealed record ModelSetting(AgentModel Model, ModelAccess Access);
-
-/// <summary>
-/// The model and the effort a job runs on, as the caller may have them.
-/// </summary>
-/// <param name="Unbounded">
-/// Whether it runs without a clock and without a limit on its steps: only a
-/// model behind the password, and only once the password was checked.
-/// </param>
-public sealed record AgentChoice(AgentModel Model, AgentEffort Effort, bool Unbounded)
-{
-
-    public string ModelName => AgentCatalog.NameOf(Model);
-
-    public string EffortName => AgentCatalog.NameOf(Effort);
-
-}

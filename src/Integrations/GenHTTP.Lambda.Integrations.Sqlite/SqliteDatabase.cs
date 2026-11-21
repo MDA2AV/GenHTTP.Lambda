@@ -30,17 +30,3 @@ public static class SqliteDatabase
     public static DatabaseBinding Binding { get; } = new(typeof(SqliteConnection), ["Microsoft.Data.Sqlite", "Microsoft.EntityFrameworkCore.Sqlite"], ["Microsoft.Data.Sqlite"]);
 
 }
-
-/// <summary>
-/// Configures the SQLite database of an installation.
-/// </summary>
-/// <remarks>
-/// Nothing to configure: where the files are follows from the data directory.
-/// </remarks>
-public sealed class SqliteDatabaseBuilder : IIntegrationBuilder<IDatabaseProvider>
-{
-
-    public IDatabaseProvider Build(IntegrationContext context)
-        => new SqliteDatabaseProvider(context.DataDirectory, context.Loggers.CreateLogger<SqliteDatabaseProvider>());
-
-}
