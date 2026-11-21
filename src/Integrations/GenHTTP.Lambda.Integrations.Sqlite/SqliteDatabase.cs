@@ -1,7 +1,6 @@
 using GenHTTP.Lambda.Integrations.Databases;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Integrations.Sqlite;
 

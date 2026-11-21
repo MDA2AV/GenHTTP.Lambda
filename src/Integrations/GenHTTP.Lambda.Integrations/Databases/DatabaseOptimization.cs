@@ -1,7 +1,3 @@
-using System.Data.Common;
-
-using Microsoft.EntityFrameworkCore;
-
 namespace GenHTTP.Lambda.Integrations.Databases;
 
 /// <summary>

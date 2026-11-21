@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Connectivity;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("The lambdas that asked to connect to other servers, and those that may.")]

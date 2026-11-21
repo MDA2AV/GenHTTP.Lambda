@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
-using GenHTTP.Api.Content.Documentation;
-
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;

@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Meta;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What a lambda keeps, and how much of each allowance it takes.")]

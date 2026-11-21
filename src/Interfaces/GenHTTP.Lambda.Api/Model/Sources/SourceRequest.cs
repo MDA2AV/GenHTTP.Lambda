@@ -1,8 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Source;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("What a lambda's source is to be published under. What is left out stays as it is.")]

@@ -1,8 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Building;
-using GenHTTP.Lambda.Services.Meta;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("Who may have one model of the build agent.")]

@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Branding;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("A logo, as it was uploaded.")]

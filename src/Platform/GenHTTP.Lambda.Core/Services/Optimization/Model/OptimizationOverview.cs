@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Data.Entities;
-
 namespace GenHTTP.Lambda.Services.Optimization;
 
 /// <summary>

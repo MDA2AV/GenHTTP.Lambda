@@ -1,7 +1,3 @@
-using System.Net;
-
-using GenHTTP.Api.Protocol;
-
 namespace GenHTTP.Lambda.Services.Diagnostics;
 
 /// <summary>

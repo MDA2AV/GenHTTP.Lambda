@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Meta;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("A page of a lambda's log, and where to carry on from.")]

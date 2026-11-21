@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Data.Entities;
-
 namespace GenHTTP.Lambda.Services.Showcase;
 
 /// <summary>

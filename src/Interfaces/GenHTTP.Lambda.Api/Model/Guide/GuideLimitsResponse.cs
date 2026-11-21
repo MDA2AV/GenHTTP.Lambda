@@ -1,5 +1,3 @@
-using System.Text;
-
 using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Services.Guide;

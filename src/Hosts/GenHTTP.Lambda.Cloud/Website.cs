@@ -1,7 +1,3 @@
-using GenHTTP.Api.Content;
-
-using GenHTTP.Lambda.Web;
-
 namespace GenHTTP.Lambda.Cloud;
 
 /// <summary>

@@ -1,8 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-
-using GenHTTP.Lambda.Services.Hosting;
-
 namespace GenHTTP.Lambda.Services.Branding;
 
 /// <summary>

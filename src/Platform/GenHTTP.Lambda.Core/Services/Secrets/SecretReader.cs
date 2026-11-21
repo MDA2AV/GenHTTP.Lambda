@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Integrations.Secrets;
-
 namespace GenHTTP.Lambda.Services.Secrets;
 
 /// <summary>

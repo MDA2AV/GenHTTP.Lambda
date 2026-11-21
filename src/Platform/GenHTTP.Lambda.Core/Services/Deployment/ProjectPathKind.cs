@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Services.Deployment.Model;
-
 namespace GenHTTP.Lambda.Services.Deployment;
 
 public enum ProjectPathKind

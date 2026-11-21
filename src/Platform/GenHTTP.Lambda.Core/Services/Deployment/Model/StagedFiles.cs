@@ -1,10 +1,3 @@
-using System.IO.Compression;
-using System.Text;
-
-using GenHTTP.Lambda.Infrastructure;
-using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Storage;
-
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>

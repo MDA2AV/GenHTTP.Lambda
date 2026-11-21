@@ -1,10 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Data;
-using GenHTTP.Lambda.Data.Entities;
-
-using Microsoft.EntityFrameworkCore;
-
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>Counts per day, one series per kind of event.</summary>

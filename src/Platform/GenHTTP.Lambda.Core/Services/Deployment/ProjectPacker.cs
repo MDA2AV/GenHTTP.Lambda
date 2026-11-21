@@ -4,8 +4,6 @@ using System.Reflection;
 using System.Text;
 
 using GenHTTP.Api.Content;
-
-using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Integrations.Sqlite;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;

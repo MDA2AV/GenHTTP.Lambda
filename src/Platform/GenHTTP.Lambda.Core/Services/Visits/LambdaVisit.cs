@@ -1,5 +1,3 @@
-using GenHTTP.Api.Protocol;
-
 using GenHTTP.Lambda.Services.Meta.Model;
 
 namespace GenHTTP.Lambda.Services.Visits;

@@ -1,7 +1,3 @@
-using GenHTTP.Api.Content;
-
-using Microsoft.Extensions.DependencyInjection;
-
 namespace GenHTTP.Lambda.Mcp;
 
 /// <summary>

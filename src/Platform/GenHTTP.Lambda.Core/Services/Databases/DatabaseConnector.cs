@@ -1,7 +1,5 @@
 using System.Data.Common;
 
-using GenHTTP.Lambda.Data.Entities;
-
 namespace GenHTTP.Lambda.Services.Databases;
 
 /// <summary>

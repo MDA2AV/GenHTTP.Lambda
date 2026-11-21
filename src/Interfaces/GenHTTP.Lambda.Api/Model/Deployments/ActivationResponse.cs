@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Deployment.Model;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("One stretch of time a version was online.")]

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace GenHTTP.Lambda.Services.UsageReports;
 
 /// <param name="Os">The operating system: <c>Linux</c>, <c>Windows</c>, <c>macOS</c>, <c>FreeBSD</c> or <c>Other</c></param>

@@ -1,8 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Services.Hosting;
-using GenHTTP.Lambda.Services.Source;
-
 namespace GenHTTP.Lambda.Api.Model;
 
 [Summary("The files of a published version, as the project it is packed into has them.")]

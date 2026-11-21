@@ -1,7 +1,3 @@
-using GenHTTP.Api.Content;
-
-using GenHTTP.Lambda.Api.Infrastructure;
-
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>

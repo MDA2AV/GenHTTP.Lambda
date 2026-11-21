@@ -1,14 +1,3 @@
-using System.Net;
-using System.Runtime.InteropServices;
-
-using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-
-using GenHTTP.Lambda.Services.Diagnostics;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace GenHTTP.Lambda.Server;
 
 /// <summary>

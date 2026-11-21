@@ -1,12 +1,3 @@
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-
-using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Source;
-
 namespace GenHTTP.Lambda.Web;
 
 /// <summary>

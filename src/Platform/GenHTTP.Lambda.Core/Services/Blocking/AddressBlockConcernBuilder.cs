@@ -1,10 +1,6 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
-using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Services.Hosting;
-
-using GenHTTP.Modules.IO;
 
 namespace GenHTTP.Lambda.Services.Blocking;
 
