@@ -32,7 +32,7 @@ export const PLATFORM: Brand = { name: 'GenHTTP Lambda', logo: null };
 /**
  * A brand made of placeholders, which the build renders the pages of a site
  * that may be branded with a second time, and the server fills in (see
- * Web/SitePrerender.cs) - a brand is drawn as other markup than the
+ * Web/Provider/SitePrerender.cs) - a brand is drawn as other markup than the
  * platform's mark, not as another value in it.
  */
 export const BRAND_PLACEHOLDERS: Brand = { name: '__LAMBDA_BRAND_NAME__', logo: '__LAMBDA_BRAND_LOGO__' };

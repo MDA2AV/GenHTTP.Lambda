@@ -27,6 +27,9 @@
         <Project Path="src/Hosts/GenHTTP.Lambda.Cloud/GenHTTP.Lambda.Cloud.csproj" />
         <Project Path="src/Hosts/GenHTTP.Lambda.Community/GenHTTP.Lambda.Community.csproj" />
     </Folder>
+    <Folder Name="/analyzers/">
+        <Project Path="analyzers/GenHTTP.Lambda.Analyzers/GenHTTP.Lambda.Analyzers.csproj" />
+    </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/GenHTTP.Lambda.Tests/GenHTTP.Lambda.Tests.csproj" />
     </Folder>
