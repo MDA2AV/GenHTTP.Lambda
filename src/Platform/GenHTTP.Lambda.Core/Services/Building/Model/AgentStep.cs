@@ -45,6 +45,6 @@ public sealed record AgentStep(
     bool? Preview = null,
     [Summary("The kind of data a step of kind `data` switched on: `database`, `secrets` or `workspace`")]
     string? Data = null,
-    [Summary("The site a step of kind `web` read a page of, by its host name - never the rest of the address")]
+    [Summary("The site a step of kind `web` read a page of, by its host name without `www.` - never the rest of the address")]
     string? Site = null
 );

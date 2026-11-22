@@ -3377,7 +3377,7 @@ also read its pages, through the page fetch the same proxy serves
   but what holds is the rule of the sites: a page that tells the agent to
   send the editor key of a change somewhere can only have it sent to a site
   the person named. The runner reads nothing of a page as a fact of the run;
-  the step says which site was read (`web`, `site`: the host, never the rest
+  the step says which site was read (`web`, `site`: the host without `www.`, never the rest
   of the address), and `/build` and the Change section show it.
 - **Switched off** with `LAMBDA_AGENT_FETCH=false` in the `.env` of either
   compose file, which reaches both halves: the runner (`AGENT_FETCH`; where

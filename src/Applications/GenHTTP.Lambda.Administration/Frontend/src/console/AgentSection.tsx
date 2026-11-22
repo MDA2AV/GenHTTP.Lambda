@@ -274,7 +274,7 @@ function Runner({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
 
         {runner?.reachable && runner.readsPages != null && (
           <Fact label="Web pages">
-            {runner.readsPages ? 'Of the sites a request names - LAMBDA_AGENT_FETCH' : 'None - LAMBDA_AGENT_FETCH is false'}
+            {runner.readsPages ? 'The sites a request names - LAMBDA_AGENT_FETCH' : 'None - LAMBDA_AGENT_FETCH is false'}
           </Fact>
         )}
 

@@ -1463,10 +1463,13 @@ const errorsIn = diagnostics => diagnostics.filter(d => /error/i.test(String(d?.
 
 const names = list => (Array.isArray(list) ? list.map(f => String(f?.name ?? f ?? '')).filter(Boolean) : []);
 
-/** The site of an address the agent read, for its step. */
+/**
+ * The site of an address the agent read, for its step: as people write it,
+ * without www. - which is also what fits on a phone, where the line is cut.
+ */
 function siteStep(address) {
   try {
-    return { site: clip(new URL(String(address)).hostname, 253) };
+    return { site: clip(new URL(String(address)).hostname.replace(/^www\./, ''), 253) };
   } catch {
     return {};
   }

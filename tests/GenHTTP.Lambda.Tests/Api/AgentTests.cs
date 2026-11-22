@@ -432,16 +432,16 @@ public sealed class AgentTests
 
         var id = (await build.GetContentAsync<BuildStarted>()).Id;
 
-        agent.Step(id, new JsonObject { ["at"] = 4, ["kind"] = "web", ["site"] = "www.myoldhomepage.com", ["done"] = true });
+        agent.Step(id, new JsonObject { ["at"] = 4, ["kind"] = "web", ["site"] = "myoldhomepage.com", ["done"] = true });
 
         using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
 
         var step = (await read.GetContentAsync<BuildProgress>()).Steps.Single();
 
         // the site, which is what the person named, so /build can say "Looking
-        // at www.myoldhomepage.com" - never the address, which may hold anything
+        // at myoldhomepage.com" - never the address, which may hold anything
         Assert.AreEqual("web", step.Kind);
-        Assert.AreEqual("www.myoldhomepage.com", step.Site);
+        Assert.AreEqual("myoldhomepage.com", step.Site);
         Assert.IsTrue(step.Done);
     }
 
