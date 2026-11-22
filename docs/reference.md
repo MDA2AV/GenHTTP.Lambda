@@ -1541,6 +1541,13 @@ are the same: `Platform/` (the services), `Integrations/` (what the data is
 kept in), `Interfaces/` (the doors programs and agents use), `Applications/`
 (the components with pages people use), `Serving/` (what serves them all),
 `Hosts/` (the two editions), and `Kit/`, the source the frontends share.
+Within a project a file declares one top-level type, named after it, and the
+top level holds what others use - the builders and contracts - with the
+implementation below it (`Provider/`, the API's `Endpoints/`, the platform's
+`Services/`). `analyzers/GenHTTP.Lambda.Analyzers`, which the root
+`Directory.Build.props` hands to the compiler of every `GenHTTP.Lambda.*`
+project, the tests included, fails a build that breaks this (`GL0001`,
+`GL0002`); a host of somebody's own built in a checkout is not held to it.
 
 | Project | Below `src/` | What it is |
 |---|---|---|

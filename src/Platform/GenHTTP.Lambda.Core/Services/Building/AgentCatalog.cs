@@ -1,54 +1,6 @@
 namespace GenHTTP.Lambda.Services.Building;
 
 /// <summary>
-/// The models the build agent may run on.
-/// </summary>
-/// <remarks>
-/// Which of them an installation offers, and to whom, is its operator's
-/// (<see cref="AgentSettings"/>); which model of Anthropic's each runs as is
-/// the runner's, which maps the names to identifiers of its own.
-/// </remarks>
-public enum AgentModel
-{
-    Opus,
-    Sonnet,
-    Haiku,
-    Fable
-}
-
-/// <summary>
-/// How much the agent thinks and how many steps it takes over a job - the
-/// effort the model is asked for.
-/// </summary>
-public enum AgentEffort
-{
-    Low,
-    Medium,
-    High,
-    ExtraHigh,
-    Max
-}
-
-/// <summary>
-/// Who may have a model of the build agent.
-/// </summary>
-public enum ModelAccess
-{
-    /// <summary>Nobody: it is not offered.</summary>
-    Off,
-
-    /// <summary>Everybody who may ask the agent at all.</summary>
-    Open,
-
-    /// <summary>
-    /// Whoever knows the installation's password - and runs without a clock
-    /// and without a limit on its steps, since it was asked for by somebody
-    /// the operator trusts with that.
-    /// </summary>
-    Password
-}
-
-/// <summary>
 /// What the models and efforts are called: on the wire, in the settings, and
 /// on the pages.
 /// </summary>

@@ -1,5 +1,3 @@
-using GenHTTP.Api.Content.Documentation;
-
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 
@@ -81,20 +79,3 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
     }
 
 }
-
-/// <summary>Counts per day, one series per kind of event.</summary>
-[Summary("What happened on the platform per day, one series per kind of event.")]
-public sealed record EventHistory(
-    [Summary("The days covered, as `yyyy-MM-dd` in UTC, oldest first")]
-    IReadOnlyList<string> Days,
-    [Summary("One series per kind of event, its counts in the order of `days`")]
-    IReadOnlyList<EventSeries> Series);
-
-[Summary("How often one kind of event happened, day by day.")]
-public sealed record EventSeries(
-    [Summary("`created`, `saved`, `deployed`, `undeployed` or `deleted` - of lambdas")]
-    string Kind,
-    [Summary("How many happened on each day of the window")]
-    IReadOnlyList<int> Counts,
-    [Summary("How many have ever happened, beyond the window too")]
-    int Total);

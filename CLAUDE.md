@@ -1348,6 +1348,22 @@ API, with GenHTTP's documentation attributes beside the code.
 - Code is written to be read: XML documentation with `<remarks>` that say
   *why*, `#region` blocks per concern, braces on their own line. Match the file
   you are in.
+- **One top-level type per file, named after it (owner)** - records, enums,
+  interfaces and delegates too - so a type is found by its name. A group of
+  DTOs is a folder (`Api/Model/Admin/`, a service's `Model/`). Nested types,
+  and `file` types only their file uses, stay with their owner; the parts of a
+  partial type may add a suffix (`McpTools.Lambdas.cs`). The build enforces it
+  for every `GenHTTP.Lambda.*` project (`analyzers/`, `GL0001` and `GL0002`),
+  not for a host somebody builds in a checkout of their own. **The tests
+  follow the same rule**, foldered by area.
+- **The top level of a project is its public surface (owner)**: builders,
+  contracts, whatever a host or another component uses. The implementation is
+  in sub-folders - `Provider/` the way GenHTTP's modules keep theirs, the REST
+  resources in `Endpoints/`, the platform's `Services/`, `Data/`,
+  `Infrastructure/`. A host stays flat: it is its composition. Folders never
+  change a namespace, which follows the project. No folder is called `Logs`,
+  `Log`, `Data`/`data` (Windows), `bin` or `obj` - the root `.gitignore` hides
+  it.
 - Comments say why, not what. Prose, not marketing.
 - Tailwind, light and dark themes, phones included.
 - Check a UI change by running the app and looking at it; type checks and tests

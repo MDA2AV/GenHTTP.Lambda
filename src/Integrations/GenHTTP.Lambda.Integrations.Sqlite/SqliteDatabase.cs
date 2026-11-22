@@ -1,7 +1,6 @@
 using GenHTTP.Lambda.Integrations.Databases;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Integrations.Sqlite;
 
@@ -28,19 +27,5 @@ public static class SqliteDatabase
     /// what only SQLite has, such as the code of an error.
     /// </remarks>
     public static DatabaseBinding Binding { get; } = new(typeof(SqliteConnection), ["Microsoft.Data.Sqlite", "Microsoft.EntityFrameworkCore.Sqlite"], ["Microsoft.Data.Sqlite"]);
-
-}
-
-/// <summary>
-/// Configures the SQLite database of an installation.
-/// </summary>
-/// <remarks>
-/// Nothing to configure: where the files are follows from the data directory.
-/// </remarks>
-public sealed class SqliteDatabaseBuilder : IIntegrationBuilder<IDatabaseProvider>
-{
-
-    public IDatabaseProvider Build(IntegrationContext context)
-        => new SqliteDatabaseProvider(context.DataDirectory, context.Loggers.CreateLogger<SqliteDatabaseProvider>());
 
 }

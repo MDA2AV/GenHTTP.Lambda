@@ -76,36 +76,3 @@ public sealed record LogLine(
     string? Domain = null,
     long? FeatureId = null
 );
-
-/// <summary>
-/// One caller, and everything the log still holds about them.
-/// </summary>
-/// <param name="Lines">
-/// Counting folded lines by what they stand for rather than as one, so this is
-/// requests and not rows.
-/// </param>
-public sealed record CallerSummary(
-    string Client,
-    string? Place,
-    string? Country,
-    string? Agent,
-    long Lines,
-    long Failed,
-    DateTime First,
-    DateTime Last
-);
-
-/// <summary>
-/// Which of a lambda's lines to read: its own, or one feature's preview's.
-/// </summary>
-/// <param name="Id">The feature, or nothing for the lambda itself</param>
-public readonly record struct FeatureLines(long? Id)
-{
-
-    /// <summary>What the lambda itself said, without its previews.</summary>
-    public static FeatureLines None => new(null);
-
-    /// <summary>What the preview of one feature said.</summary>
-    public static FeatureLines Of(long featureId) => new(featureId);
-
-}
