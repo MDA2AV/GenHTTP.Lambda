@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: '人気が出てきたら',
   premiumTitle: '本格的に運用する',
   premiumText:
-    'yourapp.com のような独自のアドレスで公開でき、アクセスが少ない時期もオンラインのままです。保存できる容量も増えます。',
+    'yourapp.com のような独自のアドレスで公開でき、保存できる容量も増えます。',
   premiumAsk: 'お問い合わせ',
   premiumSubject: (tier) => `アプリの${tier}ホスティングについて`,
   premiumBody: (address) => `こんにちは。\n\nアプリを本格的に運用したいと考えています: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'この下書きを始めた後に、アプリが変更されました。公開する前に最新の状態に更新する必要があります。エージェントに任せることもできます。',
   mergeText: '現在公開中のものを置き換えます。アプリに保存されたデータはそのまま残ります。',
   mergeUndo: '以前に公開されていたものには、概要からいつでも戻せます。',
+  profiles: {
+    cloud: {
+      premiumText:
+        '保存できる容量が増え、独自のアドレスでアプリを公開できます。非営利団体（クラブ、協会、オープンソースのプロジェクトなど）には、申請により提供しています。アドレスは yourclub.org のようなものを、ご自身で登録していただきます。企業の場合は、条件を一緒に決めさせていただきます。',
+      premiumBody: (address) =>
+        `こんにちは。\n\nアプリをきちんとした形でホスティングしたいと考えています：${address}\n\n利用するのは（クラブ、協会、オープンソースのプロジェクト、企業）： \n\n`,
+    },
+  },
 };

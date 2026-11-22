@@ -27,7 +27,8 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task ALambdaInProductionMayHaveMoreCode()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 4096));
+        // labelled, as an installation may call its tiers: refusals say what the pages say
+        await using var fixture = await LambdaFixture.CreateAsync(o => o.WithSizes(build: 1024, productionBuild: 4096).WithLabels("Free", "Premium"));
 
         var lambda = await fixture.CreateLambdaAsync();
 

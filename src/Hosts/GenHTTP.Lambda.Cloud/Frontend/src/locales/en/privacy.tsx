@@ -32,7 +32,7 @@ export const privacy = {
 
     contentTitle: 'What you put here',
     content: (days: number) =>
-      `A lambda is its code, its files, its settings, and the notes saved with its versions about what was asked for and what changed. All of it is stored on the server so that it can be run and edited. A free lambda is removed with all of its versions about ${days} days after it was last changed or visited, and at once when whoever holds its editor link deletes it. Anybody with the editor link can read all of it, what you put on the showcase can be seen by everybody, and administrators look at a lambda when they have to, to deal with a report or keep the server safe. The legal basis is providing the service you asked for (Art. 6(1)(b) GDPR).`,
+      `A lambda is its code, its files, its settings, and the notes saved with its versions about what was asked for and what changed. All of it is stored on the server so that it can be run and edited. A lambda in the sandbox is removed with all of its versions about ${days} days after it was last changed or visited, and at once when whoever holds its editor link deletes it. Anybody with the editor link can read all of it, what you put on the showcase can be seen by everybody, and administrators look at a lambda when they have to, to deal with a report or keep the server safe. The legal basis is providing the service you asked for (Art. 6(1)(b) GDPR).`,
 
     agentTitle: 'What you ask the build agent',
     agent: (policy: (text: string) => ReactNode) => (

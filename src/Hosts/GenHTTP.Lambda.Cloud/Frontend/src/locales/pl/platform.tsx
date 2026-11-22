@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Domena',
       title: 'Własna domena',
       text: 'Każda aplikacja zaczyna pod naszym adresem. Gdy się przyjmie, może przenieść się na domenę, którą posiadasz: ta sama aplikacja i ten sam edytor, pod adresem, który ludzie zapamiętają. Linki do starego adresu nadal działają – prowadzą do nowego.',
-      points: ['Dla aplikacji Premium: napisz do nas', 'Ta sama aplikacja, edytor i wpisy', 'Stary adres odsyła odwiedzających dalej'],
+      points: ['Dla organizacji non-profit na zapytanie, dla firm w drodze umowy', 'Ta sama aplikacja, edytor i wpisy', 'Stary adres odsyła odwiedzających dalej'],
       alt: 'Adres aplikacji przenosi się z adresu na genhttp.run na własną domenę klubu',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Szkic',
-  domainOwn: 'Premium',
+  domainOwn: 'Produkcja',
   domainSubject: 'Domena dla mojej aplikacji',
   domainAsk: 'Zapytaj o domenę',
   zoom: 'Pokaż większe',

@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: '반응이 좋다면',
   premiumTitle: '전문적으로 호스팅하기',
   premiumText:
-    'yourapp.com 같은 나만의 주소로, 방문이 적을 때도 계속 온라인으로 두고, 저장 공간도 더 넉넉하게 쓸 수 있어요.',
+    'yourapp.com 같은 나만의 주소로, 저장 공간도 더 넉넉하게 쓸 수 있어요.',
   premiumAsk: '문의하기',
   premiumSubject: (tier) => `내 앱의 ${tier} 호스팅 문의`,
   premiumBody: (address) => `안녕하세요.\n\n제 앱을 전문적으로 호스팅하고 싶습니다: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: '이 초안을 시작한 뒤에 앱이 바뀌었어요. 온라인으로 전환하려면 먼저 최신 상태로 맞춰야 해요. 에이전트에게 맡길 수도 있어요.',
   mergeText: '지금 온라인인 앱을 대체해요. 앱에 저장된 데이터는 그대로 유지돼요.',
   mergeUndo: '이전에 온라인이던 앱으로는 개요에서 언제든 돌아갈 수 있어요.',
+  profiles: {
+    cloud: {
+      premiumText:
+        '저장 공간을 더 넉넉하게 쓰고 나만의 주소를 가질 수 있어요. 동호회, 협회, 오픈 소스 프로젝트 같은 비영리 단체는 요청하시면 이용할 수 있고, yourclub.org 같은 주소는 직접 등록하셔야 해요. 기업은 조건을 함께 협의해요.',
+      premiumBody: (address) =>
+        `안녕하세요,\n\n제 앱을 전문적으로 호스팅하고 싶어요: ${address}\n\n사용 대상은 다음 중 하나예요 (동호회, 협회, 오픈 소스 프로젝트, 기업): \n\n`,
+    },
+  },
 };

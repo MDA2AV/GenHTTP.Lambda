@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Domain',
       title: 'Domain sendiri',
       text: 'Setiap aplikasi dimulai di alamat dari kami. Kalau sudah populer, aplikasinya bisa pindah ke domain milik Anda: aplikasi dan editor yang sama, di alamat yang mudah diingat. Link ke alamat lama tetap berfungsi - semuanya diarahkan ke yang baru.',
-      points: ['Untuk aplikasi Premium: hubungi kami', 'Aplikasi, editor, dan catatan yang sama', 'Alamat lama meneruskan pengunjung'],
+      points: ['Untuk organisasi nirlaba atas permintaan, untuk perusahaan sesuai kesepakatan', 'Aplikasi, editor, dan catatan yang sama', 'Alamat lama meneruskan pengunjung'],
       alt: 'Alamat aplikasi pindah dari alamatnya di genhttp.run ke domain milik klub',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Draf',
-  domainOwn: 'Premium',
+  domainOwn: 'Produksi',
   domainSubject: 'Domain untuk aplikasi saya',
   domainAsk: 'Tanya soal domain',
   zoom: 'Perbesar',

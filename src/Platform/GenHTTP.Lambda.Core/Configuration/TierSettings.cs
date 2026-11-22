@@ -22,8 +22,8 @@ namespace GenHTTP.Lambda.Configuration;
 /// Whether a lambda in it may connect to other servers unless the operator decided otherwise about it
 /// </param>
 /// <param name="Label">
-/// What the tier is called on the installation's pages, shown as written and in no other language - "Premium" on
-/// genhttp.dev. Nothing to call it by its own name, which the pages translate. The API and the code use the tier's
+/// What the tier is called on the installation's pages, shown as written and in no other language. Nothing to call it
+/// by its own name, which the pages translate. The API and the code use the tier's
 /// name only.
 /// </param>
 public sealed record TierSettings(long BuildBytes, long DataBytes, int AnalyticsDays, bool Connectivity, string? Label = null)

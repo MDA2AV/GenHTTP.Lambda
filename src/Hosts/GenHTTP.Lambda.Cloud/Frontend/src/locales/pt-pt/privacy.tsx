@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'O que pões aqui',
     content: (days) =>
-      `Uma lambda é o seu código, os seus ficheiros, as suas definições e as notas guardadas com cada versão sobre o que foi pedido e o que mudou. Tudo isto fica guardado no servidor para que a lambda possa correr e ser editada. Uma lambda do plano gratuito é removida, com todas as versões, cerca de ${days} dias depois da última alteração ou visita, e de imediato se quem tiver o link de edição a eliminar. Quem tiver o link de edição pode ler tudo isto, o que puseres na montra fica à vista de todos, e os administradores consultam uma lambda quando é preciso, para tratar de uma denúncia ou manter o servidor seguro. O fundamento jurídico é a prestação do serviço que pediste (art. 6.º, n.º 1, alínea b), do RGPD).`,
+      `Uma lambda é o seu código, os seus ficheiros, as suas definições e as notas guardadas com cada versão sobre o que foi pedido e o que mudou. Tudo isto fica guardado no servidor para que a lambda possa correr e ser editada. Uma lambda na sandbox é removida, com todas as versões, cerca de ${days} dias depois da última alteração ou visita, e de imediato se quem tiver o link de edição a eliminar. Quem tiver o link de edição pode ler tudo isto, o que puseres na montra fica à vista de todos, e os administradores consultam uma lambda quando é preciso, para tratar de uma denúncia ou manter o servidor seguro. O fundamento jurídico é a prestação do serviço que pediste (art. 6.º, n.º 1, alínea b), do RGPD).`,
 
     agentTitle: 'O que pedes ao agente de criação',
     agent: (policy) => (

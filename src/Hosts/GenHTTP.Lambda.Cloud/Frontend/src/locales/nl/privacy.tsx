@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Wat je hier neerzet',
     content: (days) =>
-      `Een lambda bestaat uit zijn code, zijn bestanden, zijn instellingen en de notities die bij zijn versies worden opgeslagen: wat er werd gevraagd en wat er veranderde. Dat staat allemaal op de server, zodat de lambda kan draaien en bewerkt kan worden. Een gratis lambda wordt met al zijn versies verwijderd ongeveer ${days} dagen nadat hij voor het laatst is gewijzigd of bezocht, en meteen als iemand met de editorlink hem verwijdert. Iedereen met de editorlink kan alles inzien. Wat je in de showcase zet, is voor iedereen zichtbaar. En beheerders bekijken een lambda als het moet, om een melding af te handelen of de server veilig te houden. De rechtsgrond is het leveren van de dienst waar je om hebt gevraagd (art. 6 lid 1 sub b AVG).`,
+      `Een lambda bestaat uit zijn code, zijn bestanden, zijn instellingen en de notities die bij zijn versies worden opgeslagen: wat er werd gevraagd en wat er veranderde. Dat staat allemaal op de server, zodat de lambda kan draaien en bewerkt kan worden. Een lambda in de sandbox wordt met al zijn versies verwijderd ongeveer ${days} dagen nadat hij voor het laatst is gewijzigd of bezocht, en meteen als iemand met de editorlink hem verwijdert. Iedereen met de editorlink kan alles inzien. Wat je in de showcase zet, is voor iedereen zichtbaar. En beheerders bekijken een lambda als het moet, om een melding af te handelen of de server veilig te houden. De rechtsgrond is het leveren van de dienst waar je om hebt gevraagd (art. 6 lid 1 sub b AVG).`,
 
     agentTitle: 'Wat je aan de bouwagent vraagt',
     agent: (policy) => (

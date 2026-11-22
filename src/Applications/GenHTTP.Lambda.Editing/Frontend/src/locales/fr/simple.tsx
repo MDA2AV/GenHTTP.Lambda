@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Quand ça décolle',
   premiumTitle: 'Hébergez-la professionnellement',
   premiumText:
-    'Votre application à une adresse bien à vous, comme votre-app.fr, maintenue en ligne même quand elle est peu visitée, avec plus de place pour tout ce qu’elle enregistre.',
+    'Votre application à une adresse bien à vous, comme votre-app.fr, avec plus de place pour tout ce qu’elle enregistre.',
   premiumAsk: 'Écrivez-nous',
   premiumSubject: (tier) => `Hébergement ${tier} pour mon application`,
   premiumBody: (address) => `Bonjour,\n\nje souhaite héberger mon application de manière professionnelle : ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'Votre application a changé depuis le début de ce brouillon. Il doit être mis à jour avant de pouvoir être mis en ligne - l’agent peut s’en charger pour vous.',
   mergeText: 'Il remplace ce qui est actuellement en ligne. Les données enregistrées par votre application restent inchangées.',
   mergeUndo: 'Vous pouvez revenir à ce qui était en ligne auparavant depuis la vue d’ensemble.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'Votre application à une adresse bien à vous, avec plus de place pour tout ce qu’elle enregistre. Pour une association à but non lucratif – un club, une association, un projet open source –, c’est possible sur demande, à une adresse comme votre-club.org que vous enregistrez vous-même. Pour une entreprise, nous convenons ensemble des conditions.',
+      premiumBody: (address) =>
+        `Bonjour,\n\nJe souhaiterais héberger mon application de façon professionnelle : ${address}\n\nElle est destinée à (un club, une association, un projet open source, une entreprise) : \n\n`,
+    },
+  },
 };

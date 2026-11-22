@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'O que você coloca aqui',
     content: (days) =>
-      `Uma lambda é formada pelo código, pelos arquivos, pelas configurações e pelas notas salvas com cada versão, que contam o que foi pedido e o que mudou. Tudo isso fica guardado no servidor para que ela possa rodar e ser editada. Uma lambda do plano grátis é removida, com todas as versões, cerca de ${days} dias depois da última mudança ou visita, e imediatamente se quem tem o link de edição excluir a lambda. Qualquer pessoa com o link de edição pode ler tudo isso. O que você coloca na vitrine fica visível para todo mundo. E os administradores olham uma lambda quando precisam, para tratar uma denúncia ou manter o servidor seguro. A base legal é a prestação do serviço que você pediu (art. 6º, 1, b, do RGPD).`,
+      `Uma lambda é formada pelo código, pelos arquivos, pelas configurações e pelas notas salvas com cada versão, que contam o que foi pedido e o que mudou. Tudo isso fica guardado no servidor para que ela possa rodar e ser editada. Uma lambda na sandbox é removida, com todas as versões, cerca de ${days} dias depois da última mudança ou visita, e imediatamente se quem tem o link de edição excluir a lambda. Qualquer pessoa com o link de edição pode ler tudo isso. O que você coloca na vitrine fica visível para todo mundo. E os administradores olham uma lambda quando precisam, para tratar uma denúncia ou manter o servidor seguro. A base legal é a prestação do serviço que você pediu (art. 6º, 1, b, do RGPD).`,
 
     agentTitle: 'O que você pede ao agente de criação',
     agent: (policy) => (

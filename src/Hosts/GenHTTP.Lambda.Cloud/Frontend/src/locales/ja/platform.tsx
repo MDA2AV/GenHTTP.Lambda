@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'ドメイン',
       title: '独自ドメイン',
       text: 'どのアプリも、最初は私たちのURLで始まります。人気が出たら、お持ちのドメインに移せます。アプリも編集画面も同じまま、覚えやすいURLになります。古いURLへのリンクもそのまま使え、新しいURLへ案内されます。',
-      points: ['Premiumのアプリ向け：ご連絡ください', 'アプリも編集画面も記録も同じ', '古いURLから訪問者を案内します'],
+      points: ['非営利団体は申請により、企業はご相談のうえで', 'アプリも編集画面も記録も同じ', '古いURLから訪問者を案内します'],
       alt: 'アプリのURLが、genhttp.runのURLからクラブの独自ドメインに移るところ',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: '下書き',
-  domainOwn: 'Premium',
+  domainOwn: '本番運用',
   domainSubject: 'アプリのドメインについて',
   domainAsk: 'ドメインについて問い合わせる',
   zoom: '拡大して見る',

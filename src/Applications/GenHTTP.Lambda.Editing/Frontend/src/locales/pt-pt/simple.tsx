@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Quando fizer sucesso',
   premiumTitle: 'Alojá-la de forma profissional',
   premiumText:
-    'A sua aplicação num endereço próprio, como a-sua-app.pt, sempre online mesmo com pouco movimento, e com mais espaço para tudo o que guarda.',
+    'A tua app num endereço próprio, como a-tua-app.pt, com mais espaço para tudo o que guarda.',
   premiumAsk: 'Escreva-nos',
   premiumSubject: (tier) => `Alojamento ${tier} para a minha aplicação`,
   premiumBody: (address) => `Olá,\n\ngostaria de alojar a minha aplicação de forma profissional: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'A sua aplicação mudou desde que este rascunho começou. Tem de ser atualizado antes de ficar online - o agente pode tratar disso por si.',
   mergeText: 'Substitui o que está online agora. Os dados guardados pela aplicação mantêm-se.',
   mergeUndo: 'Pode voltar ao que estava online antes a partir da vista geral.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'A tua app num endereço próprio, com mais espaço para tudo o que guarda. Para uma organização sem fins lucrativos - um clube, uma associação, um projeto de código aberto - está disponível a pedido, num endereço como oteuclube.org, que registas tu mesmo. Para uma empresa, combinamos as condições em conjunto.',
+      premiumBody: (address) =>
+        `Olá,\n\nGostaria de alojar a minha app a sério: ${address}\n\nÉ para (um clube, uma associação, um projeto de código aberto, uma empresa): \n\n`,
+    },
+  },
 };

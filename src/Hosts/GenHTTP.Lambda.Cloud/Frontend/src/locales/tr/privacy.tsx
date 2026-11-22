@@ -31,7 +31,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Buraya koyduklarınız',
     content: (days) =>
-      `Bir lambda; kodundan, dosyalarından, ayarlarından ve sürümleriyle birlikte kaydedilen notlardan oluşur. Bu notlar neyin istendiğini ve neyin değiştiğini anlatır. Lambda çalıştırılabilsin ve düzenlenebilsin diye bunların hepsi sunucuda saklanır. Ücretsiz plandaki bir lambda, en son değiştirildiği ya da ziyaret edildiği andan yaklaşık ${days} gün sonra tüm sürümleriyle birlikte silinir. Editör linkine sahip biri onu silerse hemen silinir. Editör linkine sahip olan herkes bunların hepsini okuyabilir. Vitrine koyduğunuz şeyleri herkes görebilir. Yöneticiler de gerektiğinde, örneğin bir bildirimi incelemek ya da sunucuyu güvende tutmak için bir lambdaya bakar. Hukuki dayanak, istediğiniz hizmeti size sunmaktır (GDPR md. 6/1-b).`,
+      `Bir lambda; kodundan, dosyalarından, ayarlarından ve sürümleriyle birlikte kaydedilen notlardan oluşur. Bu notlar neyin istendiğini ve neyin değiştiğini anlatır. Lambda çalıştırılabilsin ve düzenlenebilsin diye bunların hepsi sunucuda saklanır. Deneme aşamasındaki bir lambda, en son değiştirildiği ya da ziyaret edildiği andan yaklaşık ${days} gün sonra tüm sürümleriyle birlikte silinir. Editör linkine sahip biri onu silerse hemen silinir. Editör linkine sahip olan herkes bunların hepsini okuyabilir. Vitrine koyduğunuz şeyleri herkes görebilir. Yöneticiler de gerektiğinde, örneğin bir bildirimi incelemek ya da sunucuyu güvende tutmak için bir lambdaya bakar. Hukuki dayanak, istediğiniz hizmeti size sunmaktır (GDPR md. 6/1-b).`,
 
     agentTitle: 'Oluşturma ajanından istedikleriniz',
     agent: (policy) => (

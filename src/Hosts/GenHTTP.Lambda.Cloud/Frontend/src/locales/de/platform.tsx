@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Domain',
       title: 'Eine eigene Domain',
       text: 'Jede App beginnt unter einer Adresse von uns. Findet sie Anklang, kann sie auf eine Domain umziehen, die Ihnen gehört: dieselbe App und derselbe Editor, unter einer Adresse, die man sich merkt. Links zur alten Adresse funktionieren weiter – sie führen zur neuen.',
-      points: ['Für Premium-Apps: schreiben Sie uns', 'Dieselbe App, derselbe Editor, dieselben Einträge', 'Die alte Adresse leitet Besucher weiter'],
+      points: ['Für gemeinnützige Organisationen auf Anfrage, für Unternehmen nach Vereinbarung', 'Dieselbe App, derselbe Editor, dieselben Einträge', 'Die alte Adresse leitet Besucher weiter'],
       alt: 'Die Adresse der App zieht von ihrer Adresse auf genhttp.run auf die eigene Domain des Vereins um',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Entwurf',
-  domainOwn: 'Premium',
+  domainOwn: 'Produktion',
   domainSubject: 'Eine Domain für meine App',
   domainAsk: 'Nach einer Domain fragen',
   zoom: 'Größer anzeigen',

@@ -310,11 +310,12 @@ public sealed class LimitsTests
     [TestMethod]
     public async Task ALabelIsWhatThePagesCallATierAndTheApiStillNamesItByPurpose()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+        // a host may give a tier a label of its own, as genhttp.dev did before its tiers went by their names
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { Sandbox = o.Sandbox with { Label = "Free" } });
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        Assert.AreEqual("Free", lambda.TierPolicy.Label, "what genhttp.dev calls the sandbox");
+        Assert.AreEqual("Free", lambda.TierPolicy.Label, "what the host calls the sandbox");
         Assert.AreEqual(nameof(LambdaTier.Production), lambda.TierPolicy.Above);
 
         var current = await ReadAsync(fixture);

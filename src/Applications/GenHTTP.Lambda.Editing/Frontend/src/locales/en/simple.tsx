@@ -94,15 +94,14 @@ export const simple = {
 
   /**
    * The tile that offers hosting it professionally, while the app is in a tier
-   * with one above it. Its chip is that tier's name, as the installation calls
-   * it - "Premium" on genhttp.dev.
+   * with one above it. Its chip is that tier's name - "Production", or what
+   * the installation calls it.
    */
   premiumHeading: 'When it catches on',
   premiumTitle: 'Host it professionally',
-  premiumText:
-    'Your app at an address of your own, like yourapp.com - kept online however quiet it gets, with more room for everything it stores.',
+  premiumText: 'Your app at an address of your own, like yourapp.com, with more room for everything it stores.',
   premiumAsk: 'Write to us',
-  /** The subject of the mail, with the name of the tier the app would move to - "Premium" on genhttp.dev. */
+  /** The subject of the mail, with the name of the tier the app would move to - "Production", or what the installation calls it. */
   premiumSubject: (tier: string) => `${tier} hosting for my app`,
   premiumBody: (address: string) => `Hello,\n\nI would like to host my app professionally: ${address}\n\n`,
 
@@ -143,4 +142,19 @@ export const simple = {
   behindText: 'Your app changed after this draft began. It has to be brought up to date before it can go online - the agent can do that for you.',
   mergeText: 'It replaces what is online now. What your app has stored stays as it is.',
   mergeUndo: 'You can go back to what was online before from the overview.',
+
+  /**
+   * The tile that offers hosting it professionally, on the public platform
+   * (genhttp.dev): production is not sold there - non-profits get it on
+   * request with an address they register themselves, companies agree on the
+   * terms. The mail asks whom the app is for, so the answer can say which.
+   */
+  profiles: {
+    cloud: {
+      premiumText:
+        'Your app at an address of your own, with more room for everything it stores. For a non-profit - a club, an association, an open source project - it is available on request, at an address like yourclub.org that you register yourself. For a company, we agree on the terms together.',
+      premiumBody: (address: string) =>
+        `Hello,\n\nI would like to host my app professionally: ${address}\n\nIt is for (a club, an association, an open source project, a company): \n\n`,
+    },
+  },
 };

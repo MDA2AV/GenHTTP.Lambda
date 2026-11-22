@@ -294,8 +294,8 @@ public sealed class TierTests
 
         var said = (await refused.GetContentAsync<ErrorResponse>()).Message;
 
-        Assert.Contains($"in the tier 'Free'", said, "the limit, and the tier it is the limit of, as the installation calls it");
-        Assert.Contains($"In the tier 'Premium' it may take {32 * WorkspaceLimits.Block} bytes", said, "and the tier that has more room");
+        Assert.Contains($"in the tier 'Sandbox'", said, "the limit, and the tier it is the limit of, as the installation calls it");
+        Assert.Contains($"In the tier 'Production' it may take {32 * WorkspaceLimits.Block} bytes", said, "and the tier that has more room");
     }
 
     [TestMethod]
@@ -396,8 +396,8 @@ public sealed class TierTests
 
             var said = (await refused.GetContentAsync<ErrorResponse>()).Message;
 
-            Assert.Contains("1 KB together in the tier 'Free'", said, "the limit, as the installation calls its tier");
-            Assert.Contains("In the tier 'Premium' a version may come to 4 KB", said, "and the tier that allows more");
+            Assert.Contains("1 KB together in the tier 'Sandbox'", said, "the limit, and its tier");
+            Assert.Contains("In the tier 'Production' a version may come to 4 KB", said, "and the tier that allows more");
         }
 
         using var merge = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/merge", new MergeFeatureRequest());

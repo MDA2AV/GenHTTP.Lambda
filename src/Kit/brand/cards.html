@@ -184,7 +184,7 @@
         ${w.apps.map((app) => bar(app, 'live', words.live)).join('')}
         ${people(6, w.count)}</div></div>`,
     // one app and what it has besides its code, at a domain of its own
-    '/platform': (w) => `<div class="card"><div class="body">${bar('book.kestrellane.club', 'own', 'Premium')}
+    '/platform': (w) => `<div class="card"><div class="body">${bar('book.kestrellane.club', 'own', w.tier)}
         <ul class="features">${w.features.map((feature) => `<li>${check}${feature}</li>`).join('')}</ul></div></div>`,
     // the same app, in either place - neither drawn as the better one
     '/self-hosting': (w) => `<div class="card"><div class="code"><span class="c">$</span> docker run -p 8080:8080 \\

@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Als het aanslaat',
   premiumTitle: 'Professioneel hosten',
   premiumText:
-    'Uw app op een eigen adres, zoals uwapp.nl, altijd online, ook als het rustig is, en met meer ruimte voor alles wat hij bewaart.',
+    'Uw app op een eigen adres, zoals uwapp.nl, en met meer ruimte voor alles wat hij bewaart.',
   premiumAsk: 'Mail ons',
   premiumSubject: (tier) => `${tier}-hosting voor mijn app`,
   premiumBody: (address) => `Hallo,\n\nik wil mijn app professioneel laten hosten: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'Uw app is veranderd sinds dit concept begon. Het moet eerst worden bijgewerkt voordat het online kan - de agent kan dat voor u doen.',
   mergeText: 'Het vervangt wat nu online staat. Wat uw app heeft opgeslagen, blijft zoals het is.',
   mergeUndo: 'Vanuit het overzicht kunt u teruggaan naar wat eerder online stond.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'Uw app op een eigen adres, met meer ruimte voor alles wat hij bewaart. Voor een non-profit - een club, een vereniging, een open source-project - is dit op aanvraag beschikbaar, op een adres zoals uwclub.nl dat u zelf registreert. Voor een bedrijf maken we samen afspraken over de voorwaarden.',
+      premiumBody: (address) =>
+        `Hallo,\n\nIk wil mijn app professioneel laten hosten: ${address}\n\nDe app is bedoeld voor (een club, een vereniging, een open source-project, een bedrijf): \n\n`,
+    },
+  },
 };

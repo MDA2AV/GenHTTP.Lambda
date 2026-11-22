@@ -165,9 +165,9 @@
       "id": "self-hosting", "de": "Self-Hosting", "es": "autoalojamiento", "fr": "auto-hébergement", "it": "self-hosting", "nl": "zelf hosten", "pl": "self-hosting", "pt": "auto-hospedagem", "pt-pt": "alojamento próprio", "tr": "kendi sunucunda barındırma", "ja": "セルフホスト", "ko": "셀프 호스팅"
     },
     {
-      "en": "Free, Premium",
-      "note": "the names of genhttp.dev's two tiers, written as they are in every language",
-      "id": "Free, Premium", "de": "Free, Premium", "es": "Free, Premium", "fr": "Free, Premium", "it": "Free, Premium", "nl": "Free, Premium", "pl": "Free, Premium", "pt": "Free, Premium", "pt-pt": "Free, Premium", "tr": "Free, Premium", "ja": "Free、Premium", "ko": "Free, Premium"
+      "en": "sandbox, production",
+      "note": "the names of the tiers a lambda is in, as the editor's tier badge calls them (Sandbox, Production); genhttp.dev uses them too",
+      "id": "sandbox, produksi", "de": "Sandbox, Produktion", "es": "sandbox, producción", "fr": "bac à sable, production", "it": "sandbox, produzione", "nl": "sandbox, productie", "pl": "piaskownica, produkcja", "pt": "sandbox, produção", "pt-pt": "sandbox, produção", "tr": "deneme, üretim", "ja": "サンドボックス、本番運用", "ko": "샌드박스, 프로덕션"
     },
     {
       "en": "model",

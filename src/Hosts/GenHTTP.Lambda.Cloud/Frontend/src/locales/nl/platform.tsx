@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Domein',
       title: 'Een eigen domein',
       text: 'Elke app begint op een adres van ons. Slaat hij aan, dan kan hij verhuizen naar een domein dat van jou is: dezelfde app en dezelfde editor, op een adres dat mensen onthouden. Links naar het oude adres blijven werken - ze leiden naar het nieuwe.',
-      points: ['Voor Premium-apps: schrijf ons', 'Dezelfde app, editor en items', 'Het oude adres stuurt bezoekers door'],
+      points: ['Voor non-profits op aanvraag, voor bedrijven in overleg', 'Dezelfde app, editor en items', 'Het oude adres stuurt bezoekers door'],
       alt: 'Het adres van de app verhuist van zijn adres op genhttp.run naar het eigen domein van de club',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Concept',
-  domainOwn: 'Premium',
+  domainOwn: 'Productie',
   domainSubject: 'Een domein voor mijn app',
   domainAsk: 'Vraag naar een domein',
   zoom: 'Groter tonen',

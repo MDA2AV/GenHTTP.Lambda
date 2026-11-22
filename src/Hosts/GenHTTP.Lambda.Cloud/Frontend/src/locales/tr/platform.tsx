@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Alan adı',
       title: 'Kendi alan adı',
       text: 'Her uygulama bizim bir adresimizde başlar. Tuttuğunda, sahibi olduğunuz bir alan adına taşınabilir: aynı uygulama ve aynı editör, insanların hatırlayacağı bir adreste. Eski adrese giden linkler çalışmaya devam eder - yenisine yönlendirir.',
-      points: ['Premium uygulamalar için: bize yazın', 'Aynı uygulama, editör ve kayıtlar', 'Eski adres ziyaretçileri yönlendirir'],
+      points: ['Kâr amacı gütmeyenler için istek üzerine, şirketler için anlaşmayla', 'Aynı uygulama, editör ve kayıtlar', 'Eski adres ziyaretçileri yönlendirir'],
       alt: 'Uygulamanın adresi genhttp.run üzerindeki adresinden kulübün kendi alan adına taşınıyor',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Taslak',
-  domainOwn: 'Premium',
+  domainOwn: 'Üretim',
   domainSubject: 'Uygulamam için bir alan adı',
   domainAsk: 'Alan adını sorun',
   zoom: 'Büyüt',

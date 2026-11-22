@@ -22,7 +22,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'public');
 
 /** Where the previews of the pages only the cloud has go. */
-const cloud = join(here, '..', '..', 'GenHTTP.Lambda.Cloud', 'Frontend', 'public');
+const cloud = join(here, '..', '..', 'Hosts', 'GenHTTP.Lambda.Cloud', 'Frontend', 'public');
 
 const CLOUD_PAGES = ['/build', '/ship', '/platform', '/self-hosting'];
 

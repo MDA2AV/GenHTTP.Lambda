@@ -419,8 +419,9 @@ function Today({ control }: { control: Control }) {
 /**
  * The way to having the app hosted properly - a domain of its own, kept
  * online however quiet it gets - for a lambda in a tier with one above: the
- * sandbox, below production. Named as the installation calls that tier
- * ("Premium" on genhttp.dev), or by its own name.
+ * sandbox, below production. Named as the installation calls that tier, or
+ * by its own name. What it costs is the installation's to say: the public
+ * platform says it in its profile's words.
  *
  * The tier is the operator's to assign, so the tile asks the owner to write
  * rather than offering a switch. The mail names the app by its public

@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Uygulamanız tutunca',
   premiumTitle: 'Profesyonel olarak barındırın',
   premiumText:
-    'Uygulamanız kendi adresinizde, örneğin uygulamaniz.com - az ziyaret edildiğinde bile yayında ve kaydettiği her şey için daha fazla alanla.',
+    'Uygulamanız kendi adresinizde, örneğin uygulamaniz.com, kaydettiği her şey için daha fazla alanla.',
   premiumAsk: 'Bize yazın',
   premiumSubject: (tier) => `Uygulamam için ${tier} barındırma`,
   premiumBody: (address) => `Merhaba,\n\nuygulamamı profesyonel olarak barındırmak istiyorum: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'Bu taslak başladıktan sonra uygulamanız değişti. Yayına alınmadan önce güncellenmesi gerekiyor - bunu ajan sizin için yapabilir.',
   mergeText: 'Şu anda yayında olanın yerini alır. Uygulamanızın kaydettiği veriler olduğu gibi kalır.',
   mergeUndo: 'Önceden yayında olana genel bakıştan dönebilirsiniz.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'Uygulamanız kendi adresinizde, kaydettiği her şey için daha fazla alanla. Kâr amacı gütmeyen bir kuruluş için - dernek, kulüp, açık kaynak projesi - istek üzerine mümkündür; adresi, örneğin kulubunuz.org, kendiniz kaydettirirsiniz. Bir şirket içinse koşulları birlikte belirleriz.',
+      premiumBody: (address) =>
+        `Merhaba,\n\nUygulamamı profesyonel olarak barındırmak istiyorum: ${address}\n\nŞunun için (kulüp, dernek, açık kaynak projesi, şirket): \n\n`,
+    },
+  },
 };

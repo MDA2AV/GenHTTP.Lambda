@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Saat mulai populer',
   premiumTitle: 'Hosting secara profesional',
   premiumText:
-    'Aplikasi Anda di alamat sendiri, seperti aplikasianda.com, tetap online meski sepi pengunjung, dan dengan ruang lebih besar untuk semua yang disimpannya.',
+    'Aplikasi Anda di alamat sendiri, seperti aplikasianda.com, dengan ruang lebih besar untuk semua yang disimpannya.',
   premiumAsk: 'Hubungi kami',
   premiumSubject: (tier) => `Hosting ${tier} untuk aplikasi saya`,
   premiumBody: (address) => `Halo,\n\nsaya ingin meng-hosting aplikasi saya secara profesional: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'Aplikasi Anda sudah berubah sejak draf ini dimulai. Draf perlu diperbarui dulu sebelum dapat online - agen dapat melakukannya untuk Anda.',
   mergeText: 'Draf ini menggantikan yang sekarang online. Data yang disimpan aplikasi Anda tetap seperti semula.',
   mergeUndo: 'Anda dapat kembali ke yang sebelumnya online dari ringkasan.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'Aplikasi Anda di alamat sendiri, dengan ruang lebih besar untuk semua yang disimpannya. Untuk organisasi nirlaba - klub, perkumpulan, proyek open source - tersedia atas permintaan, di alamat seperti klubanda.org yang Anda daftarkan sendiri. Untuk perusahaan, kita sepakati ketentuannya bersama.',
+      premiumBody: (address) =>
+        `Halo,\n\nSaya ingin meng-host aplikasi saya secara profesional: ${address}\n\nAplikasi ini untuk (klub, perkumpulan, proyek open source, perusahaan): \n\n`,
+    },
+  },
 };

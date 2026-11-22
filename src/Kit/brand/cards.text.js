@@ -56,6 +56,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Production",
       "title": [
         "Building it takes a minute.",
         "Everything else is built in."
@@ -137,6 +138,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produksi",
       "title": [
         "Membuatnya cuma semenit.",
         "Selebihnya sudah tersedia."
@@ -218,6 +220,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produktion",
       "title": [
         "Gebaut ist sie in einer Minute.",
         "Alles andere ist schon eingebaut."
@@ -299,6 +302,7 @@ window.CARD_TEXT = {
       "count": "conectados"
     },
     "/platform": {
+      "tier": "Producción",
       "title": [
         "Crearla lleva un minuto.",
         "Todo lo demás ya viene incluido."
@@ -380,6 +384,7 @@ window.CARD_TEXT = {
       "count": "connectés"
     },
     "/platform": {
+      "tier": "Production",
       "title": [
         "La création prend une minute.",
         "Le reste est déjà intégré."
@@ -461,6 +466,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produzione",
       "title": [
         "Crearla richiede un minuto.",
         "Il resto è già incluso."
@@ -542,6 +548,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Productie",
       "title": [
         "Bouwen duurt een minuut.",
         "De rest zit er al in."
@@ -623,6 +630,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produkcja",
       "title": [
         "Zbudowanie zajmuje minutę.",
         "Cała reszta jest już w środku."
@@ -704,6 +712,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produção",
       "title": [
         "Criar leva um minuto.",
         "O resto já vem incluído."
@@ -785,6 +794,7 @@ window.CARD_TEXT = {
       "count": "online"
     },
     "/platform": {
+      "tier": "Produção",
       "title": [
         "Construir demora um minuto.",
         "O resto já vem incluído."
@@ -866,6 +876,7 @@ window.CARD_TEXT = {
       "count": "kişi çevrimiçi"
     },
     "/platform": {
+      "tier": "Üretim",
       "title": [
         "Yapmak bir dakika sürer.",
         "Gerisi hazır geliyor."
@@ -947,6 +958,7 @@ window.CARD_TEXT = {
       "count": "{n}人が閲覧中"
     },
     "/platform": {
+      "tier": "本番運用",
       "title": [
         "作るのは1分。",
         "あとは最初からそろっています。"
@@ -1028,6 +1040,7 @@ window.CARD_TEXT = {
       "count": "{n}명 접속 중"
     },
     "/platform": {
+      "tier": "프로덕션",
       "title": [
         "만드는 데는 1분이면 돼요.",
         "나머지는 모두 갖춰져 있어요."
