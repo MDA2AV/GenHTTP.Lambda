@@ -3,11 +3,10 @@ using GenHTTP.Api.Content.Authentication;
 using GenHTTP.Api.Content.Documentation.Security;
 
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Infrastructure;
 
 using GenHTTP.Modules.Authentication;
 
-namespace GenHTTP.Lambda.Api.Infrastructure;
+namespace GenHTTP.Lambda.Infrastructure;
 
 /// <summary>
 /// The one check that stands between a request and everything an operator can
@@ -21,7 +20,10 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// more - the framework releases them once the body is bound.
 ///
 /// An installation without a token has no panel: the routes are not added at
-/// all (see <see cref="ApiLayout"/>), so they are not found.
+/// all (the API's layout, the operator's MCP endpoint), so they are not found.
+/// In the platform rather than in a door, so every door that lets the
+/// operator in - the REST API, the operator's MCP endpoint - checks the token
+/// the same way, and neither reaches into the other.
 /// </remarks>
 public static class AdminAuthentication
 {

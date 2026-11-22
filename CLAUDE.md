@@ -267,8 +267,8 @@ GenHTTP way. Two hosts, two editions:
 ### Branding (community only)
 
 **(owner)** The operator gives the installation a name and a logo in the
-panel's **Branding** section (or `/admin/branding`, the MCP tool
-`customize_installation`) - never environment variables - and every page shows
+panel's **Branding** section (or `/admin/branding`, `customize_installation`
+on the operator's MCP endpoint) - never environment variables - and every page shows
 them instead of GenHTTP Lambda's: bar, titles, link previews, icon, manifest,
 `llms.txt`. The host decides whether it is offered (`LambdaOptions.Branding`);
 without it the routes, tool and section are absent and nothing stored is read.
@@ -336,6 +336,7 @@ needs is given to its builder, not read from the environment.
 | Services, database, jobs, log book | `GenHTTP.Lambda.Core` | `LambdaPlatform.Create().Options(...)` | - |
 | REST API | `GenHTTP.Lambda.Api` | `RestApi.Create(platform)` | `/api` |
 | MCP endpoint | `GenHTTP.Lambda.Mcp` | `McpServer.Create(platform)` | `/mcp` |
+| Operator's MCP endpoint | `GenHTTP.Lambda.Mcp` | `OperatorMcp.Create(platform)` | `/admin/mcp`, a concern in front of the panel |
 | Editor, create page, owner's git | `GenHTTP.Lambda.Editing` | `Editor.Create(platform)` | `/editor` |
 | Operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
 | Published sources, public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` |
@@ -406,7 +407,8 @@ the log is behind the admin token. There are no accounts.
 `/admin` authenticates with `X-Admin-Token` (`AdminAuthentication`, GenHTTP's
 API key auth): 401 without, 403 wrong, 404 on an installation without a
 token. The token is the platform's (`LambdaOptions.AdminToken`) **(owner)**;
-the REST API's operator routes answer to it. **The editor has no admin section
+the REST API's operator routes and the operator's MCP endpoint answer to it,
+in that header - never as a tool argument. **The editor has no admin section
 (owner)**: what only the operator decides about a lambda (block, tier) is on
 its page in the panel. Telemetry is seen only by owners (their lambda's) and
 the operator.
@@ -962,6 +964,32 @@ timer).
   (`diskState`).
 - English only.
 
+### The operator's MCP endpoint
+
+**(owner)** `/admin/mcp` covers everything the panel does and shows, for an
+agent the operator runs, authenticated by the `X-Admin-Token` header as the
+REST API is: 401, 403, 404 without a token. What only the operator does is
+never on `/mcp`, where every agent would be shown it (`customize_installation`
+left it after 0.8.0).
+
+- **Put in front of the panel by the host**, as a concern
+  (`AdminPanel.Create(platform).Add(OperatorMcp.Create(platform))`): it takes
+  `/admin/mcp` and hands every other path to the panel as it came - a layout
+  at `/admin` would redirect `/admin` first. Neither serves the other's
+  content. Without a token `/admin/mcp` is not found rather than handed to the
+  panel's pages. No browser origin is allowed.
+- **The panel's actions and reads, nothing of the owner's**, through the same
+  services, refusals and log lines (the operator's region of `OperationLog`) as
+  the API's operator routes. A rule both doors need moves into the services.
+  `EveryRouteOfTheOperatorsApiHasATool` maps every operator route to its tool:
+  a new route gets its tool in the same change.
+- **No editor key in an answer** (lambdas by public key; keys masked in log
+  lines' paths), bounded answers (pages, the newest twenty, one file, a cursor,
+  readings summed up), what strangers wrote said to be data in the
+  instructions. A change takes what it names and leaves the rest.
+- **Annotations**: reads `ReadOnly`; `Destructive` exactly what cannot be
+  undone (deleting a lambda, removing the guide section, a logo taken away).
+
 ## Architecture
 
 Read the reference's "How it is put together" before touching services.
@@ -1167,11 +1195,13 @@ not the request. A new endpoint or tool gets its line in the same change
   not a comment.
 - **Use what the framework offers the way it is meant (owner)** ("embrace
   it"): where GenHTTP has a module for something done by hand, move onto it.
-- **The MCP endpoint is GenHTTP's MCP module**: tools are `[Tool]` methods of
-  `McpTools`, `[Summary]` their description; fixed argument limits are
+- **The MCP endpoints are GenHTTP's MCP module**: tools are `[Tool]` methods of
+  `McpTools` (the operator's of the `…OperatorTools`), `[Summary]` their
+  description; fixed argument limits are
   attributes (`[Range]`, `[MaxLength]`, `[AllowedValues]`), not checks of our
-  own. A `LambdaException` is turned into an error that says why
-  (`Refusing`), never a crash.
+  own - an optional argument's `[AllowedValues]` lists `null`, which the
+  module validates too. A `LambdaException` is turned into an error that says
+  why (`Refusing`), never a crash.
 - **Do not write tests for the frameworks.**
 - The framework source is beside this repository (`../GenHTTP`); read it rather
   than decompiling packages.

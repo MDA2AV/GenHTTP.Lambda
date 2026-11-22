@@ -41,4 +41,13 @@ public interface ILogBook
     /// </summary>
     IReadOnlyList<CallerSummary> Callers(int limit = 500);
 
+    /// <summary>
+    /// What went wrong with a lambda lately, the newest first: anything at
+    /// error, and anything the server said about the lambda itself - a handler
+    /// that threw is a warning with its trace. A request answered with a
+    /// client error is not one: a browser asking for a favicon that is not
+    /// there is nothing anybody needs to be shown first.
+    /// </summary>
+    IReadOnlyList<LogLine> Problems(long lambdaId, int count);
+
 }

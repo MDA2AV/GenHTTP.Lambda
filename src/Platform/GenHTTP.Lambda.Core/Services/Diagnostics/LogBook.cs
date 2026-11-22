@@ -315,6 +315,15 @@ public sealed class LogBook : ILogBook
     /// Which lines of a lambda: those of the lambda itself (<see cref="FeatureLines.None" />, what its owner and
     /// its agent read), those of one feature's preview, or - left out - all of them together
     /// </param>
+    public IReadOnlyList<LogLine> Problems(long lambdaId, int count)
+    {
+        var (said, _, _) = Read(0, null, LogLevel.Warning, 500, lambdaId: lambdaId, feature: FeatureLines.None);
+
+        return [.. said.Where(l => l.Level is "error" or "critical" || l.Source != "Requests")
+                       .TakeLast(count)
+                       .Reverse()];
+    }
+
     public (IReadOnlyList<LogLine> Lines, long Cursor, int Missed) Read(long since, string? lambda, LogLevel minimum, int limit,
                                                                         string? client = null, long? lambdaId = null,
                                                                         FeatureLines? feature = null)

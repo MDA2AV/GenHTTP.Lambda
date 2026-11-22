@@ -561,18 +561,20 @@ public sealed class BrandingTests
     #region Agents
 
     [TestMethod]
-    public async Task AnAgentWithTheTokenNamesTheInstallationAndDrawsItsLogo()
+    public async Task TheOperatorsAgentNamesTheInstallationAndDrawsItsLogo()
     {
         await using var fixture = await CommunityAsync();
 
         Assert.Contains("customize_installation", await ToolsAsync(fixture), "the operator's agents are shown the tool");
 
-        var refused = await CallAsync(fixture, new JsonObject { ["adminToken"] = "not-the-token", ["name"] = "Mine" });
+        using (var refused = await PostMcpAsync(fixture, Call(new JsonObject { ["name"] = "Mine" }), "not-the-token"))
+        {
+            Assert.AreEqual(HttpStatusCode.Forbidden, refused.StatusCode, "the token is the endpoint's header, not an argument");
+        }
 
-        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
         Assert.AreEqual("GenHTTP Lambda", (await BrandAsync(fixture)).Name, "nothing was changed");
 
-        var answer = await CallAsync(fixture, new JsonObject { ["adminToken"] = LambdaFixture.OperatorToken, ["name"] = "Acme Apps", ["logo"] = Svg });
+        var answer = await CallAsync(fixture, new JsonObject { ["name"] = "Acme Apps", ["logo"] = Svg });
 
         var said = answer["result"]!["structuredContent"]!;
 
@@ -588,11 +590,11 @@ public sealed class BrandingTests
 
         Assert.AreEqual(Svg, await logo.GetContentAsync());
 
-        var removed = await CallAsync(fixture, new JsonObject { ["adminToken"] = LambdaFixture.OperatorToken, ["logo"] = "" });
+        var removed = await CallAsync(fixture, new JsonObject { ["logo"] = "" });
 
         Assert.IsNull(removed["result"]!["structuredContent"]!["logo"], "an empty logo takes it away");
 
-        var base64 = await CallAsync(fixture, new JsonObject { ["adminToken"] = LambdaFixture.OperatorToken, ["logo"] = Convert.ToBase64String(Png) });
+        var base64 = await CallAsync(fixture, new JsonObject { ["logo"] = Convert.ToBase64String(Png) });
 
         Assert.AreEqual("image/png", base64["result"]!["structuredContent"]!["logo"]!["type"]!.GetValue<string>());
     }
@@ -604,7 +606,6 @@ public sealed class BrandingTests
 
         var answer = await CallAsync(fixture, new JsonObject
         {
-            ["adminToken"] = LambdaFixture.OperatorToken,
             ["name"] = "Acme Apps",
             ["logo"] = "<svg viewBox=\"0 0 1 1\"/>"
         });
@@ -616,11 +617,16 @@ public sealed class BrandingTests
     }
 
     [TestMethod]
-    public async Task WithoutATokenNoAgentIsShownTheTool()
+    public async Task NoAgentOnThePublicEndpointIsShownTheTool()
     {
-        await using var fixture = await LambdaFixture.CreateCommunityAsync();
+        await using var fixture = await CommunityAsync();
 
-        Assert.DoesNotContain("customize_installation", await ToolsAsync(fixture));
+        using var response = await PostMcpAsync(fixture, List(), token: null, path: "/mcp");
+
+        var listed = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("create_lambda", listed);
+        Assert.DoesNotContain("customize_installation", listed, "it is the operator's, on the operator's endpoint");
     }
 
     #endregion
@@ -910,33 +916,50 @@ public sealed class BrandingTests
         return await fixture.Host.GetResponseAsync(request);
     }
 
+    private static JsonObject List() => new() { ["jsonrpc"] = "2.0", ["id"] = 1, ["method"] = "tools/list", ["params"] = new JsonObject() };
+
+    private static JsonObject Call(JsonObject arguments) => new()
+    {
+        ["jsonrpc"] = "2.0",
+        ["id"] = 1,
+        ["method"] = "tools/call",
+        ["params"] = new JsonObject { ["name"] = "customize_installation", ["arguments"] = arguments }
+    };
+
+    /// <summary>
+    /// The tools the operator's endpoint lists - on an installation without one, what its 404 says.
+    /// </summary>
     private static async Task<string> ToolsAsync(LambdaFixture fixture)
     {
-        using var response = await PostMcpAsync(fixture, new JsonObject { ["jsonrpc"] = "2.0", ["id"] = 1, ["method"] = "tools/list", ["params"] = new JsonObject() });
+        using var response = await PostMcpAsync(fixture, List());
 
         return await response.Content.ReadAsStringAsync();
     }
 
     private static async Task<JsonObject> CallAsync(LambdaFixture fixture, JsonObject arguments)
     {
-        using var response = await PostMcpAsync(fixture, new JsonObject
-        {
-            ["jsonrpc"] = "2.0",
-            ["id"] = 1,
-            ["method"] = "tools/call",
-            ["params"] = new JsonObject { ["name"] = "customize_installation", ["arguments"] = arguments }
-        });
+        using var response = await PostMcpAsync(fixture, Call(arguments));
 
         return (JsonObject)JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
     }
 
     private static async Task<string> BacklinkAsync(LambdaFixture fixture) => Guide.Section(await Guide.ReadAsync(fixture), "backlink");
 
-    private static async Task<HttpResponseMessage> PostMcpAsync(LambdaFixture fixture, JsonObject message)
+    /// <summary>
+    /// Sends a message to the operator's endpoint with the operator's token,
+    /// or to another path or with another token.
+    /// </summary>
+    private static async Task<HttpResponseMessage> PostMcpAsync(LambdaFixture fixture, JsonObject message, string? token = LambdaFixture.OperatorToken,
+                                                                string path = "/admin/mcp")
     {
-        using var request = fixture.Host.GetRequest("/mcp", HttpMethod.Post);
+        using var request = fixture.Host.GetRequest(path, HttpMethod.Post);
 
         request.Headers.Add("Accept", "application/json, text/event-stream");
+
+        if (token != null)
+        {
+            request.Headers.Add("X-Admin-Token", token);
+        }
         request.Content = new StringContent(message.ToJsonString(), Encoding.UTF8, "application/json");
 
         return await fixture.Host.GetResponseAsync(request);

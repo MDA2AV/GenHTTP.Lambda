@@ -8,8 +8,6 @@ using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 
-using Microsoft.Extensions.Logging;
-
 namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
@@ -53,19 +51,7 @@ internal sealed class LambdaSummaries(IMetaService meta, IWorkspaceService works
 
         var product = limits.Get();
 
-        /*
-         * A request answered with a client error is written as a warning, and
-         * a browser asking for a favicon that is not there is not a problem
-         * anybody needs to be shown first. What is: anything at error, and
-         * anything the server said about the lambda itself - a handler that
-         * threw is a warning with the trace attached.
-         */
-        var (said, _, _) = book.Read(0, null, LogLevel.Warning, 500, lambdaId: id, feature: FeatureLines.None);
-
-        var problems = said.Where(l => l.Level is "error" or "critical" || l.Source != "Requests")
-                           .TakeLast(5)
-                           .Reverse()
-                           .ToList();
+        var problems = book.Problems(id, 5);
 
         var measured = live?.Version ?? latest?.Version;
 

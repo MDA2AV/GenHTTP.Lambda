@@ -1,6 +1,11 @@
+using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Branding;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Guide;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.Extensions.Logging;
 
@@ -104,6 +109,95 @@ public static class OperationLog
             logger.LogInformation("Failed to deploy feature '{Feature}' of lambda {Lambda}", result.Feature.Name, lambda);
         }
     }
+
+    #endregion
+
+    #region The operator's
+
+    // what the operator did, through the panel's API or the operator's MCP
+    // endpoint alike - one line per case, so a search finds either door's
+
+    public static void TierChanged(this ILogger logger, string lambda, string tier)
+        => logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", lambda, tier);
+
+    public static void DomainChanged(this ILogger logger, string lambda, string? domain)
+        => logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", lambda, domain ?? "(none)");
+
+    public static void Undeployed(this ILogger logger, string lambda)
+        => logger.LogInformation("Undeployed lambda {Lambda} by operator", lambda);
+
+    public static void Deleted(this ILogger logger, string lambda)
+        => logger.LogInformation("Deleted lambda {Lambda} by operator", lambda);
+
+    public static void Blocked(this ILogger logger, string lambda, int addresses)
+        => logger.LogInformation("Blocked lambda {Lambda} addresses {Addresses} by operator", lambda, addresses);
+
+    public static void Unblocked(this ILogger logger, string lambda)
+        => logger.LogInformation("Unblocked lambda {Lambda} by operator", lambda);
+
+    public static void ConnectivityDecided(this ILogger logger, string lambda, bool allowed)
+    {
+        if (allowed)
+        {
+            logger.LogInformation("Allowed connectivity for lambda {Lambda} by operator", lambda);
+        }
+        else
+        {
+            logger.LogInformation("Declined connectivity for lambda {Lambda} by operator", lambda);
+        }
+    }
+
+    public static void AddressBlockRemoved(this ILogger logger, long block)
+        => logger.LogInformation("Removed address block #{Block} by operator", block);
+
+    public static void SettingsChanged(this ILogger logger, SiteSettings saved)
+        => logger.LogInformation("Updated settings optimizeDatabases {OptimizeDatabases} profile {Profile} by operator", saved.OptimizeDatabases,
+                                 InstallationProfiles.NameOf(saved.Profile));
+
+    /// <summary>
+    /// A line per limit a save changed, none for those it left as they were.
+    /// </summary>
+    public static void LimitsChanged(this ILogger logger, ProductLimits previous, ProductLimits saved)
+    {
+        foreach (var (key, before, value) in LimitsService.Changes(previous, saved))
+        {
+            logger.LogInformation("Changed limit {Limit} from {Previous} to {Value} by operator", key, before ?? "(none)", value);
+        }
+    }
+
+    public static void AgentSettingsChanged(this ILogger logger, AgentSettings saved)
+        => logger.LogInformation("Updated agent settings builds {Builds} changes {Changes} models {Models} model {Model} efforts {Efforts} effort {Effort} by operator",
+                                 saved.Builds, saved.Changes,
+                                 string.Join(',', saved.Models.Select(m => $"{AgentCatalog.NameOf(m.Model)}:{AgentCatalog.NameOf(m.Access)}")),
+                                 AgentCatalog.NameOf(saved.DefaultModel),
+                                 string.Join(',', saved.Efforts.Select(AgentCatalog.NameOf)),
+                                 AgentCatalog.NameOf(saved.DefaultEffort));
+
+    public static void GuideSectionChanged(this ILogger logger, GuideSection section)
+        => logger.LogInformation("Changed guide section '{Title}' bytes {Bytes} by operator", section.Title, section.Bytes);
+
+    public static void GuideSectionRemoved(this ILogger logger, GuideSection removed)
+        => logger.LogInformation("Removed guide section '{Title}' by operator", removed.Title);
+
+    /// <summary>
+    /// Logs a new name - and nothing where the name stayed what it was.
+    /// </summary>
+    public static void BrandingRenamed(this ILogger logger, string? previous, Brand brand)
+    {
+        if (previous != brand.Given)
+        {
+            logger.LogInformation("Changed branding name from '{Previous}' to '{Name}' by operator", previous ?? Brand.PlatformName, brand.Name);
+        }
+    }
+
+    public static void BrandingReset(this ILogger logger)
+        => logger.LogInformation("Reset branding by operator");
+
+    public static void LogoUploaded(this ILogger logger, Brand brand)
+        => logger.LogInformation("Uploaded branding logo type {Type} bytes {Bytes} by operator", brand.Logo!.Type, brand.Logo.Content.Length);
+
+    public static void LogoRemoved(this ILogger logger)
+        => logger.LogInformation("Removed branding logo by operator");
 
     #endregion
 

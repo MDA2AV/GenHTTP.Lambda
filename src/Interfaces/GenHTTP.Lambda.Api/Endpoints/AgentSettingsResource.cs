@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Building;
 
 using GenHTTP.Modules.Reflection;
@@ -62,12 +63,7 @@ public sealed class AgentSettingsResource(IBuildService builds, LambdaOptions op
     {
         var saved = await builds.SaveSettingsAsync(body.Over(builds.GetSettings()));
 
-        logger.LogInformation("Updated agent settings builds {Builds} changes {Changes} models {Models} model {Model} efforts {Efforts} effort {Effort} by operator",
-                              saved.Builds, saved.Changes,
-                              string.Join(',', saved.Models.Select(m => $"{AgentCatalog.NameOf(m.Model)}:{AgentCatalog.NameOf(m.Access)}")),
-                              AgentCatalog.NameOf(saved.DefaultModel),
-                              string.Join(',', saved.Efforts.Select(AgentCatalog.NameOf)),
-                              AgentCatalog.NameOf(saved.DefaultEffort));
+        logger.AgentSettingsChanged(saved);
 
         // the runner is not asked again: what it says of itself did not change
         return Describe(saved, null);
