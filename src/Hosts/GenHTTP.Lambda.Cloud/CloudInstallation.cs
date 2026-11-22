@@ -4,9 +4,8 @@ namespace GenHTTP.Lambda.Cloud;
 
 /// <summary>
 /// What genhttp.dev is as an installation, beside what its environment says:
-/// its terms, whom to write to, where its legal pages are, what its tiers are
-/// called, and that it is the cloud - a public platform, which its operator
-/// does not choose otherwise.
+/// its terms, whom to write to, where its legal pages are, and that it is the
+/// cloud - a public platform, which its operator does not choose otherwise.
 /// </summary>
 /// <remarks>
 /// The installation's own, rather than the platform's: they describe how this
@@ -14,10 +13,10 @@ namespace GenHTTP.Lambda.Cloud;
 /// when unused, a company to write to - which somebody running their own does
 /// not promise. The legal pages of the site say the same at length.
 ///
-/// The sandbox is called Free and production Premium here, as they were before
-/// the tiers were named by purpose: what people pay for is this
-/// installation's business, so the words are its own - shown as they are in
-/// every language, while the code and the API name the tiers by purpose.
+/// The tiers go by their own names here, which the pages translate: production
+/// is not sold, but offered to non-profits on request and agreed with
+/// companies, so a label saying who pays (Free and Premium, as they were
+/// called before) would say something untrue.
 /// </remarks>
 public static class CloudInstallation
 {
@@ -32,8 +31,6 @@ public static class CloudInstallation
         Contact = options.Contact ?? "solutions@genhttp.dev",
         AbuseContact = options.AbuseContact ?? "abuse@genhttp.dev",
         LegalPages = true,
-        Sandbox = options.Sandbox with { Label = "Free" },
-        Production = options.Production with { Label = "Premium" },
         Profile = InstallationProfile.Cloud,
         Profiles = []
     };
@@ -46,7 +43,7 @@ public static class CloudInstallation
         malware, phishing pages, crypto miners, or anything that attacks, scans or
         floods other systems, and not to publish content you have no right to publish.
         Anyone who knows the editor link can change your lambda, so treat it as a
-        password. Free tier lambdas stay online for as long as they are used: one
+        password. Lambdas in the sandbox stay online for as long as they are used: one
         that nobody visits and nobody edits for a month is taken offline, and
         removed if nothing happens for two months after that. Anything you deploy
         may be removed at any time.

@@ -102,8 +102,8 @@ export const platform = {
       name: 'Domain',
       title: 'A domain of its own',
       text: 'Every app starts at an address of ours. When it catches on, it can move to a domain you own: the same app and the same editor, at an address people remember. Links to the old address keep working - they lead to the new one.',
-      /** Premium is what genhttp.dev calls the tier above the free one: a name, written as it is in every language. */
-      points: ['For Premium apps: write to us', 'The same app, editor and records', 'The old address sends visitors on'],
+      /** Who gets a domain of their own: non-profits (clubs, open source projects) on request, companies on terms agreed with them. */
+      points: ['For non-profits on request, for companies by agreement', 'The same app, editor and records', 'The old address sends visitors on'],
       alt: 'The address of the app moving from its address on genhttp.run to the club’s own domain',
     },
     code: {
@@ -124,8 +124,8 @@ export const platform = {
 
   /** On the address bar above the picture of a draft. */
   draftBadge: 'Draft',
-  /** On the address bar above the domain the app moved to: the name of the tier, written as it is in every language. */
-  domainOwn: 'Premium',
+  /** On the address bar above the domain the app moved to: the name of the tier an app with a domain is in, as the editor's tier badge says it. */
+  domainOwn: 'Production',
   domainSubject: 'A domain for my app',
   domainAsk: 'Ask about a domain',
   zoom: 'Show larger',

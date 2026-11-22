@@ -67,8 +67,8 @@ export function AnalyticsTab({ control }: { control: Control }) {
   const said = t.analytics;
   const title = t.frame.sections.analytics;
 
-  // the tier an app would move to to see more, as the installation calls it
-  // ("Premium" on genhttp.dev), or nothing where there is none
+  // the tier an app would move to to see more, as the installation calls it,
+  // or nothing where there is none
   const policy = lambda.tierPolicy;
   const above = policy.above != null ? (policy.aboveLabel ?? t.shared.tiers[policy.above] ?? policy.above) : null;
   const tag = tagOf(useLanguage());

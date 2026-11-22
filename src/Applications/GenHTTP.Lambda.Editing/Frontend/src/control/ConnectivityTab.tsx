@@ -64,7 +64,7 @@ export function ConnectivityTab({ control }: { control: Control }) {
     act(() => api.requestConnectivity(privateKey, purpose.trim()), said.asked);
   };
 
-  // the tier as the installation calls it - "Premium" on genhttp.dev
+  // the tier as the installation calls it, or by its own name
   const tier = lambda.tierPolicy.label ?? t.shared.tiers[lambda.tier] ?? lambda.tier;
 
   // what the operator decided about the lambda comes before what its tier

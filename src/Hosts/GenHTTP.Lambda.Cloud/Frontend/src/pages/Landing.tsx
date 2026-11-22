@@ -264,7 +264,7 @@ function Feature({ id, said, flip }: { id: Key; said: Said; flip: boolean }) {
       }
     />
   ) : (
-    <OwnDomain alt={feature.alt} premium={said.domainOwn} />
+    <OwnDomain alt={feature.alt} tier={said.domainOwn} />
   );
 
   return (
@@ -309,7 +309,7 @@ function Feature({ id, said, flip }: { id: Key; said: Said; flip: boolean }) {
  * bar, which a screenshot of the editor would not show - the app's address
  * here above, the club's own below, the same page in both.
  */
-function OwnDomain({ alt, premium }: { alt: string; premium: string }) {
+function OwnDomain({ alt, tier }: { alt: string; tier: string }) {
   return (
     <figure className="surface p-6 shadow-xl shadow-grey-900/5 sm:p-10 dark:shadow-black/30" role="img" aria-label={alt}>
       <div aria-hidden="true" className="mx-auto max-w-md space-y-3">
@@ -319,7 +319,7 @@ function OwnDomain({ alt, premium }: { alt: string; premium: string }) {
             <path d="M12 4v16M6 14l6 6 6-6" />
           </svg>
         </div>
-        <Bar premium={premium}>book.kestrellane.club</Bar>
+        <Bar tier={tier}>book.kestrellane.club</Bar>
 
         {/* the same page at both: the club's booking, in a few strokes */}
         <div className="mt-6 border border-grey-200 dark:border-ink-800">
@@ -341,7 +341,7 @@ function OwnDomain({ alt, premium }: { alt: string; premium: string }) {
   );
 }
 
-function Bar({ children, muted, premium }: { children: ReactNode; muted?: boolean; premium?: string }) {
+function Bar({ children, muted, tier }: { children: ReactNode; muted?: boolean; tier?: string }) {
   return (
     <div
       className={`flex items-center gap-2.5 border px-3 py-2.5 font-mono text-[13px] sm:text-sm ${
@@ -352,7 +352,7 @@ function Bar({ children, muted, premium }: { children: ReactNode; muted?: boolea
     >
       <IconGlobe className={`h-4 w-4 shrink-0 ${muted ? 'text-grey-500' : 'text-logo-500 dark:text-logo-400'}`} />
       <span className={`min-w-0 flex-1 truncate ${muted ? 'line-through decoration-grey-400/70' : ''}`}>{children}</span>
-      {premium && <span className="chip shrink-0 rounded-full bg-logo-500/10 text-logo-700 dark:bg-logo-400/10 dark:text-logo-400">{premium}</span>}
+      {tier && <span className="chip shrink-0 rounded-full bg-logo-500/10 text-logo-700 dark:bg-logo-400/10 dark:text-logo-400">{tier}</span>}
     </div>
   );
 }

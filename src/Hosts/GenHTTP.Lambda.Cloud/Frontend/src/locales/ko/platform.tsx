@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: '도메인',
       title: '나만의 도메인',
       text: '모든 앱은 저희 주소에서 시작해요. 인기가 생기면 여러분이 가진 도메인으로 옮길 수 있어요. 같은 앱, 같은 에디터를 사람들이 기억하기 쉬운 주소에서 쓰는 거예요. 이전 주소로 오는 링크도 계속 작동하고, 새 주소로 연결돼요.',
-      points: ['Premium 앱은 문의해 주세요', '같은 앱, 에디터, 기록 그대로', '이전 주소는 방문자를 새 주소로 보내요'],
+      points: ['비영리 단체는 요청 시, 기업은 협의를 통해', '같은 앱, 에디터, 기록 그대로', '이전 주소는 방문자를 새 주소로 보내요'],
       alt: '앱의 주소가 genhttp.run의 주소에서 클럽의 도메인으로 옮겨 가는 모습',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: '초안',
-  domainOwn: 'Premium',
+  domainOwn: '프로덕션',
   domainSubject: '내 앱의 도메인',
   domainAsk: '도메인 문의하기',
   zoom: '크게 보기',

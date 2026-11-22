@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Domaine',
       title: 'Un domaine à elle',
       text: 'Chaque app démarre à une adresse à nous. Quand elle prend, elle peut passer sur un domaine qui vous appartient : la même app et le même éditeur, à une adresse dont on se souvient. Les liens vers l’ancienne adresse continuent de marcher : ils mènent à la nouvelle.',
-      points: ['Pour les apps Premium : écrivez-nous', 'La même app, le même éditeur, les mêmes entrées', 'L’ancienne adresse renvoie les visiteurs'],
+      points: ['Pour les associations sur demande, pour les entreprises sur accord', 'La même app, le même éditeur, les mêmes entrées', 'L’ancienne adresse renvoie les visiteurs'],
       alt: 'L’adresse de l’app passant de son adresse sur genhttp.run au domaine du club',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Brouillon',
-  domainOwn: 'Premium',
+  domainOwn: 'Production',
   domainSubject: 'Un domaine pour mon app',
   domainAsk: 'Se renseigner sur un domaine',
   zoom: 'Agrandir',

@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Yang Anda taruh di sini',
     content: (days) =>
-      `Lambda terdiri dari kodenya, file-filenya, pengaturannya, dan catatan yang disimpan bersama setiap versinya tentang apa yang diminta dan apa yang diubah. Semuanya disimpan di server supaya bisa dijalankan dan diedit. Lambda gratis dihapus beserta semua versinya sekitar ${days} hari setelah terakhir kali diubah atau dikunjungi, dan langsung dihapus kalau pemegang link editornya menghapusnya. Siapa pun yang punya link editor bisa membaca semuanya, apa yang Anda pasang di showcase bisa dilihat semua orang, dan administrator melihat isi lambda kalau memang perlu, untuk menangani laporan atau menjaga server tetap aman. Dasar hukumnya adalah penyediaan layanan yang Anda minta (Pasal 6 ayat (1) huruf b GDPR).`,
+      `Lambda terdiri dari kodenya, file-filenya, pengaturannya, dan catatan yang disimpan bersama setiap versinya tentang apa yang diminta dan apa yang diubah. Semuanya disimpan di server supaya bisa dijalankan dan diedit. Lambda di sandbox dihapus beserta semua versinya sekitar ${days} hari setelah terakhir kali diubah atau dikunjungi, dan langsung dihapus kalau pemegang link editornya menghapusnya. Siapa pun yang punya link editor bisa membaca semuanya, apa yang Anda pasang di showcase bisa dilihat semua orang, dan administrator melihat isi lambda kalau memang perlu, untuk menangani laporan atau menjaga server tetap aman. Dasar hukumnya adalah penyediaan layanan yang Anda minta (Pasal 6 ayat (1) huruf b GDPR).`,
 
     agentTitle: 'Yang Anda minta dari agen build',
     agent: (policy) => (

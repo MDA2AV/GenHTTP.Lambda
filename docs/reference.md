@@ -2081,8 +2081,7 @@ the only place below the hosts that reads it - apart from the limits of the
 tiers, which are the product's promises rather than the server's
 configuration and are set in the administration panel while it runs (see
 [Limits](#limits)); a host gives their defaults (`LambdaOptions.Sandbox`,
-`Production`, `System`, `DefaultTier`), as genhttp.dev gives the sandbox and
-production the labels *Free* and *Premium*. The variables are read into two: the platform's options
+`Production`, `System`, `DefaultTier`), and may give a tier a label. The variables are read into two: the platform's options
 ([`LambdaOptions`](../src/Platform/GenHTTP.Lambda.Core/Configuration/LambdaOptions.cs)),
 which every component is built with, and the host's (`ServerSettings`), which
 only `LambdaServer` reads - `LAMBDA_ENGINE`, `LAMBDA_HTTP_PROTOCOLS`,
@@ -3045,7 +3044,7 @@ lambda shares the process.
   can still be put online and rolled back to; a new save, a merge or a push
   that is larger is refused, naming the limit and the tier above it as the
   installation calls them (`The code and the resources of a version must not
-  exceed 32 MB together in the tier 'Free'; … In the tier 'Premium' a version
+  exceed 32 MB together in the tier 'Sandbox'; … In the tier 'Production' a version
   may come to 128 MB`). Data beyond its new room stays and is read; writes that
   would grow it fail, as they do when the data is full. A domain is kept but
   not served in a tier without domains.
@@ -3053,8 +3052,10 @@ lambda shares the process.
   clocks and those of its features' previews never count from before it
   (`tier_changed`), when nothing would have taken it offline.
 - **Labels.** An installation may call a tier otherwise on its pages - a
-  word shown as written in every language: genhttp.dev calls the sandbox
-  *Free* and production *Premium* (`CloudInstallation`). The pages, refusals
+  word shown as written in every language. genhttp.dev gives none: its tiers
+  go by their own names, since production is not sold there but offered to
+  non-profits on request and agreed with companies (`CloudInstallation`,
+  where they were *Free* and *Premium* before). The pages, refusals
   and `platform_guide` say the label; the API and the code name the tiers by
   their identifiers only, and `tierPolicy.label` of a lambda says what it is
   called. Without a label a tier goes by its own name, which the pages translate.
@@ -3139,7 +3140,7 @@ in another.
 
 | Limit               | Sandbox  | Production | System   | What it bounds                                   |
 |---------------------|----------|------------|----------|--------------------------------------------------|
-| Called              | -        | -          | -        | what the pages call the tier, as written in every language - *Free* and *Premium* on genhttp.dev; empty for its own name, at most 24 characters |
+| Called              | -        | -          | -        | what the pages call the tier, as written in every language; empty for its own name, which the pages translate, at most 24 characters |
 | Build               | 32 MB    | 128 MB     | 128 MB   | a version: its code - the C#, and everything kept with it - and its resources, together |
 | Data                | 512 MB   | 4 GB       | 4 GB     | what a lambda keeps: its database and its workspace, together |
 | Analytics shown     | 7 days   | 365 days   | 365 days | how far back the owner sees what was counted of their visitors; a year is kept of every lambda, so at most 365 |

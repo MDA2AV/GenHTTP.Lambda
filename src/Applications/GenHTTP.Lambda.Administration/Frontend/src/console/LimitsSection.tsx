@@ -33,7 +33,7 @@ interface Limit {
 /** What each tier has, the same for every tier: a column each. */
 const TIER: (Limit & { key: keyof TierLimits })[] = [
   { key: 'label', title: 'Called', unit: '', text: true,
-    note: 'What the pages call the tier, as written, in every language - "Free" and "Premium" on genhttp.dev. Empty for its own name, which the pages translate. The API and the code use the name only.' },
+    note: 'What the pages call the tier, as written, in every language. Empty for its own name, which the pages translate. The API and the code use the name only.' },
   { key: 'buildBytes', title: 'Build', unit: 'MB', bytes: true,
     note: 'A version: its code - the C#, and the documentation, the tests and whatever else is kept with it - and its resources, together. Kept in every version. The C# is compiled, so this also bounds what the compiler spends, which the whole server shares.' },
   { key: 'dataBytes', title: 'Data', unit: 'MB', bytes: true,

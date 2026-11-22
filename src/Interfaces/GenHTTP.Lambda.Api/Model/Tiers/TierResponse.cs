@@ -6,7 +6,7 @@ namespace GenHTTP.Lambda.Api.Model;
 public sealed record TierResponse(
     [Summary("`Sandbox` for trying something, `Production` for an app people use, `System` for what the installation itself depends on, or `Demo` for one of its demos")]
     string Tier,
-    [Summary("What this installation calls the tier on its pages, shown as written - `Premium` for production on genhttp.dev; absent where it goes by its own name")]
+    [Summary("What this installation calls the tier on its pages, shown as written; absent where it goes by its own name")]
     string? Label,
     [Summary("What a version may come to, its code and its resources together, in bytes")]
     long VersionBytes,

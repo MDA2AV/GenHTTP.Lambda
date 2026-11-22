@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Was Sie hier ablegen',
     content: (days) =>
-      `Ein Lambda besteht aus seinem Code, seinen Dateien, seinen Einstellungen und den Notizen, die mit seinen Versionen gespeichert werden: was gewünscht war und was sich geändert hat. All das liegt auf dem Server, damit das Lambda laufen und bearbeitet werden kann. Ein kostenloses Lambda wird samt allen Versionen etwa ${days} Tage nach der letzten Änderung oder dem letzten Besuch gelöscht – und sofort, wenn jemand mit dem Editor-Link es löscht. Wer den Editor-Link hat, kann alles davon lesen. Was Sie in den Showcase stellen, sehen alle. Und Administratoren sehen sich ein Lambda an, wenn es nötig ist, etwa um einer Meldung nachzugehen oder den Server zu schützen. Rechtsgrundlage ist, dass wir den Dienst erbringen, den Sie angefordert haben (Art. 6 Abs. 1 lit. b DSGVO).`,
+      `Ein Lambda besteht aus seinem Code, seinen Dateien, seinen Einstellungen und den Notizen, die mit seinen Versionen gespeichert werden: was gewünscht war und was sich geändert hat. All das liegt auf dem Server, damit das Lambda laufen und bearbeitet werden kann. Ein Lambda in der Sandbox wird samt allen Versionen etwa ${days} Tage nach der letzten Änderung oder dem letzten Besuch gelöscht – und sofort, wenn jemand mit dem Editor-Link es löscht. Wer den Editor-Link hat, kann alles davon lesen. Was Sie in den Showcase stellen, sehen alle. Und Administratoren sehen sich ein Lambda an, wenn es nötig ist, etwa um einer Meldung nachzugehen oder den Server zu schützen. Rechtsgrundlage ist, dass wir den Dienst erbringen, den Sie angefordert haben (Art. 6 Abs. 1 lit. b DSGVO).`,
 
     agentTitle: 'Was Sie dem Build-Agenten sagen',
     agent: (policy) => (

@@ -29,7 +29,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Co tu umieszczasz',
     content: (days) =>
-      `Lambda to jej kod, pliki, ustawienia i notatki zapisywane przy jej wersjach – o tym, o co proszono i co się zmieniło. Wszystko to jest przechowywane na serwerze, żeby lambda mogła działać i być edytowana. Darmowa lambda jest usuwana razem ze wszystkimi wersjami około ${days} dni po ostatniej zmianie lub odwiedzinach, a od razu, gdy usunie ją ktoś, kto ma link do edytora. Każdy, kto ma link do edytora, może przeczytać wszystko. To, co dodasz do galerii, widzą wszyscy. Administratorzy serwisu zaglądają do lambdy, gdy muszą – żeby zająć się zgłoszeniem albo zadbać o bezpieczeństwo serwera. Podstawą prawną jest świadczenie usługi, o którą prosisz (art. 6 ust. 1 lit. b RODO).`,
+      `Lambda to jej kod, pliki, ustawienia i notatki zapisywane przy jej wersjach – o tym, o co proszono i co się zmieniło. Wszystko to jest przechowywane na serwerze, żeby lambda mogła działać i być edytowana. Lambda w piaskownicy jest usuwana razem ze wszystkimi wersjami około ${days} dni po ostatniej zmianie lub odwiedzinach, a od razu, gdy usunie ją ktoś, kto ma link do edytora. Każdy, kto ma link do edytora, może przeczytać wszystko. To, co dodasz do galerii, widzą wszyscy. Administratorzy serwisu zaglądają do lambdy, gdy muszą – żeby zająć się zgłoszeniem albo zadbać o bezpieczeństwo serwera. Podstawą prawną jest świadczenie usługi, o którą prosisz (art. 6 ust. 1 lit. b RODO).`,
 
     agentTitle: 'Co mówisz agentowi do budowania',
     agent: (policy) => (

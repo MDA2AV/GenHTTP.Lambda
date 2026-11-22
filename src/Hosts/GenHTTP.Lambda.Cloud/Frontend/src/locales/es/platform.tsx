@@ -86,7 +86,7 @@ export const platform: Messages['platform'] = {
       name: 'Dominio',
       title: 'Un dominio propio',
       text: 'Cada app empieza en una dirección nuestra. Cuando tiene éxito, puede pasar a un dominio tuyo: la misma app y el mismo editor, en una dirección que la gente recuerda. Los enlaces a la dirección antigua siguen funcionando y llevan a la nueva.',
-      points: ['Para apps Premium: escríbenos', 'La misma app, el mismo editor y los mismos registros', 'La dirección antigua redirige a los visitantes'],
+      points: ['Para entidades sin ánimo de lucro, bajo petición; para empresas, por acuerdo', 'La misma app, el mismo editor y los mismos registros', 'La dirección antigua redirige a los visitantes'],
       alt: 'La dirección de la app pasando de su dirección en genhttp.run al dominio propio del club',
     },
     code: {
@@ -106,7 +106,7 @@ export const platform: Messages['platform'] = {
   },
 
   draftBadge: 'Borrador',
-  domainOwn: 'Premium',
+  domainOwn: 'Producción',
   domainSubject: 'Un dominio para mi app',
   domainAsk: 'Consultar por un dominio',
   zoom: 'Ampliar',

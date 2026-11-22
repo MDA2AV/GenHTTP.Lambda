@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Kiedy się przyjmie',
   premiumTitle: 'Profesjonalny hosting',
   premiumText:
-    'Twoja aplikacja pod własnym adresem, np. twojaaplikacja.pl, online nawet przy małym ruchu i z większą ilością miejsca na wszystko, co zapisuje.',
+    'Twoja aplikacja pod własnym adresem, np. twojaaplikacja.pl, z większą ilością miejsca na wszystko, co zapisuje.',
   premiumAsk: 'Napisz do nas',
   premiumSubject: (tier) => `Hosting ${tier} dla mojej aplikacji`,
   premiumBody: (address) => `Dzień dobry,\n\nchcę profesjonalnie hostować moją aplikację: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'Aplikacja zmieniła się od rozpoczęcia tego szkicu. Przed udostępnieniem trzeba go zaktualizować – agent może to zrobić.',
   mergeText: 'Zastępuje to, co jest teraz online. Dane zapisane przez aplikację pozostają bez zmian.',
   mergeUndo: 'Do tego, co było online wcześniej, można wrócić z przeglądu.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'Twoja aplikacja pod własnym adresem, z większą ilością miejsca na wszystko, co zapisuje. Dla organizacji non-profit – klubu, stowarzyszenia, projektu open source – jest dostępne na zapytanie, pod adresem w rodzaju twojklub.org, który rejestrujesz samodzielnie. Z firmą ustalamy warunki wspólnie.',
+      premiumBody: (address) =>
+        `Dzień dobry,\n\nchciałbym profesjonalnie hostować swoją aplikację: ${address}\n\nJest dla (klubu, stowarzyszenia, projektu open source, firmy): \n\n`,
+    },
+  },
 };

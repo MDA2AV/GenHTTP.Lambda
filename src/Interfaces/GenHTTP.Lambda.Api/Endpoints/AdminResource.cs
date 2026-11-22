@@ -645,7 +645,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Summary("Reads what a lambda may have and do, per tier")]
     [Remarks("""
              Where the operator has not saved them yet, these are the defaults - the built in ones, or what the host of the
-             installation sets (genhttp.dev calls its sandbox `Free` and production `Premium`). What a tier is for is fixed: the
+             installation sets. What a tier is for is fixed: the
              sandbox is taken offline once unused, production and system lambdas are kept and may answer at a domain of their
              own, and system lambdas are the installation's own. What is set here is how much each may have, whether it
              connects to other servers by default, and what it is called on the pages.

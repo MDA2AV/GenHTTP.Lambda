@@ -32,7 +32,7 @@ export const privacy: Messages['privacy'] = {
 
     contentTitle: 'Ce que vous mettez ici',
     content: (days) =>
-      `Une lambda, c’est son code, ses fichiers, ses réglages et les notes enregistrées avec ses versions sur ce qui a été demandé et ce qui a changé. Tout cela est stocké sur le serveur pour qu’elle puisse être exécutée et modifiée. Une lambda gratuite est supprimée avec toutes ses versions environ ${days} jours après sa dernière modification ou visite, et immédiatement si la personne qui a son lien d’édition la supprime. Toute personne qui a le lien d’édition peut tout lire, ce que vous mettez dans la vitrine est visible par tous, et les administrateurs consultent une lambda quand c’est nécessaire, pour traiter un signalement ou protéger le serveur. La base légale est la fourniture du service que vous avez demandé (art. 6.1.b du RGPD).`,
+      `Une lambda, c’est son code, ses fichiers, ses réglages et les notes enregistrées avec ses versions sur ce qui a été demandé et ce qui a changé. Tout cela est stocké sur le serveur pour qu’elle puisse être exécutée et modifiée. Une lambda en bac à sable est supprimée avec toutes ses versions environ ${days} jours après sa dernière modification ou visite, et immédiatement si la personne qui a son lien d’édition la supprime. Toute personne qui a le lien d’édition peut tout lire, ce que vous mettez dans la vitrine est visible par tous, et les administrateurs consultent une lambda quand c’est nécessaire, pour traiter un signalement ou protéger le serveur. La base légale est la fourniture du service que vous avez demandé (art. 6.1.b du RGPD).`,
 
     agentTitle: 'Ce que vous demandez à l’agent de création',
     agent: (policy) => (

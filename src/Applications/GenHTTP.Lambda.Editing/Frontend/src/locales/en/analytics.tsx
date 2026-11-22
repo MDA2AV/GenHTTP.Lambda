@@ -14,7 +14,7 @@ export const analytics = {
     'How many people come each day, which pages they open, which sites send them, from which countries and on which devices - counted day by day, from the moment you switch it on.',
   offPrivate: 'No cookies, and no banner your visitors have to accept',
   offAddresses: 'No addresses are kept - only how many visits there were each day',
-  /** With the tier that shows more, as the installation calls it - "Premium" on genhttp.dev - where there is one. */
+  /** With the tier that shows more, as the installation calls it - "Production" by its own name - where there is one. */
   offKept: (days: number, tier: string | null) =>
     days >= 365
       ? 'Kept for a year, and all of it shown to you'
@@ -28,7 +28,7 @@ export const analytics = {
 
   range: 'Time range',
   days: (days: number) => (days >= 365 ? '12 months' : `${days} days`),
-  /** On a range the tier does not show, on hover, with the tier that does - "Premium" on genhttp.dev. */
+  /** On a range the tier does not show, on hover, with the tier that does - "Production" by its own name. */
   premiumRange: (tier: string) => `${tier} shows up to a year`,
 
   /** The figures at the top; each one picks what the chart below shows. */
@@ -124,7 +124,7 @@ export const analytics = {
 
   /**
    * For an app that counted more than its tier shows, with the tier that shows
-   * it - "Premium" on genhttp.dev.
+   * it - "Production" by its own name.
    */
   moreKept: (since: string, tier: string) => `Counted since ${since} - ${tier} shows all of it, up to a year.`,
   premiumAsk: (tier: string) => `Ask about ${tier}`,

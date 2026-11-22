@@ -70,7 +70,7 @@ export const simple: EditorMessages['simple'] = {
   premiumHeading: 'Quando decolla',
   premiumTitle: 'Ospitarla in modo professionale',
   premiumText:
-    'La Sua app a un indirizzo tutto Suo, come lasuaapp.it, sempre online anche quando ha poche visite, e con più spazio per tutto ciò che salva.',
+    'La Sua app a un indirizzo tutto Suo, come lasuaapp.it, e con più spazio per tutto ciò che salva.',
   premiumAsk: 'Ci scriva',
   premiumSubject: (tier) => `Hosting ${tier} per la mia app`,
   premiumBody: (address) => `Buongiorno,\n\nvorrei ospitare la mia app in modo professionale: ${address}\n\n`,
@@ -108,4 +108,12 @@ export const simple: EditorMessages['simple'] = {
   behindText: 'La Sua app è cambiata da quando è iniziata questa bozza. Va aggiornata prima di poter andare online - l’agente può farlo per Lei.',
   mergeText: 'Sostituisce ciò che è online ora. I dati salvati dalla Sua app restano invariati.',
   mergeUndo: 'Può tornare a ciò che era online prima dalla panoramica.',
+  profiles: {
+    cloud: {
+      premiumText:
+        'La Sua app a un indirizzo tutto Suo, con più spazio per tutto ciò che salva. Per un’organizzazione non profit - un club, un’associazione, un progetto open source - è disponibile su richiesta, a un indirizzo come iltuoclub.org che registra Lei stesso. Per un’azienda concordiamo insieme le condizioni.',
+      premiumBody: (address) =>
+        `Buongiorno,\n\nvorrei ospitare la mia app in modo professionale: ${address}\n\nÈ per (un club, un’associazione, un progetto open source, un’azienda): \n\n`,
+    },
+  },
 };

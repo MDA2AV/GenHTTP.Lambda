@@ -125,7 +125,7 @@ the installation itself depends on, which cannot be blocked and is not deleted
 with its editor key; and `Demo` for the installation's demos. `tierPolicy` of a
 lambda says what its tier lets it have on this installation, and `tiers` of
 `GET /system` what each does; an installation may call a tier otherwise on its
-pages (`label` - genhttp.dev says `Free` and `Premium`), but the API names the
+pages (`label`), but the API names the
 tiers by these identifiers only. A sandbox lambda that nobody visits or edits
 for a while is taken offline, and later removed. `deployedUntil` and
 `keptUntil` say when; both move forward with every visit and every edit.

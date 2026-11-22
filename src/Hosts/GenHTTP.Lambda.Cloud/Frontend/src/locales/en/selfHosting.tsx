@@ -3,9 +3,9 @@ import type { ReactNode } from 'react';
 /**
  * /self-hosting: genhttp.dev and the community edition side by side. Says
  * that the platform can be run elsewhere and what differs, without
- * preferring either - whoever reads it picks what suits them. Free and
- * Premium are what genhttp.dev calls its tiers: names, written as they are in
- * every language.
+ * preferring either - whoever reads it picks what suits them. Production is
+ * the tier an app people use is moved to, as the editor's tier badge calls it:
+ * on genhttp.dev for non-profits on request, for companies by agreement.
  */
 export const selfHosting = {
   /** The page's name in the menu of every page. */
@@ -58,10 +58,10 @@ export const selfHosting = {
     ['Where the apps run', 'On our server', 'On yours, in one container with one volume'],
     ['Getting started', 'Open the build page - no account', 'Start the image, then open its address'],
     ['Who looks after the server', 'We do', 'You do'],
-    ['What it costs', 'Nothing; Premium apps on request', 'Nothing; the server is yours to pay for'],
+    ['What it costs', 'Nothing to try; production for non-profits on request, for companies by agreement', 'Nothing; the server is yours to pay for'],
     ['Where an app answers', 'At a subdomain of genhttp.run', 'Below your address, or at subdomains of a domain you give it'],
-    ['A domain of its own', 'For Premium apps', 'For any app you move to production'],
-    ['Apps nobody uses', `Offline after ${offline} days without a visit or a change, unless Premium`, 'As you set it'],
+    ['A domain of its own', 'For apps in production, registered by you', 'For any app you move to production'],
+    ['Apps nobody uses', `Offline after ${offline} days without a visit or a change, unless in production`, 'As you set it'],
     ['Limits and rules', 'Ours, and our terms of service', 'Yours, set in the admin panel'],
     ['The build agent', 'Included, a number of builds a day', 'Optional, with your own Claude subscription or API key'],
     ['Usage reports', 'None', 'Once a day: the version, the machine, the options and counts over the apps - never an app or a person. You can switch it off.'],

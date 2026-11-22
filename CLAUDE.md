@@ -298,8 +298,9 @@ edition, chosen under **Settings**.
   connectivity, block or decline **(open)**.
 - **The words are the catalogs'**: a section's `profiles` holds only what a
   profile says differently, and the kit hands every page its profile's words
-  (`profile.ts`, `wordsFor`), so no component asks which it is. Only
-  `enterprise` has words of its own; `home` says what the cloud says.
+  (`profile.ts`, `wordsFor`), so no component asks which it is. `enterprise`
+  has words of its own; `cloud` only where genhttp.dev's own terms are said
+  (the tile offering production); `home` says what every profile says.
 - **Enterprise (owner)**: the community front page addresses the colleagues,
   not the operator (`EnterpriseLanding`) - people who do not write code and
   come to have tools built; no "Made with" line; no GitHub or Discord links.
@@ -887,9 +888,12 @@ chosen by the owner (`LambdaTier`):
   (`ILimitsService.PolicyOf`, `TiersWhere`, `Above`). Nothing else compares a
   tier with a value. What a tier is *for* is fixed in code; its sizes,
   analytics window, connectivity default and **label** are the installation's
-  (`TierSettings`, the panel's **Limits**). genhttp.dev labels them "Free" and
-  "Premium" **(owner)**. The API, MCP and code use identifiers only; pages and
-  refusals use labels.
+  (`TierSettings`, the panel's **Limits**). genhttp.dev gives no labels: its
+  tiers go by their own names **(owner)**, since production is not sold there -
+  non-profits (clubs, associations, open source projects) get it on request
+  with a domain they bring, companies agree on terms. The simple view's tile
+  offering production says so in the cloud profile's words. The API, MCP and
+  code use identifiers only; pages and refusals use labels.
 - The default tier for new lambdas is the sandbox **(owner)**.
 - **A move changes the policy and nothing else (owner)**: no restart, no data
   moved; what is beyond the new limits stays readable and does not grow. Moved
