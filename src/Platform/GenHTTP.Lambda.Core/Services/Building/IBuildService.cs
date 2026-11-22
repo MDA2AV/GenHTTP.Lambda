@@ -1,5 +1,7 @@
 using System.Net;
 
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Building;
 
 /// <summary>
@@ -8,6 +10,19 @@ namespace GenHTTP.Lambda.Services.Building;
 /// </summary>
 public interface IBuildService
 {
+
+    /// <summary>
+    /// The header the calls of a job of the build agent carry its ticket in,
+    /// by which what it saves is known to be the build agent's.
+    /// </summary>
+    const string TicketHeader = "X-Lambda-Agent";
+
+    /// <summary>
+    /// Who writes what a call carrying the given ticket saves: the build agent,
+    /// on the model and effort of the job the ticket was issued for - or
+    /// nobody known, where it is not a ticket this installation issued.
+    /// </summary>
+    ValueTask<VersionAuthor?> AuthorOfAsync(string? ticket, CancellationToken cancellation = default);
 
     /// <summary>
     /// Whether this installation has an agent to build with.

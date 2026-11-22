@@ -76,7 +76,7 @@ export function FeaturesTab({ control }: { control: Control }) {
                 <button type="button" onClick={() => control.openFeature(feature.key)} className="min-w-0 flex-1 text-left">
                   <span className="flex items-center gap-2">
                     <span className="truncate text-[15px] font-medium group-hover:text-accent-600 dark:group-hover:text-accent-400">{feature.name}</span>
-                    <AgentMark origin={feature.origin} />
+                    <AgentMark origin={feature.origin} written={feature} detail={!control.simple} />
                   </span>
                   <span className="mt-0.5 block truncate text-[13px] text-slate-500">
                     {feature.change ?? feature.specification ?? said.noChange}

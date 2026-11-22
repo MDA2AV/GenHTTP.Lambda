@@ -112,6 +112,12 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
                                     .Select(g => new { Origin = g.Key, Count = g.Count() })
                                     .ToListAsync(cancellation);
 
+        var written = await database.Deployments.AsNoTracking()
+                                    .Where(d => d.Created >= recent && d.Writer == VersionWriter.BuildAgent && !demos.Contains(d.Lambda!.Tier))
+                                    .GroupBy(d => new { d.AgentModel, d.AgentEffort })
+                                    .Select(g => new { g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
+                                    .ToListAsync(cancellation);
+
         var installation = await InstallationAsync(database, cancellation);
 
         return new UsageReport(
@@ -152,7 +158,9 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
                 lambdas.Count(l => l.Connectivity == ConnectivityStatus.Requested),
                 CountRepositories(ids)
             ),
-            new UsageActivity(RecentDays, CountOrigins(origins.Select(o => (o.Origin, o.Count))))
+            new UsageActivity(RecentDays, CountOrigins(origins.Select(o => (o.Origin, o.Count))), written.Sum(w => w.Count),
+                              Count(AgentCatalog.Models.Select(m => m.Name), written.Select(w => (AgentCatalog.NameOf(w.AgentModel), w.Count))),
+                              Count(AgentCatalog.Efforts.Select(e => e.Name), written.Select(w => (AgentCatalog.NameOf(w.AgentEffort), w.Count))))
         );
     }
 
@@ -375,6 +383,25 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
 
         return Directory.EnumerateDirectories(options.GitDirectory)
                         .Count(d => long.TryParse(Path.GetFileName(d), out var id) && lambdas.Contains(id));
+    }
+
+    /// <summary>
+    /// How many of each there were, every known name present - at zero where
+    /// there was none - and nothing that is not one of them.
+    /// </summary>
+    private static Dictionary<string, int> Count(IEnumerable<string> known, IEnumerable<(string? Name, int Count)> counted)
+    {
+        var counts = known.ToDictionary(name => name, _ => 0);
+
+        foreach (var (name, count) in counted)
+        {
+            if (name != null && counts.ContainsKey(name))
+            {
+                counts[name] += count;
+            }
+        }
+
+        return counts;
     }
 
     private static Dictionary<string, int> CountOrigins(IEnumerable<(VersionOrigin? Origin, int Count)> origins)

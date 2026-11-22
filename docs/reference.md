@@ -386,7 +386,10 @@ the database's migrations among them (see [Code and resources](#code-and-resourc
 A version never changes once it is saved, which is
 what makes every one worth keeping - any of them can be compared with, and put back online
 exactly as it was. Saving files (`POST …/versions`, `write_code`) makes a new
-one.
+one. A version says where it came from (`origin`: the door it came
+through) and, where the platform knows it, who wrote it (`writer`, with the
+`model` and `effort` - the installation's build agent only; see
+[The build agent](#the-build-agent)).
 
 A **feature** is a change worked on beside the lambda. It branches off a
 version - the newest, unless another is named - with a copy of its files and a
@@ -3237,6 +3240,36 @@ subscription does not include, or one a key has no access to - ends as the
 CLI ends it, with an error rather than a closing note: the build or the change
 fails with the CLI's words in `detail`, rather than being taken for an answer
 or a run that ran out of time.
+
+**What the agent writes is marked as its own.** Every build and change is
+handed to the runner with a ticket the server made for it (`ticket`: 32 hex
+characters, random, never logged), which the runner
+writes into the agent's configuration of the MCP endpoint as the header
+`X-Lambda-Agent` - so every call of the job carries it - and leaves out where
+it is not one. A save through MCP that carries a ticket the server issued
+records who wrote it (`writer`: `build-agent`) and the model and effort of the
+job, as the server issued them - never as the runner or the agent says.
+A draft keeps them for its last save, and any other save into it clears them;
+the version it is merged into takes them over, whoever merges it - so the
+owner putting the agent's draft online makes a version of origin `api` that
+the agent wrote. They are `writer`, `model` and `effort` of a version (`GET
+…/versions`, `GET …/versions/:version`) and of a feature, left out for
+anybody else's work: an agent of somebody's own says nothing over MCP about
+its model, and nothing the platform could trust about itself. The editor
+marks the agent's work with the model's family and the effort - beside the
+mark in the full view, in its title in the simple one - the panel's
+**Statistics** count what it wrote in the last thirty days by model and effort
+(`agentModels`, `agentEfforts` of `GET /admin/overview`), and so does the
+usage report. The public source, the git history and the export say nothing
+of it.
+
+The tickets are kept in the platform's records (`agent_tickets`), not in the
+memory of the server that issued them, so a ticket outlives a restart and is
+known to whichever server the job's calls reach. Only a ticket's SHA-256 is
+kept, with the model and effort of its job and when it expires: a day after it
+was issued, since a job without a clock runs for hours, not days. A save
+carrying something that is not a ticket costs no lookup; an expired one marks
+nothing, and the expired ones are removed hourly (`AgentTicketJob`).
 
 ### Who it is for
 

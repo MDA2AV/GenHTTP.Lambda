@@ -368,7 +368,7 @@ function Latest({ control, wide }: { control: Control; wide: boolean }) {
         </p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
           <Ago at={latest.created} />
-          <AgentMark origin={latest.origin} />
+          <AgentMark origin={latest.origin} written={latest} />
           {latest.version === control.lambda.activeVersion && <OnlineMark />}
         </p>
       </div>

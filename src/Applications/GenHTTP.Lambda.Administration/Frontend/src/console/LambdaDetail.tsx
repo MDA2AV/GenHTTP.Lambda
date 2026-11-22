@@ -414,7 +414,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
                           <span className="truncate" title={version.change ?? undefined}>
                             {version.change ?? <span className="text-slate-400">No description</span>}
                           </span>
-                          <AgentMark origin={version.origin} />
+                          <AgentMark origin={version.origin} written={version} detail />
                         </span>
                         <span className="text-slate-500">
                           <Ago at={version.created} /> · {origin(version.origin)}

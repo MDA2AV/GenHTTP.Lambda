@@ -274,6 +274,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
         services.AddSingleton<AgentClient>();
+        services.AddSingleton<AgentTickets>();
         services.AddSingleton<AgentSettingsStore>();
         services.AddSingleton<BuildAllowance>();
         services.AddSingleton<ModelGate>();
@@ -327,6 +328,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
         services.AddSingleton<IBackgroundJob, CrawlerJob>();
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
+        services.AddSingleton<IBackgroundJob, AgentTicketJob>();
         services.AddSingleton<IBackgroundJob, UsageReportJob>();
         services.AddSingleton<IBackgroundJob, StorageCensusJob>();
         services.AddSingleton<IBackgroundJob, QuietHoursJob>();

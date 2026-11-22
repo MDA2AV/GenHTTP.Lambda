@@ -224,8 +224,30 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
  * marking: the rest - the template, the owner, the platform - are what
  * anybody would assume.
  */
-export function AgentMark({ origin, git = false }: { origin?: string | null; git?: boolean }) {
+export function AgentMark({ origin, git = false, written, detail = false }: {
+  origin?: string | null;
+  git?: boolean;
+  /** Who wrote it, where the platform knows it - the agent running on this server, and on which model and effort. */
+  written?: { writer?: string | null; model?: string | null; effort?: string | null };
+  /** Whether the model and effort are said beside the mark, for somebody who works with code, or only in its title. */
+  detail?: boolean;
+}) {
   const words = useShared();
+
+  // the agent of this server: the model by its family's name - the version
+  // the runner ran it as is the runner's, and may have changed since
+  if (written?.writer === 'build-agent') {
+    const model = written.model ? written.model.charAt(0).toUpperCase() + written.model.slice(1) : '';
+    const effort = (written.effort && words.agentEfforts[written.effort]) ?? written.effort ?? '';
+    const title = words.writtenByBuildAgent(model, effort);
+
+    return (
+      <span title={title} className="inline-flex items-center gap-1 text-accent-500 dark:text-accent-400">
+        <IconSpark className="h-3.5 w-3.5" />
+        {detail ? <span className="whitespace-nowrap text-[11px]">{words.ranOn(model, effort)}</span> : <span className="sr-only">{title}</span>}
+      </span>
+    );
+  }
 
   if (origin === 'git' && git) {
     return (

@@ -2,6 +2,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -378,7 +379,8 @@ public sealed class MetaService : IMetaService
         return await database.Deployments.AsNoTracking()
                              .Where(d => d.LambdaId == lambda.Id)
                              .OrderByDescending(d => d.Version)
-                             .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, VersionOriginNames.Name(d.Origin)))
+                             .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, VersionOriginNames.Name(d.Origin), VersionWriterNames.Name(d.Writer),
+                                                                AgentCatalog.NameOf(d.AgentModel), AgentCatalog.NameOf(d.AgentEffort)))
                              .ToListAsync(cancellation);
     }
 
@@ -395,7 +397,8 @@ public sealed class MetaService : IMetaService
         var files = Storage.Read(lambda.Id, version)
                  ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, VersionOriginNames.Name(deployment.Origin));
+        return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, VersionOriginNames.Name(deployment.Origin),
+                                        VersionWriterNames.Name(deployment.Writer), AgentCatalog.NameOf(deployment.AgentModel), AgentCatalog.NameOf(deployment.AgentEffort));
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)

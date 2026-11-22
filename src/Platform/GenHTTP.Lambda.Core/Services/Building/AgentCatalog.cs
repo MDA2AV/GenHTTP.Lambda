@@ -46,6 +46,18 @@ public static class AgentCatalog
 
     public static string NameOf(AgentEffort effort) => Efforts.First(e => e.Effort == effort).Name;
 
+    /// <summary>
+    /// The name of a model as it was stored with what the agent wrote, or
+    /// nothing where none was - or one no member has.
+    /// </summary>
+    public static string? NameOf(AgentModel? model) => model is { } known && Models.Any(m => m.Model == known) ? NameOf(known) : null;
+
+    /// <summary>
+    /// The name of an effort as it was stored with what the agent wrote, or
+    /// nothing where none was - or one no member has.
+    /// </summary>
+    public static string? NameOf(AgentEffort? effort) => effort is { } known && Efforts.Any(e => e.Effort == known) ? NameOf(known) : null;
+
     public static string NameOf(ModelAccess access) => access switch
     {
         ModelAccess.Open => "open",

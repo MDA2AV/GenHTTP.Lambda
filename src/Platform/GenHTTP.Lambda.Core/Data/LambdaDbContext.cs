@@ -45,6 +45,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<BlobEntity> Blobs => Set<BlobEntity>();
 
+    public DbSet<AgentTicketEntity> AgentTickets => Set<AgentTicketEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -116,6 +118,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
         deployments.Property(d => d.Origin).HasColumnName("origin").HasConversion<short>();
+        deployments.Property(d => d.Writer).HasColumnName("writer").HasConversion<short>();
+        deployments.Property(d => d.AgentModel).HasColumnName("agent_model").HasConversion<short>();
+        deployments.Property(d => d.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
 
@@ -236,6 +241,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         features.Property(f => f.Change).HasColumnName("change");
         features.Property(f => f.BaseVersion).HasColumnName("base_version");
         features.Property(f => f.Origin).HasColumnName("origin").HasConversion<short>();
+        features.Property(f => f.Writer).HasColumnName("writer").HasConversion<short>();
+        features.Property(f => f.AgentModel).HasColumnName("agent_model").HasConversion<short>();
+        features.Property(f => f.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
         features.Property(f => f.Created).HasColumnName("created");
         features.Property(f => f.Modified).HasColumnName("modified");
         features.Property(f => f.Preview).HasColumnName("preview");
@@ -365,6 +373,17 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
              .WithMany()
              .HasForeignKey(b => b.LambdaId)
              .OnDelete(DeleteBehavior.Cascade);
+
+        var tickets = builder.Entity<AgentTicketEntity>();
+
+        tickets.ToTable("agent_tickets");
+
+        tickets.HasKey(t => t.Hash);
+
+        tickets.Property(t => t.Hash).HasColumnName("hash");
+        tickets.Property(t => t.Model).HasColumnName("model").HasConversion<short>();
+        tickets.Property(t => t.Effort).HasColumnName("effort").HasConversion<short>();
+        tickets.Property(t => t.Expires).HasColumnName("expires");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

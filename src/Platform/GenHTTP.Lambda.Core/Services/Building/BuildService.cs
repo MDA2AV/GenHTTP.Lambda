@@ -3,6 +3,9 @@ using System.Net;
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Meta.Model;
+
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Building;
@@ -40,9 +43,12 @@ namespace GenHTTP.Lambda.Services.Building;
 /// panel - builds and changes each have a switch of their own - and the page
 /// is then left with how to connect an agent of one's own.
 /// </remarks>
-public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, AgentSettingsStore settings,
+public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, AgentSettingsStore settings, AgentTickets tickets,
                                  ILogger<BuildService> logger) : IBuildService
 {
+
+    public async ValueTask<VersionAuthor?> AuthorOfAsync(string? ticket, CancellationToken cancellation = default)
+        => await tickets.ResolveAsync(ticket, cancellation) is { } job ? new VersionAuthor(VersionWriter.BuildAgent, job.Model, job.Effort) : null;
 
     /// <summary>Whether this installation has an agent to build with.</summary>
     public bool Available => agent.Available;
@@ -117,9 +123,11 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         BuildStarted? started;
 
+        var ticket = await tickets.IssueAsync(choice);
+
         try
         {
-            started = await agent.StartBuildAsync(wanted, choice);
+            started = await agent.StartBuildAsync(wanted, choice, ticket);
         }
         catch (ProviderException)
         {
@@ -227,10 +235,12 @@ public sealed class BuildService(AgentClient agent, BuildAllowance allowance, Mo
 
         ChangeProgress? job;
 
+        var ticket = await tickets.IssueAsync(choice);
+
         try
         {
             job = await agent.StartChangeAsync(lambda, privateKey, before, wanted, deploy, choice,
-                                               AgentInput.Language(language), feature, AgentInput.History(history));
+                                               AgentInput.Language(language), feature, AgentInput.History(history), ticket);
         }
         catch (ProviderException)
         {
