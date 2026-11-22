@@ -86,6 +86,7 @@ export const change: EditorMessages['change'] = {
     connectivity: '他のサーバーへの接続の依頼',
     analytics: 'アクセス解析の確認',
     source: 'ソースコードの公開',
+    web: (site) => <>{site}のページの読み取り</>,
     other: (tool) => `${tool}の実行`,
   },
   marks: {

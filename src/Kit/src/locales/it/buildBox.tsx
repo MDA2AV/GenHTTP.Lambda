@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'Rimozione di un file',
     files: 'Uno sguardo a ciò che ha salvato',
     services: 'Richiesta di usare altri servizi',
+    site: (site) => `Consultazione di ${site}`,
   },
   further: 'Il suo link di modifica',
   keep:

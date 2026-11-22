@@ -174,7 +174,8 @@ services:
   #               answering to its own public name. The runner is NOT on it, so
   #               a build cannot reach the thing holding the socket.
   #   default     the ordinary bridge. Neither the runner nor a build is on it.
-  #               The proxy is, and it resolves only the hosts it is told to.
+  #               The proxy is: it tunnels to the hosts it is told to, and
+  #               reads pages of the sites a build's request names.
   agent:
     build:
       context: ../../docker/agent
@@ -214,6 +215,12 @@ services:
       HTTPS_PROXY: http://egress-proxy:3128
       HTTP_PROXY: http://egress-proxy:3128
       NO_PROXY: genhttp.dev,lambda,localhost,127.0.0.1
+      # whether a build may read the pages of the sites its request names -
+      # "look at myoldhomepage.com and make a new version of it" - through
+      # the page fetch the proxy serves: GET and HEAD, public addresses,
+      # those sites only. false here and at the proxy leaves it off.
+      AGENT_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      AGENT_FETCH_URL: http://egress-proxy:3129/mcp
     volumes:
       # The one real privilege in here, and the reason for the split above.
       # Anything that can create a container can create one that mounts the
@@ -241,13 +248,17 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # The only way out for a build: to Anthropic, and nowhere else.
+  # The only way out for a build: tunnels to Anthropic and nowhere else, and
+  # the page fetch - GET and HEAD, made by the proxy itself, to public
+  # addresses of the sites a build's request names.
   egress-proxy:
     image: genhttp-agent:latest
     command: ["node", "/app/proxy.mjs"]
     environment:
       PROXY_PORT: 3128
       PROXY_ALLOW: ${LAMBDA_AGENT_EGRESS:-api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai}
+      PROXY_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      PROXY_FETCH_PORT: 3129
     depends_on:
       - agent
     networks:
@@ -257,6 +268,14 @@ services:
       - no-new-privileges:true
     mem_limit: 256m
     restart: unless-stopped
+    # A line per tunnel and per page read, with the host and nothing of the
+    # address after it: capped like the runner's, which keeps the prompts the
+    # hosts came from.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
 

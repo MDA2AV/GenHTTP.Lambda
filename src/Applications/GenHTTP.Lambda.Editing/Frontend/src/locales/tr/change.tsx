@@ -87,6 +87,7 @@ export const change: EditorMessages['change'] = {
     connectivity: 'Başka sunuculara bağlanma izni isteniyor',
     analytics: 'Analitiğe bakılıyor',
     source: 'Kaynak kod yayınlanıyor',
+    web: (site) => <>{site} sitesinden bir sayfa okunuyor</>,
     other: (tool) => `${tool} aracı kullanılıyor`,
   },
   marks: {

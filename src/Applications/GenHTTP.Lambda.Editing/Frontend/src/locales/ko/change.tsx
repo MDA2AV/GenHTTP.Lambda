@@ -84,6 +84,7 @@ export const change: EditorMessages['change'] = {
     connectivity: '다른 서버에 연결하도록 요청하고 있어요',
     analytics: '분석을 확인하고 있어요',
     source: '코드를 공개하고 있어요',
+    web: (site) => <>{site} 페이지를 읽고 있어요</>,
     other: (tool) => `${tool} 사용`,
   },
   marks: {

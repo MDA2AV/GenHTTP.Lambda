@@ -85,6 +85,8 @@ export const change = {
     analytics: 'Looking at the analytics',
     /** The agent published the app's source code, or looked at whether it is. */
     source: 'Publishing the source code',
+    /** The agent read a page of a website the owner named in their message; site is its address, like www.example.com. */
+    web: (site: Node) => <>Reading a page of {site}</>,
     other: (tool: string) => `Using ${tool}`,
   },
   marks: {

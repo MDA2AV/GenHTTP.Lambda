@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'Dosya kaldırılıyor',
     files: 'Kaydedilenlere bakılıyor',
     services: 'Başka hizmetleri kullanma izni isteniyor',
+    site: (site) => `${site} sayfasına bakılıyor`,
   },
   further: 'Editör linkiniz',
   keep:

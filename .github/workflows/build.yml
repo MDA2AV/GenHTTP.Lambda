@@ -40,6 +40,11 @@ jobs:
       - name: Check translations
         run: npm run translations -- check
 
+      # the rules of the build agent's page fetch - which sites, which
+      # addresses - checked without the internet
+      - name: Test the agent's page fetch
+        run: node --test 'docker/agent/*.test.mjs'
+
       # what each component serves, beside its project
       - name: Upload bundles
         uses: actions/upload-artifact@v4

@@ -44,6 +44,8 @@ export const buildBox = {
     files: 'Looking at what it saved',
     /** The agent asked for the app to use other services on the internet, which the operator of the site allows. */
     services: 'Asking to use other services',
+    /** The agent is reading a page of a website the person named in their message, such as their old homepage; site is its address, like www.example.com. */
+    site: (site: string) => `Looking at ${site}`,
   },
 
   /** Above the editor link, once the app is built. */

@@ -423,6 +423,29 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task APageTheAgentReadIsAStepThatNamesItsSite()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("Look at myoldhomepage.com and make a new version of it"));
+
+        var id = (await build.GetContentAsync<BuildStarted>()).Id;
+
+        agent.Step(id, new JsonObject { ["at"] = 4, ["kind"] = "web", ["site"] = "www.myoldhomepage.com", ["done"] = true });
+
+        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
+
+        var step = (await read.GetContentAsync<BuildProgress>()).Steps.Single();
+
+        // the site, which is what the person named, so /build can say "Looking
+        // at www.myoldhomepage.com" - never the address, which may hold anything
+        Assert.AreEqual("web", step.Kind);
+        Assert.AreEqual("www.myoldhomepage.com", step.Site);
+        Assert.IsTrue(step.Done);
+    }
+
+    [TestMethod]
     public async Task ABuildSaysHowLongItHasRunAndMayRun()
     {
         await using var agent = FakeAgent.Start();
@@ -851,6 +874,7 @@ public sealed class AgentTests
         Assert.AreEqual("api-key", runner.SignsInWith);
         Assert.AreEqual("claude-fable-5-2", runner.Models!["fable"]);
         Assert.AreEqual("2.1.329", runner.Cli);
+        Assert.IsTrue(runner.ReadsPages, "whether a build may read the sites its request names");
 
         var raw = await response.Content.ReadAsStringAsync();
 

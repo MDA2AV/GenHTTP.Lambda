@@ -45,8 +45,9 @@ services:
     restart: unless-stopped
 
   # Runs a build: starts a container for it, which talks to the server over
-  # MCP and to Anthropic through the proxy below, and nothing else. It holds
-  # the docker socket for that, and runs nothing a model wrote itself.
+  # MCP and to Anthropic through the proxy below, and nothing else - but for
+  # the pages of sites its request names, which the proxy reads for it. It
+  # holds the docker socket for that, and runs nothing a model wrote itself.
   agent:
     profiles: ["agent"]
     image: genhttp/lambda-agent:latest
@@ -68,6 +69,11 @@ services:
       HTTPS_PROXY: http://egress-proxy:3128
       HTTP_PROXY: http://egress-proxy:3128
       NO_PROXY: lambda,localhost,127.0.0.1
+      # whether a build may read the pages of the sites its request names
+      # ("look at myoldhomepage.com"): GET and HEAD, public addresses, those
+      # sites only - LAMBDA_AGENT_FETCH=false in .env leaves it off
+      AGENT_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      AGENT_FETCH_URL: http://egress-proxy:3129/mcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # the group that owns the docker socket on this machine:
@@ -81,7 +87,9 @@ services:
     mem_limit: 1g
     restart: unless-stopped
 
-  # The only way out for a build: to Anthropic, and nowhere else.
+  # The only way out for a build: tunnels to Anthropic and nowhere else, and
+  # the pages of the sites a build's request names, read by the proxy itself
+  # - GET and HEAD, public addresses only, never your network's.
   egress-proxy:
     profiles: ["agent"]
     image: genhttp/lambda-agent:latest
@@ -89,6 +97,8 @@ services:
     environment:
       PROXY_PORT: 3128
       PROXY_ALLOW: api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai
+      PROXY_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      PROXY_FETCH_PORT: 3129
     networks:
       - build-net
       - default
@@ -96,6 +106,11 @@ services:
       - no-new-privileges:true
     mem_limit: 256m
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   # the server and the agent, and nothing else

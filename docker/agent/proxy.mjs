@@ -1,17 +1,27 @@
 /*
- * The agent's only way off the machine.
+ * The agent's only way off the machine, with two doors.
  *
- * It is a CONNECT proxy and nothing else: no caching, no plain HTTP
+ * The first is a CONNECT proxy and nothing else: no caching, no plain HTTP
  * forwarding, no rewriting. The agent sits on a network with no route out, so
- * the set of hosts named here is the complete list of places anything it does
- * can reach - which is the point of it, and is easier to be sure of in fifty
- * lines than in a configuration file for a general purpose proxy.
+ * the set of hosts named here is the complete list of places a tunnel can
+ * reach - which is the point of it, and is easier to be sure of in fifty lines
+ * than in a configuration file for a general purpose proxy.
+ *
+ * The second is the page fetch (fetch.mjs), on a port of its own: GET and
+ * HEAD, made here, to public addresses of the sites a build's request names.
+ * A tunnel could not be held to a method - what goes through it is TLS this
+ * cannot read - so reading a page is not a tunnel. PROXY_FETCH=false leaves
+ * that door shut.
  */
 
 import { createServer } from 'node:http';
 import { connect } from 'node:net';
 
+import { serveFetch } from './fetch.mjs';
+
 const PORT = Number(process.env.PROXY_PORT ?? 3128);
+
+if (process.env.PROXY_FETCH !== 'false') serveFetch(Number(process.env.PROXY_FETCH_PORT ?? 3129));
 
 const ALLOWED = (process.env.PROXY_ALLOW ?? 'api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai')
   .split(',')

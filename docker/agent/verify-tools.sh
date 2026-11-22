@@ -70,7 +70,8 @@ echo "Asking the CLI in the agent's container which tools a build loads..."
       child.kill();
 
       const tools = event.tools ?? [];
-      const foreign = tools.filter(t => !t.startsWith("mcp__genhttp__"));
+      // the platform'"'"'s MCP, and the page fetch a build that names a site gets
+      const foreign = tools.filter(t => !t.startsWith("mcp__genhttp__") && t !== "mcp__web__fetch");
 
       console.log(`CLI ${event.claude_code_version ?? "?"}, ${tools.length} tools loaded:`);
       for (const tool of tools) console.log(`  ${foreign.includes(tool) ? "!!" : "  "} ${tool}`);

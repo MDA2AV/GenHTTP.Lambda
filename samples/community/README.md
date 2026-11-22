@@ -37,8 +37,12 @@ docker compose --profile agent up -d
 ```
 
 Every build runs in a container of its own, which reaches this server and
-Anthropic and nothing else, and is thrown away when it ends. Which models and
-efforts people may choose is set in the panel, under **Build agent**.
+Anthropic and nothing else, and is thrown away when it ends. Where somebody
+names a site - *"look at myoldhomepage.com and make a new version of it"* -
+the build may read its pages, which the proxy fetches for it: GET and HEAD,
+at public addresses, that site only. `LAMBDA_AGENT_FETCH=false` in `.env`
+switches that off. Which models and efforts people may choose is set in the
+panel, under **Build agent**.
 
 ## With PostgreSQL
 

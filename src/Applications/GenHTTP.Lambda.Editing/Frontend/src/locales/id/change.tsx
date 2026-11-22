@@ -89,6 +89,7 @@ export const change: EditorMessages['change'] = {
     connectivity: 'Meminta izin untuk terhubung ke server lain',
     analytics: 'Melihat analitik',
     source: 'Memublikasikan kode sumber',
+    web: (site) => <>Membaca halaman dari {site}</>,
     other: (tool) => `Memakai ${tool}`,
   },
   marks: {

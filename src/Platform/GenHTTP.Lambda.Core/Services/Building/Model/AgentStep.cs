@@ -13,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Building;
 public sealed record AgentStep(
     [Summary("Seconds into the run")]
     int At,
-    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets), `connectivity` (asked for the lambda to connect to other servers), `analytics` (read who visits, or switched counting on), `source` (published the source code, or read whether it is) or `other`")]
+    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets), `connectivity` (asked for the lambda to connect to other servers), `analytics` (read who visits, or switched counting on), `source` (published the source code, or read whether it is), `web` (read a page of a site the request names) or `other`")]
     string Kind,
     [Summary("What the agent said, for a step of kind `say`")]
     string? Text = null,
@@ -44,5 +44,7 @@ public sealed record AgentStep(
     [Summary("Whether the step was about a feature rather than the lambda itself")]
     bool? Preview = null,
     [Summary("The kind of data a step of kind `data` switched on: `database`, `secrets` or `workspace`")]
-    string? Data = null
+    string? Data = null,
+    [Summary("The site a step of kind `web` read a page of, by its host name - never the rest of the address")]
+    string? Site = null
 );

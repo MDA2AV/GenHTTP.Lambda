@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: '파일을 지우고 있어요',
     files: '저장된 것을 살펴보고 있어요',
     services: '다른 서비스 사용을 요청하고 있어요',
+    site: (site) => `${site}을(를) 살펴보고 있어요`,
   },
   further: '내 에디터 링크',
   keep: '이 링크는 안전한 곳에 보관하세요. 다른 기기에서 내 앱에 들어올 수 있는 유일한 방법이고, 잃어버리면 저희도 되찾아 드릴 수 없어요.',

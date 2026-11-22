@@ -9,6 +9,7 @@ import {
   IconDatabase,
   IconDots,
   IconDraft,
+  IconExternal,
   IconEye,
   IconFolder,
   IconGlobe,
@@ -328,6 +329,7 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   connectivity: IconGlobe,
   analytics: IconEye,
   source: IconStar,
+  web: IconExternal,
   other: IconDots,
 };
 

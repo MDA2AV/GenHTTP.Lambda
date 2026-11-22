@@ -78,6 +78,7 @@ export const change: EditorMessages['change'] = {
     connectivity: 'Pidiendo conectarse a otros servidores',
     analytics: 'Mirando la analítica',
     source: 'Publicando el código fuente',
+    web: (site) => <>Leyendo una página de {site}</>,
     other: (tool) => `Usando ${tool}`,
   },
   marks: {

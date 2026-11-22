@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'ファイルを削除しています',
     files: '保存したものを確認しています',
     services: '他のサービスを使う許可を依頼しています',
+    site: (site) => `${site}を確認しています`,
   },
   further: 'あなたの編集用リンク',
   keep: 'このリンクは安全な場所に保管してください。ほかの端末からアプリに入るための唯一の方法で、なくすと私たちにも復元できません。',
