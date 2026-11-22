@@ -1,4 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -25,6 +26,6 @@ public sealed record AdminLambdaUses(
 {
 
     public static AdminLambdaUses Of(LambdaUses uses)
-        => new(uses.Database, uses.Workspace, uses.Secrets, uses.AnalyticsSince, uses.Showcase, uses.Source, uses.Drafts, uses.View.ToString());
+        => new(uses.Database, uses.Workspace, uses.Secrets, uses.AnalyticsSince, uses.Showcase, uses.Source, uses.Drafts, EditorViewNames.Name(uses.View));
 
 }

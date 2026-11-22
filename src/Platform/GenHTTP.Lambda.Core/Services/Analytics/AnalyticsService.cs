@@ -222,7 +222,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
         var from = to.AddDays(-(shown - 1));
 
-        var tier = lambda.Tier.ToString();
+        var tier = LambdaTierNames.Name(lambda.Tier);
 
         if (lambda.AnalyticsSince == null)
         {

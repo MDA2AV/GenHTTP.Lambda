@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
@@ -89,6 +90,6 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
     /// <summary>
     /// Where a request stands, for a log line.
     /// </summary>
-    internal static string Said(ConnectivityInfo connectivity) => connectivity.Status?.ToString() ?? (connectivity.Included ? "Included" : "None");
+    internal static string Said(ConnectivityInfo connectivity) => ConnectivityStatusNames.Name(connectivity.Status) ?? (connectivity.Included ? "Included" : "None");
 
 }

@@ -1,5 +1,6 @@
 using GenHTTP.Api.Content.Documentation;
 
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Connectivity;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -25,7 +26,7 @@ public sealed record ConnectivityResponse(
     {
         var known = connectivity ?? ConnectivityInfo.None;
 
-        return new(known.Allowed, known.Included, known.Status?.ToString(), known.Changed, known.Purpose, known.Note);
+        return new(known.Allowed, known.Included, ConnectivityStatusNames.Name(known.Status), known.Changed, known.Purpose, known.Note);
     }
 
 }

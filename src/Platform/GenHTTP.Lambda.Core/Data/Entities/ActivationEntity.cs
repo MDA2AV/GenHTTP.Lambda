@@ -25,9 +25,9 @@ public sealed class ActivationEntity
     public DateTime Started { get; set; }
 
     /// <summary>
-    /// Who put it online, one of <see cref="VersionOrigins" />.
+    /// Who put it online.
     /// </summary>
-    public string? Origin { get; set; }
+    public VersionOrigin? Origin { get; set; }
 
     /// <summary>
     /// When it went offline, or null while it is still online.
@@ -35,9 +35,9 @@ public sealed class ActivationEntity
     public DateTime? Ended { get; set; }
 
     /// <summary>
-    /// Why it went offline, one of <see cref="ActivationEndings" />.
+    /// Why it went offline.
     /// </summary>
-    public string? EndedBy { get; set; }
+    public ActivationEnding? EndedBy { get; set; }
 
     public LambdaEntity? Lambda { get; set; }
 

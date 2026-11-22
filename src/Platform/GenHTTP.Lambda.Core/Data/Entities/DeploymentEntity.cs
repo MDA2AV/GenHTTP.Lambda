@@ -30,9 +30,9 @@ public sealed class DeploymentEntity
     public string? Change { get; set; }
 
     /// <summary>
-    /// Where it came from, one of <see cref="VersionOrigins" />.
+    /// Where it came from.
     /// </summary>
-    public string? Origin { get; set; }
+    public VersionOrigin? Origin { get; set; }
 
     public LambdaEntity? Lambda { get; set; }
 

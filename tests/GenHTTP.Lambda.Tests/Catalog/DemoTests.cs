@@ -246,7 +246,7 @@ public sealed class DemoTests
         var versions = await fixture.Meta.GetVersionsAsync("demo-crud");
 
         Assert.HasCount(1, versions, "a demo that is current is left alone");
-        Assert.AreEqual(VersionOrigins.System, versions[0].Origin);
+        Assert.AreEqual("system", versions[0].Origin);
     }
 
     [TestMethod]

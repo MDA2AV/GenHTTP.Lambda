@@ -1,4 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Census;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -48,7 +49,7 @@ public sealed record AdminCensusResponse(
 
     public static AdminCensusResponse Of(LambdaCensus census) => new(
         census.Taken, census.Lambdas, census.Demos, census.Online, census.Offline, census.Blocked,
-        census.Tiers.ToDictionary(t => t.Key.ToString(), t => t.Value),
+        census.Tiers.ToDictionary(t => LambdaTierNames.Name(t.Key), t => t.Value),
         census.CreatedDay, census.CreatedWeek, census.CreatedMonth, census.ActiveMonth, census.GoingOffline, census.Removed, census.Expiring,
         census.Uses, census.Simple, census.Full, census.Versions, census.Saved);
 

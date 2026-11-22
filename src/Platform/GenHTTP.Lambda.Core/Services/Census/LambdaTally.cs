@@ -74,7 +74,11 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
                                    .GroupBy(d => d.Origin)
                                    .Select(g => new { Origin = g.Key, Count = g.Count() })
                                    .ToListAsync(cancellation))
-                    .ToDictionary(g => g.Origin ?? "unknown", g => g.Count);
+                    // by name, the unrecorded first, as the panel lists them
+                    .GroupBy(g => VersionOriginNames.Name(g.Origin))
+                    .OrderBy(g => g.Key != null)
+                    .ThenBy(g => g.Key, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key ?? "unknown", g => g.Sum(o => o.Count));
 
         var product = limits.Get();
 

@@ -41,7 +41,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         // in the activity list that nothing can be looked up from any more
         telemetry.ForgetLambda(lambda.Id);
 
-        await history.RecordAsync(database, lambda, LambdaEvents.Deleted);
+        await history.RecordAsync(database, lambda, LambdaEvent.Deleted);
 
         // the key cascades in the schema, but only where the connection has
         // foreign keys switched on - said here so it does not depend on that

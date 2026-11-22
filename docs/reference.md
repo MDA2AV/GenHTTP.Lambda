@@ -1275,7 +1275,10 @@ feature's preview.
   `lambdas`, and a table of facts per statistic - `days` (the totals),
   `pages`, `referrers`, `countries`, `devices`, `browsers`, `systems`,
   `crawlers` - keyed by lambda, year, month and day (and value), so a
-  lambda's days are a range of the key. Migrated by Evolve from
+  lambda's days are a range of the key. A device, browser or system is kept
+  as a small number (`VisitorDevice`, `VisitorBrowser`, `VisitorSystem`,
+  named by `AnalyticsCodes`; 0 is other), the open sets - pages, referrers,
+  countries, crawlers - as their text. Migrated by Evolve from
   `Services/Analytics/Migrations`. Only the switch is in `lambda.db`
   (`lambdas.analytics_since`), read with everything else that serves a
   request. Deleting a lambda deletes its rows.
@@ -2040,7 +2043,17 @@ integration may speak (`IDatabaseProvider.Dialect`): `Data/Migrations` and
 `Services/Analytics/Migrations` for SQLite, `Data/PostgreSql` and
 `Services/Analytics/PostgreSql` for PostgreSQL, each numbered on its own. A
 change to the schema is a migration in every set. The analytics' commands are
-written once, in SQL both accept.
+written once, in SQL both accept. A column of one of a few known values holds
+a small number (`INTEGER` in SQLite, `smallint` in PostgreSQL): the tier,
+editor view and connectivity of a lambda, the origin of a version, a
+deployment and a feature, why an activation ended, an event's kind - the
+members of the enums in `Data/Entities`, which keep their numbers for good.
+What the API and MCP call them is spelled out beside each (`LambdaTierNames`,
+`VersionOriginNames`, …), so the names on the wire are those of before; a
+number no member has reads as the sandbox, the full view
+(`Data/StoredValues.cs`) or nothing recorded. V30 (V5 in PostgreSQL) converted
+the names an installation had saved, and cannot be undone by an older
+release.
 
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder

@@ -31,9 +31,9 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
 
         var policy = limits.PolicyOf(lambda.Tier);
 
-        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), policy, limits.Above(lambda.Tier), lambda.Created, lambda.Modified,
+        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, LambdaTierNames.Name(lambda.Tier), policy, limits.Above(lambda.Tier), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lifetime.DeployedUntil(lambda), lifetime.KeptUntil(lambda),
-                              lambda.Domain, lambda.View.ToString(), addresses.Of(lambda.PublicKey),
+                              lambda.Domain, EditorViewNames.Name(lambda.View), addresses.Of(lambda.PublicKey),
                               addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain), lambda.Blocked, lambda.BlockReason,
                               ConnectivityRule.Describe(lambda, policy));
     }
@@ -46,7 +46,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
     public LambdaOverview Overview(LambdaEntity lambda, int? latest, int versions)
         => new(lambda.PublicKey,
                lambda.PrivateKey,
-               lambda.Tier.ToString(),
+               LambdaTierNames.Name(lambda.Tier),
                limits.PolicyOf(lambda.Tier),
                lambda.Created,
                lambda.Modified,

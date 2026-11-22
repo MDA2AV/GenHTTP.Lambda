@@ -7,9 +7,11 @@ namespace GenHTTP.Lambda.Data.Entities;
 /// Named by purpose rather than by price: who pays is the installation's
 /// business, how much a lambda matters is the lambda's. What each tier means
 /// is said once, in <c>TierPolicies</c>; nothing else compares a tier with one
-/// of these values. Assigned by the operator, never chosen by the owner. The
-/// name is what is stored, so a tier can be added anywhere in the list without
-/// moving the ones already written.
+/// of these values. Assigned by the operator, never chosen by the owner.
+/// Stored as its number, so a tier keeps its number for good and a new one
+/// takes the next; what the API, MCP and the pages call it is
+/// <see cref="LambdaTierNames"/>. A number no member has reads as the sandbox,
+/// the tier that allows the least.
 /// </remarks>
 public enum LambdaTier
 {
@@ -19,13 +21,13 @@ public enum LambdaTier
     /// when abandoned. Where a new lambda starts, unless the installation says
     /// otherwise.
     /// </summary>
-    Sandbox,
+    Sandbox = 0,
 
     /// <summary>
     /// An app people use: kept whether or not anybody visited it lately, with
     /// more room and a domain of its own.
     /// </summary>
-    Production,
+    Production = 1,
 
     /// <summary>
     /// Something the platform itself depends on - the collector of usage
@@ -36,7 +38,7 @@ public enum LambdaTier
     /// The intended hook for running such a lambda apart from the others or
     /// ahead of them, which nothing does yet.
     /// </remarks>
-    System,
+    System = 2,
 
     /// <summary>
     /// One of the installation's own demos: kept online, and read only for
@@ -47,6 +49,6 @@ public enum LambdaTier
     /// Never assigned by hand. The demo seeder puts a lambda here and is the
     /// only thing that changes what it runs.
     /// </remarks>
-    Demo
+    Demo = 3
 
 }

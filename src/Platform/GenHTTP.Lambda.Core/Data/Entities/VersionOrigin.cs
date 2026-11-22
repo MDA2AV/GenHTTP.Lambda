@@ -1,25 +1,31 @@
 namespace GenHTTP.Lambda.Data.Entities;
 
-/// <summary>Where a version or a deployment came from.</summary>
-public static class VersionOrigins
+/// <summary>Where a version, a deployment or a feature came from.</summary>
+/// <remarks>
+/// Stored as its number, so a member keeps its number for good and a new one
+/// takes the next; what the API, MCP and the pages call it is
+/// <see cref="VersionOriginNames"/>. A row whose number no member has - a
+/// later version's, or one written by hand - reads as not recorded.
+/// </remarks>
+public enum VersionOrigin
 {
 
     /// <summary>Seeded from a template when the lambda was created.</summary>
-    public const string Template = "template";
+    Template = 1,
 
     /// <summary>Through the REST API, which is also what the editor uses.</summary>
-    public const string Api = "api";
+    Api = 2,
 
     /// <summary>Through the MCP endpoint, by an agent.</summary>
-    public const string Agent = "agent";
+    Agent = 3,
 
     /// <summary>Pushed to the lambda's repository with git, a commit each.</summary>
-    public const string Git = "git";
+    Git = 4,
 
     /// <summary>By the operator, through the administration panel.</summary>
-    public const string Admin = "admin";
+    Admin = 5,
 
     /// <summary>By the installation itself, on a schedule.</summary>
-    public const string System = "system";
+    System = 6
 
 }
