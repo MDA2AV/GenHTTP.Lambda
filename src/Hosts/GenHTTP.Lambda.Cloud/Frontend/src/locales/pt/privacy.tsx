@@ -39,14 +39,16 @@ export const privacy: Messages['privacy'] = {
         mensagens anteriores e o que o agente respondeu, para que ele entenda o que você quer dizer. Para responder ou
         fazer uma mudança, o agente também lê a lambda (o código, as notas das versões, o log, que contém as requisições e
         o que ela imprimiu, mas não os endereços IP dos visitantes, e, quando você pergunta sobre eles, os registros e as
-        contagens de visitantes), e o que ele lê também é enviado para lá. O que a Anthropic faz com isso está descrito
+        contagens de visitantes), e o que ele lê também é enviado para lá. Quando você indica um site, o agente também lê
+        páginas dele, a partir deste servidor - assim o site vê o nosso endereço, e não o seu - e elas são enviadas para lá
+        do mesmo modo. O que a Anthropic faz com isso está descrito
         na {policy('política de privacidade da própria empresa')}. Os Estados Unidos não protegem dados pessoais do
         mesmo jeito que a UE. Seu pedido é enviado para lá porque isso é necessário para criar ou mudar o que você pediu
         (art. 6º, 1, b, e art. 49, 1, b, do RGPD). Então não coloque nele nada que você não queira compartilhar.
       </>
     ),
     agentKept:
-      'O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. O pedido em si é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação; os dois também têm tamanho fixo. As mensagens anteriores, que a página de criação envia junto, não são gravadas. A página de criação guarda os links de edição dos seus apps e a conversa sobre cada um no armazenamento do seu próprio navegador, e em nenhum outro lugar: não guardamos cópia, e quem usar o mesmo navegador pode abri-los. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
+      'O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. O pedido em si é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação, que também anota os nomes dos sites cujas páginas o agente leu; os dois também têm tamanho fixo. As mensagens anteriores, que a página de criação envia junto, não são gravadas. A página de criação guarda os links de edição dos seus apps e a conversa sobre cada um no armazenamento do seu próprio navegador, e em nenhum outro lugar: não guardamos cópia, e quem usar o mesmo navegador pode abri-los. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
 
     lambdasTitle: 'O que uma lambda faz depende do dono dela',
     lambdas:

@@ -42,14 +42,16 @@ export const privacy = {
         messages before it and what the agent answered, so that it understands what you mean. To answer
         or make a change, the agent also reads the lambda - its code, the notes on its versions, its log, which holds its
         requests and what it printed but not its visitors' IP addresses, and where you ask about them its records and the
-        counts of its visitors - and what it reads is sent there too. What Anthropic does with it is covered by{' '}
+        counts of its visitors - and what it reads is sent there too. Where you name a website, it reads pages of that
+        site as well, from this server - so the site sees our address, not yours - and they are sent there in the same way.
+        What Anthropic does with it is covered by{' '}
         {policy('its own privacy policy')}. The United States does not protect personal data the way the EU does. Your
         request is sent there because building or changing what you asked for needs it (Art. 6(1)(b) and Art. 49(1)(b)
         GDPR), so do not put anything into it that you would not want to share.
       </>
     ),
     agentKept:
-      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log; both have a fixed size as well. The messages before it, which the build page sends along, are not written down. The build page keeps your apps' editor links and the conversation about each in your browser's own storage, and nowhere else: we do not keep a copy, and whoever uses the same browser can open them. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
+      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log, which also notes the names of the websites the agent read pages of; both have a fixed size as well. The messages before it, which the build page sends along, are not written down. The build page keeps your apps' editor links and the conversation about each in your browser's own storage, and nowhere else: we do not keep a copy, and whoever uses the same browser can open them. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
 
     lambdasTitle: 'What a lambda does is up to its owner',
     lambdas:

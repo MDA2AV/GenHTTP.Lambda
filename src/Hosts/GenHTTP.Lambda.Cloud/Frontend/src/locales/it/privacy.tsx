@@ -39,7 +39,9 @@ export const privacy: Messages['privacy'] = {
         insieme agli ultimi messaggi precedenti e alle risposte dell’agente, così che capisca cosa intendi. Per
         rispondere o fare una modifica, l’agente legge anche la lambda (il codice, le note delle sue versioni, il suo
         log, che contiene le richieste e quello che ha stampato, ma non gli indirizzi IP dei visitatori, e, se glielo
-        chiedi, le sue voci e i conteggi dei suoi visitatori), e anche quello che legge viene inviato lì. Cosa ne fa
+        chiedi, le sue voci e i conteggi dei suoi visitatori), e anche quello che legge viene inviato lì. Se indichi un
+        sito web, l’agente legge anche le pagine di quel sito, da questo server - quindi il sito vede il nostro
+        indirizzo, non il tuo - e anche queste vengono inviate lì allo stesso modo. Cosa ne fa
         Anthropic lo stabilisce {policy('la sua informativa sulla privacy')}. Gli Stati Uniti non proteggono i dati
         personali come l’UE. La tua richiesta viene inviata lì perché serve a creare o modificare quello che hai chiesto
         (artt. 6, par. 1, lett. b) e 49, par. 1, lett. b) GDPR), quindi non scriverci niente che non vorresti
@@ -47,7 +49,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'L’agente salva la tua richiesta, spesso riformulata con parole sue, come nota della versione che scrive. La richiesta viene scritta per intero nel log del server, e le prime centinaia di caratteri nel log del servizio di creazione; anche questi due hanno una dimensione fissa. I messaggi precedenti, che la pagina di creazione manda insieme, non vengono registrati. La pagina di creazione conserva i link di modifica delle tue app e la conversazione su ciascuna nella memoria del tuo browser, e da nessun’altra parte: non ne teniamo una copia, e chi usa lo stesso browser può aprirle. Se invece usi un tuo agente, come Claude o Claude Code, quello che gli dici va al fornitore di quell’agente, non a noi: noi riceviamo solo il codice e le note che manda qui.',
+      'L’agente salva la tua richiesta, spesso riformulata con parole sue, come nota della versione che scrive. La richiesta viene scritta per intero nel log del server, e le prime centinaia di caratteri nel log del servizio di creazione, che annota anche i nomi dei siti web di cui l’agente ha letto le pagine; anche questi due hanno una dimensione fissa. I messaggi precedenti, che la pagina di creazione manda insieme, non vengono registrati. La pagina di creazione conserva i link di modifica delle tue app e la conversazione su ciascuna nella memoria del tuo browser, e da nessun’altra parte: non ne teniamo una copia, e chi usa lo stesso browser può aprirle. Se invece usi un tuo agente, come Claude o Claude Code, quello che gli dici va al fornitore di quell’agente, non a noi: noi riceviamo solo il codice e le note che manda qui.',
 
     lambdasTitle: 'Cosa fa una lambda lo decide il suo proprietario',
     lambdas:
