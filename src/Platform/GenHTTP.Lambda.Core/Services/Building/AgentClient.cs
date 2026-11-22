@@ -285,7 +285,8 @@ public sealed class AgentClient : IDisposable
                 efforts,
                 body?["cli"] is JsonValue cli && cli.TryGetValue<string>(out var version) ? version : null,
                 Count(body?["quick"], "running") + Count(body?["long"], "running"),
-                Count(body?["quick"], "queued") + Count(body?["long"], "queued")
+                Count(body?["quick"], "queued") + Count(body?["long"], "queued"),
+                body?["fetch"] is JsonValue fetch && fetch.TryGetValue<bool>(out var reads) ? reads : null
             );
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellation.IsCancellationRequested)

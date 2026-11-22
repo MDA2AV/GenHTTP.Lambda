@@ -39,15 +39,16 @@ export const privacy: Messages['privacy'] = {
         de bouwpagina gaan ook de laatste paar berichten ervoor en wat de agent antwoordde mee, zodat hij begrijpt wat je
         bedoelt. Om te antwoorden of een wijziging door te voeren, leest de agent ook de lambda: de code, de notities bij
         de versies, het log, met de requests en de output van de lambda maar niet de IP-adressen van bezoekers, en als je
-        ernaar vraagt de items en het aantal bezoekers. Ook wat hij leest, wordt daarheen gestuurd. Wat Anthropic ermee
-        doet, staat in{' '}
+        ernaar vraagt de items en het aantal bezoekers. Noem je een website, dan leest de agent ook pagina’s van die site,
+        vanaf deze server, zodat de site ons adres ziet en niet het jouwe. Ook wat hij leest, wordt daarheen gestuurd. Wat
+        Anthropic ermee doet, staat in{' '}
         {policy('het eigen privacybeleid van Anthropic')}. De Verenigde Staten beschermen persoonsgegevens niet zoals de
         EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen of aan te passen wat je vroeg
         (art. 6 lid 1 sub b en art. 49 lid 1 sub b AVG). Zet er dus niets in wat je niet met anderen wilt delen.
       </>
     ),
     agentKept:
-      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst; beide hebben ook een vaste grootte. De berichten ervoor, die de bouwpagina meestuurt, worden niet opgeschreven. De bouwpagina bewaart de editorlinks van je apps en het gesprek over elke app in de eigen opslag van je browser en nergens anders: wij bewaren geen kopie, en wie dezelfde browser gebruikt kan ze openen. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
+      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst, waarin ook de namen staan van de websites waarvan de agent pagina’s las; beide hebben ook een vaste grootte. De berichten ervoor, die de bouwpagina meestuurt, worden niet opgeschreven. De bouwpagina bewaart de editorlinks van je apps en het gesprek over elke app in de eigen opslag van je browser en nergens anders: wij bewaren geen kopie, en wie dezelfde browser gebruikt kan ze openen. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
 
     lambdasTitle: 'Wat een lambda doet, bepaalt de eigenaar',
     lambdas:

@@ -41,14 +41,16 @@ export const privacy: Messages['privacy'] = {
         anlasın diye, bundan önceki son birkaç mesaj ve ajanın verdiği yanıt da birlikte gönderilir. Yanıt vermek ya da bir
         değişiklik yapmak için ajan lambdayı da okur: kodunu, sürümlerinin notlarını, logunu (log, lambdanın aldığı
         istekleri ve yazdırdıklarını içerir, ama ziyaretçilerinin IP adreslerini içermez) ve onlar hakkında soru
-        sorduğunuzda kayıtlarını ve ziyaretçi sayılarını. Ajanın okudukları da oraya gönderilir. Anthropic’in bunlarla ne
+        sorduğunuzda kayıtlarını ve ziyaretçi sayılarını. Ajanın okudukları da oraya gönderilir. Bir web sitesi
+        belirttiğinizde ajan o sitenin sayfalarını da okur; bunu bu sunucudan yapar, dolayısıyla site sizin adresinizi değil
+        bizim adresimizi görür. Okunan sayfalar da aynı şekilde oraya gönderilir. Anthropic’in bunlarla ne
         yaptığı, şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD, kişisel verileri AB’nin koruduğu gibi
         korumaz. İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak ya da değiştirmek için bu gereklidir
         (GDPR md. 6/1-b ve md. 49/1-b). Bu yüzden paylaşmak istemeyeceğiniz hiçbir şeyi oraya yazmayın.
       </>
     ),
     agentKept:
-      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin tamamı sunucunun loguna, ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır. Bu logların da boyutu sabittir. Oluşturma sayfasının birlikte gönderdiği önceki mesajlar yazılmaz. Oluşturma sayfası, uygulamalarınızın editör linklerini ve her biri hakkındaki sohbeti yalnızca tarayıcınızın kendi depolama alanında tutar, başka hiçbir yerde tutmaz: bir kopyasını saklamayız ve aynı tarayıcıyı kullanan herkes bunları açabilir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
+      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin tamamı sunucunun loguna, ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır; bu log ayrıca ajanın sayfalarını okuduğu web sitelerinin adlarını da not eder. Bu logların da boyutu sabittir. Oluşturma sayfasının birlikte gönderdiği önceki mesajlar yazılmaz. Oluşturma sayfası, uygulamalarınızın editör linklerini ve her biri hakkındaki sohbeti yalnızca tarayıcınızın kendi depolama alanında tutar, başka hiçbir yerde tutmaz: bir kopyasını saklamayız ve aynı tarayıcıyı kullanan herkes bunları açabilir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
 
     lambdasTitle: 'Bir lambdanın ne yaptığına sahibi karar verir',
     lambdas:

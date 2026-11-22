@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'Menghapus file',
     files: 'Melihat yang sudah disimpannya',
     services: 'Meminta izin untuk menggunakan layanan lain',
+    site: (site) => `Melihat ${site}`,
   },
   further: 'Link editor Anda',
   keep:

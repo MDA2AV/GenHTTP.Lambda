@@ -60,6 +60,10 @@ RUN mkdir -p /home/builder/.claude /home/builder/run /home/builder/jobs \
 
 COPY --chown=builder:builder builder.mjs /app/builder.mjs
 COPY --chown=builder:builder proxy.mjs /app/proxy.mjs
+# the page fetch the proxy serves, and the rule of which sites a build may
+# read, which the runner and the fetch both take from sites.mjs
+COPY --chown=builder:builder fetch.mjs /app/fetch.mjs
+COPY --chown=builder:builder sites.mjs /app/sites.mjs
 # what a build is told about the room it is in; the runner writes it into each
 # container's working directory so the CLI picks it up as project context
 COPY --chown=builder:builder AGENTS.md /app/AGENTS.md

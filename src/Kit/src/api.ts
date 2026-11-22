@@ -462,13 +462,17 @@ export interface AgentStep {
    * base, merge making it a version, discard deleting it; data is switching a
    * kind of data on, records reading the database, secrets listing them;
    * connectivity asking for the lambda to connect to other servers;
-   * analytics reading who visits, or switching that on; source publishing the code.
+   * analytics reading who visits, or switching that on; source publishing the
+   * code; web reading a page of a site the request names.
    */
   kind:
     | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
-    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'analytics' | 'source' | 'other';
+    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'analytics' | 'source'
+    | 'web' | 'other';
   /** The kind of data switched on, for "data": database, secrets or workspace. */
   data?: string | null;
+  /** The site a page was read of, for "web": its host name only. */
+  site?: string | null;
   /** What the agent said, for "say". */
   text?: string | null;
   /** The tool, for "other". */
@@ -1450,6 +1454,8 @@ export interface AgentRunner {
   cli?: string | null;
   running: number;
   queued: number;
+  /** Whether a build may read the pages of the sites its request names; absent from a runner that does not say. */
+  readsPages?: boolean | null;
 }
 
 /** What the operator decided about the build agent, and how its runner is. */

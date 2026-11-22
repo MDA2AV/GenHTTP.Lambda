@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'Suppression d’un fichier',
     files: 'Coup d’œil à ce qu’il a enregistré',
     services: 'Demande d’utilisation d’autres services',
+    site: (site) => `Consultation de ${site}`,
   },
   further: 'Votre lien d’édition',
   keep:

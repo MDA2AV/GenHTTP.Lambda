@@ -90,6 +90,8 @@ function shared(step: AgentStep, words: Words): string | null {
       return words.removeFile;
     case 'list':
       return words.files;
+    case 'web':
+      return step.site ? words.site(step.site) : null;
     default:
       return null;
   }

@@ -42,7 +42,9 @@ export const privacy: Messages['privacy'] = {
         les quelques messages précédents et les réponses de l’agent, afin qu’il comprenne ce que vous voulez dire. Pour
         répondre ou faire une modification, l’agent lit aussi la lambda (son code, les notes de ses versions, son
         journal, qui contient ses requêtes et ce qu’elle a affiché, mais pas les adresses IP de ses visiteurs, et, si
-        vous les demandez, ses entrées et le nombre de ses visiteurs), et ce qu’il lit y est lui aussi envoyé. Ce
+        vous les demandez, ses entrées et le nombre de ses visiteurs), et ce qu’il lit y est lui aussi envoyé. Si vous
+        nommez un site web, l’agent lit aussi des pages de ce site, depuis ce serveur – le site voit donc notre adresse,
+        pas la vôtre – et elles y sont envoyées de la même manière. Ce
         qu’Anthropic en fait relève de {policy('sa propre politique de confidentialité')}. Les États-Unis ne protègent
         pas les données personnelles comme l’UE. Votre demande y est envoyée parce qu’elle est nécessaire pour créer ou
         modifier ce que vous voulez (art. 6.1.b et art. 49.1.b du RGPD) : n’y mettez donc rien que vous ne
@@ -50,7 +52,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit. La demande elle-même est écrite en entier dans le journal du serveur, et ses premières centaines de caractères dans celui du service de création ; tous deux ont eux aussi une taille fixe. Les messages précédents, que la page de création envoie avec elle, ne sont pas enregistrés. La page de création conserve les liens d’édition de vos apps et la conversation de chacune dans le stockage propre à votre navigateur, et nulle part ailleurs : nous n’en gardons aucune copie, et quiconque utilise le même navigateur peut les ouvrir. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
+      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit. La demande elle-même est écrite en entier dans le journal du serveur, et ses premières centaines de caractères dans celui du service de création, qui note aussi les noms des sites web dont l’agent a lu des pages ; tous deux ont eux aussi une taille fixe. Les messages précédents, que la page de création envoie avec elle, ne sont pas enregistrés. La page de création conserve les liens d’édition de vos apps et la conversation de chacune dans le stockage propre à votre navigateur, et nulle part ailleurs : nous n’en gardons aucune copie, et quiconque utilise le même navigateur peut les ouvrir. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
 
     lambdasTitle: 'Ce que fait une lambda dépend de son propriétaire',
     lambdas:

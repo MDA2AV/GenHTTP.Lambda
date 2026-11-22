@@ -3299,7 +3299,8 @@ passes the key as `LAMBDA_AGENT_API_KEY` for the same reason, so a shell's own
 The section shows what the runner says of itself, from its health, asked with
 three seconds to answer: where it listens, whether it answers, what its
 builds sign in with - the kind, never the credential - the identifier each
-model runs as, the version of Claude Code its builds run and its queue.
+model runs as, the version of Claude Code its builds run, whether its builds
+read web pages (`readsPages`, below) and its queue.
 
 Offer only what the credential runs. A job on a model it cannot run - one a
 subscription does not include, or one a key has no access to - ends as the
@@ -3336,6 +3337,58 @@ kept, with the model and effort of its job and when it expires: a day after it
 was issued, since a job without a clock runs for hours, not days. A save
 carrying something that is not a ticket costs no lookup; an expired one marks
 nothing, and the expired ones are removed hourly (`AgentTicketJob`).
+
+**Reading web pages.** A build reaches nothing outside the machine but
+Anthropic, through the egress proxy beside the runner, which tunnels to the
+hosts it is given (`PROXY_ALLOW`) and no others. Where somebody names a site -
+*"look at myoldhomepage.com and make a new version of it"* - the build may
+also read its pages, through the page fetch the same proxy serves
+(`docker/agent/fetch.mjs`, port 3129, `/mcp`):
+
+- **Only the sites the person named.** The runner finds them in the request
+  and, from the workspace, in the earlier messages of the conversation -
+  never in what the agent answered (`docker/agent/sites.mjs`): a name with
+  `https://` or `www.` in front, or ending in a country's two letters or a
+  common top-level domain; at most ten; `index.html` and `Node.js` are
+  files, not sites. A job that names one gets a second MCP server - the
+  fetch, with the sites in the header `X-Fetch-Sites` of the configuration
+  the runner writes, which no tool of the build changes - its one tool
+  (`fetch`), and a paragraph of the brief that names the sites. A job that
+  names none gets neither.
+- **GET and HEAD, made by the proxy.** A tunnel carries TLS the proxy cannot
+  read, so it could not be held to a method: the fetch makes the request
+  itself. It reads `http` and `https` on the standard ports, at a host that
+  is one of the sites, with or without `www.` - not a name below it, since
+  whoever writes `github.io` has not named every site there. Every address the
+  name resolves to must be public - not loopback, a private or carrier
+  network, link-local (the cloud's metadata), the containers' networks or a
+  multicast range - and the connection goes to the address checked, so a
+  name cannot point elsewhere between the check and the request. Redirects
+  are followed while they stay within the sites, five at most; one that
+  leaves them is reported, not followed. Twenty seconds and 4 MB
+  (decompressed) a page, eight at a time across every build.
+- **What comes back** is text: HTML as readable text, its links and pictures
+  in Markdown and what its head says above it (title, description, language,
+  preview, stylesheets); `raw` for the markup or a stylesheet as sent; other
+  text as it is; anything else described by its type and size. 40,000
+  characters an answer, `start` reads on. Nothing a script puts on a page is
+  there, and no picture can be copied into a lambda.
+- **A page is data.** The brief and the agent's instructions say so, and to
+  put nothing into an address that did not come from the request or a page -
+  but what holds is the rule of the sites: a page that tells the agent to
+  send the editor key of a change somewhere can only have it sent to a site
+  the person named. The runner reads nothing of a page as a fact of the run;
+  the step says which site was read (`web`, `site`: the host without `www.`, never the rest
+  of the address), and `/build` and the Change section show it.
+- **Switched off** with `LAMBDA_AGENT_FETCH=false` in the `.env` of either
+  compose file, which reaches both halves: the runner (`AGENT_FETCH`; where
+  the fetch is, `AGENT_FETCH_URL`, `http://egress-proxy:3129/mcp` by default)
+  and the proxy (`PROXY_FETCH`, `PROXY_FETCH_PORT`). Both are on where
+  nothing says otherwise. The proxy logs the host of each page read or
+  refused (`fetched GET example.com`), nothing of the address after it.
+
+The rules are checked without the internet by `docker/agent/fetch.test.mjs`
+(`node --test 'docker/agent/*.test.mjs'`, in CI).
 
 ### Who it is for
 

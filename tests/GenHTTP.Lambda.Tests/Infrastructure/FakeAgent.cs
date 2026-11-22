@@ -49,6 +49,9 @@ public sealed class FakeAgent : IAsyncDisposable
     /// <summary>What its health says the builds sign in with, as the runner says it.</summary>
     public string? SignsInWith { get; set; } = "subscription";
 
+    /// <summary>Whether its health says a build may read the pages of the sites its request names.</summary>
+    public bool ReadsPages { get; set; } = true;
+
     public static FakeAgent Start()
     {
         // a port nobody has, found by asking for any
@@ -204,6 +207,7 @@ public sealed class FakeAgent : IAsyncDisposable
                     ["fable"] = "claude-fable-5-2"
                 },
                 ["efforts"] = new JsonArray("low", "medium", "high", "xhigh", "max"),
+                ["fetch"] = ReadsPages,
                 ["cli"] = "2.1.329",
                 ["quick"] = new JsonObject { ["running"] = !_jobs.IsEmpty, ["queued"] = 0 },
                 ["long"] = new JsonObject { ["running"] = false, ["queued"] = 0 }

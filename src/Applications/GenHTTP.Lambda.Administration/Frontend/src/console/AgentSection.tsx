@@ -272,6 +272,12 @@ function Runner({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
 
         {runner?.reachable && runner.cli && <Fact label="Claude Code">{runner.cli}</Fact>}
 
+        {runner?.reachable && runner.readsPages != null && (
+          <Fact label="Web pages">
+            {runner.readsPages ? 'The sites a request names - LAMBDA_AGENT_FETCH' : 'None - LAMBDA_AGENT_FETCH is false'}
+          </Fact>
+        )}
+
         {runner?.reachable && (
           <Fact label="Jobs">
             {plural(runner.running, 'running', 'running')} · {plural(runner.queued, 'waiting', 'waiting')}

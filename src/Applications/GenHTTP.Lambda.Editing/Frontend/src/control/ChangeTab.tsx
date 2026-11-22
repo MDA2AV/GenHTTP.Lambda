@@ -845,6 +845,8 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.analytics}</>;
     case 'source':
       return <>{words.source}</>;
+    case 'web':
+      return <>{words.web(<strong className="font-medium">{step.site ?? ''}</strong>)}</>;
     default:
       return <>{words.other(step.tool ?? '')}</>;
   }

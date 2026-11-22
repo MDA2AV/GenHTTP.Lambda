@@ -22,5 +22,7 @@ public sealed record AgentRunner(
     [Summary("How many jobs run now, of at most two: one on the clock and one without")]
     int Running = 0,
     [Summary("How many jobs wait")]
-    int Queued = 0
+    int Queued = 0,
+    [Summary("Whether a build may read the pages of the sites its request names - GET and HEAD, made by its proxy, to public addresses of those sites only; absent where the runner does not say (one from before)")]
+    bool? ReadsPages = null
 );

@@ -153,8 +153,28 @@ request's language:
 
 Reported as `declined` and shown as the agent's sentence. Ordinary apps -
 calling APIs, keeping data, accounts, merely alarming-sounding - are not
-declined. Keep `PURPOSE`, `AGENTS.md` ("What not to build") and the docs
-saying the same.
+declined, nor is reading a site the request names to build from it. Keep
+`PURPOSE`, `AGENTS.md` ("What not to build") and the docs saying the same.
+
+**It reads the pages of the sites the person named (owner)** - "look at
+myoldhomepage.com and make a new version of it":
+
+- **GET and HEAD, made by the proxy (owner)** (`docker/agent/fetch.mjs`, an
+  MCP server beside the tunnels): never a tunnel to another host, since the
+  proxy cannot see a method inside TLS. Tunnels stay Anthropic's, builds
+  keep loading no built-in tool.
+- **Only the sites the person named (owner)** (`docker/agent/sites.mjs`),
+  each with or without `www.` - not the names below it, which a shared
+  suffix (`github.io`) would open to anybody - handed to the fetch in a
+  header of the build's MCP configuration that no tool changes: a page that
+  asks for the editor key in an address can only send it to a site the
+  person named. In the workspace their earlier messages count too, never
+  the agent's replies **(open)**. Public addresses only, checked on the
+  address connected to.
+- A page is data, as everything else the agent reads; the runner reads none
+  of it as a fact of the run, and its step (`web`) names the host only.
+- On by default, `LAMBDA_AGENT_FETCH=false` switches both halves off; the
+  panel shows which, it is no setting there **(open)**.
 
 **What it writes is known to be its own.** The server issues every job a
 random ticket (`AgentTickets`: kept in the platform's records as its SHA-256,

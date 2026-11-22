@@ -38,6 +38,7 @@ export const buildBox: KitMessages['buildBox'] = {
     removeFile: 'Een bestand verwijderen',
     files: 'Bekijken wat er is opgeslagen',
     services: 'Vraagt om andere diensten te mogen gebruiken',
+    site: (site) => `Kijkt naar ${site}`,
   },
   further: 'Je editorlink',
   keep:
