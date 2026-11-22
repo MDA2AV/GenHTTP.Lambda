@@ -33,11 +33,12 @@ test('no more than ten sites are taken from a message', () => {
   assert.equal(sitesIn([many]).length, 10);
 });
 
-test('a host belongs to a site with or without www and below it, and nowhere else', () => {
+test('a host belongs to a site with or without www, and nowhere else', () => {
   assert.ok(belongs('www.example.com', ['example.com']));
   assert.ok(belongs('example.com', ['www.example.com']));
-  assert.ok(belongs('blog.example.com', ['www.example.com']));
   assert.ok(belongs('EXAMPLE.com.', ['example.com']));
+  assert.ok(!belongs('blog.example.com', ['example.com']), 'a name below it is somebody else\'s as often as not');
+  assert.ok(!belongs('evil.github.io', ['github.io']));
   assert.ok(!belongs('evilexample.com', ['example.com']));
   assert.ok(!belongs('example.com.evil.net', ['example.com']));
   assert.ok(belongs('93.184.216.34', ['93.184.216.34']));

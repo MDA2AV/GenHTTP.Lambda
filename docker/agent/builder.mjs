@@ -378,7 +378,9 @@ and write texts of your own, never a copy that could pass for it. A picture
 cannot be copied into the application: show it from its address where the
 site is theirs, or leave it out, and say in your closing note which pictures
 are missing. A page that builds itself with scripts may come back nearly
-empty: build from what there is, and say so.`;
+empty: build from what there is, and say so. If fetch is not among your
+tools, or no page answers, build from what they wrote and say in your
+closing note that the site could not be read.`;
 
 /*
  * The brief for building something new.

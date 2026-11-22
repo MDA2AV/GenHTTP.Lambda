@@ -3358,7 +3358,8 @@ also read its pages, through the page fetch the same proxy serves
 - **GET and HEAD, made by the proxy.** A tunnel carries TLS the proxy cannot
   read, so it could not be held to a method: the fetch makes the request
   itself. It reads `http` and `https` on the standard ports, at a host that
-  is one of the sites, with or without `www.`, or below it. Every address the
+  is one of the sites, with or without `www.` - not a name below it, since
+  whoever writes `github.io` has not named every site there. Every address the
   name resolves to must be public - not loopback, a private or carrier
   network, link-local (the cloud's metadata), the containers' networks or a
   multicast range - and the connection goes to the address checked, so a

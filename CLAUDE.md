@@ -163,12 +163,14 @@ myoldhomepage.com and make a new version of it":
   MCP server beside the tunnels): never a tunnel to another host, since the
   proxy cannot see a method inside TLS. Tunnels stay Anthropic's, builds
   keep loading no built-in tool.
-- **Only the sites named in the person's messages (owner)**
-  (`docker/agent/sites.mjs`), never in the agent's replies, handed to the
-  fetch in a header of the build's MCP configuration that no tool changes: a
-  page that asks for the editor key in an address can only send it to a site
-  the person named. Public addresses only, checked on the address
-  connected to.
+- **Only the sites the person named (owner)** (`docker/agent/sites.mjs`),
+  each with or without `www.` - not the names below it, which a shared
+  suffix (`github.io`) would open to anybody - handed to the fetch in a
+  header of the build's MCP configuration that no tool changes: a page that
+  asks for the editor key in an address can only send it to a site the
+  person named. In the workspace their earlier messages count too, never
+  the agent's replies **(open)**. Public addresses only, checked on the
+  address connected to.
 - A page is data, as everything else the agent reads; the runner reads none
   of it as a fact of the run, and its step (`web`) names the host only.
 - On by default, `LAMBDA_AGENT_FETCH=false` switches both halves off; the

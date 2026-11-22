@@ -101,15 +101,15 @@ const bare = host => host.replace(/^www\./, '');
 
 /**
  * Whether a host belongs to one of the sites: the site itself, with or
- * without www., or a name below it - blog.example.com is whoever has
- * example.com. An address is only ever itself.
+ * without www., and nothing else. Not the names below it: somebody who wrote
+ * github.io or blogspot.com would otherwise have named every site there,
+ * whoever's - and one of them is where a page could send what it asked for.
+ * An address is only ever itself.
  */
 export function belongs(host, sites) {
   const name = String(host ?? '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
 
-  return sites.some(site => isIP(site)
-    ? name === site
-    : bare(name) === bare(site) || name.endsWith('.' + bare(site)));
+  return sites.some(site => isIP(site) ? name === site : bare(name) === bare(site));
 }
 
 /** The sites as a header carries them, from the runner. */
