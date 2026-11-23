@@ -277,6 +277,51 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # The nightly backup to Nextcloud, started by backup.sh beside this file and
+  # never by "up": the profile keeps it out of everything else compose does.
+  #
+  # It reads the server's volume while the server runs. Mounted writable
+  # nonetheless, because SQLite takes its locks on a database in write-ahead
+  # logging through the -shm file beside it - read-only, the snapshot could
+  # not tell where the server's writer is. run.sh writes nothing there.
+  backup:
+    profiles: ["backup"]
+    build:
+      context: ./backup
+    image: genhttp-backup:latest
+    environment:
+      # The repository: restic, encrypted with RESTIC_PASSWORD, kept by rclone
+      # on the Nextcloud's WebDAV. NEXTCLOUD_PASS is an app password of that
+      # account, run through "rclone obscure" - see backup.sh --help.
+      RESTIC_REPOSITORY: rclone:nextcloud:${BACKUP_FOLDER:-genhttp-dev-backup}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      RCLONE_CONFIG_NEXTCLOUD_TYPE: webdav
+      RCLONE_CONFIG_NEXTCLOUD_VENDOR: nextcloud
+      RCLONE_CONFIG_NEXTCLOUD_URL: ${NEXTCLOUD_URL:-}
+      RCLONE_CONFIG_NEXTCLOUD_USER: ${NEXTCLOUD_USER:-}
+      RCLONE_CONFIG_NEXTCLOUD_PASS: ${NEXTCLOUD_PASS:-}
+      BACKUP_HOST: genhttp.dev
+      BACKUP_KEEP: ${BACKUP_KEEP:---keep-daily 7 --keep-weekly 4 --keep-monthly 3}
+    volumes:
+      - lambda-data:/data
+      # restic's index of what the repository holds, so a night does not
+      # begin by reading it back over WebDAV
+      - backup-cache:/cache
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    # Not the server's machine: run only while the night is quiet, and below
+    # the server whenever both want the disk or a core.
+    cpu_shares: 256
+    blkio_config:
+      weight: 100
+    # what a night said, read with journalctl -u genhttp-backup as well
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
 networks:
 
   # The bridge the server is published on, given IPv6 of its own.
@@ -308,3 +353,4 @@ networks:
 
 volumes:
   lambda-data:
+  backup-cache:

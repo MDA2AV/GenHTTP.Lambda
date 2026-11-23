@@ -1,0 +1,15 @@
+# Nightly, in the quiet hours. The panel's Performance section says when the
+# installation is quiet (UTC); the databases are optimized in the same hours,
+# from 03:00 server time while they are unknown, and the two do not mind each
+# other - this only reads. Persistent, so a night the machine was down is
+# made up as it comes back.
+[Unit]
+Description=Back up genhttp.dev to Nextcloud nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
