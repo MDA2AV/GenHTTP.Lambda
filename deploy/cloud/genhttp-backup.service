@@ -1,0 +1,19 @@
+# The nightly backup of genhttp.dev, started by genhttp-backup.timer.
+#
+#   sudo ln -s /path/to/checkout/deploy/cloud/backup.sh /usr/local/bin/genhttp-backup
+#   sudo cp deploy/cloud/genhttp-backup.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now genhttp-backup.timer
+#
+# A night that failed leaves the unit failed: systemctl --failed, and
+# journalctl -u genhttp-backup says why.
+[Unit]
+Description=Back up genhttp.dev to Nextcloud
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/genhttp-backup
+# a night with a slow Nextcloud ends rather than meeting the next one
+TimeoutStartSec=5h

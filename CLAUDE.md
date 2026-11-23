@@ -409,7 +409,11 @@ needs is given to its builder, not read from the environment.
   user stays uid and gid 1001 (the volumes and certificates of installations
   from before), `/app` belongs to root. The
   cloud's operations are in `deploy/cloud`, so the root holds nothing only
-  genhttp.dev needs. `.github/workflows/release.yml` publishes `genhttp/lambda`
+  genhttp.dev needs. **Backed up nightly to a Nextcloud with restic (open)**
+  (`deploy/cloud/backup.sh`), encrypted before it leaves, while the server
+  runs: databases by SQLite's online backup, never copied as files and never
+  by stopping the server; `secrets.key` and the repository's password kept
+  apart from both. `.github/workflows/release.yml` publishes `genhttp/lambda`
   and `genhttp/lambda-agent` (amd64, arm64) on a `v*` tag or by hand only.
 - Shipped as project references for now; meant to become NuGet packages, so a
   component takes nothing from a host.

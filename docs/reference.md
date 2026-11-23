@@ -2240,6 +2240,56 @@ container with the flags and lists of a build, prints the tools it loaded -
 read from the first line it writes, before it asks the model anything - and
 fails on any that is not one of the platform's MCP tools.
 
+### Backups
+
+genhttp.dev is backed up nightly to a Nextcloud, over WebDAV, while it runs:
+`deploy/cloud/backup.sh` starts the compose service `backup` (its own profile,
+so `up` and `deploy.sh` never start it), and `genhttp-backup.timer` beside it
+runs that at 02:30 UTC. The repository is restic's, kept by rclone on the
+Nextcloud: encrypted before anything leaves the machine, and content is stored
+once however many snapshots hold it - versions never change, so a night sends
+little more than what changed that day.
+
+```bash
+sudo ln -sf "$PWD/deploy/cloud/backup.sh" /usr/local/bin/genhttp-backup
+sudo genhttp-backup --setup              # the account (an app password) and the repository, once
+sudo genhttp-backup --keys               # what to keep apart from the server
+sudo genhttp-backup                      # a snapshot now; the timer runs this
+sudo genhttp-backup --list               # the snapshots kept
+sudo genhttp-backup --check [5%]         # read a part of the repository back
+sudo genhttp-backup --restore [id]       # into a new volume; the server is not touched
+```
+
+The server is not stopped. The databases - `lambda.db`, `analytics.db`, each
+lambda's and each draft's copy, named by their paths rather than by `*.db`,
+since a lambda may keep a file of that name in its workspace - are taken with
+SQLite's online backup on a read-only connection: one read transaction each,
+which in write-ahead logging the server's writer does not wait for, includes
+what is still in the log, and never checkpoints it. Each copy passes
+`quick_check`; a draft's copy that cannot be read (the draft was deleted
+meanwhile) is skipped with a line, any other fails the night. The databases
+are taken before the files, so every version the records name is among the
+files. A workspace file written at the moment it is read may be caught half
+written; nothing else changes once written.
+
+What the server makes again is left out (`assemblies`, `resources`,
+`sources`, `staging`, `geo`, `crawlers`), and so are `dumps` - a crashed
+process's memory, keys and addresses included - and `secrets.key`. Kept are
+the code and its content store, the git store, workspaces, drafts, branding
+and the showcase. Kept are 7 daily, 4 weekly and 3 monthly snapshots
+(`BACKUP_KEEP` in `.env`); pruning and a check of 5% of the repository run on
+Sundays.
+
+Two keys are kept apart from the server and the Nextcloud: the repository's
+password (`RESTIC_PASSWORD`), without which nothing in it can be read, and the
+installation's `secrets.key` (see [Secrets](#secrets)). `--keys` prints both.
+
+A restore goes into a new volume and checks every database it restored; the
+script then says how to put it online - `secrets.key` back, the server
+stopped, its volume kept aside and replaced. A night that failed leaves
+`genhttp-backup.service` failed (`systemctl --failed`, `journalctl -u
+genhttp-backup`).
+
 ## Telemetry
 
 The panel's **Server** section shows what the process is doing, and
