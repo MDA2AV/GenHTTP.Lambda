@@ -43,7 +43,11 @@ remember() {
   chmod 600 "$HERE/.env"
 }
 
-run() { "${COMPOSE[@]}" run --rm --build backup "$@"; }
+# Built apart and quietly, not with run --build: that writes the build's
+# progress to stdout whenever there is no terminal, into whatever reads it.
+build() { "${COMPOSE[@]}" build --quiet backup; }
+
+run() { build && "${COMPOSE[@]}" run --rm backup "$@"; }
 
 configured() {
   for name in NEXTCLOUD_URL NEXTCLOUD_USER NEXTCLOUD_PASS RESTIC_PASSWORD; do
@@ -67,8 +71,13 @@ EOF
   [ -n "$base" ] && [ -n "$user" ] && [ -n "$pass" ] || { echo "  Nothing written." >&2; exit 1; }
 
   # rclone takes the password obscured, not in plain - which is no
-  # encryption, only keeps it from being read over a shoulder in .env.
-  obscured=$("${COMPOSE[@]}" run --rm --build -T --entrypoint rclone backup obscure - <<<"$pass")
+  # encryption, only keeps it from being read over a shoulder in .env. Asked
+  # of the image directly, since compose adds lines of its own to stdout.
+  build
+  obscured=$(docker run --rm -i --entrypoint rclone genhttp-backup:latest obscure - <<<"$pass")
+
+  # what rclone prints is base64 for addresses; anything else is not it
+  [[ "$obscured" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "  Could not obscure the password; nothing written." >&2; exit 1; }
 
   remember NEXTCLOUD_URL "${base%/}/remote.php/dav/files/$user"
   remember NEXTCLOUD_USER "$user"
@@ -82,7 +91,17 @@ EOF
   fi
 
   say "Making the repository"
-  run init
+  if ! run init; then
+    cat >&2 <<EOF
+
+  The repository was not made; what is in .env stays, so --setup can simply be
+  run again. If the Nextcloud answered 401 or 404: the address takes the
+  account's user id, which need not be the name signed in with - the Nextcloud
+  shows the exact WebDAV address in Files, Files settings (bottom left).
+  Written now: $(setting NEXTCLOUD_URL)
+EOF
+    exit 1
+  fi
 
   say "Done. Now keep the two keys apart from this machine:"
   printf '  sudo %s --keys\n' "$(basename "$0")"
@@ -107,7 +126,8 @@ restore() {
 
   docker volume create "$target" > /dev/null
   say "Restoring ${1:-latest} into the volume $target"
-  "${COMPOSE[@]}" run --rm --build -v "$target:/restore" backup restore "${1:-latest}"
+  build
+  "${COMPOSE[@]}" run --rm -v "$target:/restore" backup restore "${1:-latest}"
 
   cat <<EOF
 
