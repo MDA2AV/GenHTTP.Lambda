@@ -300,6 +300,10 @@ services:
       RCLONE_CONFIG_NEXTCLOUD_URL: ${NEXTCLOUD_URL:-}
       RCLONE_CONFIG_NEXTCLOUD_USER: ${NEXTCLOUD_USER:-}
       RCLONE_CONFIG_NEXTCLOUD_PASS: ${NEXTCLOUD_PASS:-}
+      # Alpine's rclone sends "User-Agent: rclone/", a product without its
+      # version, which is not a valid value - and a server that checks it
+      # refuses every request
+      RCLONE_USER_AGENT: genhttp-lambda-backup/1.0
       BACKUP_HOST: genhttp.dev
       BACKUP_KEEP: ${BACKUP_KEEP:---keep-daily 7 --keep-weekly 4 --keep-monthly 3}
     volumes:
