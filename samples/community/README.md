@@ -44,6 +44,11 @@ at public addresses, that site only. `LAMBDA_AGENT_FETCH=false` in `.env`
 switches that off. Which models and efforts people may choose is set in the
 panel, under **Build agent**.
 
+One build runs at a time and the others wait; `LAMBDA_AGENT_CONCURRENCY` in
+`.env` lets more run at once, each taking up to 2 GB and one and a half cores
+while it runs. Several installations on one machine can share one build agent:
+[samples/shared-agent](../shared-agent/README.md) has two.
+
 ## With PostgreSQL
 
 The databases - the platform's records, its analytics and every app's - in a

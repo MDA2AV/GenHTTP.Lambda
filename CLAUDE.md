@@ -216,6 +216,20 @@ agent builds and changes apps at all.
 - `AgentCatalog` labels name the default versions; the identifiers are the
   runner's (`AGENT_MODEL`, `AGENT_SONNET_MODEL`, `AGENT_HAIKU_MODEL`,
   `AGENT_FABLE_MODEL`).
+- **One runner may build for several installations on a machine (owner)**
+  (`AGENT_HOSTS`, `docker/agent/hosts.mjs`), each known by a token of its
+  own, which says which installation asks: its MCP and origin are the
+  runner's configuration, never the request's, so a build is always made at
+  the installation that asked. Jobs and changes are filed per installation;
+  one is answered, waits for and stops only its own, and the health counts
+  only its own. Without `AGENT_HOSTS` the runner is the single
+  installation's, as before - keep both working. `samples/shared-agent` and
+  the reference say what any layout needs.
+- **Builds run `AGENT_CONCURRENCY` at once** (1 by default), a free place
+  going to the installation with the fewest running (`docker/agent/lanes.mjs`);
+  unbounded jobs one per installation. A new file of the runner is copied in
+  its Dockerfile by name, and a rule of it is tested without docker
+  (`docker/agent/*.test.mjs`).
 - Builds load no built-in tool (`--tools ""` plus the denylist).
   `verify-tools.sh` checks what a build loaded from the CLI's first line; run
   it after every change of the CLI's version.

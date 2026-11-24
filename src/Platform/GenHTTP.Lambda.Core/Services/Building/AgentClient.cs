@@ -239,13 +239,16 @@ public sealed class AgentClient : IDisposable
 
     /// <summary>
     /// What the runner says of itself: what its builds sign in with, which
-    /// identifier each model runs as, and its queue.
+    /// identifier each model runs as, this installation's jobs, how many run
+    /// at once and whether other installations share it.
     /// </summary>
     /// <remarks>
     /// Only the panel asks, so a runner that does not answer within a few
     /// seconds is said to be unreachable rather than held against the page.
     /// A runner from before the models were chosen in the panel answers with
-    /// a list of names rather than a map, and without what it signs in with.
+    /// a list of names rather than a map, and without what it signs in with;
+    /// one from before several builds ran at once says a job runs as a flag
+    /// rather than a count, and nothing of how many run or who shares it.
     /// </remarks>
     public async ValueTask<AgentRunner> HealthAsync(CancellationToken cancellation = default)
     {
@@ -274,6 +277,9 @@ public sealed class AgentClient : IDisposable
                 ? list.OfType<JsonValue>().Select(e => e.ToString()).ToList()
                 : null;
 
+            static int? Number(JsonNode? node)
+                => node is JsonValue value && value.TryGetValue<int>(out var number) && number > 0 ? number : null;
+
             static int Count(JsonNode? lane, string field)
                 => lane?[field] is JsonValue value && value.TryGetValue<int>(out var number) ? number
                  : lane?[field] is JsonValue flag && flag.TryGetValue<bool>(out var on) && on ? 1 : 0;
@@ -286,7 +292,9 @@ public sealed class AgentClient : IDisposable
                 body?["cli"] is JsonValue cli && cli.TryGetValue<string>(out var version) ? version : null,
                 Count(body?["quick"], "running") + Count(body?["long"], "running"),
                 Count(body?["quick"], "queued") + Count(body?["long"], "queued"),
-                body?["fetch"] is JsonValue fetch && fetch.TryGetValue<bool>(out var reads) ? reads : null
+                body?["fetch"] is JsonValue fetch && fetch.TryGetValue<bool>(out var reads) ? reads : null,
+                Number(body?["concurrency"]),
+                Number(body?["installations"])
             );
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellation.IsCancellationRequested)

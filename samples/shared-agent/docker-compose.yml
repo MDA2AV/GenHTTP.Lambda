@@ -1,0 +1,147 @@
+# Two installations of the community edition on one machine, sharing one
+# build agent: team-a on http://localhost:8080, team-b on http://localhost:8081,
+# each with its own data, panel and apps. See README.md.
+#
+#   cp .env.example .env     # and fill it in
+#   docker compose up -d
+#
+# What makes the sharing work, and has to hold in any other layout:
+#
+#   - every installation has a token of its own (LAMBDA_AGENT_TOKEN), and the
+#     runner knows each by it (AGENT_HOSTS): its MCP address and its public
+#     origin are the runner's configuration, so a build always goes back to
+#     the installation that asked for it;
+#   - every installation is on the build network under the name its MCP
+#     address uses, and lists that name in LAMBDA_MCP_ORIGINS, so it answers
+#     the builds at it once it has a public address;
+#   - the runner is on the agent network with every installation.
+
+name: genhttp-lambda-shared
+
+# One installation, as the community edition runs it; each service below adds
+# its name, port, address and token.
+x-installation: &installation
+  image: ${LAMBDA_IMAGE:-genhttp/lambda:latest}
+  networks:
+    - default
+    - agent-net
+    - build-net
+  restart: unless-stopped
+
+services:
+
+  team-a:
+    <<: *installation
+    ports:
+      - "8080:8080"
+    environment:
+      LAMBDA_PUBLIC_URL: ${TEAM_A_PUBLIC_URL:-http://localhost:8080}
+      LAMBDA_ADMIN_TOKEN: ${TEAM_A_ADMIN_TOKEN:-secure-password}
+      # the name the builds reach it at on the build network
+      LAMBDA_MCP_ORIGINS: team-a
+      LAMBDA_AGENT_URL: http://agent:8401
+      LAMBDA_AGENT_TOKEN: ${TEAM_A_AGENT_TOKEN:?set TEAM_A_AGENT_TOKEN in .env - openssl rand -hex 32}
+      LAMBDA_AGENT_PASSWORD: ${TEAM_A_AGENT_PASSWORD:-}
+      LAMBDA_USAGE_REPORTS: ${LAMBDA_USAGE_REPORTS:-true}
+    volumes:
+      - team-a-data:/data
+
+  team-b:
+    <<: *installation
+    ports:
+      - "8081:8080"
+    environment:
+      LAMBDA_PUBLIC_URL: ${TEAM_B_PUBLIC_URL:-http://localhost:8081}
+      LAMBDA_ADMIN_TOKEN: ${TEAM_B_ADMIN_TOKEN:-secure-password}
+      LAMBDA_MCP_ORIGINS: team-b
+      LAMBDA_AGENT_URL: http://agent:8401
+      LAMBDA_AGENT_TOKEN: ${TEAM_B_AGENT_TOKEN:?set TEAM_B_AGENT_TOKEN in .env - openssl rand -hex 32}
+      LAMBDA_AGENT_PASSWORD: ${TEAM_B_AGENT_PASSWORD:-}
+      LAMBDA_USAGE_REPORTS: ${LAMBDA_USAGE_REPORTS:-true}
+    volumes:
+      - team-b-data:/data
+
+  # The one runner of the build agent. It starts a container for each build,
+  # which talks to the MCP of the installation that asked and to Anthropic
+  # through the proxy below, and nothing else. It holds the docker socket for
+  # that, and runs nothing a model wrote itself.
+  agent:
+    image: ${LAMBDA_AGENT_IMAGE:-genhttp/lambda-agent:latest}
+    environment:
+      AGENT_PORT: 8401
+      AGENT_BUILD_IMAGE: ${LAMBDA_AGENT_IMAGE:-genhttp/lambda-agent:latest}
+      AGENT_BUILD_NETWORK: genhttp-shared-build-net
+      # The installations it builds for: each by its token, the address its
+      # builds reach its MCP at - its name on the build network - and the
+      # address people open it at, which the editor link of a build is made
+      # of. Tokens are long hex strings, so they go into the JSON as they are.
+      AGENT_HOSTS: >-
+        [
+          {"name": "team-a", "token": "${TEAM_A_AGENT_TOKEN}", "mcp": "http://team-a:8080/mcp", "origin": "${TEAM_A_PUBLIC_URL:-http://localhost:8080}"},
+          {"name": "team-b", "token": "${TEAM_B_AGENT_TOKEN}", "mcp": "http://team-b:8080/mcp", "origin": "${TEAM_B_PUBLIC_URL:-http://localhost:8081}"}
+        ]
+      # How many builds run at once, of both installations together. Each
+      # takes up to 2 GB and one and a half cores while it runs.
+      AGENT_CONCURRENCY: ${LAMBDA_AGENT_CONCURRENCY:-2}
+      # what the builds sign in to Anthropic with - one of the two; where both
+      # are set the token wins. Shared by every installation.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${LAMBDA_AGENT_API_KEY:-}
+      HTTPS_PROXY: http://egress-proxy:3128
+      HTTP_PROXY: http://egress-proxy:3128
+      # the installations' MCP endpoints are added by the runner itself
+      NO_PROXY: localhost,127.0.0.1
+      AGENT_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      AGENT_FETCH_URL: http://egress-proxy:3129/mcp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # the group that owns the docker socket on this machine:
+    # getent group docker | cut -d: -f3
+    group_add:
+      - "${DOCKER_GID:-999}"
+    networks:
+      - agent-net
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    restart: unless-stopped
+
+  # The only way out for a build: tunnels to Anthropic and nowhere else, and
+  # the pages of the sites a build's request names - GET and HEAD, public
+  # addresses only.
+  egress-proxy:
+    image: ${LAMBDA_AGENT_IMAGE:-genhttp/lambda-agent:latest}
+    command: ["node", "/app/proxy.mjs"]
+    environment:
+      PROXY_PORT: 3128
+      PROXY_ALLOW: api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai
+      PROXY_FETCH: ${LAMBDA_AGENT_FETCH:-true}
+      PROXY_FETCH_PORT: 3129
+    networks:
+      - build-net
+      - default
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  # the installations and the runner, nothing else. Named, so that an
+  # installation of another compose project can join it (external: true)
+  agent-net:
+    name: genhttp-shared-agent-net
+    internal: true
+  # the builds, the installations and the proxy; named, because the runner
+  # names it when it starts a build
+  build-net:
+    name: genhttp-shared-build-net
+    internal: true
+
+volumes:
+  team-a-data:
+  team-b-data:

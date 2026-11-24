@@ -883,6 +883,26 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task ThePanelSaysHowManyBuildsRunAtOnceAndWhoSharesTheRunner()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var alone = (await (await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent")).GetContentAsync<AgentSettingsResponse>()).Runner!;
+
+        Assert.IsNull(alone.Concurrency, "a runner from before says nothing of it");
+        Assert.IsNull(alone.Installations, "a runner of this installation alone says nothing of others");
+
+        agent.Concurrency = 4;
+        agent.Installations = 3;
+
+        var shared = (await (await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent")).GetContentAsync<AgentSettingsResponse>()).Runner!;
+
+        Assert.AreEqual(4, shared.Concurrency);
+        Assert.AreEqual(3, shared.Installations);
+    }
+
+    [TestMethod]
     public async Task ThePanelSaysWhenTheRunnerDoesNotAnswer()
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { AgentUrl = "http://127.0.0.1:9/", AdminToken = AdminToken });

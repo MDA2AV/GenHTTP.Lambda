@@ -58,6 +58,9 @@ services:
       AGENT_BUILD_NETWORK: genhttp-build-net
       AGENT_MCP_URL: http://lambda:8080/mcp
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_PUBLIC_URL:-http://localhost:8080}
+      # how many builds run at once, each taking up to 2 GB and one and a
+      # half cores while it runs
+      AGENT_CONCURRENCY: ${LAMBDA_AGENT_CONCURRENCY:-1}
       # what the builds sign in to Anthropic with - one of the two:
       # a token of your Claude subscription (claude setup-token), or an API
       # key of your organization's account, billed by the token. Where both

@@ -195,6 +195,9 @@ services:
       AGENT_HAIKU_MODEL: ${LAMBDA_AGENT_HAIKU_MODEL:-claude-haiku-5-5}
       AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-2}
       AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-60}
+      # how many builds and changes run at once, each a container with the
+      # caps above - so this times AGENT_BUILD_MEMORY is what they may take
+      AGENT_CONCURRENCY: ${LAMBDA_AGENT_CONCURRENCY:-1}
       AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-600}
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}
       AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
