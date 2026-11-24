@@ -52,6 +52,12 @@ public sealed class FakeAgent : IAsyncDisposable
     /// <summary>Whether its health says a build may read the pages of the sites its request names.</summary>
     public bool ReadsPages { get; set; } = true;
 
+    /// <summary>How many builds its health says run at once; nothing, as a runner from before says.</summary>
+    public int? Concurrency { get; set; }
+
+    /// <summary>How many installations its health says share it; nothing, as a runner of one says.</summary>
+    public int? Installations { get; set; }
+
     public static FakeAgent Start()
     {
         // a port nobody has, found by asking for any
@@ -210,7 +216,9 @@ public sealed class FakeAgent : IAsyncDisposable
                 ["fetch"] = ReadsPages,
                 ["cli"] = "2.1.329",
                 ["quick"] = new JsonObject { ["running"] = !_jobs.IsEmpty, ["queued"] = 0 },
-                ["long"] = new JsonObject { ["running"] = false, ["queued"] = 0 }
+                ["long"] = new JsonObject { ["running"] = false, ["queued"] = 0 },
+                ["concurrency"] = Concurrency,
+                ["installations"] = Installations
             });
 
             return;

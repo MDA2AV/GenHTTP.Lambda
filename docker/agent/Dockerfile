@@ -59,6 +59,10 @@ RUN mkdir -p /home/builder/.claude /home/builder/run /home/builder/jobs \
  && chown -R builder:builder /home/builder
 
 COPY --chown=builder:builder builder.mjs /app/builder.mjs
+# the installations the runner builds for (AGENT_HOSTS), and the order its
+# jobs run in (AGENT_CONCURRENCY)
+COPY --chown=builder:builder hosts.mjs /app/hosts.mjs
+COPY --chown=builder:builder lanes.mjs /app/lanes.mjs
 COPY --chown=builder:builder proxy.mjs /app/proxy.mjs
 # the page fetch the proxy serves, and the rule of which sites a build may
 # read, which the runner and the fetch both take from sites.mjs

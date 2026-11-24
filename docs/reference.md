@@ -2138,7 +2138,7 @@ variable (see [Branding](#branding)).
 | `LAMBDA_CONTACT`                    | -                | where to write to whoever runs the installation, which the pages offer - about moving an app to production, for one; without, they offer nobody |
 | `LAMBDA_ABUSE_CONTACT`              | -                | where a lambda that does harm is reported; without, the pages offer no way to report one |
 | `LAMBDA_AGENT_URL`                  | -                | where the build agent listens; without, nothing is built from a request and its text boxes are not offered |
-| `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask |
+| `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask - and, where installations share a runner, how it tells them apart (see [The build agent](#the-build-agent)) |
 | `LAMBDA_AGENT_PASSWORD`             | -                | the password for the models of the build agent the panel puts behind one (Fable, at first); without, those are not offered. `LAMBDA_AGENT_FABLE_PASSWORD`, its name before, is still read (see [The build agent](#the-build-agent)) |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
@@ -3350,7 +3350,10 @@ The section shows what the runner says of itself, from its health, asked with
 three seconds to answer: where it listens, whether it answers, what its
 builds sign in with - the kind, never the credential - the identifier each
 model runs as, the version of Claude Code its builds run, whether its builds
-read web pages (`readsPages`, below) and its queue.
+read web pages (`readsPages`, below), this installation's jobs running and
+waiting, how many builds run at once (`concurrency`) and, where other
+installations share the runner, how many there are (`installations`; both
+below). A runner from before says neither of the last two.
 
 Offer only what the credential runs. A job on a model it cannot run - one a
 subscription does not include, or one a key has no access to - ends as the
@@ -3439,6 +3442,69 @@ also read its pages, through the page fetch the same proxy serves
 
 The rules are checked without the internet by `docker/agent/fetch.test.mjs`
 (`node --test 'docker/agent/*.test.mjs'`, in CI).
+
+**How many run at once.** Jobs on the clock - builds and changes alike - run
+`AGENT_CONCURRENCY` at a time (1 by default; at most 64), each in a container
+of its own with its caps (`AGENT_BUILD_MEMORY`, 2 GB, `AGENT_BUILD_CPUS`,
+1.5, `AGENT_BUILD_PIDS`), so the machine decides how many it can take. Both
+compose files pass `LAMBDA_AGENT_CONCURRENCY` from `.env`. A job without a
+clock runs in a lane of its own, one at a time per installation. An
+installation may have twelve jobs waiting; the next is refused with 503. Two
+changes of the same lambda never run at once (409), however many places are
+free. A job's place in the queue (`waiting`) is an estimate: a free place goes
+to the installation with the fewest jobs running, and only then to the oldest.
+
+**One runner for several installations.** Installations on the same machine
+can share one runner - one image, one credential, one limit on how many builds
+run - instead of each running its own (`samples/shared-agent` has two, with
+what has to hold in any layout). The runner then names them in `AGENT_HOSTS`,
+a JSON array, or in the file `AGENT_HOSTS_FILE` names:
+
+```json
+[
+  { "name": "team-a", "token": "…", "mcp": "http://team-a:8080/mcp", "origin": "https://team-a.example.com" },
+  { "name": "team-b", "token": "…", "mcp": "http://team-b:8080/mcp", "origin": "https://team-b.example.com" }
+]
+```
+
+| Field    | What it is |
+|----------|------------|
+| `name`   | lower case letters, digits and dashes, at most 32; only in the runner's log |
+| `token`  | the installation's `LAMBDA_AGENT_TOKEN`: at least 16 characters, different for each |
+| `mcp`    | where its builds reach its MCP endpoint - its name on the build network, which it lists in `LAMBDA_MCP_ORIGINS` |
+| `origin` | where people open it (its `LAMBDA_PUBLIC_URL`), which the editor link of a build is made of |
+
+- **The token says which installation asks** (`X-Agent-Token`, compared in
+  constant time); a request with none that is known is refused with 403. Its
+  MCP address and origin are the runner's configuration, never the request's,
+  so a build is always made at the installation that asked for it - with its
+  ticket, at its MCP.
+- **An installation is answered about its own jobs only**: a build or change
+  of another is not found, to read or to stop (404), and changes are filed by
+  installation and lambda (`team-a/12`), so lambda 12 of one never waits for
+  or shows the change of lambda 12 of another. Its health counts its own jobs
+  and says of the others only how many installations there are.
+- **The builds reach every installation's MCP directly** on the build
+  network: the runner adds their hosts to the builds' `NO_PROXY`. Without
+  `AGENT_HOSTS`, `NO_PROXY` is used as given, since a single installation's
+  MCP may be behind the egress proxy.
+- **Wrong is refused as the runner starts**, with what to fix: not JSON, a
+  field it does not know, a name or token twice, a short token, an `mcp` or
+  `origin` that is no `http` or `https` address, or both `AGENT_HOSTS` and
+  `AGENT_HOSTS_FILE`. With `AGENT_HOSTS`, `AGENT_TOKEN`, `AGENT_MCP_URL` and
+  `AGENT_PUBLIC_ORIGIN` are not read, and the runner warns where they are set.
+  Without it, the runner builds for the one installation they describe, as it
+  always did.
+- **The runner's log names the installation** of each job (`host`), its line
+  at start every installation by name and MCP, never by token.
+
+What they share is the credential - one subscription's limits or one
+account's bill - the models it runs as and the room for builds. Each
+installation's panel still decides its own models, efforts, password and
+switches. A change to `AGENT_HOSTS` takes a restart of the runner, which loses
+the jobs under way, as any restart does. The rules are checked by
+`docker/agent/hosts.test.mjs` and `lanes.test.mjs`, and the runner as the
+servers see it - with a stand-in for docker - by `runner.test.mjs`.
 
 ### Who it is for
 

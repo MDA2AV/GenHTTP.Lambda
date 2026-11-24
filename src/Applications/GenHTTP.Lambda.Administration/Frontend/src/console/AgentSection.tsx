@@ -279,8 +279,22 @@ function Runner({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
         )}
 
         {runner?.reachable && (
-          <Fact label="Jobs">
+          <Fact label={(runner.installations ?? 1) > 1 ? 'Jobs of this installation' : 'Jobs'}>
             {plural(runner.running, 'running', 'running')} · {plural(runner.queued, 'waiting', 'waiting')}
+          </Fact>
+        )}
+
+        {runner?.reachable && runner.concurrency != null && (
+          <Fact label="At once">
+            {plural(runner.concurrency, 'build')} - AGENT_CONCURRENCY
+          </Fact>
+        )}
+
+        {runner?.reachable && runner.installations != null && (
+          <Fact label="Shared">
+            {runner.installations > 1
+              ? `With ${plural(runner.installations - 1, 'other installation')} - AGENT_HOSTS`
+              : 'With nobody - AGENT_HOSTS names this installation alone'}
           </Fact>
         )}
 

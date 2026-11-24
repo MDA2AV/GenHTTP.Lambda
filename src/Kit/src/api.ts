@@ -1452,10 +1452,15 @@ export interface AgentRunner {
   efforts?: string[] | null;
   /** The version of Claude Code its builds run. */
   cli?: string | null;
+  /** This installation's jobs that run now, and that wait. */
   running: number;
   queued: number;
   /** Whether a build may read the pages of the sites its request names; absent from a runner that does not say. */
   readsPages?: boolean | null;
+  /** How many jobs on the clock run at once, of every installation it builds for; absent from a runner that does not say. */
+  concurrency?: number | null;
+  /** How many installations share the runner, this one among them; absent where it builds for this one alone. */
+  installations?: number | null;
 }
 
 /** What the operator decided about the build agent, and how its runner is. */

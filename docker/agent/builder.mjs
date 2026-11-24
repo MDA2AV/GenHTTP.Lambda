@@ -26,9 +26,15 @@
  * of it waiting to be tried.
  *
  * It is deliberately boring. No streaming to the browser, no websockets: a
- * job goes on a queue, one runs at a time, and the caller polls. A job is a
- * few minutes of work, so the difference between polling and streaming is not
+ * job goes on a queue, as many run at once as the operator allows (one,
+ * unless AGENT_CONCURRENCY says more), and the caller polls. A job is a few
+ * minutes of work, so the difference between polling and streaming is not
  * worth the failure modes of holding a connection open across two hops.
+ *
+ * One runner may build for several installations on the same machine
+ * (AGENT_HOSTS, hosts.mjs). Each job belongs to the installation whose token
+ * asked for it: it is built against that installation's MCP, and only that
+ * installation can ask after it or stop it.
  */
 
 import { createServer } from 'node:http';
@@ -37,8 +43,50 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 import { sitesIn } from './sites.mjs';
+import { hostsFrom, hostFor, directOf, HostsError } from './hosts.mjs';
+import { Lane } from './lanes.mjs';
 
 const PORT = Number(process.env.AGENT_PORT ?? 8401);
+
+/*
+ * The installations this runner builds for: the one of AGENT_TOKEN,
+ * AGENT_MCP_URL and AGENT_PUBLIC_ORIGIN, or those AGENT_HOSTS names. A
+ * configuration that is wrong stops the runner here, saying what to fix,
+ * rather than sending somebody's build to an installation that did not ask.
+ */
+let HOSTS;
+
+try {
+  HOSTS = hostsFrom(process.env);
+} catch (e) {
+  if (!(e instanceof HostsError)) throw e;
+
+  console.error(`The build agent cannot start: ${e.message}`);
+  process.exit(1);
+}
+
+/** Whether several installations share this runner. */
+const SHARED = HOSTS.shared;
+
+/*
+ * How many jobs on the clock run at once, of all installations together.
+ * Each is a container of its own with the caps below, so the machine decides
+ * it: AGENT_BUILD_MEMORY times this is what the builds may take at once.
+ */
+const CONCURRENCY = Number.parseInt(process.env.AGENT_CONCURRENCY ?? '1', 10);
+
+if (!Number.isInteger(CONCURRENCY) || CONCURRENCY < 1 || CONCURRENCY > 64) {
+  console.error(`The build agent cannot start: AGENT_CONCURRENCY is how many builds run at once, 1 to 64 - not ${process.env.AGENT_CONCURRENCY}`);
+  process.exit(1);
+}
+
+/*
+ * How many jobs an installation may have waiting, builds and changes
+ * together, before it is told to try again: a queue is a promise of a few
+ * minutes, and a long one breaks it. Counted per installation, so a busy one
+ * cannot fill the queue for the others.
+ */
+const LONGEST_QUEUE = 12;
 
 /*
  * What a job runs in.
@@ -69,8 +117,9 @@ const GUIDE = await readFile('/app/AGENTS.md', 'utf8').catch(() => '');
  * purpose (PURPOSE below) goes the same way, only to keep it in one place.
  *
  * The configuration of its MCP servers goes the same way (mcpConfigOf): the
- * ticket the server issued for the job goes into the agent's connection to
- * the MCP endpoint as a header, sent with every call, so the server knows
+ * MCP endpoint is the one of the installation that asked for the job, and the
+ * ticket that installation issued for the job goes into the agent's connection to
+ * it as a header, sent with every call, so the server knows
  * what the job saves is the build agent's - and on which model and effort,
  * which it remembers itself and never takes from here. Never logged. Where
  * the job may read pages, the page fetch is the second server, with the
@@ -81,7 +130,6 @@ const INSIDE = `set -e
 printf '%s' "$AGENT_GUIDE" > /work/AGENTS.md
 printf '%s' "$AGENT_MCP_CONFIG" > /work/mcp.json
 exec claude -p "$AGENT_BRIEF" --append-system-prompt "$AGENT_PURPOSE" --mcp-config /work/mcp.json "$@"`;
-const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
 
 /*
  * Where a build reads web pages: the page fetch the proxy serves
@@ -101,10 +149,13 @@ const FETCH_TOOL = 'mcp__web__fetch';
  */
 const sitesOf = job => (FETCH_URL ? sitesIn([job.prompt, ...(job.history ?? []).map(turn => turn.prompt)]) : []);
 
-/** The MCP servers of a build, as the CLI reads them. */
+/**
+ * The MCP servers of a build, as the CLI reads them: the platform's is the
+ * MCP of the installation that asked, from the runner's configuration.
+ */
 function mcpConfigOf(job, sites) {
   const servers = {
-    genhttp: { type: 'http', url: MCP_URL, ...(job.ticket ? { headers: { 'X-Lambda-Agent': job.ticket } } : {}) }
+    genhttp: { type: 'http', url: job.host.mcp, ...(job.ticket ? { headers: { 'X-Lambda-Agent': job.ticket } } : {}) }
   };
 
   if (sites.length > 0) {
@@ -115,11 +166,12 @@ function mcpConfigOf(job, sites) {
 }
 
 /*
- * What the builds reach without the proxy: the runner's own list, and the
- * page fetch - which is on the proxy's host, and would be asked for through
- * the proxy otherwise, and refused.
+ * What the builds reach without the proxy: the runner's own list, the page
+ * fetch - which is on the proxy's host, and would be asked for through the
+ * proxy otherwise, and refused - and, where several installations share the
+ * runner, their MCP endpoints (directOf).
  */
-const DIRECT = [process.env.NO_PROXY, FETCH_URL ? new URL(FETCH_URL).hostname : null].filter(Boolean).join(',');
+const DIRECT = directOf(HOSTS.hosts, SHARED, [process.env.NO_PROXY, FETCH_URL ? new URL(FETCH_URL).hostname : null]);
 
 /*
  * Which models a caller may ask for, by short name.
@@ -148,8 +200,6 @@ const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const EFFORT = EFFORTS.includes(process.env.AGENT_EFFORT) ? process.env.AGENT_EFFORT : 'high';
 const MAX_TURNS = Number(process.env.AGENT_MAX_TURNS ?? 60);
 const TIMEOUT = Number(process.env.AGENT_TIMEOUT_SECONDS ?? 600) * 1000;
-const ORIGIN = process.env.AGENT_PUBLIC_ORIGIN ?? 'https://genhttp.dev';
-const TOKEN = process.env.AGENT_TOKEN ?? '';
 
 /*
  * What the builds sign in to Anthropic with: a token of a Claude subscription,
@@ -698,26 +748,28 @@ const jobs = new Map();
  * The server keeps nothing about a change itself: it asks here, by lambda,
  * whenever the control center asks it. So a change survives the server being
  * redeployed under it, which happens more often than a change takes.
+ *
+ * The tag is the lambda's number in its installation's records, which two
+ * installations sharing the runner both have: filed under the installation
+ * too (lambdaTag), the owner of one lambda 12 never sees, waits for or stops
+ * the change of another.
  */
 const latest = new Map();
 
+const lambdaTag = (host, lambda) => `${host.name}/${lambda}`;
+
 /*
- * Two lanes, because one of them has no end.
+ * Two lanes (lanes.mjs): the jobs on the clock, AGENT_CONCURRENCY at once,
+ * and the unbounded ones, one per installation at once. Builds and changes
+ * share both.
  *
- * A job asked for with the password runs without a turn limit and without a
- * clock, which is the point of it - but the ordinary queue runs one at a time,
- * so an unbounded job sharing it would hold the public text box shut for as
- * long as it felt like running. They get a lane of their own instead: at most
- * one of each kind at once, and neither waits on the other. Builds and
- * changes share both, first come first served.
- *
- * Which job that is, the server says (unbounded): it is the one that checked
- * the password, for whichever model its operator put behind it. A job that
- * does not say so runs on the clock, whatever model it asked for.
+ * Which job is unbounded, the server says (unbounded): it is the one that
+ * checked the password, for whichever model its operator put behind it. A job
+ * that does not say so runs on the clock, whatever model it asked for.
  */
 const lanes = {
-  quick: { queue: [], running: false },
-  long: { queue: [], running: false }
+  quick: new Lane(CONCURRENCY),
+  long: new Lane(Infinity, 1)
 };
 
 /** Whether a job runs without a clock or a turn limit. */
@@ -734,6 +786,7 @@ function enqueue(order) {
 
   const job = {
     id,
+    host: order.host,
     kind: order.key ? 'change' : 'build',
     state: 'queued',
     prompt: order.prompt,
@@ -755,31 +808,36 @@ function enqueue(order) {
 
   jobs.set(id, job);
 
-  if (job.lambda) latest.set(job.lambda, id);
+  const tag = job.lambda ? lambdaTag(job.host, job.lambda) : null;
+
+  if (tag) latest.set(tag, id);
 
   const lane = laneOf(job);
 
-  lane.queue.push(id);
+  lane.add(job);
   setImmediate(() => pump(lane));
 
   // an hour is long enough for somebody to come back to a tab
   setTimeout(() => {
     jobs.delete(id);
-    if (job.lambda && latest.get(job.lambda) === id) latest.delete(job.lambda);
+    if (tag && latest.get(tag) === id) latest.delete(tag);
   }, 60 * 60 * 1000).unref?.();
 
   return job;
 }
 
-async function pump(lane) {
-  if (lane.running || lane.queue.length === 0) return;
+/** Starts whatever the lane has room for. */
+function pump(lane) {
+  let job;
 
-  lane.running = true;
+  while ((job = lane.take()) !== null) {
+    work(lane, job);
+  }
+}
 
-  const id = lane.queue.shift();
-  const job = jobs.get(id);
-
-  if (job && job.state === 'queued') {
+/** Runs a job that has its place in the lane, and gives the place back. */
+async function work(lane, job) {
+  if (job.state === 'queued') {
     try {
       await run(job);
     } catch (e) {
@@ -791,7 +849,7 @@ async function pump(lane) {
     record(job);
   }
 
-  lane.running = false;
+  lane.done(job);
 
   setImmediate(() => pump(lane));
 }
@@ -804,10 +862,7 @@ async function pump(lane) {
  */
 function cancel(job) {
   if (job.state === 'queued') {
-    const lane = laneOf(job);
-    const at = lane.queue.indexOf(job.id);
-
-    if (at >= 0) lane.queue.splice(at, 1);
+    laneOf(job).remove(job);
 
     job.state = 'cancelled';
     job.finished = Date.now();
@@ -1239,9 +1294,10 @@ async function run(job) {
     deployed,
     publicKey: created.publicKey,
     privateKey: created.privateKey,
-    // the old path still leads there, for a lambda whose address no answer gave
-    url: created.publicUrl ?? `${ORIGIN}/lambda/${created.publicKey}/`,
-    editorUrl: `${ORIGIN}/editor/${created.privateKey}`,
+    // the old path still leads there, for a lambda whose address no answer
+    // gave; both at the address people open the installation that asked at
+    url: created.publicUrl ?? `${job.host.origin}/lambda/${created.publicKey}/`,
+    editorUrl: `${job.host.origin}/editor/${created.privateKey}`,
     summary: clip(summary, 1200)
   };
 }
@@ -1347,6 +1403,8 @@ function record(job) {
   console.log(JSON.stringify({
     at: new Date().toISOString(),
     id: job.id.slice(0, 8),
+    // which installation asked, where there are several to tell apart
+    host: SHARED ? job.host.name : undefined,
     kind: job.kind,
     model: job.model || 'opus',
     effort: job.effort ?? EFFORT,
@@ -1593,7 +1651,7 @@ function progress(job) {
     state: job.state,
     steps: job.steps,
     result: job.result,
-    waiting: lane.queue.indexOf(job.id) + 1,
+    waiting: lane.placeOf(job),
     // how long it has been running, measured here, so a browser with its
     // clock wrong still counts the right number of seconds
     seconds: job.started ? Math.max(0, Math.round((until - from) / 1000)) : 0,
@@ -1668,9 +1726,13 @@ const read = req => new Promise(resolve => {
 });
 
 createServer(async (req, res) => {
-  // only the lambda server can reach this network, but a shared secret costs
-  // nothing and means a mistake in the network definition is not an open door
-  if (TOKEN && req.headers['x-agent-token'] !== TOKEN) {
+  // only the lambda servers can reach this network, but a shared secret costs
+  // nothing and means a mistake in the network definition is not an open door -
+  // and where several installations share the runner, it is what says which
+  // of them is asking
+  const host = hostFor(HOSTS.hosts, req.headers['x-agent-token']);
+
+  if (!host) {
     return send(res, 403, { error: 'no' });
   }
 
@@ -1679,7 +1741,9 @@ createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/health') {
     // for the panel: what the builds sign in with - the kind, never the
     // credential - which identifier each model runs as, whether a build may
-    // read the pages of the sites its request names, and the queue
+    // read the pages of the sites its request names, and the jobs of the
+    // installation asking; where others share the runner, how many there
+    // are and how many jobs run at once - never what theirs are doing
     return send(res, 200, {
       ok: true,
       auth: AUTH,
@@ -1687,8 +1751,10 @@ createServer(async (req, res) => {
       efforts: EFFORTS,
       fetch: FETCH_URL !== null,
       cli: process.env.AGENT_CLI_VERSION || undefined,
-      quick: { running: lanes.quick.running, queued: lanes.quick.queue.length },
-      long: { running: lanes.long.running, queued: lanes.long.queue.length }
+      quick: { running: lanes.quick.runningOf(host), queued: lanes.quick.waitingOf(host) },
+      long: { running: lanes.long.runningOf(host), queued: lanes.long.waitingOf(host) },
+      concurrency: CONCURRENCY,
+      installations: SHARED ? HOSTS.hosts.length : undefined
     });
   }
 
@@ -1699,7 +1765,7 @@ createServer(async (req, res) => {
 
     if (prompt.length < 3) return send(res, 400, { error: 'Say what you want built.' });
 
-    if (lanes.quick.queue.length + lanes.long.queue.length > 12) {
+    if (lanes.quick.waitingOf(host) + lanes.long.waitingOf(host) > LONGEST_QUEUE) {
       return send(res, 503, { error: 'Too many builds waiting. Try again shortly.' });
     }
 
@@ -1736,7 +1802,7 @@ createServer(async (req, res) => {
     }
 
     if (key) {
-      const running = jobs.get(latest.get(lambda));
+      const running = jobs.get(latest.get(lambdaTag(host, lambda)));
 
       // two agents writing the same files at once would each undo the other
       if (running && active(running)) {
@@ -1745,6 +1811,7 @@ createServer(async (req, res) => {
     }
 
     const job = enqueue({
+      host,
       prompt: clip(prompt, 2000),
       model,
       effort: effort || undefined,
@@ -1762,7 +1829,7 @@ createServer(async (req, res) => {
       ticket: /^[0-9a-f]{32}$/.test(String(body.ticket ?? '')) ? body.ticket : undefined
     });
 
-    return send(res, 202, { id: job.id, queued: laneOf(job).queue.length, ...(key ? progress(job) : {}) });
+    return send(res, 202, { id: job.id, queued: laneOf(job).placeOf(job), ...(key ? progress(job) : {}) });
   }
 
   // the newest job of a lambda, which is how the control center finds a
@@ -1770,24 +1837,24 @@ createServer(async (req, res) => {
   const byLambda = /^\/lambda\/([0-9]{1,18})$/.exec(url.pathname);
 
   if (byLambda && req.method === 'GET') {
-    const job = jobs.get(latest.get(byLambda[1]));
+    const job = jobs.get(latest.get(lambdaTag(host, byLambda[1])));
 
     return job ? send(res, 200, progress(job)) : send(res, 404, { error: 'Nothing has been asked of this lambda lately.' });
   }
 
+  // a job is answered for and stopped only for the installation that asked
+  // for it: to any other, there is no such job
   const match = /^\/build\/([0-9a-f-]{36})$/.exec(url.pathname);
+  const found = match ? jobs.get(match[1]) : undefined;
+  const job = found?.host === host ? found : undefined;
 
   if (match && req.method === 'GET') {
-    const job = jobs.get(match[1]);
-
     if (!job) return send(res, 404, { error: 'No such build.' });
 
     return send(res, 200, progress(job));
   }
 
   if (match && req.method === 'DELETE') {
-    const job = jobs.get(match[1]);
-
     // the lambda is checked here as well as by the server, so a job can only
     // be stopped by whoever could have started it
     if (!job || (job.lambda ?? '') !== (url.searchParams.get('lambda') ?? '')) {
@@ -1803,8 +1870,20 @@ createServer(async (req, res) => {
 }).listen(PORT, () => {
   const signing = AUTH === 'subscription' ? 'a subscription token' : AUTH === 'api-key' ? 'an API key' : 'nothing';
 
-  console.log(`build agent listening on ${PORT}, signing in with ${signing}, models ${Object.values(MODELS).join(', ')}, mcp ${MCP_URL}, `
+  // the installations by name and MCP, never by token
+  const building = SHARED
+    ? `for ${HOSTS.hosts.length} installations (${HOSTS.hosts.map(h => `${h.name} at ${h.mcp}`).join(', ')})`
+    : `mcp ${HOSTS.hosts[0].mcp}`;
+
+  console.log(`build agent listening on ${PORT}, signing in with ${signing}, models ${Object.values(MODELS).join(', ')}, ${building}, `
+    + `${CONCURRENCY} at once, `
     + (FETCH_URL ? `reading the sites a request names through ${FETCH_URL}` : 'reading no web pages'));
+
+  // read from AGENT_HOSTS instead, so a value left over here changes nothing
+  if (HOSTS.ignored.length > 0) {
+    console.warn(`AGENT_HOSTS names the installations, so ${HOSTS.ignored.join(', ')} ${HOSTS.ignored.length === 1 ? 'is' : 'are'} not read: `
+      + 'put each installation\'s token, MCP and origin into AGENT_HOSTS');
+  }
 
   // every build would fail to sign in, so it is said once here rather than
   // found out from the first person who asks for something
