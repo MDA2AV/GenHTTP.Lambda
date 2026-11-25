@@ -76,6 +76,8 @@ public static class ApiDocumentation
 
     public const string Branding = "Branding";
 
+    public const string SharedFiles = "Shared files";
+
     public const string Telemetry = "Telemetry";
 
     public const string ServerLog = "Server log";
@@ -91,7 +93,7 @@ public static class ApiDocumentation
         ("How it is doing", [Monitoring, Analytics]),
         ("Sharing it", [Domain, Showcase, OpenSource]),
         ("The build agent", [Builds, Changes]),
-        ("Operating the installation", [Administration, Guide, BuildAgent, Branding, Telemetry, ServerLog])
+        ("Operating the installation", [Administration, Guide, BuildAgent, Branding, SharedFiles, Telemetry, ServerLog])
     ];
 
     #endregion

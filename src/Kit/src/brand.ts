@@ -14,6 +14,10 @@ import { useSyncExternalStore } from 'react';
  * (`#lambda-brand`, see Web/PageBranding.cs), and only where it is not the
  * platform's - so the first render draws what the page was sent with, and
  * nothing is asked for before the bar is drawn.
+ *
+ * The colours and the fonts a page is drawn with are no part of it: they are
+ * values of its style sheet (`#lambda-look`, for what index.css leaves open),
+ * so no script has to know whose they are.
  */
 export interface Brand {
   /** The name the pages show: GenHTTP Lambda, or what the operator named it. */
@@ -41,6 +45,9 @@ export const BRAND_PLACEHOLDERS: Brand = { name: '__LAMBDA_BRAND_NAME__', logo: 
 export const isOwn = (brand: Brand) => brand.logo !== null;
 
 const ELEMENT = 'lambda-brand';
+
+/** The style sheet the server sends a page with where its colours or fonts are the operator's. */
+const LOOK = 'lambda-look';
 
 let rendering: Brand | null = null;
 
@@ -94,6 +101,24 @@ export function changeBrand(brand: Brand) {
   showIcon(brand);
 
   listeners.forEach((listener) => listener());
+}
+
+/**
+ * The colours and the fonts as the operator just saved them, in which the
+ * open page is drawn from now on - or the platform's own, where there are
+ * none any more.
+ */
+export function changeLook(sheet: string | null) {
+  document.getElementById(LOOK)?.remove();
+
+  if (sheet !== null) {
+    const style = document.createElement('style');
+
+    style.id = LOOK;
+    style.textContent = sheet;
+
+    document.head.appendChild(style);
+  }
 }
 
 /** The icon of the tab: the brand's picture, or the bundle's own icons for the platform's. */

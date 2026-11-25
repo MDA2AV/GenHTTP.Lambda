@@ -5,7 +5,6 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -15,8 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
-/// The name and the logo the operator gives the installation, at
-/// <c>/admin/branding</c> behind the admin token.
+/// The name, the logo, the colours and the fonts the operator gives the
+/// installation, at <c>/admin/branding</c> behind the admin token.
 /// </summary>
 /// <remarks>
 /// Only there where the host lets its operator brand the installation (see
@@ -26,30 +25,31 @@ namespace GenHTTP.Lambda.Api;
 /// handed the token - the same thing through the same door.
 /// </remarks>
 [Tag(ApiDocumentation.Branding)]
-[Summary("The name and the logo the installation's pages show in place of GenHTTP Lambda's - for whoever runs it.")]
+[Summary("The name and the logo the installation's pages show in place of GenHTTP Lambda's, and the colours and fonts they are drawn with - for whoever runs it.")]
 [Remarks("""
          Where the host of the installation lets its operator brand it; elsewhere these routes are not there. The name and the
          picture beside it show in the bar of every page, in the titles of the pages and their previews, and as the icon of the
-         browser tab - the logo, or the first letter of the name on a plate where there is no logo. A change shows on the next
-         page anybody opens; `GET /system` says what the pages show (`brand`).
+         browser tab - the logo, or the first letter of the name on a plate where there is no logo. The colours and the fonts are
+         those of every page - the site, the editor, the panel, the published sources - and of nothing a lambda serves. A change
+         shows on the next page anybody opens; `GET /system` says what the pages show (`brand`).
          """)]
 public sealed class BrandingResource(IBrandingService branding, ILogger<BrandingResource> logger)
 {
 
     [ResourceMethod]
-    [Summary("Reads the name and the logo")]
-    [return: Summary("The name and the logo, and what they may be")]
+    [Summary("Reads the branding")]
+    [return: Summary("The name, the logo, the colours and the fonts, and what they may be")]
     public BrandingResponse Get() => BrandingResponse.Of(branding.Current);
 
     [ResourceMethod(Method.Put)]
     [Summary("Names the installation")]
     [Remarks("""
              The name its pages show, in place of `GenHTTP Lambda`: one line of at most 40 characters, trimmed. An empty or absent
-             name gives it back the platform's name. The logo is left as it is.
+             name gives it back the platform's name. The logo, the colours and the fonts are left as they are.
              """)]
     [Response(ResponseStatus.BadRequest, "The name is longer than 40 characters, or holds line breaks or other control characters. Nothing was changed.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [return: Summary("The name and the logo, as they are now")]
+    [return: Summary("The branding, as it is now")]
     public async ValueTask<BrandingResponse> Rename(BrandingRequest body)
     {
         var (brand, previous) = await branding.RenameAsync(body.Name);
@@ -60,12 +60,12 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     }
 
     [ResourceMethod(Method.Delete)]
-    [Summary("Gives back the platform's name and mark")]
-    [Remarks("Takes the name and the logo away: the pages show GenHTTP Lambda again, with its own mark. Nothing happens where they do already.")]
+    [Summary("Gives back the platform's name, mark, colours and fonts")]
+    [Remarks("Takes the name, the logo, the colours and the fonts away: the pages show GenHTTP Lambda again, with its own mark and as it is drawn. The shared files the fonts were made of stay. Nothing happens where they do already.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     public async ValueTask Reset()
     {
-        var had = branding.Current.Own;
+        var had = branding.Current.Own || branding.Current.Look.Own;
 
         await branding.ResetAsync();
 
@@ -86,10 +86,10 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
     [RequestBody("The picture", ContentType = "image/*")]
     [Response(ResponseStatus.BadRequest, "The body is empty, larger than 512 KB, or no PNG, JPEG, GIF, WebP or SVG image. Nothing was changed.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [return: Summary("The name and the logo, as they are now")]
+    [return: Summary("The branding, as it is now")]
     public async ValueTask<BrandingResponse> ChangeLogo(Stream body)
     {
-        var content = await ReadAsync(body);
+        var content = await Bodies.ReadAsync(body, BrandChecks.MaxLogoBytes, $"The logo must not be larger than {BrandChecks.MaxLogoBytes / 1024} KB.");
 
         var brand = await branding.ChangeLogoAsync(content);
 
@@ -114,29 +114,62 @@ public sealed class BrandingResource(IBrandingService branding, ILogger<Branding
         }
     }
 
-    /// <summary>
-    /// The body, read no further than a logo may go - so a larger one is
-    /// refused rather than held.
-    /// </summary>
-    private static async ValueTask<byte[]> ReadAsync(Stream body)
+    [ResourceMethod("preview")]
+    [Summary("Works out a look")]
+    [Remarks("""
+             What the pages would be drawn with in the colours and fonts given, changing nothing. An accent is drawn as it is where it
+             is a surface - a button, the plate of the installation's letter, the moving background - and where it is text, as much
+             lighter or darker as reading it takes (4.5 to 1 and more). What is written on a button of it is white or dark,
+             whichever can be read. A font is told by what its files draw, and which languages of the pages they lack letters for.
+             """)]
+    [Response(ResponseStatus.BadRequest, "One of the colours is none as `#rrggbb`, or a font cannot be made of the files.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("What it would come to")]
+    public async ValueTask<BrandingPreviewResponse> Preview([Summary("The accent as `#rrggbb`, its `#` encoded or left out; nothing for the platform's blue")] string? accent,
+                                                            [Summary("The second accent; nothing for the platform's purple")] string? second,
+                                                            [Summary("The shared files the font would be made of, with commas between; nothing for the system's")] string? text,
+                                                            [Summary("Those of the font of the headings; nothing for the same as the text")] string? headings)
+        => BrandingPreviewResponse.Of(await branding.ComposeAsync(BrandChecks.Color(accent, "accent"), BrandChecks.Color(second, "second accent"), Names(text), Names(headings)));
+
+    private static string[] Names(string? files) => files?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+
+    [ResourceMethod(Method.Put, "colors")]
+    [Summary("Chooses the colours")]
+    [Remarks("""
+             `accent` is what links, buttons and marks are drawn in, and the first light of the moving background behind the front
+             page. `second` is what is drawn in the platform's purple otherwise, and the second light - without one, that is the
+             colour beside the accent, and the purple stays. Any colour may be one: see `GET /admin/branding/preview` for what becomes of it. The letter that
+             stands in for a logo is on a plate of the accent.
+             """)]
+    [Response(ResponseStatus.BadRequest, "One of them is no colour as `#rrggbb`. Nothing was changed.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The branding, as it is now")]
+    public async ValueTask<BrandingResponse> ChangeColors(BrandingColorsRequest body)
     {
-        using var buffer = new MemoryStream();
+        var (brand, previous) = await branding.ColorAsync(BrandChecks.Color(body.Accent, "accent"), BrandChecks.Color(body.Second, "second accent"));
 
-        var chunk = new byte[16 * 1024];
+        logger.BrandingColored(previous, brand);
 
-        int read;
+        return BrandingResponse.Of(brand);
+    }
 
-        while ((read = await body.ReadAsync(chunk)) > 0)
-        {
-            if (buffer.Length + read > BrandChecks.MaxLogoBytes)
-            {
-                throw LambdaException.Invalid($"The logo must not be larger than {BrandChecks.MaxLogoBytes / 1024} KB.");
-            }
+    [ResourceMethod(Method.Put, "fonts")]
+    [Summary("Chooses the fonts")]
+    [Remarks("""
+             A font is the shared files it is made of (`PUT /admin/shared/{name}`): one variable font, which draws every weight, or a
+             file for each - which weights and whether they are slanted is read from the files. `text` is what the pages are set in
+             and `headings` their headings and the installation's name in the bar; code stays in the face it is in. The pages come
+             with the font from this installation, so no visitor's browser asks anybody else for it. Letters a font does not have
+             are drawn in the system's.
+             """)]
+    [Response(ResponseStatus.BadRequest, "There is no shared file of one of the names, it is no font, or a font is made of more than 12 files. Nothing was changed.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The branding, as it is now")]
+    public async ValueTask<BrandingResponse> ChangeFonts(BrandingFontsRequest body)
+    {
+        var (brand, previous) = await branding.FontAsync(body.Text ?? [], body.Headings ?? []);
 
-            buffer.Write(chunk, 0, read);
-        }
+        logger.BrandingFonts(previous, brand);
 
-        return buffer.ToArray();
+        return BrandingResponse.Of(brand);
     }
 
 }

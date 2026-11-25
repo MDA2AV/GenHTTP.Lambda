@@ -23,7 +23,9 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// <param name="Secrets">What keeps their secrets: <c>database</c>, sealed in the platform's own</param>
 /// <param name="OptimizeDatabases">Whether the platform optimizes the databases itself, in their quiet hours, or its operator left them to their own tools</param>
 /// <param name="Profile">Who it is for, as its operator chose it: <c>home</c> or <c>enterprise</c> - never whose it is</param>
+/// <param name="SharedFiles">How many files its operator shares across it - never what they are called or hold</param>
 public sealed record UsageConfiguration(string Addressing, bool HostingDomain, bool BuildAgent, bool BuildBox, bool ChangeBox, bool AdminPanel,
                                         bool Terms, bool Contact, bool AbuseContact, bool LegalPages, int McpOrigins, bool ClientAddresses,
                                         bool Geo, bool GeoPlaces, bool LambdaOutput, bool CrawlerLists, bool Development, bool Branded,
-                                        string Database, string Files, string Secrets, bool OptimizeDatabases, string Profile);
+                                        string Database, string Files, string Secrets, bool OptimizeDatabases, string Profile,
+                                        int SharedFiles);

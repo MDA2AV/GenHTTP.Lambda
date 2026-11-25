@@ -4,8 +4,8 @@ namespace GenHTTP.Lambda.Integrations.Files;
 
 /// <summary>
 /// Where files are kept: the workspace of every lambda and the copy a feature
-/// works on, and the pictures the platform keeps for itself - its logo, the
-/// pictures of the showcase.
+/// works on, and what the platform keeps for itself - its logo, the pictures
+/// of the showcase, the files its operator shares across the installation.
 /// </summary>
 /// <remarks>
 /// <para>

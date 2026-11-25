@@ -190,7 +190,9 @@ public sealed class OperatorMcpTests
         {
             var path = documented.TrimEnd('/');
 
-            if (!(path.StartsWith("/admin", StringComparison.Ordinal) || path.StartsWith("/telemetry", StringComparison.Ordinal) || path.StartsWith("/logs", StringComparison.Ordinal)))
+            // the operator's, and the public one the panel opens a shared file by
+            if (!(path.StartsWith("/admin", StringComparison.Ordinal) || path.StartsWith("/telemetry", StringComparison.Ordinal) || path.StartsWith("/logs", StringComparison.Ordinal)
+                  || path.StartsWith("/shared/", StringComparison.Ordinal)))
             {
                 continue;
             }
@@ -254,6 +256,13 @@ public sealed class OperatorMcpTests
         ["DELETE /admin/branding"] = "customize_installation",
         ["PUT /admin/branding/logo"] = "customize_installation",
         ["DELETE /admin/branding/logo"] = "customize_installation",
+        ["GET /admin/branding/preview"] = "customize_installation",
+        ["PUT /admin/branding/colors"] = "customize_installation",
+        ["PUT /admin/branding/fonts"] = "customize_installation",
+        ["GET /admin/shared"] = "list_shared_files",
+        ["PUT /admin/shared/{name}"] = "write_shared_file",
+        ["DELETE /admin/shared/{name}"] = "delete_shared_file",
+        ["GET /shared/{name}"] = "read_shared_file",
         ["GET /telemetry"] = "read_telemetry",
         ["GET /telemetry/lambdas"] = "list_activity",
         ["GET /logs"] = "read_logs",
@@ -267,7 +276,7 @@ public sealed class OperatorMcpTests
 
         var listed = await RpcAsync(fixture, List());
 
-        string[] destructive = ["delete_lambda", "remove_guide_section", "customize_installation"];
+        string[] destructive = ["delete_lambda", "remove_guide_section", "delete_shared_file", "customize_installation"];
 
         foreach (var tool in listed["result"]!["tools"]!.AsArray())
         {

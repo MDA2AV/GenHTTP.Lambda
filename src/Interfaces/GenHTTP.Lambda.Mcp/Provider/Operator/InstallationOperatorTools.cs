@@ -135,7 +135,7 @@ public sealed class InstallationOperatorTools(IMetaService meta, ICensusService 
         => Refusing.Async(() => GuideAsync(request, whole));
 
     [Tool("change_guide_section", Title = "Write the guide's operator section", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Summary("Writes the operator's section of the guide, replacing what it said: rules for agents where the guide leaves them the choice - which languages, a house style, what to call things. It changes nothing the platform requires. A title of one line that is not one of the platform's sections; Markdown without # or ## headings and with every code block closed; read_guide says how long each may be. Agents read it from their next platform_guide on.")]
+    [Summary("Writes the operator's section of the guide, replacing what it said: rules for agents where the guide leaves them the choice - which languages, a house style, what to call things. It changes nothing the platform requires. A title of one line that is not one of the platform's sections; Markdown without # or ## headings and with every code block closed; read_guide says how long each may be. A link to shared/{name} is one to that shared file (list_shared_files), handed to agents with its address: what is too long for the section goes into a shared text they read with platform_guide. Agents read it from their next platform_guide on.")]
     public ValueTask<object> ChangeGuideSection([Summary("The section's title, one line."), MaxLength(GuideChecks.MaxTitle)] string title,
                                                 [Summary("The section's text, in Markdown.")] string text)
         => Refusing.Async(() => ChangeGuideAsync(title, text));
@@ -491,19 +491,19 @@ public sealed class InstallationOperatorTools(IMetaService meta, ICensusService 
         label = tier.Label
     };
 
-    private ValueTask<object> GuideAsync(IRequest request, bool whole)
+    private async ValueTask<object> GuideAsync(IRequest request, bool whole)
     {
-        var written = whole ? guide.Write(RequestOrigin.Of(request)) : null;
+        var written = whole ? await guide.WriteAsync(RequestOrigin.Of(request)) : null;
 
         logger.LogInformation("Read guide by operator");
 
-        return ValueTask.FromResult<object>(new
+        return new
         {
             section = Describe(guide.Section),
             limits = new { title = GuideChecks.MaxTitle, textBytes = GuideChecks.MaxTextBytes },
             guide = written,
             bytes = written == null ? (int?)null : Encoding.UTF8.GetByteCount(written)
-        });
+        };
     }
 
     private static object? Describe(GuideSection? section)

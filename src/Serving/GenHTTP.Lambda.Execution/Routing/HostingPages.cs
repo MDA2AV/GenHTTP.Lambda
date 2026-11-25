@@ -30,7 +30,7 @@ namespace GenHTTP.Lambda.Execution;
 /// language the browser prefers, since a cookie of the site is never sent to
 /// this domain. Nothing of a frontend build is needed to draw them. Where they
 /// name the installation rather than link to it, they name it as its operator
-/// did (see <see cref="Brand"/>).
+/// did (see <see cref="Brand"/>), and they are in its colours and fonts.
 /// </remarks>
 public sealed class HostingPages(LambdaOptions options, IBrandingService branding)
 {
@@ -155,6 +155,15 @@ public sealed class HostingPages(LambdaOptions options, IBrandingService brandin
                         ? $"<small>{Legal(root, language, "/imprint", ImprintTemplate, ImprintFallback)} · {Legal(root, language, "/privacy", PrivacyTemplate, PrivacyFallback)}</small>"
                         : string.Empty;
 
+        var look = branding.Current.Look;
+
+        var link = look.AccentShades?.Light.Text.Hex ?? "#1765cc";
+        var linkAtNight = look.AccentShades?.Dark.Tint.Hex ?? "#8ab4f8";
+
+        // the installation's fonts are the platform's to serve, which answers
+        // elsewhere - so they are only there where it says where
+        var fonts = options.PublicUrl is { } platform ? look.FontsFor(platform, "ui-sans-serif, system-ui, sans-serif") : string.Empty;
+
         return $$"""
             <!doctype html>
             <html lang="{{SiteLanguages.TagOf(language)}}">
@@ -170,10 +179,11 @@ public sealed class HostingPages(LambdaOptions options, IBrandingService brandin
                     main { max-width: 36rem; padding: 2rem; }
                     h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
                     p { margin: 0; opacity: .85; }
-                    a { color: #1765cc; }
-                    @media (prefers-color-scheme: dark) { a { color: #8ab4f8; } }
+                    a { color: {{link}}; }
+                    @media (prefers-color-scheme: dark) { a { color: {{linkAtNight}}; } }
                     small { display: block; margin-top: 2rem; font-size: .8rem; opacity: .65; }
                     small a { color: inherit; }
+                    {{fonts}}
                 </style>
             </head>
             <body>

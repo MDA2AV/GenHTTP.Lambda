@@ -42,7 +42,7 @@ export function AgentGuide({ words, origin, children }: { words: GuideWords; ori
 
       <section className="relative z-10 px-5 pb-12 pt-14 text-center sm:px-6 sm:pt-20">
         <h1 className="rise mx-auto max-w-4xl text-[2.4rem] font-bold leading-[1.05] tracking-tight sm:text-6xl">
-          <span className="mb-5 block text-balance text-xs font-medium uppercase leading-normal tracking-[0.2em] text-accent-600 dark:text-accent-400">
+          <span className="mb-5 block text-balance font-sans text-xs font-medium uppercase leading-normal tracking-[0.2em] text-accent-600 dark:text-accent-400">
             {words.eyebrow}
           </span>
           {words.title}
@@ -128,7 +128,7 @@ function SayThis({ text }: { text: string }) {
     <button
       type="button"
       onClick={copy}
-      className="group flex w-full items-center gap-3 bg-accent-500 px-4 py-3 text-left text-[15px] text-white shadow-sm transition-colors hover:bg-accent-600 dark:bg-accent-400 dark:text-grey-900 dark:hover:bg-accent-400/90"
+      className="group flex w-full items-center gap-3 bg-accent-fill px-4 py-3 text-left text-[15px] text-accent-ink shadow-sm transition-colors hover:bg-accent-hover"
     >
       <span className="flex-1">{text}</span>
       <span className="flex shrink-0 items-center gap-1 text-xs font-medium opacity-80 group-hover:opacity-100">

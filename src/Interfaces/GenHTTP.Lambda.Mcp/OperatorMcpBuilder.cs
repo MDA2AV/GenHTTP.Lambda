@@ -44,13 +44,15 @@ public sealed class OperatorMcpBuilder(LambdaPlatform platform) : IConcernBuilde
         var installation = ActivatorUtilities.CreateInstance<InstallationOperatorTools>(services);
         var monitoring = ActivatorUtilities.CreateInstance<MonitoringOperatorTools>(services);
 
-        // the installation's name and logo, where its host lets the operator
-        // give it some - and no tool for it where it does not
+        var files = ActivatorUtilities.CreateInstance<SharedFileTools>(services);
+
+        // the installation's name, logo, colours and fonts, where its host
+        // lets the operator give it some - and no tool for it where it does not
         var branding = options.Branding ? ActivatorUtilities.CreateInstance<BrandingTools>(services) : null;
 
         // the token is checked in front of the tools, as the REST API checks
         // it: 401 without one, 403 with another
-        var endpoint = Concerns.Chain([AdminAuthentication.Create(options)], OperatorEndpoint.Create(lambdas, installation, monitoring, branding).Build());
+        var endpoint = Concerns.Chain([AdminAuthentication.Create(options)], OperatorEndpoint.Create(lambdas, installation, monitoring, files, branding).Build());
 
         return new OperatorRoute(content, endpoint);
     }

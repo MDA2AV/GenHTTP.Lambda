@@ -166,7 +166,8 @@ when a push is refused, the line says why.
   A page a level deeper needs `"../api/items"`. `Redirect.To(...)` takes
   relative paths too. The only full addresses in a page are `og:image`,
   `og:url` and the canonical link, which name it for whoever reads it
-  elsewhere.
+  elsewhere, and those of the files the installation shares, where
+  `platform_guide` lists any (`sharedFiles`).
 - Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
   `Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused - a
   request runs on one thread per core, and a task finishes on the thread that

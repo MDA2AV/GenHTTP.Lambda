@@ -83,6 +83,8 @@ public sealed class StorageSurvey(IDbContextFactory<LambdaDbContext> databases, 
             // the platform's pictures, where the local files integration keeps them
             ["branding"] = ("pictures", false),
             ["showcase"] = ("pictures", false),
+            // and what its operator shares across the installation
+            ["shared"] = ("shared", false),
             // the lists the log and the analytics read, downloaded by their jobs
             ["geo"] = ("locations", false),
             ["crawlers"] = ("crawlers", false),

@@ -10,8 +10,8 @@ namespace GenHTTP.Lambda.Web;
 /// <summary>
 /// What a page of a bundle says about whose installation it is, before a
 /// script of it runs: the name in its title and in the names its link
-/// preview is given, the icon of its tab, and the brand its scripts draw the
-/// bar with.
+/// preview is given, the icon of its tab, the brand its scripts draw the bar
+/// with, and the colours and fonts it is drawn in.
 /// </summary>
 /// <remarks>
 /// Every bundle's index page names GenHTTP Lambda and links the platform's
@@ -19,8 +19,12 @@ namespace GenHTTP.Lambda.Web;
 /// logo, the server writes theirs into it instead - on every page it sends,
 /// the editor's and the panel's as well as the site's - so neither a tab nor
 /// the first moment of a page shows the platform's, and the scripts draw the
-/// bar from <c>#lambda-brand</c> rather than asking for it. Where the brand
-/// is the platform's own, a page is sent as it was built, to the byte.
+/// bar from <c>#lambda-brand</c> rather than asking for it. Its colours and
+/// fonts are values for what the bundles' style sheets leave open
+/// (<c>#lambda-look</c>, see <c>BrandStyle</c>), so a page is drawn in them
+/// from its first moment as well - with the font it is set in named ahead of
+/// everything else, to be there by then. Where the brand is the platform's
+/// own, a page is sent as it was built, to the byte.
 /// </remarks>
 public static partial class PageBranding
 {
@@ -29,6 +33,12 @@ public static partial class PageBranding
     /// The element the brand is handed to the scripts in, as <c>brand.ts</c> in the kit reads it.
     /// </summary>
     public const string Element = "lambda-brand";
+
+    /// <summary>
+    /// The element the colours and the fonts are in, which the panel writes
+    /// anew as the operator saves others.
+    /// </summary>
+    public const string LookElement = "lambda-look";
 
     private static readonly HtmlEncoder Html = HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
 
@@ -49,11 +59,30 @@ public static partial class PageBranding
     /// </summary>
     public static string Apply(string markup, Brand brand)
     {
-        if (!brand.Own || brand.Picture is not { } picture)
+        if (brand.Own && brand.Picture is { } picture)
         {
-            return markup;
+            markup = Identify(markup, brand, picture);
         }
 
+        return brand.Look.StyleSheet is { } sheet ? Draw(markup, brand.Look, sheet) : markup;
+    }
+
+    /// <summary>
+    /// The page in the installation's colours and fonts: after the bundle's
+    /// own style sheet, whose values these take the place of.
+    /// </summary>
+    private static string Draw(string markup, BrandLook look, string sheet)
+    {
+        var preloads = look.Preloaded.Select(f => $"<link rel=\"preload\" href=\"{Html.Encode(f.VersionedPath)}\" as=\"font\" type=\"{f.Type.Type}\" crossorigin />\n");
+
+        return SiteMeta.InHead(markup, $"{string.Concat(preloads)}<style id=\"{LookElement}\">{sheet}</style>");
+    }
+
+    /// <summary>
+    /// The page under the installation's name and picture.
+    /// </summary>
+    private static string Identify(string markup, Brand brand, BrandPicture picture)
+    {
         var platform = Html.Encode(Brand.PlatformName);
         var name = Html.Encode(brand.Name);
 

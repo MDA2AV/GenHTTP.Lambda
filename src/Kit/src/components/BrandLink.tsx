@@ -57,7 +57,7 @@ export function BrandMark({ brand, nameClassName }: { brand: Brand; nameClassNam
   return (
     <>
       <img src={brand.logo} alt="" className="h-6 w-auto max-w-[7.5rem] shrink-0 object-contain" />
-      <span className={nameClassName ? `min-w-0 truncate ${nameClassName}` : 'min-w-0 truncate'}>{brand.name}</span>
+      <span className={`wordmark min-w-0 truncate ${nameClassName ?? ''}`.trimEnd()}>{brand.name}</span>
     </>
   );
 }

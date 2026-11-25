@@ -41,19 +41,27 @@ public sealed class GuideResource(IGuideService guide, ILogger<GuideResource> lo
     [Summary("Reads the guide")]
     [Remarks("The guide exactly as an agent calling `platform_guide` at this address reads it now, and the operator's section on its own.")]
     [return: Summary("The guide, the operator's section, and what the section may be")]
-    public GuideResponse Get(IRequest request) => GuideResponse.Of(guide.Write(RequestOrigin.Of(request)), guide.Section);
+    public async ValueTask<GuideResponse> Get(IRequest request)
+    {
+        // before anything is awaited: the headers are the request's, and gone once it is answered elsewhere
+        var origin = RequestOrigin.Of(request);
+
+        return GuideResponse.Of(await guide.WriteAsync(origin), guide.Section);
+    }
 
     [ResourceMethod(Method.Put)]
     [Summary("Writes the operator's section")]
     [Remarks("""
              Writes the section, or replaces the one there was: a title, which is its heading, and a text in Markdown. Agents read it
              from their next call to `platform_guide` on. The text is trimmed and its line breaks made `\n`; headings inside it take
-             `###` or more, since `#` and `##` are the guide's own. `GET` reads the guide with it.
+             `###` or more, since `#` and `##` are the guide's own. A link to `shared/{name}` is a link to that shared file, which
+             agents are handed with its address. `GET` reads the guide with it.
              """)]
     [Response(ResponseStatus.BadRequest, """
                                          The title is empty, longer than 60 characters, more than one line, or the name of one of the platform's own
                                          sections; or the text is empty, larger than 6 KB in UTF-8, holds control characters, a heading of the first
-                                         or second level, or a code block that is never closed. Nothing was changed.
+                                         or second level, a code block that is never closed, or a link to a shared file there is not. Nothing was
+                                         changed.
                                          """, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The section, as kept")]
     public async ValueTask<GuideSectionResponse> Change(GuideRequest body)

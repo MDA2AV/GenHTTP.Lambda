@@ -322,6 +322,27 @@ public sealed class UsageReportTests
         CollectionAssert.AreEqual(new[] { "home", "enterprise" }, profiles, "a home installation as it comes, and an organization's once its operator says so");
     }
 
+    [TestMethod]
+    public async Task AReportCountsTheSharedFilesAndNamesNone()
+    {
+        await using var collector = FakeCollector.Start();
+
+        await using var fixture = await LambdaFixture.CreateCommunityAsync(o => LambdaFixture.WithPanel(o) with { UsageReportUrl = collector.Url });
+
+        await Reports(fixture).SendAsync();
+
+        await fixture.ShareAsync("tidewell-house-style.md", "Teal, and square corners.");
+        await fixture.ShareAsync("Tidewell.woff2", new TestFont("Tidewell Sans").Woff2());
+
+        await Reports(fixture).SendAsync();
+
+        var counted = collector.Reports.Select(r => JsonDocument.Parse(r.Body).RootElement.GetProperty("configuration").GetProperty("sharedFiles").GetInt32()).ToList();
+
+        CollectionAssert.AreEqual(new[] { 0, 2 }, counted);
+
+        Assert.DoesNotContain("tidewell", collector.Reports.Last().Body.ToLowerInvariant(), "never what one is called, holds, or what a font calls itself");
+    }
+
     private static IUsageReportService Reports(LambdaFixture fixture) => fixture.Platform.Services.GetRequiredService<IUsageReportService>();
 
     #endregion

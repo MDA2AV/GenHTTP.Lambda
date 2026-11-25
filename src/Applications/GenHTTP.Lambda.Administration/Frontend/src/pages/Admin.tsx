@@ -20,6 +20,7 @@ import { LogSection } from '../console/LogSection';
 import { QuietHoursSection } from '../console/QuietHoursSection';
 import { ServerSection } from '../console/ServerSection';
 import { SettingsSection } from '../console/SettingsSection';
+import { SharedFilesSection } from '../console/SharedFilesSection';
 import { StatisticsSection } from '../console/StatisticsSection';
 import { StorageSection } from '../console/StorageSection';
 import { UsageReportSection } from '../console/UsageReportSection';
@@ -27,7 +28,7 @@ import { usePageMeta } from '@genhttp-lambda/kit/meta';
 import { askPlatform } from '@genhttp-lambda/kit/site';
 import type { Theme } from '@genhttp-lambda/kit/theme';
 
-type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding'
+type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'blocks' | 'server' | 'storage' | 'log' | 'settings' | 'limits' | 'branding' | 'shared'
   | 'integrations' | 'usage' | 'quiet' | 'guide' | 'agent';
 
 /*
@@ -38,9 +39,10 @@ type SectionId = 'dashboard' | 'statistics' | 'lambdas' | 'connectivity' | 'bloc
  * installation safe from what runs on it: the lambdas that ask to connect
  * out, and the addresses refused. Then how the machine is doing: the
  * process, the room on its volume, and what it logs. Last, the platform
- * itself: the name and logo its pages show, where its host lets the operator
- * give it some; the guide agents read first with the operator's own rules in
- * it; the build agent - whether it builds and changes apps, and on which
+ * itself: the name, the logo, the colours and the fonts of its pages, where
+ * its host lets the operator choose them; the files shared across it, which
+ * they and the guide use; the guide agents read first with the operator's own
+ * rules in it; the build agent - whether it builds and changes apps, and on which
  * models; the switches of what the platform does by itself; what
  * it holds the lambdas to; what it keeps its data in, as its host chose; when
  * it is usually quiet; and, last, the report it sends about itself. A group a
@@ -64,7 +66,8 @@ const GROUPS: { id: string; label: string | null; sections: { id: SectionId; lab
     { id: 'log', label: 'Log', note: 'What the server and the lambdas are printing, live' },
   ] },
   { id: 'platform', label: 'Platform', sections: [
-    { id: 'branding', label: 'Branding', note: 'The name and the logo the pages show in place of GenHTTP Lambda' },
+    { id: 'branding', label: 'Branding', note: 'The name, the logo, the colours and the fonts of the pages' },
+    { id: 'shared', label: 'Shared files', note: 'Fonts, pictures and texts for the branding, the guide and the apps' },
     { id: 'guide', label: 'Guide', note: 'What agents read first, with rules of your own' },
     { id: 'agent', label: 'Build agent', note: 'Whether it builds and changes apps here, on which models and efforts' },
     { id: 'settings', label: 'Settings', note: 'What the platform does by itself, switched without a restart' },
@@ -248,6 +251,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LimitsSection access={access} />
           ) : section === 'branding' ? (
             <BrandingSection access={access} />
+          ) : section === 'shared' ? (
+            <SharedFilesSection access={access} />
           ) : section === 'integrations' ? (
             <IntegrationsSection access={access} />
           ) : section === 'usage' ? (

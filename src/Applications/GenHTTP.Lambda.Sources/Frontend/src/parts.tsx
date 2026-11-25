@@ -39,7 +39,7 @@ export function LambdaNotice({ className = '', slim = false }: { className?: str
 
   return (
     <aside className={`flex flex-wrap items-center gap-x-4 gap-y-2 border border-logo-500/25 bg-logo-500/[0.04] px-4 py-3 ${className}`}>
-      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center bg-logo-500 text-lg font-semibold leading-none text-white">
+      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center bg-logo-500 text-lg font-semibold leading-none text-logo-ink">
         λ
       </span>
       <p className="min-w-0 flex-1 basis-64 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">

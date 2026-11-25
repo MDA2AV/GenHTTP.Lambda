@@ -7,7 +7,7 @@ namespace GenHTTP.Lambda.Services.Branding;
 
 /// <summary>
 /// How the installation presents itself on its pages: the name they show,
-/// and the picture beside it.
+/// the picture beside it, and the colours and fonts they are drawn with.
 /// </summary>
 /// <remarks>
 /// GenHTTP Lambda's own, drawn by the pages with the platform's mark, until
@@ -16,6 +16,10 @@ namespace GenHTTP.Lambda.Services.Branding;
 /// plain words, and beside it their logo, or the first letter of the name
 /// drawn on a plate where they gave none - which is also the icon of the
 /// browser tab, so no page of a branded installation shows the platform's.
+///
+/// What the pages are drawn with is the operator's on its own
+/// (<see cref="Look"/>): a colour alone makes nobody another installation, and
+/// a name alone leaves the platform's blue.
 /// </remarks>
 public sealed class Brand
 {
@@ -28,7 +32,7 @@ public sealed class Brand
     /// <summary>
     /// The platform's own: its name, and its mark drawn by the pages.
     /// </summary>
-    public static Brand Platform { get; } = new(null, null);
+    public static Brand Platform { get; } = new(null, null, BrandLook.Platform);
 
     #region Get-/Setters
 
@@ -66,18 +70,24 @@ public sealed class Brand
     /// </summary>
     public string? PicturePath { get; }
 
+    /// <summary>
+    /// The colours and fonts its pages are drawn with.
+    /// </summary>
+    public BrandLook Look { get; }
+
     #endregion
 
     #region Initialization
 
-    private Brand(string? given, BrandPicture? logo)
+    private Brand(string? given, BrandPicture? logo, BrandLook look)
     {
         Given = given;
         Logo = logo;
+        Look = look;
 
         if (Own)
         {
-            Picture = logo ?? Monogram.Of(Name);
+            Picture = logo ?? Monogram.Of(Name, look.AccentShades?.Light);
             PicturePath = $"{PlatformRoutes.ApiBase}/system/logo?v={VersionOf(Name, Picture)}";
         }
     }
@@ -86,7 +96,22 @@ public sealed class Brand
     /// The installation as its operator gave it, or the platform's own where
     /// they gave nothing.
     /// </summary>
-    public static Brand Of(string? given, BrandPicture? logo) => given == null && logo == null ? Platform : new(given, logo);
+    public static Brand Of(string? given, BrandPicture? logo, BrandLook look) => given == null && logo == null && !look.Own ? Platform : new(given, logo, look);
+
+    /// <summary>
+    /// The same installation by another name.
+    /// </summary>
+    public Brand Named(string? given) => Of(given, Logo, Look);
+
+    /// <summary>
+    /// The same installation with another logo.
+    /// </summary>
+    public Brand With(BrandPicture? logo) => Of(Given, logo, Look);
+
+    /// <summary>
+    /// The same installation, drawn in other colours and fonts.
+    /// </summary>
+    public Brand With(BrandLook look) => Of(Given, Logo, look);
 
     /// <summary>
     /// A short name for what the picture and the name are, which changes

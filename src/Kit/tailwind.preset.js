@@ -21,6 +21,9 @@ const grey = {
   900: '#202124',
 };
 
+/** A colour kept as a variable, as its channels - so an opacity can still be written behind it. */
+const shade = (variable) => `rgb(var(${variable}) / <alpha-value>)`;
+
 export default {
   darkMode: 'class',
   theme: {
@@ -52,20 +55,30 @@ export default {
           600: '#80868b',
         },
         // Google blue: the light tint carries the dark theme, where the
-        // saturated one would not hold its contrast
+        // saturated one would not hold its contrast. Variables, since the
+        // operator of a community installation may give it an accent of their
+        // own: what they are is in index.css, and what theirs come to is
+        // worked out by the server (Services/Branding/BrandPalette.cs).
+        // fill, hover and ink are a button filled with the accent, under the
+        // pointer, and what is written on it.
         accent: {
-          400: '#8ab4f8',
-          500: '#1a73e8',
-          600: '#1765cc',
-          700: '#174ea6',
+          400: shade('--accent-400'),
+          500: shade('--accent-500'),
+          600: shade('--accent-600'),
+          700: shade('--accent-700'),
+          fill: shade('--accent-fill'),
+          hover: shade('--accent-hover'),
+          ink: shade('--accent-ink'),
         },
         // the purple of the logo, for what is special rather than what is
-        // interactive - the premium tier. The dark shade carries text on the
-        // light theme, the light one on the dark theme.
+        // interactive - the production tier - or the operator's second accent.
+        // The dark shade carries text on the light theme, the light one on
+        // the dark theme; ink is what is written on 500.
         logo: {
-          400: '#c99bff',
-          500: '#aa55ff',
-          700: '#7b2fd1',
+          400: shade('--second-400'),
+          500: shade('--second-500'),
+          700: shade('--second-700'),
+          ink: shade('--second-ink'),
         },
         // Google cyan, for the enterprise tier: an installation of its own
         // rather than a place on the shared one, so a colour of its own too
@@ -110,14 +123,14 @@ export default {
       fontFamily: {
         /*
          * The stack the reference site uses: whatever the system draws its own
-         * interface in, with Inter ahead of it for anyone who has it. Nothing
-         * is fetched - a face downloaded before the first word can be read is
-         * a poor trade for a page whose whole claim is speed.
+         * interface in, with Inter ahead of it for anyone who has it
+         * (--font-system, in index.css, where Japanese and Korean name their
+         * own). Nothing is fetched - a face downloaded before the first word
+         * can be read is a poor trade for a page whose whole claim is speed -
+         * unless the operator gave the installation a font: the page then
+         * comes with it under the first name, which is nobody's otherwise.
          */
-        sans: [
-          '-apple-system', 'BlinkMacSystemFont', 'Inter', 'system-ui', 'Segoe UI',
-          'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'sans-serif',
-        ],
+        sans: ['"Lambda Brand Text"', 'var(--font-system)'],
         mono: [
           'Geist Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco',
           'Consolas', 'Liberation Mono', 'Courier New', 'monospace',

@@ -1,6 +1,3 @@
-using System.Text;
-using System.Xml;
-
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -8,7 +5,7 @@ namespace GenHTTP.Lambda.Services.Branding;
 
 /// <summary>
 /// What the operator may give the installation to present itself with: a name
-/// that fits the bar of a page, and a logo a browser draws.
+/// that fits the bar of a page, a logo a browser draws, colours and fonts.
 /// </summary>
 /// <remarks>
 /// Said once for every door - the panel, the API, the MCP tool - and with
@@ -31,18 +28,20 @@ public static class BrandChecks
     public const int MaxLogoBytes = 512 * 1024;
 
     /// <summary>
+    /// How many files a font may be made of: every weight it has, upright and
+    /// slanted, or the parts it was cut into by script.
+    /// </summary>
+    public const int MaxFontFiles = 12;
+
+    /// <summary>
     /// What an SVG is served as.
     /// </summary>
-    public const string Svg = "image/svg+xml";
-
-    private const string SvgNamespace = "http://www.w3.org/2000/svg";
+    public const string Svg = SvgImage.Type;
 
     /// <summary>
     /// Every kind of picture a logo may be.
     /// </summary>
     public static IReadOnlyList<string> Types { get; } = [.. ImageTypes.Raster, Svg];
-
-    private static readonly UTF8Encoding Strict = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     #region Functionality
 
@@ -90,67 +89,34 @@ public static class BrandChecks
             throw LambdaException.Invalid($"The logo must not be larger than {MaxLogoBytes / 1024} KB.");
         }
 
-        return ImageTypes.Sniff(content) ?? (IsSvg(content) ? Svg : throw LambdaException.Invalid(
-            "The logo has to be a PNG, JPEG, GIF, WebP or SVG image."));
+        if (ImageTypes.Sniff(content) is { } raster)
+        {
+            return raster;
+        }
+
+        if (!SvgImage.Is(content, out var named))
+        {
+            throw LambdaException.Invalid("The logo has to be a PNG, JPEG, GIF, WebP or SVG image.");
+        }
+
+        return named ? Svg : throw LambdaException.Invalid(
+            $"The logo is an SVG without xmlns=\"{SvgImage.Namespace}\" on its svg element, which a browser does not draw as a picture.");
     }
 
     /// <summary>
-    /// Whether the content is an SVG a browser draws as a picture: text, well
-    /// formed, its root an <c>svg</c> element in the SVG namespace - without
-    /// which a browser shows no picture at all.
+    /// The colour as it is kept, or nothing for the platform's own.
     /// </summary>
-    /// <remarks>
-    /// Nothing it refers to is fetched and no document type it names is
-    /// read. Whatever script it holds is never run: a page draws it as an
-    /// image, and opened on its own it is served with a policy that runs
-    /// nothing (see <c>SystemResource.Logo</c>).
-    /// </remarks>
-    private static bool IsSvg(byte[] content)
+    /// <param name="what">Which of the two it is, for the refusal</param>
+    public static BrandColor? Color(string? color, string what)
     {
-        string text;
-
-        try
+        if (string.IsNullOrWhiteSpace(color))
         {
-            text = Strict.GetString(content);
-        }
-        catch (DecoderFallbackException)
-        {
-            return false;
+            return null;
         }
 
-        var settings = new XmlReaderSettings
-        {
-            DtdProcessing = DtdProcessing.Ignore,
-            XmlResolver = null,
-            IgnoreComments = true,
-            IgnoreProcessingInstructions = true
-        };
-
-        try
-        {
-            using var reader = XmlReader.Create(new StringReader(text.TrimStart('﻿')), settings);
-
-            if (reader.MoveToContent() != XmlNodeType.Element || reader.LocalName != "svg")
-            {
-                return false;
-            }
-
-            if (reader.NamespaceURI != SvgNamespace)
-            {
-                throw LambdaException.Invalid($"The logo is an SVG without xmlns=\"{SvgNamespace}\" on its svg element, which a browser does not draw as a picture.");
-            }
-
-            // the rest of it, so a drawing that is cut off is refused too
-            while (reader.Read())
-            {
-            }
-
-            return true;
-        }
-        catch (XmlException)
-        {
-            return false;
-        }
+        return BrandColor.TryParse(color, out var parsed)
+            ? parsed
+            : throw LambdaException.Invalid($"The {what} has to be a colour as #rrggbb, such as #1a73e8.");
     }
 
     #endregion

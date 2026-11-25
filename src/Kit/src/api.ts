@@ -1547,7 +1547,87 @@ export interface OptimizationOverview {
   fallbackFrom: number;
 }
 
-/** The name and the logo the operator gave the installation, which its pages show in place of GenHTTP Lambda's. */
+/** What an accent comes to in one theme, each as #rrggbb (see the server's BrandShades). */
+export interface BrandShades {
+  /** Text and marks on a dark page. */
+  tint: string;
+  /** Edges, marks and links. */
+  line: string;
+  /** Text on a light page. */
+  text: string;
+  /** Large text on a light page. */
+  deep: string;
+  /** A button, the same under the pointer, and what is written on it. */
+  fill: string;
+  hover: string;
+  ink: string;
+}
+
+/** What the colours come to in one theme; none is what the platform's own are drawn in. */
+export interface BrandTheme {
+  accent?: BrandShades | null;
+  second?: BrandShades | null;
+  /** The two lights of the moving background. */
+  firstLight?: string | null;
+  secondLight?: string | null;
+}
+
+/** The colours the pages are drawn in, as #rrggbb - none for the platform's - and what they come to. */
+export interface BrandColors {
+  accent?: string | null;
+  second?: string | null;
+  light: BrandTheme;
+  dark: BrandTheme;
+}
+
+/** A file the operator shares across the installation. */
+export interface SharedFile {
+  name: string;
+  kind: 'picture' | 'font' | 'style' | 'text';
+  /** What it is served as. */
+  type: string;
+  bytes: number;
+  updated: string;
+  /** Where it is found, whatever it holds by then - what a page links to. */
+  path: string;
+  /** Where it is found as it is now, which may be cached for good. */
+  versionedPath: string;
+  /** What a font draws. */
+  font?: { family: string; from: number; to: number; italic: boolean } | null;
+  /** What of the installation uses it: its fonts, the guide. */
+  uses?: ('textFont' | 'headingFont' | 'guide')[] | null;
+}
+
+/** The shared files, how large they are together, and what one may be. */
+export interface SharedFiles {
+  files: SharedFile[];
+  bytes: number;
+  limits: {
+    files: number;
+    bytes: number;
+    totalBytes: number;
+    name: number;
+    /** What a name may end in, by what the file is for. */
+    types: Record<SharedFile['kind'], string[]>;
+  };
+}
+
+/** The shared files each font is made of - none for the system's, and for headings set in the text's. */
+export interface BrandFonts {
+  text: SharedFile[];
+  headings: SharedFile[];
+  /** The languages of the pages, by their codes, each has too few letters for. */
+  textLacks: string[];
+  headingLacks: string[];
+}
+
+/** What the pages would be drawn with, worked out and not saved. */
+export interface BrandPreview {
+  colors: BrandColors;
+  fonts: BrandFonts;
+}
+
+/** How the operator had the installation present itself: its name, its logo, its colours and its fonts. */
 export interface AdminBranding {
   /** What the operator named it; none where it goes by the platform's own name. */
   name: string | null;
@@ -1557,7 +1637,11 @@ export interface AdminBranding {
   logo: { type: string; bytes: number; updated: string } | null;
   /** Where the pages load the picture beside the name from - the logo, or the first letter of the name; none for the platform's mark. */
   picture: string | null;
-  limits: { name: number; logoBytes: number; types: string[] };
+  colors: BrandColors;
+  fonts: BrandFonts;
+  /** The style sheet the pages are sent with to be drawn this way; none where nothing of it is the operator's. */
+  styleSheet: string | null;
+  limits: { name: number; logoBytes: number; types: string[]; fontFiles: number };
 }
 
 /** The section the operator wrote into the guide, for the agents that build on the installation. */
@@ -1712,6 +1796,7 @@ const branded = (branding: AdminBranding): AdminBranding => ({
   name: branding.name ?? null,
   logo: branding.logo ?? null,
   picture: branding.picture ?? null,
+  styleSheet: branding.styleSheet ?? null,
 });
 
 /** The panel and the figures behind it are the parts of this API that authenticate. */
@@ -1840,6 +1925,38 @@ export const api = {
     removeLogo: (token: string) => request<void>('/admin/branding/logo', withToken(token, { method: 'DELETE' })),
 
     resetBranding: (token: string) => request<void>('/admin/branding', withToken(token, { method: 'DELETE' })),
+
+    /** What colours and fonts would come to, changing nothing. */
+    previewBranding: (token: string, accent: string | null, second: string | null, text: string[], headings: string[]) =>
+      request<BrandPreview>(
+        `/admin/branding/preview?${new URLSearchParams({
+          ...(accent && { accent }),
+          ...(second && { second }),
+          ...(text.length > 0 && { text: text.join(',') }),
+          ...(headings.length > 0 && { headings: headings.join(',') }),
+        })}`,
+        withToken(token),
+      ),
+
+    saveColors: (token: string, accent: string | null, second: string | null) =>
+      request<AdminBranding>('/admin/branding/colors', withToken(token, { method: 'PUT', body: JSON.stringify({ accent, second }) })).then(branded),
+
+    /** The fonts, by the names of the shared files they are made of. */
+    saveFonts: (token: string, text: string[], headings: string[]) =>
+      request<AdminBranding>('/admin/branding/fonts', withToken(token, { method: 'PUT', body: JSON.stringify({ text, headings }) })).then(branded),
+
+    sharedFiles: (token: string) => request<SharedFiles>('/admin/shared', withToken(token)),
+
+    /** The file as it is, in place of the one of that name. */
+    shareFile: (token: string, name: string, file: Blob) =>
+      request<SharedFile>(`/admin/shared/${encodeURIComponent(name)}`, withToken(token, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      })),
+
+    deleteSharedFile: (token: string, name: string) =>
+      request<void>(`/admin/shared/${encodeURIComponent(name)}`, withToken(token, { method: 'DELETE' })),
 
     guide: (token: string) =>
       request<AdminGuide>('/admin/guide', withToken(token)).then((read) => ({ ...read, section: read.section ?? null })),

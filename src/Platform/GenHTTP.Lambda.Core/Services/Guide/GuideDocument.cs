@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
@@ -11,6 +12,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.SharedFiles;
 using GenHTTP.Lambda.Services.Showcase;
 
 namespace GenHTTP.Lambda.Services.Guide;
@@ -42,15 +44,26 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// <para>
 /// What differs per installation is filled in: its addresses, what it is
 /// called, whom it is for, the tiers' labels and limits, whether lambdas
-/// answer by path, its terms and its operator's section - and what its integrations add to the
-/// sections of what they keep (database, workspace, secrets), at the end of
-/// each. The code they teach is the same everywhere: a lambda names none of
-/// them.
+/// answer by path, its terms, the files its operator shares and their section
+/// - and what its integrations add to the sections of what they keep
+/// (database, workspace, secrets), at the end of each. The code they teach is
+/// the same everywhere: a lambda names none of them.
 /// </para>
 /// </remarks>
 internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IDatabaseProvider database, IFileProvider files,
                                     ISecretProvider secrets)
 {
+    /// <summary>
+    /// A file to read the headings with: the section of them is one of the
+    /// platform's, whether there are any or not.
+    /// </summary>
+    private static readonly SharedFile Sample = new("sample.txt", SharedFileType.Of("sample.txt")!, 0, new string('0', 64), DateTime.UnixEpoch, null);
+
+    /// <summary>
+    /// How much of the guide the names of the shared files may take.
+    /// </summary>
+    private const int MaxListedBytes = 2048;
+
     private IReadOnlySet<string>? _headings;
 
     #region Functionality
@@ -59,13 +72,14 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
     /// Every heading of the platform's own guide, which the operator's section
     /// may not be called: a pointer to it would find two.
     /// </summary>
-    public IReadOnlySet<string> Headings => _headings ??= Read(Write("", "", null, InstallationProfile.Home));
+    public IReadOnlySet<string> Headings => _headings ??= Read(Write("", "", null, InstallationProfile.Home, [Sample]));
 
     /// <param name="origin">The address the agent called, used where the installation names no public one</param>
     /// <param name="made">What this platform is called - GenHTTP Lambda, or what its operator named it</param>
     /// <param name="section">What the operator wrote for the agents of this installation, if anything</param>
     /// <param name="profile">Who the installation is for, which the apps built here are written for</param>
-    public string Write(string origin, string made, GuideSection? section, InstallationProfile profile)
+    /// <param name="shared">The files its operator shares, which agents are told of where there are any</param>
+    public string Write(string origin, string made, GuideSection? section, InstallationProfile profile, IReadOnlyList<SharedFile> shared)
     {
         var home = Home(origin);
         var address = addresses.Of("{publicKey}");
@@ -84,12 +98,21 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
         var shown = string.Join(", ", tiers.TiersWhere(p => !p.ReadOnly).Select(t => $"{Identifier(t)} {tiers.PolicyOf(t).AnalyticsDays} days"));
 
+        // where a page finds the shared files: by the address the site is meant
+        // to be found at, or by a path of the platform, where the lambdas
+        // answer below it - the build agent calls by whatever address its
+        // container was given, which is not one to send a visitor's browser to
+        var sharedAt = $"{options.PublicUrl ?? (addresses.ByPath ? string.Empty : origin)}{SharedFile.BasePath}";
+
         // last, after the platform's own: what the platform requires matters
         // most to an agent, and the operator's rules are how lambdas are built
         // here within it - followed where the guide leaves the choice open
         var rules = section is { } own
-            ? $"\n## {own.Title}\n\nSet by whoever runs this installation, for every lambda built here. Follow it wherever the guide above leaves the choice to you; it changes nothing the platform requires or refuses.\n\n{own.Text}\n"
+            ? $"\n## {own.Title}\n\nSet by whoever runs this installation, for every lambda built here. Follow it wherever the guide above leaves the choice to you; it changes nothing the platform requires or refuses.\n\n{GuideLinks.Resolved(own.Text, sharedAt)}\n"
             : "";
+
+        var elsewhere = shared.Count > 0 ? ", and for the files of sharedFiles, which are not the lambda's" : "";
+        var leaving = shared.Count > 0 ? " - but the files of sharedFiles its pages link to: take them along" : "";
 
         var terms = options.Terms is { } text
             ? $"\n## terms\n\nThe user accepts them with create_lambda's acceptTerms:\n\n{text.Trim()}\n"
@@ -182,7 +205,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - A websocket: new URL("play", location.href), the scheme set to ws: or wss:.
             - In C#, Redirect.To("other") and Location headers are relative; never build an address from the request's host.
             - Register a service worker relatively ("sw.js"); Service-Worker-Allowed is refused on the platform's address.
-            - Full addresses only for og:image, og:url and the canonical link (see beingFound).
+            - Full addresses only for og:image, og:url and the canonical link (see beingFound){{elsewhere}}.
 
             ## compiling
 
@@ -324,8 +347,8 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
 
             ## export
 
-            GET {{home}}api/v1/lambdas/{privateKey}/export: the newest version as a standalone .NET 10 project with a Dockerfile and its database, needing nothing from here. The code is the user's - worth telling them.
-            {{terms}}{{rules}}
+            GET {{home}}api/v1/lambdas/{privateKey}/export: the newest version as a standalone .NET 10 project with a Dockerfile and its database, needing nothing from here{{leaving}}. The code is the user's - worth telling them.
+            {{terms}}{{Shared(shared, home, sharedAt)}}{{rules}}
             """;
     }
 
@@ -366,6 +389,62 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             - Say that you added it. If the user does not want it, leave it out or remove it, and note that in docs/decisions.md so it is not put back.
             """
     };
+
+    /// <summary>
+    /// The files the operator shares, where there are any: which they are, how
+    /// a page has one, and how an agent reads one that is text.
+    /// </summary>
+    /// <remarks>
+    /// The texts first, which are what an agent reads, and the fonts last, of
+    /// which there are most - as many of them as fit: every agent reads the
+    /// guide with every call.
+    /// </remarks>
+    /// <param name="home">Where an agent reaches the platform</param>
+    /// <param name="address">What a page finds a file below</param>
+    private static string Shared(IReadOnlyList<SharedFile> shared, string home, string address)
+    {
+        if (shared.Count == 0)
+        {
+            return "";
+        }
+
+        var listed = new StringBuilder();
+        var left = shared.Count;
+
+        foreach (var file in shared.OrderByDescending(f => f.Type.Readable).ThenBy(f => f.Type.Kind == SharedFileKind.Font))
+        {
+            var line = $"- {file.Name}: {SharedFileKindNames.Name(file.Type.Kind)}{Drawn(file.Font)}{(file.Type.Readable ? ", readable" : "")}\n";
+
+            if (Encoding.UTF8.GetByteCount(line) + listed.Length > MaxListedBytes)
+            {
+                break;
+            }
+
+            listed.Append(line);
+            left--;
+        }
+
+        if (left > 0)
+        {
+            listed.Append($"- and {left} more, which GET {home}api/v1/shared lists\n");
+        }
+
+        return $$"""
+
+            ## sharedFiles
+
+            Files whoever runs this installation shares for what is built here - a logo, fonts, a house style. Use them where they fit what the user asked for, and as the section after this says, if there is one. A page links to one at {{address}}{name}, exactly so, rather than carrying a copy: one that is replaced is then new in every app. A readable one is what platform_guide answers with its name as file.
+
+            {{listed.ToString().TrimEnd()}}
+
+            """;
+    }
+
+    /// <summary>
+    /// What a font draws, as a page that uses it has to say.
+    /// </summary>
+    private static string Drawn(FontFace? face)
+        => face == null ? "" : $" ({face.Family}, font-weight {(face.Variable ? $"{face.From} {face.To}" : $"{face.From}")}{(face.Italic ? ", italic" : "")})";
 
     /// <summary>
     /// What an integration adds to the end of its section, as lines of it -

@@ -19,11 +19,16 @@ public interface IGuideService
     GuideSection? Section { get; }
 
     /// <summary>
+    /// The names of the shared files the operator's section links to.
+    /// </summary>
+    IReadOnlySet<string> SharedFiles { get; }
+
+    /// <summary>
     /// The guide as an agent reads it now: Markdown, the operator's section
     /// last.
     /// </summary>
     /// <param name="origin">The address the caller reached the platform by, where the installation names no public one</param>
-    string Write(string origin);
+    ValueTask<string> WriteAsync(string origin, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes the operator's section, or replaces it.

@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.SharedFiles;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +30,7 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// </remarks>
 public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses,
                                  IBrandingService branding, ISettingsService settings, IDatabaseProvider database, IFileProvider files,
-                                 ISecretProvider secrets) : IGuideService
+                                 ISecretProvider secrets, ISharedFiles shared) : IGuideService
 {
     private const string TitleKey = "guide.title";
 
@@ -43,6 +44,8 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     private readonly SemaphoreSlim _turn = new(1, 1);
 
     private volatile GuideSection? _section;
+
+    private volatile IReadOnlySet<string> _linked = new HashSet<string>();
 
     #region Reading
 
@@ -58,9 +61,16 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
     }
 
     /// <summary>
+    /// The shared files the section links to - none where there is no
+    /// operator, whose section is then not read either.
+    /// </summary>
+    public IReadOnlySet<string> SharedFiles => _linked;
+
+    /// <summary>
     /// The guide as an agent reads it now.
     /// </summary>
-    public string Write(string origin) => _document.Write(origin, branding.Current.Name, Section, settings.Get().Profile);
+    public async ValueTask<string> WriteAsync(string origin, CancellationToken cancellation = default)
+        => _document.Write(origin, branding.Current.Name, Section, settings.Get().Profile, await shared.ListAsync(cancellation));
 
     /// <summary>
     /// Reads the operator's section into memory, before anything is served -
@@ -79,7 +89,13 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
                                    .Where(s => s.Key == TitleKey || s.Key == TextKey)
                                    .ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
 
-        _section = stored.TryGetValue(TitleKey, out var title) && stored.TryGetValue(TextKey, out var text) ? new GuideSection(title, text) : null;
+        Hold(stored.TryGetValue(TitleKey, out var title) && stored.TryGetValue(TextKey, out var text) ? new GuideSection(title, text) : null);
+    }
+
+    private void Hold(GuideSection? section)
+    {
+        _section = section;
+        _linked = GuideLinks.Names(section?.Text);
     }
 
     #endregion
@@ -95,6 +111,8 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
 
         var section = GuideChecks.Section(title, text, _document.Headings);
 
+        await RequireSharedAsync(section, cancellation);
+
         await _turn.WaitAsync(cancellation);
 
         try
@@ -106,7 +124,9 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
 
             await database.SaveChangesAsync(cancellation);
 
-            return _section = section;
+            Hold(section);
+
+            return section;
         }
         finally
         {
@@ -136,13 +156,28 @@ public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, L
 
             await database.SaveChangesAsync(cancellation);
 
-            _section = null;
+            Hold(null);
 
             return was;
         }
         finally
         {
             _turn.Release();
+        }
+    }
+
+    /// <summary>
+    /// Refuses a section that links to a file nobody shared: agents would be
+    /// sent to what is not there.
+    /// </summary>
+    private async ValueTask RequireSharedAsync(GuideSection section, CancellationToken cancellation)
+    {
+        foreach (var name in GuideLinks.Names(section.Text))
+        {
+            if (await shared.FindAsync(name, cancellation) == null)
+            {
+                throw LambdaException.Invalid($"The text links to shared/{name}, and there is no shared file called '{name}': share it first.");
+            }
         }
     }
 

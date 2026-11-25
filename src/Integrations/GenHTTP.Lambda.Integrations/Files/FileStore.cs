@@ -18,6 +18,12 @@ public enum FileStore
     /// <summary>
     /// The pictures of the showcase, one per lambda that is listed there.
     /// </summary>
-    Showcase
+    Showcase,
+
+    /// <summary>
+    /// The files whoever runs the installation shares across it, by what they
+    /// hold.
+    /// </summary>
+    Shared
 
 }

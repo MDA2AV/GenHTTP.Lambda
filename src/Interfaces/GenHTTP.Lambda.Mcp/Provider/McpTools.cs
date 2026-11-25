@@ -28,6 +28,7 @@ using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.SharedFiles;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -82,7 +83,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                               IDatabaseService databases, ISourceService sources, IAnalyticsService analytics,
                               IConnectivityService connectivity,
                               ITelemetryService telemetry, ILogBook book,
-                              LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IGuideService guide, IBuildService builds,
+                              LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, IGuideService guide, ISharedFiles shared, IBuildService builds,
                               ILogger<McpTools> logger)
 {
 
@@ -309,12 +310,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     }
 
     [Tool("platform_guide", Title = "Read the platform guide", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Summary("How this platform works, read first: one Markdown document in sections the other tools point to as 'platform_guide, <section>' - how versions, features and data live, git and the REST API, code and resources, paths, compiling, requests, the database, the workspace, secrets, connectivity, live updates, documentation and tests, pages meant to be found, the link back, limits and terms.")]
-    public string ReadGuide(IRequest request)
+    [Summary("How this platform works, read first: one Markdown document in sections the other tools point to as 'platform_guide, <section>' - how versions, features and data live, git and the REST API, code and resources, paths, compiling, requests, the database, the workspace, secrets, connectivity, live updates, documentation and tests, pages meant to be found, the link back, limits and terms, and the files this installation shares.")]
+    public ValueTask<object> ReadGuide(IRequest request,
+                                       [Summary("A readable file of the guide's section sharedFiles, by its name: what it says, instead of the guide."), MaxLength(SharedFileChecks.MaxName)] string? file = null)
     {
-        logger.LogInformation("Read platform guide");
+        var origin = RequestOrigin.Of(request);
 
-        return guide.Write(RequestOrigin.Of(request));
+        return RefusingAsync(() => GuideAsync(origin, file));
     }
 
     #endregion
@@ -1299,6 +1301,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     #endregion
 
     #region Reading
+
+    /// <summary>
+    /// The guide, or a text it names: both the platform's or its operator's
+    /// words, so read through the one tool every agent calls first - which is
+    /// also how an agent without any other way to fetch a file reads one.
+    /// </summary>
+    private async ValueTask<object> GuideAsync(string origin, string? file)
+    {
+        if (!string.IsNullOrWhiteSpace(file))
+        {
+            var text = await shared.ReadTextAsync(file.Trim());
+
+            logger.LogInformation("Read shared file {Name}", file.Trim());
+
+            return ToolResult.Text(text);
+        }
+
+        logger.LogInformation("Read platform guide");
+
+        return ToolResult.Text(await guide.WriteAsync(origin));
+    }
 
     /// <summary>
     /// What a deployed lambda - or the preview of one of its features - has

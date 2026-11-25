@@ -3,8 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * The colours and the fonts an operator may make their own (the Branding
+   * section of the panel), as the platform has them. What an installation was
+   * given instead is written into each page after this (#lambda-look, see
+   * Web/PageBranding.cs), so nothing else has to know whose they are.
+   *
+   * Colours are channels rather than values, so a shade can be drawn at any
+   * opacity. Each theme's are said on their own: an accent that reads on
+   * white may not on the dark page, and the other way round. in-light and
+   * in-dark are the same for a part of a page that shows a theme it is not in,
+   * as the panel does of a brand that is not saved yet.
+   */
+  :root,
+  .in-light,
+  .in-dark {
+    --accent-400: 138 180 248;
+    --accent-500: 26 115 232;
+    --accent-600: 23 101 204;
+    --accent-700: 23 78 166;
+
+    /* a button filled with the accent: itself, under the pointer, and what is written on it */
+    --accent-fill: 26 115 232;
+    --accent-hover: 23 101 204;
+    --accent-ink: 255 255 255;
+
+    /* the one measure a chart of the editor shows */
+    --accent-chart: 26 115 232;
+
+    /* the purple of the logo */
+    --second-400: 201 155 255;
+    --second-500: 170 85 255;
+    --second-700: 123 47 209;
+    --second-ink: 255 255 255;
+
+    /* the lights of the moving background */
+    --aurora-a: 26 115 232;
+    --aurora-b: 170 85 255;
+  }
+
+  html.dark,
+  .in-dark {
+    --accent-fill: 138 180 248;
+    --accent-hover: 127 165 227;
+    --accent-ink: 32 33 36;
+
+    --accent-chart: 66 133 244;
+
+    --aurora-a: 66 133 244;
+  }
+
   :root {
     color-scheme: light;
+
+    --font-system: -apple-system, BlinkMacSystemFont, Inter, system-ui, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+      'Open Sans', 'Helvetica Neue', sans-serif;
   }
 
   html.dark {
@@ -36,21 +89,34 @@
   }
 
   /*
+   * In the operator's font for headings, where they gave one - those that are
+   * set as headings, which are tracked tight, and the installation's name in
+   * the bar. Not the labels that are headings to a screen reader only: a face
+   * drawn for a headline is hard to read at their size.
+   */
+  :where(h1.tracking-tight, h2.tracking-tight, .wordmark) {
+    font-family: var(--font-heading, inherit);
+    /* a display face often comes in one weight, and a browser thickening it smears it */
+    font-synthesis-weight: var(--heading-synthesis, auto);
+  }
+
+  /*
    * Japanese and Korean. The system faces the stack starts with have no
    * kanji or hangul, and a browser left to fall back on its own may draw
    * Japanese in a Chinese face - the same characters, shaped differently. So
    * each names its own faces, on the root only: set on every element, it
-   * would win over the monospace face code is shown in.
+   * would win over the monospace face code is shown in. An operator's font
+   * still comes first, and draws the letters it has.
    */
   html:lang(ja) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+    --font-system: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
       'Yu Gothic UI', 'Yu Gothic', Meiryo, system-ui, sans-serif;
     /* no small kana or closing bracket at the start of a line */
     line-break: strict;
   }
 
   html:lang(ko) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic',
+    --font-system: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic',
       system-ui, sans-serif;
     /* Korean puts spaces between its words, and a word broken in the middle
        reads as two - so lines break where the spaces are, as they would in
@@ -189,12 +255,12 @@
 
   /* ellipses rather than circles: they have an orientation, so turning shows */
   .aurora-a {
-    background: radial-gradient(42% 26% at 50% 50%, rgb(26 115 232 / 0.70), transparent 72%);
+    background: radial-gradient(42% 26% at 50% 50%, rgb(var(--aurora-a) / 0.70), transparent 72%);
     animation: turn-a 13s linear infinite;
   }
 
   .aurora-b {
-    background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.62), transparent 72%);
+    background: radial-gradient(38% 24% at 50% 50%, rgb(var(--aurora-b) / 0.62), transparent 72%);
     animation: turn-b 17s linear infinite;
   }
 
@@ -203,8 +269,8 @@
     animation: turn-c 21s linear infinite;
   }
 
-  html.dark .aurora-a { background: radial-gradient(42% 26% at 50% 50%, rgb(66 133 244 / 0.66), transparent 72%); }
-  html.dark .aurora-b { background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.58), transparent 72%); }
+  html.dark .aurora-a { background: radial-gradient(42% 26% at 50% 50%, rgb(var(--aurora-a) / 0.66), transparent 72%); }
+  html.dark .aurora-b { background: radial-gradient(38% 24% at 50% 50%, rgb(var(--aurora-b) / 0.58), transparent 72%); }
   html.dark .aurora-c { background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.34), transparent 72%); }
 
   /*
@@ -312,8 +378,35 @@
   /* the filled button is the only one with an edge of its own: it is the action
      that commits, and everything else is a word you can press */
   .btn-primary {
-    @apply btn bg-accent-500 text-white shadow-sm hover:bg-accent-600 hover:shadow
-           disabled:hover:bg-accent-500 dark:bg-accent-400 dark:text-grey-900 dark:hover:bg-accent-400/90;
+    @apply btn bg-accent-fill text-accent-ink shadow-sm hover:bg-accent-hover hover:shadow
+           disabled:hover:bg-accent-fill;
+  }
+
+  /*
+   * The round button a message is sent with: a shade deeper than the others,
+   * and white on it in both themes - unless the accent is the operator's,
+   * which says what can be read on it.
+   */
+  .btn-send {
+    @apply flex items-center justify-center rounded-full transition disabled:bg-slate-300 disabled:text-white
+           dark:disabled:bg-ink-700 dark:disabled:text-slate-500;
+  }
+
+  .btn-send:not(:disabled) {
+    color: rgb(var(--accent-send-ink, 255 255 255));
+    background-color: rgb(var(--accent-send, var(--accent-600)));
+  }
+
+  .btn-send:not(:disabled):hover {
+    background-color: rgb(var(--accent-send-hover, var(--accent-700)));
+  }
+
+  html.dark .btn-send:not(:disabled) {
+    background-color: rgb(var(--accent-send, var(--accent-500)));
+  }
+
+  html.dark .btn-send:not(:disabled):hover {
+    background-color: rgb(var(--accent-send-hover, var(--accent-400)));
   }
 
   /* no outline: the tint that appears under the pointer is the affordance, and
