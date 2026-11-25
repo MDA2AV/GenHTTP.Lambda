@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { hostsFrom, hostFor, directOf, HostsError } from './hosts.mjs';
+import { hostsFrom, hostFor, directOf, HostsError, Installations } from './hosts.mjs';
 
 const A = { name: 'team-a', token: 'a'.repeat(32), mcp: 'http://lambda-a:8080/mcp', origin: 'https://a.example.com' };
 const B = { name: 'team-b', token: 'b'.repeat(32), mcp: 'https://b.example.com/mcp', origin: 'https://b.example.com/' };
@@ -113,4 +113,92 @@ test('the one installation keeps NO_PROXY as it was given', () => {
 
   assert.equal(directOf(hosts, false, ['lambda,localhost', 'egress-proxy']), 'lambda,localhost,egress-proxy');
   assert.equal(directOf(hosts, false, [undefined, null]), '');
+});
+
+/** A file of installations that can be written again. */
+function file(...hosts) {
+  let text = JSON.stringify(hosts);
+  let written = 0;
+
+  return {
+    write: value => { text = typeof value === 'string' ? value : JSON.stringify(value); written++; },
+    installations: () => new Installations({ AGENT_HOSTS_FILE: '/agent/hosts.json' }, () => text, () => String(written))
+  };
+}
+
+test('an installation added to the file is known without a restart', () => {
+  const on = file(A);
+  const installations = on.installations();
+
+  assert.equal(installations.find(B.token), null);
+  assert.equal(installations.refresh(), null, 'nothing changed');
+
+  on.write([A, B]);
+
+  assert.deepEqual(installations.refresh(), { added: ['team-b'], removed: [] });
+  assert.equal(installations.find(B.token)?.name, 'team-b');
+  assert.equal(installations.refresh(), null, 'read once');
+});
+
+test('an installation that stays is the one its jobs hold, with what it says now', () => {
+  const on = file(A, B);
+  const installations = on.installations();
+
+  const before = installations.find(A.token);
+
+  on.write([{ ...A, token: 'c'.repeat(32), mcp: 'http://elsewhere:8080/mcp' }]);
+
+  assert.deepEqual(installations.refresh(), { added: [], removed: ['team-b'] });
+
+  const now = installations.find('c'.repeat(32));
+
+  assert.equal(now, before, 'its jobs are filed under it');
+  assert.equal(now.mcp, 'http://elsewhere:8080/mcp');
+  assert.equal(installations.find(A.token), null, 'the token it had is none any more');
+  assert.equal(installations.find(B.token), null);
+});
+
+test('a file that is wrong changes nothing until it reads again, and is said once', () => {
+  const on = file(A);
+  const installations = on.installations();
+
+  on.write('[{ "name": "team-a"');
+
+  assert.match(installations.refresh().problem, /not JSON/);
+  assert.equal(installations.refresh(), null, 'said once');
+  assert.equal(installations.find(A.token)?.name, 'team-a');
+
+  on.write([]);
+
+  assert.match(installations.refresh().problem, /JSON array of installations/);
+  assert.equal(installations.find(A.token)?.name, 'team-a');
+
+  on.write([A, B]);
+
+  assert.deepEqual(installations.refresh(), { added: ['team-b'], removed: [] });
+});
+
+test('a file that is gone for a moment changes nothing', () => {
+  let there = true;
+
+  const gone = () => { throw Object.assign(new Error('gone'), { code: 'ENOENT' }); };
+
+  const installations = new Installations({ AGENT_HOSTS_FILE: '/agent/hosts.json' },
+    () => there ? JSON.stringify([A]) : gone(), () => there ? '1' : gone());
+
+  there = false;
+
+  assert.match(installations.refresh().problem, /cannot be read: ENOENT/);
+  assert.equal(installations.find(A.token)?.name, 'team-a');
+
+  there = true;
+
+  assert.deepEqual(installations.refresh(), { added: [], removed: [] });
+});
+
+test('what the environment names does not change', () => {
+  const installations = new Installations({ AGENT_HOSTS: JSON.stringify([A]) }, () => assert.fail('read'), () => assert.fail('looked at'));
+
+  assert.equal(installations.refresh(), null);
+  assert.equal(installations.shared, true);
 });

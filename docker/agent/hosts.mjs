@@ -16,12 +16,15 @@
  * runner is what it always was - one installation, AGENT_TOKEN (or none),
  * AGENT_MCP_URL and AGENT_PUBLIC_ORIGIN.
  *
+ * A file is read again as it changes (Installations), so an installation that
+ * is added is known without a restart - which would end the builds under way.
+ *
  * Kept apart from builder.mjs, which starts a server as it is loaded, so that
  * the rules can be checked on their own (hosts.test.mjs).
  */
 
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 
 /** What an installation is called in the runner's log and nowhere else. */
 const NAME = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/;
@@ -114,6 +117,115 @@ export function hostsFrom(env, read = path => readFileSync(path, 'utf8')) {
   }
 
   return { hosts, shared: true, ignored: SINGLE.filter(name => (env[name] ?? '') !== '') };
+}
+
+/**
+ * The installations of a runner as they are now: those of its environment,
+ * and - where a file names them - those the file names once it changed.
+ *
+ * Asked for before a request is answered rather than watched for: a look at
+ * the file costs less than the answer, and there is no moment at which an
+ * installation that was just added is not known yet. A file that is wrong, or
+ * gone for a moment as it is replaced, changes nothing: the runner builds for
+ * those it knows until it reads again, and says so once.
+ *
+ * An installation is the same as long as it is called the same: its jobs are
+ * filed under it, so it stays the object they hold while what it says - its
+ * token, its addresses - is taken over.
+ */
+export class Installations {
+
+  #env;
+  #file;
+  #read;
+  #stamp;
+  #seen;
+
+  /**
+   * Throws HostsError where the configuration is wrong, as hostsFrom does.
+   *
+   * @param {Record<string, string | undefined>} env the runner's environment
+   * @param {(path: string) => string} read how a file is read
+   * @param {(path: string) => string} stamp what tells a file that changed from one that did not
+   */
+  constructor(env, read = path => readFileSync(path, 'utf8'), stamp = stampOf) {
+    this.#env = env;
+    this.#file = (env.AGENT_HOSTS_FILE ?? '').trim();
+    this.#read = read;
+    this.#stamp = stamp;
+
+    // before it is read: what changes in between is read again
+    if (this.#file) this.#seen = this.#look();
+
+    const { hosts, shared, ignored } = hostsFrom(env, read);
+
+    /** @type {Host[]} */
+    this.hosts = hosts;
+
+    /** Whether there are several by configuration, rather than the single one. */
+    this.shared = shared;
+
+    /** The single installation's variables that were set but are not read. */
+    this.ignored = ignored;
+  }
+
+  /** The installation a request comes from, by the token it carries. */
+  find(token) {
+    return hostFor(this.hosts, token);
+  }
+
+  /**
+   * Reads the file again, if it changed.
+   *
+   * @returns {{ added: string[], removed: string[] } | { problem: string } | null}
+   *   what is different, what is wrong with it, or nothing where it is as it was
+   */
+  refresh() {
+    if (!this.#file) return null;
+
+    const now = this.#look();
+
+    if (now === this.#seen) return null;
+
+    this.#seen = now;
+
+    let fresh;
+
+    try {
+      fresh = hostsFrom(this.#env, this.#read).hosts;
+    } catch (e) {
+      if (!(e instanceof HostsError)) throw e;
+
+      return { problem: e.message };
+    }
+
+    const known = new Map(this.hosts.map(host => [host.name, host]));
+    const named = new Set(fresh.map(host => host.name));
+
+    this.hosts = fresh.map(host => known.has(host.name) ? Object.assign(known.get(host.name), host) : host);
+
+    return {
+      added: fresh.filter(host => !known.has(host.name)).map(host => host.name),
+      removed: [...known.keys()].filter(name => !named.has(name))
+    };
+  }
+
+  #look() {
+    try {
+      return this.#stamp(this.#file);
+    } catch {
+      // gone, which reading it says in its own words
+      return 'gone';
+    }
+  }
+
+}
+
+/** Tells a file that was written or replaced from the one that was there. */
+function stampOf(path) {
+  const { mtimeMs, size, ino } = statSync(path);
+
+  return `${ino}:${mtimeMs}:${size}`;
 }
 
 /**

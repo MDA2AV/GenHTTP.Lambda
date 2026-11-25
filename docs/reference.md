@@ -3501,8 +3501,17 @@ a JSON array, or in the file `AGENT_HOSTS_FILE` names:
 What they share is the credential - one subscription's limits or one
 account's bill - the models it runs as and the room for builds. Each
 installation's panel still decides its own models, efforts, password and
-switches. A change to `AGENT_HOSTS` takes a restart of the runner, which loses
-the jobs under way, as any restart does. The rules are checked by
+switches.
+
+**Installations that come and go** are named in `AGENT_HOSTS_FILE`, which the
+runner reads again as it changes: one that is added may ask for a build with
+its next request, one that is removed is refused, and the jobs under way go on.
+A file that is wrong then, or gone for a moment, changes nothing - the runner
+says so and builds for those it knows until it reads again - so write it beside
+and move it into place, in a folder that is mounted rather than the file alone
+(a bind mount of a single file keeps showing the one that was replaced). An
+installation is the same while it is called the same. What `AGENT_HOSTS` itself
+names is fixed as the runner starts. The rules are checked by
 `docker/agent/hosts.test.mjs` and `lanes.test.mjs`, and the runner as the
 servers see it - with a stand-in for docker - by `runner.test.mjs`.
 

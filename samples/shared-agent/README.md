@@ -24,7 +24,8 @@ installations in compose projects of their own, more of them, real hostnames.
    tells the installations apart by it. Two with the same token stop the
    runner as it starts.
 2. **The runner names every installation** in `AGENT_HOSTS` - or in a file
-   that `AGENT_HOSTS_FILE` names, which suits secrets mounted as files:
+   that `AGENT_HOSTS_FILE` names, which suits secrets mounted as files and
+   installations that come and go - the runner reads it again as it changes:
 
    ```json
    [
@@ -92,9 +93,10 @@ networks:
     external: true
 ```
 
-and the runner gets an entry for it in `AGENT_HOSTS`, with
-`"mcp": "http://team-c:8080/mcp"`, followed by a restart of the runner. A
-build under way when the runner restarts is lost, as it always was.
+and the runner gets an entry for it, with `"mcp": "http://team-c:8080/mcp"`: in
+`AGENT_HOSTS`, followed by a restart of the runner - a build under way then is
+lost, as it always was - or in the file `AGENT_HOSTS_FILE` names, which it
+reads again without one.
 
 An installation that terminates TLS itself and redirects plain HTTP, as
 genhttp.dev does, is reached by HTTPS at its public name: give it that name as

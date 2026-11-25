@@ -12,7 +12,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, chmodSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, chmodSync, renameSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -292,4 +292,46 @@ test('a runner whose installations are named wrongly does not start, and says wh
 
   assert.equal(many?.code, 1);
   assert.match(many.output, /AGENT_CONCURRENCY/);
+});
+
+test('an installation added to the file while the runner runs has its builds made at once', { skip }, async () => {
+  const file = join(folder, 'hosts.json');
+
+  writeFileSync(file, JSON.stringify([A]));
+
+  const runner = await start({ AGENT_HOSTS_FILE: file, AGENT_CONCURRENCY: '2' });
+
+  try {
+    assert.equal((await runner.call(B.token, 'GET', '/health')).status, 403);
+
+    // a build under way, which a restart would have ended
+    const { body: held } = await runner.call(A.token, 'POST', '/build', { prompt: 'HOLD it', ticket });
+
+    writeFileSync(`${file}.new`, JSON.stringify([A, B]));
+    renameSync(`${file}.new`, file);
+
+    const { status, body: started } = await runner.call(B.token, 'POST', '/build', { prompt: 'an app', ticket });
+
+    assert.equal(status, 202);
+
+    const built = await settled(runner.call, B.token, started.id);
+
+    assert.equal(built.result.editorUrl, 'https://b.example.com/editor/key-of-lambda-b');
+    assert.deepEqual(given(started.id).direct.split(',').sort(), ['lambda-a', 'lambda-b']);
+
+    assert.match(runner.output(), /building for 2 installations now - added team-b/);
+
+    // the file made wrong: those that are known stay known
+    writeFileSync(file, 'nonsense');
+
+    assert.equal((await runner.call(B.token, 'GET', '/health')).status, 200);
+    assert.match(runner.output(), /The installations stay as they were: AGENT_HOSTS_FILE is not JSON/);
+
+    writeFileSync(join(folder, 'release'), '');
+
+    assert.equal((await settled(runner.call, A.token, held.id)).result.editorUrl, 'https://a.example.com/editor/key-of-lambda-a');
+  } finally {
+    rmSync(join(folder, 'release'), { force: true });
+    runner.stop();
+  }
 });

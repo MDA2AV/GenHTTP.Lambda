@@ -222,7 +222,8 @@ agent builds and changes apps at all.
   runner's configuration, never the request's, so a build is always made at
   the installation that asked. Jobs and changes are filed per installation;
   one is answered, waits for and stops only its own, and the health counts
-  only its own. Without `AGENT_HOSTS` the runner is the single
+  only its own. A file (`AGENT_HOSTS_FILE`) is followed as it changes, without
+  a restart: installations come and go while others' builds run. Without `AGENT_HOSTS` the runner is the single
   installation's, as before - keep both working. `samples/shared-agent` and
   the reference say what any layout needs.
 - **Builds run `AGENT_CONCURRENCY` at once** (1 by default), a free place
