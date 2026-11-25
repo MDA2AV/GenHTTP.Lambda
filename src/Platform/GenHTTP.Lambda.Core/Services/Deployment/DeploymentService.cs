@@ -43,6 +43,13 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// </summary>
     private readonly LambdaConnections _connections = new();
 
+    /// <summary>
+    /// Lets one lambda of the platform be built at a time, from what it ships
+    /// to its handler being prepared. What is compiled on the way takes the
+    /// turn of the process as well (<see cref="CompilationGate"/>).
+    /// </summary>
+    private readonly SemaphoreSlim _building = new(1, 1);
+
     #region Get-/Setters
 
     private IStorageService Storage { get; }
@@ -92,7 +99,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        using var turn = await Compiling.EnterAsync(cancellation);
+        using var turn = await Compiling.CompileAsync(cancellation);
 
         try
         {
@@ -148,20 +155,27 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
          * and read its C# before queueing for the compiler. The first one does
          * it and the others find it done.
          */
-        using var turn = await Compiling.EnterAsync(cancellation);
+        await _building.WaitAsync(cancellation);
 
-        if (IsDeployed(slot, stamp, settings))
+        try
         {
-            return CompilationOutcome.Succeeded();
-        }
+            if (IsDeployed(slot, stamp, settings))
+            {
+                return CompilationOutcome.Succeeded();
+            }
 
-        /*
-         * Copying out the resources of a version and compiling it takes
-         * from a moment to seconds. The request that asked for it waits
-         * either way; the other connections of its reactor should not
-         * have to (see Offload).
-         */
-        return await Offload.Run(() => BuildAsync(slot, stamp, settings, read, cancellation), cancellation);
+            /*
+             * Copying out the resources of a version and compiling it takes
+             * from a moment to seconds. The request that asked for it waits
+             * either way; the other connections of its reactor should not
+             * have to (see Offload).
+             */
+            return await Offload.Run(() => BuildAsync(slot, stamp, settings, read, cancellation), cancellation);
+        }
+        finally
+        {
+            _building.Release();
+        }
     }
 
     /// <summary>
@@ -201,7 +215,19 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                                              Workspaces.Bind(lambdaId, featureId, Databases.DataRoomFor(lambdaId, featureId),
                                                              cancellation => Databases.SizeOfAsync(lambdaId, featureId, cancellation)));
 
-        var outcome = await CompileAsync(slot, stamp, request);
+        CompilationOutcome outcome;
+
+        try
+        {
+            outcome = await CompileAsync(slot, stamp, request, cancellation);
+        }
+        catch (OperationCanceledException)
+        {
+            // given up on before its turn came, which says nothing about it
+            Restore(slot);
+
+            throw;
+        }
 
         if (outcome.Success)
         {
@@ -215,18 +241,30 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         return outcome;
     }
 
-    private async ValueTask<CompilationOutcome> CompileAsync(Slot slot, int stamp, CompilationRequest request)
+    private async ValueTask<CompilationOutcome> CompileAsync(Slot slot, int stamp, CompilationRequest request, CancellationToken cancellation)
     {
         try
         {
-            var (outcome, handler) = await LambdaCompiler.CompileAsync(request);
+            CompilationOutcome outcome;
+            LoadedLambda? lambda;
 
-            if (!outcome.Success || handler == null)
+            using (await Compiling.CompileAsync(cancellation))
+            {
+                (outcome, lambda) = await LambdaCompiler.CompileAsync(request);
+            }
+
+            if (!outcome.Success || lambda == null)
             {
                 return outcome;
             }
 
-            await handler.PrepareAsync(Servers.Require());
+            // its own code, which takes as long as it likes
+            var handler = await LambdaCompiler.InvokeAsync(lambda, request);
+
+            using (await Compiling.PrepareAsync(cancellation))
+            {
+                await handler.PrepareAsync(Servers.Require());
+            }
 
             var broken = HandlerInspector.Inspect(handler);
 
@@ -240,6 +278,10 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             Logger.LogInformation("Deployed {Slot} build {Stamp}", slot, stamp);
 
             return outcome;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception e)
         {

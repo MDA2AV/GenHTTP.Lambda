@@ -1708,6 +1708,11 @@ platform.Start();
 - **The API by reflection** (`RestApi.Create(platform).Compiled(false)`) where
   there are many: compiled into delegates it is a hundred and some assemblies
   and a second or two for every platform, which stay for as long as the process.
+- **What one of them starts holds up no other.** The turn to compile is the
+  process's, and what a lambda does as it starts is not part of it. A handler of
+  its own that takes its time to be prepared keeps the turn for five seconds at
+  most; one that is warmed up keeps the others to be warmed up waiting for
+  fifteen.
 - **Taking one away**: stop handing it requests, wait for those under way, then
   dispose of it - and delete its data directory if it is gone for good.
   Nothing of it stays but the code of its lambdas, which .NET cannot unload: a
@@ -1888,9 +1893,13 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   the resulting handler. Compiled once, then cached - one handler for what a
   lambda has online, and one for the preview of each of its features - on
   the first request, or as the server starts for the tiers kept warm
-  (`LambdaWarmup` in `Services/Meta`, see [Tiers](#tiers)). One snippet is
-  compiled at a time, whichever platform of the process it belongs to
-  (`CompilationGate`). An
+  (`LambdaWarmup` in `Services/Meta`, see [Tiers](#tiers)). One lambda
+  of a platform is built at a time, and one snippet of the process is compiled
+  at a time, whichever platform it belongs to (`CompilationGate`) - compiled,
+  that is: what a lambda does as it starts is its own code, and outside of that
+  turn. What nobody asked for yet - the demos, the lambdas kept warm - is built
+  one after another in the whole process (`IPreparationLane`), so a visitor
+  waits for one of them at most. An
   assembly stays loaded for the life of the process, so a build is known by
   its compiled C#: a version that changes only resources or the rest of its
   code - documentation, tests - gets a new handler from the assembly already

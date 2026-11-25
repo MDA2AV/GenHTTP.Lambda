@@ -412,6 +412,15 @@ needs is given to its builder, not read from the environment.
   - Nothing of a platform's is kept on the server or in a static: a server may
     have several. A static holding what a platform made keeps it alive after
     it is gone (`SeveralPlatformsTests.OneThatIsGoneIsLetGoOf`).
+  - A turn of the process is never held while code of a lambda runs, or is
+    over after a while (`Lane`): compiling takes the turn, starting does not.
+    What is prepared before anybody asks for it takes `IPreparationLane`, so
+    it is one lambda at a time that a visitor finds in front of them.
+  - What a lambda prints goes to the log of its installation, and to the
+    console only where its platform owns the process.
+  - A failure nothing waits for ends the process unless the host decides
+    otherwise. The platform does not decide it, and cannot always tell whose
+    it was: a timer has left its context by then.
   - It is not isolation, and not described as such.
 - **Nothing below the hosts reads the environment (owner).**
   `LambdaSettings.FromEnvironment()` (in `Server`) reads `LAMBDA_*` into

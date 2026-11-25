@@ -319,6 +319,40 @@ public sealed class SeveralPlatformsTests
         Assert.AreEqual("a page", await several.AskAsync("one", "page"));
     }
 
+    /// <summary>
+    /// The turn to compile is the process's, and what a lambda does as it
+    /// starts is its own - wherever it does it.
+    /// </summary>
+    [TestMethod]
+    [DataRow("await Task.Delay(60_000); return Content.From(Resource.FromString(\"late\"));", "", DisplayName = "in its code")]
+    [DataRow("return new Slow();", "public class Slow : IHandler { public ValueTask PrepareAsync(IServer server) => new ValueTask(Task.Delay(60_000)); public ValueTask<IResponse?> HandleAsync(IRequest request) => default; }", DisplayName = "in its handler")]
+    public async Task WhatOneOfThemStartsHoldsUpNoOther(string code, string type)
+    {
+        await using var several = await SeveralPlatforms.CreateAsync();
+
+        await several.StartAsync("one");
+        await several.StartAsync("two");
+
+        var starting = type.Length == 0 ? several.DeployAsync("one", "slow", code)
+                                        : several.DeployAsync("one", "slow", new LambdaFile(LambdaSource.EntryName, code), new LambdaFile("Slow.cs", type));
+
+        // it is compiled by then, and starting
+        await Task.Delay(3000);
+
+        Assert.IsFalse(starting.IsCompleted, starting.IsFaulted ? starting.Exception?.Message : "it was to take its time");
+
+        var deployed = several.DeployAsync("two", "page", "return Content.From(Resource.FromString(\"a page\"));");
+
+        Assert.AreSame(deployed, await Task.WhenAny(deployed, Task.Delay(TimeSpan.FromSeconds(20))), "the other installation waits for it");
+
+        await deployed;
+
+        Assert.AreEqual("a page", await several.AskAsync("two", "page"));
+
+        // its request is not waited for: the server it is asked of goes away
+        _ = starting.ContinueWith(t => t.Exception, TaskScheduler.Default);
+    }
+
     [TestMethod]
     public async Task OneThatIsGoneIsLetGoOf()
     {

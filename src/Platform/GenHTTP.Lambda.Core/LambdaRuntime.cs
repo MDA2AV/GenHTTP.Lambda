@@ -93,6 +93,7 @@ public sealed class LambdaRuntime : IAsyncDisposable
 
         services.AddSingleton<CompiledAssemblies>();
         services.AddSingleton<CompilationGate>();
+        services.AddSingleton<PreparationLane>();
 
         services.AddSingleton<ProcessThrottle>();
 

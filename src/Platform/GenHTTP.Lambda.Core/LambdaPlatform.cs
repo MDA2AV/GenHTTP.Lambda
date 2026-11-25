@@ -236,6 +236,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton(runtime.Services.GetRequiredService<CrawlerRanges>());
         services.AddSingleton(runtime.Services.GetRequiredService<CompiledAssemblies>());
         services.AddSingleton(runtime.Services.GetRequiredService<CompilationGate>());
+        services.AddSingleton<IPreparationLane>(runtime.Services.GetRequiredService<PreparationLane>());
 
         if (runs != null)
         {

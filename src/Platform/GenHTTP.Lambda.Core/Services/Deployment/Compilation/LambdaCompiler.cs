@@ -51,10 +51,10 @@ internal static class LambdaCompiler
 
     /// <summary>
     /// Compiles the snippet and, unless <see cref="CompilationRequest.Run" /> is
-    /// disabled, loads and invokes it to obtain the handler.
+    /// disabled, loads it. None of its code is run.
     /// </summary>
     /// <param name="request">What to compile and where to put it</param>
-    internal static async ValueTask<(CompilationOutcome Outcome, IHandler? Handler)> CompileAsync(CompilationRequest request)
+    internal static async ValueTask<(CompilationOutcome Outcome, LoadedLambda? Lambda)> CompileAsync(CompilationRequest request)
     {
         var code = request.Files.Where(f => f.IsCompiled).ToList();
 
@@ -110,7 +110,7 @@ internal static class LambdaCompiler
         if (request.Run && Loaded.TryGetValue(Identify(request), out var known))
         {
             // the very same code is already in the process, just build it again
-            return (CompilationOutcome.Succeeded(), await InvokeAsync(known, request));
+            return (CompilationOutcome.Succeeded(), known);
         }
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
@@ -174,7 +174,7 @@ internal static class LambdaCompiler
 
         Loaded[Identify(request)] = lambda;
 
-        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), await InvokeAsync(lambda, request));
+        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), lambda);
     }
 
     /// <summary>
@@ -187,7 +187,7 @@ internal static class LambdaCompiler
     /// because the top of a snippet is where an API key is most often read, a
     /// database migrated and a workspace prepared.
     /// </remarks>
-    private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
+    internal static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
     {
         if (request.Secrets is { } secrets)
         {
@@ -399,8 +399,6 @@ internal static class LambdaCompiler
         return message.StartsWith("'DatabaseFacade' does not contain a definition for 'GetConnection'", StringComparison.Ordinal)
             || message.Contains("'DbContext.Database'", StringComparison.Ordinal);
     }
-
-    private sealed record LoadedLambda(Assembly Assembly, string Scope);
 
     #endregion
 

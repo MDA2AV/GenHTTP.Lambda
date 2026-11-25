@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 
@@ -31,7 +32,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// is its public key, announced - and whose tier nobody else may set.
 /// </remarks>
 public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, ISecretVault secrets, IDatabaseVault stores,
-                               ILogger<DemoSeeder> logger)
+                               IPreparationLane lane, ILogger<DemoSeeder> logger)
 {
 
     /// <summary>
@@ -139,6 +140,8 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             return false;
         }
+
+        using var turn = await lane.EnterAsync(cancellation);
 
         if (!same)
         {
