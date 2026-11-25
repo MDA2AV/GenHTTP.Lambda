@@ -64,7 +64,8 @@ public sealed class TelemetryResource(ITelemetryService telemetry, IMetaService 
                 GCSettings.IsServerGC,
                 Environment.ProcessorCount,
                 telemetry.Started,
-                (long)(DateTime.UtcNow - telemetry.Started).TotalSeconds
+                (long)(DateTime.UtcNow - telemetry.Started).TotalSeconds,
+                telemetry.SharesProcess
             ),
             new TrafficDescription(
                 telemetry.TotalRequests,

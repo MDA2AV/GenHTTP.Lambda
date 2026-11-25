@@ -1557,9 +1557,9 @@ project, the tests included, fails a build that breaks this (`GL0001`,
 
 | Project | Below `src/` | What it is |
 |---|---|---|
-| `GenHTTP.Lambda.Core` | `Platform/` | the platform: `LambdaPlatform`, its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
+| `GenHTTP.Lambda.Core` | `Platform/` | the platform: `LambdaPlatform`, what several of one process share (`LambdaRuntime`), its services (`Services/`), its database and migrations (`Data/`), the demos, the licenses, the files of an export and the API's introduction (`Resources/`), its options (`Configuration/LambdaOptions.cs`) and its logging (`PlatformLogging`) |
 | `GenHTTP.Lambda.Web` | `Serving/` | what serving pages takes, for every component that has some: `Bundle`, a built frontend on disk, found below `bundles/<name>/` beside the host; `ClientApplication`, a bundle drawn in the browser (the editor, the panel); `SitePages`, a site's public pages named and prerendered per language, with `robots.txt`, `sitemap.xml`, `llms.txt` and, where asked, `/.well-known/ai-catalog.json`; `SiteMeta`, `SitePrerender` and `SiteLanguages`; `PageBranding`, which names every index page for the installation as its operator branded it |
-| `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `HostingPages`, with their words in its own `Resources/hosting.json` |
+| `GenHTTP.Lambda.Execution` | `Serving/` | `Runner.Create(platform).Site(site)`: serves the lambdas - at their own domains, at subdomains, below `/lambda/` where they answer by path, and the previews below `/features/` - and hands every other request to the site; `PlatformHandler.Create(platform).Handler(runner)`: the platform as a handler, for a server that serves more than it (see [Several platforms in one process](#several-platforms-in-one-process)); `HostingPages`, with their words in its own `Resources/hosting.json` |
 | `GenHTTP.Lambda.Api` | `Interfaces/` | `RestApi.Create(platform)`, mounted at `/api` |
 | `GenHTTP.Lambda.Mcp` | `Interfaces/` | `McpServer.Create(platform)`, mounted at `/mcp`; and `OperatorMcp.Create(platform)`, the operator's endpoint at `/admin/mcp`, a concern put in front of the panel (see [The operator's MCP endpoint](#the-operators-mcp-endpoint)) |
 | `GenHTTP.Lambda.Editing` | `Applications/` | `Editor.Create(platform)`, mounted at `/editor`: the editor, the page that creates a lambda, and the owner's git repositories `/editor/{key}/{name}.git` |
@@ -1619,29 +1619,34 @@ migrates the platform's records and its analytics through the database
 integration, builds the services into one container and reads what every
 request and page needs before the first request - the limits, the operator's
 switches, the guide's section, the domains served, the blocked addresses, the
-brand, the pictures moved out of the records they were kept in before - once
-per process. It is awaited: on
+brand, the pictures moved out of the records they were kept in before - once,
+as the platform is built. It is awaited: on
 PostgreSQL that is where the server is first reached; every component's
 builder is handed the platform and takes what it needs from it, and makes its
 own singletons - the MCP tools, the pages of a bundle - from those services,
 so the container registers nothing of the components. `LambdaServer` starts
-the platform's background jobs once it is listening, and seeds the demos
-after that. Disposing of the platform stops the jobs and the services, and
-gives the console back. Since nothing below the hosts reads the environment, a
+what goes on beside the requests once it is listening (`LambdaPlatform.Start`):
+the background jobs, the warm-up, the demos. Disposing of the platform stops
+them and the services, closes the connections SQLite keeps in its pools, gives
+the console back and takes back what the compiled lambdas were handed to reach
+it with - their assemblies stay loaded, and would hold on to it. Since nothing below the hosts reads the environment, a
 component runs the same in a test (`LambdaFixture`, which puts them together
 the way the cloud does, or the community edition) as in a host.
 
-Every request passes the platform's concerns in front of the runner, added by
-`PlatformHosting` - from the outside in:
+Every request passes the platform's concerns in front of the runner
+(`PlatformConcerns`), put around a server of its own by `PlatformHosting` -
+from the outside in:
 
 1. `AddressBlockConcern` - a blocked address is refused, the panel excepted
    (see [Blocking](#blocking));
 2. `LambdaRedirectConcern` - an address a lambda no longer answers at is sent
    on to where it does;
-3. the scope of the request, which every dependent concern is resolved from;
-4. `CallerConcern` - the request line, with who asked;
-5. GenHTTP's defaults - compression, the upgrade to HTTPS and the rest;
-6. `TelemetryConcern`;
+3. `CallerConcern` - the request line, with who asked;
+4. GenHTTP's defaults - compression, the upgrade to HTTPS and the rest - which
+   are the server's;
+5. `QuietHoursConcern` and `TelemetryConcern`;
+6. the scope of GenHTTP's dependency injection, for what a host of somebody's
+   own adds to the site - the platform and its components look for none;
 
 then the answers to ACME challenges, where `LAMBDA_ACME_DIRECTORY` is set, and
 the runner. Its `DomainRouter` decides once whose host a request is for: a
@@ -1649,6 +1654,79 @@ lambda's own domain or its subdomain go to that lambda, the hosting domain to
 its page, a host nobody has to the page that says nothing is there, and the
 platform's names to the previews, the lambdas below `/lambda/` where they
 answer by path, and the site.
+
+#### Several platforms in one process
+
+A host may run an installation per team or customer in one process and behind
+one server - a GenHTTP application of its own, with the platforms as handlers
+in it. Each is an installation like any other, with its own data directory,
+address, operator, limits, log and jobs. What they have in common is a
+`LambdaRuntime`, which the host makes once and hands to each of them:
+
+```csharp
+await using var runtime = LambdaRuntime.Create()
+                                       .Options(new RuntimeOptions { DataDirectory = "/data/runtime" })
+                                       .Build();
+
+// per installation, as the server runs or before
+var platform = await LambdaPlatform.Create()
+                                   .Runtime(runtime)
+                                   .Options(options)
+                                   .BuildAsync();
+
+var handler = PlatformHandler.Create(platform)
+                             .Handler(Runner.Create(platform).Site(site))
+                             .Build();
+
+await handler.PrepareAsync(server);
+
+platform.Start();
+```
+
+- **The runtime is what a process has once**: the country table and the lists
+  of crawlers with the jobs that fetch them, the turn to compile, the folder of
+  the compiled assemblies, a bound on the requests to lambdas of all platforms
+  together (`RuntimeOptions.MaxConcurrency`, beside each platform's own), and
+  what components keep that is the same for every platform
+  (`LambdaRuntime.Shared` - the prerendered pages of a bundle). Nothing in it
+  is anybody's data, so it needs no backup. A platform that is handed none
+  makes its own from its `LambdaOptions` - that is how both hosts run, and for
+  them nothing about this exists.
+- **The process is the host's.** A platform on a runtime it was handed keeps no
+  lines of the console but those of its lambdas - which are not printed to it
+  either - writes no `run.json`, and its
+  operator is told nothing of the process: `/telemetry` says `shared`, and the
+  panel leaves out what it does not read. Reading the process is walking every
+  mapping in it, which grow with every lambda of every installation.
+- **`PlatformHandler` is what `LambdaServer` is for a server of its own**: the
+  same concerns in the same order, but for what a server does to every answer.
+  The host adds GenHTTP's defaults where it wants them, and prepares a handler
+  that joins a running server itself.
+- **A host for each.** The pages are at the root of a host, so requests are
+  told apart by the host they are addressed to (`PublicUrl`); an address with
+  a path is refused as it always was.
+- **The API by reflection** (`RestApi.Create(platform).Compiled(false)`) where
+  there are many: compiled into delegates it is a hundred and some assemblies
+  and a second or two for every platform, which stay for as long as the process.
+- **What one of them starts holds up no other.** The turn to compile is the
+  process's, and what a lambda does as it starts is not part of it. A handler of
+  its own that takes its time to be prepared keeps the turn for five seconds at
+  most; one that is warmed up keeps the others to be warmed up waiting for
+  fifteen.
+- **Taking one away**: stop handing it requests, wait for those under way, then
+  dispose of it - and delete its data directory if it is gone for good.
+  Nothing of it stays but the code of its lambdas, which .NET cannot unload: a
+  version deployed is memory until the process ends, so the deployments of all
+  installations add up where they used to end with each.
+- **What a lambda does where nothing waits for it** - on a timer, say - goes on
+  when its platform is taken away, and ends the process if it fails, as it
+  always did. A host can decide otherwise
+  (`ExceptionHandling.SetUnhandledExceptionHandler`), but not always tell whose
+  it was: the mark of a lambda (`LambdaOutput.Ambient`) is there for a thread,
+  an item of the pool and an async void, and gone for a timer, whose context is
+  left before its failure is handed on.
+- **They are not isolated from one another** any more than lambdas are: they
+  share a process, and the guard is no sandbox.
 
 The frontends are an npm workspace at the root (`package.json`,
 `tsconfig.base.json`). What they share is source, not a build: `src/Kit`
@@ -1815,14 +1893,23 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   the resulting handler. Compiled once, then cached - one handler for what a
   lambda has online, and one for the preview of each of its features - on
   the first request, or as the server starts for the tiers kept warm
-  (`LambdaWarmup` in `Services/Meta`, see [Tiers](#tiers)). One snippet is
-  compiled at a time. An
+  (`LambdaWarmup` in `Services/Meta`, see [Tiers](#tiers)). One lambda
+  of a platform is built at a time, and one snippet of the process is compiled
+  at a time, whichever platform it belongs to (`CompilationGate`) - compiled,
+  that is: what a lambda does as it starts is its own code, and outside of that
+  turn. What nobody asked for yet - the demos, the lambdas kept warm - is built
+  one after another in the whole process (`IPreparationLane`), so a visitor
+  waits for one of them at most. An
   assembly stays loaded for the life of the process, so a build is known by
   its compiled C#: a version that changes only resources or the rest of its
   code - documentation, tests - gets a new handler from the assembly already
   loaded rather than being compiled
-  again. Lambdas are compiled against the metadata of the platform's
-  assemblies, read once and kept - the metadata alone, not the whole files.
+  again. The file behind it stays as well (`CompiledAssemblies`): GenHTTP builds
+  its invocation code from the files of everything loaded, so one removed would
+  break the compilation of every handler that follows. They are the process's,
+  thrown away as the next one starts. Lambdas are compiled against the metadata of the platform's
+  assemblies, read once and kept - the metadata alone, not the whole files - and
+  never against the assembly of the host, whatever it is called.
 - **Execution** (the runner, `GenHTTP.Lambda.Execution`) - not a service but
   the component that serves the lambdas: `LambdaRoute` puts the concerns in
   front of every lambda around `LambdaExecutionHandler`, an `IHandler` that
@@ -1852,9 +1939,13 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   does not query the database.
 
 A concern that needs nothing but services is a dependent concern of GenHTTP
-(`IDependentConcern`, added with `Dependent.Concern<T>()`): a singleton in the
-container, resolved per request from the scope that `PlatformHosting` opens
-around every request. That is the line each request is logged with, the server's
+(`IDependentConcern`), a singleton in the container, added with
+`ServiceConcern.Of<T>(services)`: taken from the container of the platform the
+chain is built for. Not with GenHTTP's own `Dependent.Concern<T>()`, which takes
+it from the scope of the request - a server has one container for those, and a
+platform may not be the only one of its server. The resources of the API are
+made from the platform's container for the same reason (`ApiLayout`). That is
+the line each request is logged with, the server's
 telemetry, and in front of every lambda the throttle, the mark on what it
 prints, its activity and the rate limit. The lookup of the lambda is built by
 hand, once per route, because its locator is what tells the routes apart.
@@ -1867,7 +1958,11 @@ What is printed to the console - what a lambda prints, and what the engine
 says about its reactors - is kept by `Services/Diagnostics/ConsoleCapture.cs`,
 which the platform owns: it puts a tee over the console, once per process,
 and files what is printed outside any lambda into the book of every
-platform running, until that platform is disposed of. The logger
+platform that has its process for itself, until that platform is disposed of -
+a server runs one, tests many side by side. Where several share a process they
+keep what their lambdas print - in a request, as they are deployed and as they
+are warmed up - and nothing else of the console, and nothing of it goes on to
+the console, which is their host's. The logger
 writes its lines to the console it was given before the tee existed, and takes
 the lock of `Console.Out` first - the console takes that lock itself under
 every write, and in the other order a print and a log line waited for each

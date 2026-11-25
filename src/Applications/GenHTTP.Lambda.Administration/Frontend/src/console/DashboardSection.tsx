@@ -116,10 +116,15 @@ export function DashboardSection({ access }: { access: Access }) {
           {telemetry ? (
             <Facts>
               <Fact label="Running for">{duration(telemetry.server.uptimeSeconds)}</Fact>
-              <Fact label="CPU">{telemetry.latest.cpuPercentage.toFixed(1)}%</Fact>
-              <Fact label="Working set">{bytes(telemetry.latest.workingSetBytes)}</Fact>
-              <Fact label="Managed heap">{bytes(telemetry.latest.managedBytes)}</Fact>
-              <Fact label="Open sockets">{count(telemetry.traffic.openSockets)}</Fact>
+              {/* of a process shared with other installations, nothing is read */}
+              {!telemetry.server.shared && (
+                <>
+                  <Fact label="CPU">{telemetry.latest.cpuPercentage.toFixed(1)}%</Fact>
+                  <Fact label="Working set">{bytes(telemetry.latest.workingSetBytes)}</Fact>
+                  <Fact label="Managed heap">{bytes(telemetry.latest.managedBytes)}</Fact>
+                  <Fact label="Open sockets">{count(telemetry.traffic.openSockets)}</Fact>
+                </>
+              )}
               <Fact label="Engine">{telemetry.server.engine}, GenHTTP {telemetry.server.version}</Fact>
             </Facts>
           ) : (

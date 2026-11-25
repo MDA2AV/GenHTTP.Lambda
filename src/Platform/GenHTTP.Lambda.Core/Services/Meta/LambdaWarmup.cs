@@ -1,7 +1,9 @@
 using System.Diagnostics;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
@@ -33,11 +35,13 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// so asking for all of them together would compile nothing sooner and put
 /// every one of them ahead of a visitor whose lambda is not warm yet, and of
 /// an owner putting a version online. Asked for one at a time, those wait for
-/// one compilation at most. The ones used last go first: whoever was there
-/// before the restart is likeliest to be back first.
+/// one compilation at most - and where several platforms start in one process,
+/// one of them all (<see cref="IPreparationLane"/>). The ones used last go
+/// first: whoever was there before the restart is likeliest to be back first.
 /// </remarks>
 public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deployments, IDbContextFactory<LambdaDbContext> databases,
-                                 ILimitsService limits, ILogger<LambdaWarmup> logger)
+                                 ILimitsService limits, IPreparationLane lane, ILogBook book, LambdaOptions options,
+                                 ILogger<LambdaWarmup> logger)
 {
 
     #region Functionality
@@ -65,16 +69,29 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
                 return;
             }
 
-            // asked again rather than taken from the list: one taken offline
-            // or blocked since is not served, so it is not compiled either
-            if (await meta.ResolveAsync(id) is not { } lambda)
-            {
-                continue;
-            }
+            string? name = null;
 
             try
             {
-                await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.Settings, cancellation);
+                using var turn = await lane.EnterAsync(cancellation);
+
+                // asked again rather than taken from the list: one taken offline
+                // or blocked since is not served, so it is not compiled either
+                if (await meta.ResolveAsync(id) is not { } lambda)
+                {
+                    continue;
+                }
+
+                name = lambda.PublicKey;
+
+                // under the lambda's own name, as a deployment and a request
+                // are: its startup runs here, and what it prints is its own
+                using (options.CaptureLambdaOutput
+                       ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, options.MaxOutputLines, lambda.Id))
+                       : null)
+                {
+                    await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.Settings, cancellation);
+                }
 
                 warmed++;
             }
@@ -84,7 +101,7 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Failed to warm up lambda {Lambda} version {Version}", lambda.PublicKey, lambda.ActiveVersion);
+                logger.LogWarning(e, "Failed to warm up lambda {Lambda}", name ?? $"#{id}");
             }
         }
 

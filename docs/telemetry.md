@@ -18,7 +18,7 @@ on next.
   of the data volume;
 - the server engine and GenHTTP version, whether the server terminates TLS
   itself, its uptime, the number of requests served since it started and the
-  memory the process uses;
+  memory the process uses - zero where several installations share it;
 - which options are enabled: how apps are addressed (by path or by
   subdomain), a hosting domain, the build agent and its input boxes, the
   administration panel, terms, contact addresses, legal pages, the number of

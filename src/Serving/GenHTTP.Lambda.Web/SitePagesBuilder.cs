@@ -74,7 +74,10 @@ public sealed class SitePagesBuilder(LambdaPlatform platform, Bundle bundle) : I
 
         var meta = new SiteMeta(bundle, publicUrl);
 
-        var prerender = new SitePrerender(bundle, publicUrl, services.GetRequiredService<ILimitsService>(), services.GetRequiredService<IShowcaseService>(),
+        // one for every platform of the process that serves this bundle
+        var rendered = platform.Runtime.Shared(bundle.PrerenderFile, () => new PrerenderFile(bundle.PrerenderFile));
+
+        var prerender = new SitePrerender(rendered, publicUrl, services.GetRequiredService<ILimitsService>(), services.GetRequiredService<IShowcaseService>(),
                                           services.GetRequiredService<ILambdaAddresses>(), platform.Loggers.CreateLogger<SitePrerender>());
 
         // ranges because a front page may show a video, and Safari will not

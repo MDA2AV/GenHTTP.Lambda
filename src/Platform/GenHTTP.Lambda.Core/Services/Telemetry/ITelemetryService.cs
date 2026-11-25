@@ -13,6 +13,12 @@ public interface ITelemetryService
     DateTime Started { get; }
 
     /// <summary>
+    /// Whether the process serves other installations as well, so nothing of
+    /// it is read: its memory and its connections are not this one's.
+    /// </summary>
+    bool SharesProcess { get; }
+
+    /// <summary>
     /// Every request the server has answered since it started.
     /// </summary>
     long TotalRequests { get; }

@@ -37,7 +37,7 @@ public sealed class RestApiBuilder(LambdaPlatform platform) : IHandlerBuilder<Re
         return this;
     }
 
-    public IHandler Build() => Concerns.Chain(_concerns, ApiLayout.Create(platform.Options, _compiled).Build());
+    public IHandler Build() => Concerns.Chain(_concerns, ApiLayout.Create(platform, _compiled).Build());
 
     #endregion
 

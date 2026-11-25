@@ -18,7 +18,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// that has never reached them has the list of its release and confirms no
 /// crawler - every claim is counted as unconfirmed, which is what it is.
 /// </remarks>
-public sealed class CrawlerJob(CrawlerList crawlers, CrawlerRanges ranges, LambdaOptions options, ILogger<CrawlerJob> logger) : IBackgroundJob
+public sealed class CrawlerJob(CrawlerList crawlers, CrawlerRanges ranges, RuntimeOptions options, ILogger<CrawlerJob> logger) : IBackgroundJob
 {
 
     /// <summary>

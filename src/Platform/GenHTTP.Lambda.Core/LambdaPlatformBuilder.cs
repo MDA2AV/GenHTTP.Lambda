@@ -25,6 +25,8 @@ public sealed class LambdaPlatformBuilder
 
     private RunLog? _runs;
 
+    private LambdaRuntime? _runtime;
+
     private IIntegrationBuilder<IDatabaseProvider>? _database;
 
     private IIntegrationBuilder<IFileProvider>? _files;
@@ -65,6 +67,20 @@ public sealed class LambdaPlatformBuilder
     public LambdaPlatformBuilder RunLog(RunLog runs)
     {
         _runs = runs;
+        return this;
+    }
+
+    /// <summary>
+    /// What the platform shares with the others of its process, for a host
+    /// that runs several. Without, the process is the platform's own.
+    /// </summary>
+    /// <remarks>
+    /// Where the process is shared, when it starts and how it ends are the
+    /// host's to keep, so a <see cref="RunLog"/> is neither made nor used.
+    /// </remarks>
+    public LambdaPlatformBuilder Runtime(LambdaRuntime runtime)
+    {
+        _runtime = runtime;
         return this;
     }
 
@@ -120,14 +136,17 @@ public sealed class LambdaPlatformBuilder
 
         Directory.CreateDirectory(_options.DataDirectory);
 
-        var runs = _runs;
+        // the run is a platform's to write down where the process is its own
+        var runs = _runtime == null ? _runs : null;
 
-        if (runs == null)
+        if (runs == null && _runtime == null)
         {
             runs = new RunLog(_options.DataDirectory);
 
             runs.Report(logger);
         }
+
+        var runtime = _runtime;
 
         PlatformIntegrations? integrations = null;
 
@@ -135,11 +154,13 @@ public sealed class LambdaPlatformBuilder
 
         try
         {
+            runtime ??= new LambdaRuntime(RuntimeOptions.Of(_options), loggers);
+
             integrations = await BuildIntegrationsAsync(new IntegrationContext(_options.DataDirectory, loggers), cancellation);
 
             await Migrator.MigrateAsync(integrations.Database, loggers.CreateLogger<LambdaPlatform>(), cancellation);
 
-            platform = new LambdaPlatform(_options, loggers, _loggers == null, book, runs, integrations);
+            platform = new LambdaPlatform(_options, loggers, _loggers == null, book, runs, runtime, integrations);
 
             await platform.PrepareAsync(cancellation);
 
@@ -153,14 +174,22 @@ public sealed class LambdaPlatformBuilder
                 // loggers it was handed, which are let go of below
                 await platform.DisposeAsync(false);
             }
-            else if (integrations != null)
+            else
             {
-                await integrations.DisposeAsync();
+                if (integrations != null)
+                {
+                    await integrations.DisposeAsync();
+                }
+
+                if (_runtime == null && runtime != null)
+                {
+                    await runtime.DisposeAsync();
+                }
             }
 
             // nothing watches the process for what ends it yet - the server
             // does that once there is a platform to serve
-            runs.Faulted(e);
+            runs?.Faulted(e);
 
             logger.LogCritical(e, "The platform could not be started");
 

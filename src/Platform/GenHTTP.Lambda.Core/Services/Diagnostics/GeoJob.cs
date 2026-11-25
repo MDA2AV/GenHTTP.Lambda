@@ -17,7 +17,7 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// that has never reached them simply has no countries to show rather than a
 /// startup that fails.
 /// </remarks>
-public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions options, ILogger<GeoJob> logger) : IBackgroundJob
+public sealed class GeoJob(GeoTable table, GeoPlaces places, RuntimeOptions options, ILogger<GeoJob> logger) : IBackgroundJob
 {
 
     /// <summary>

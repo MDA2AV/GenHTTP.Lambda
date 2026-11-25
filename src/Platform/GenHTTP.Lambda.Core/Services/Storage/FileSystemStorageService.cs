@@ -61,13 +61,10 @@ public sealed class FileSystemStorageService : IStorageService
 
         Directory.CreateDirectory(options.CodeDirectory);
 
-        // nothing is loaded yet, so this is the one moment where the artifacts
-        // of previous runs can safely be thrown away - and what was on its way
-        // into a store when it stopped, which no manifest names
-        Remove(options.AssemblyDirectory);
+        // what was on its way into a store when the server stopped, which no
+        // manifest names
         Remove(options.StagingDirectory);
 
-        Directory.CreateDirectory(options.AssemblyDirectory);
         Directory.CreateDirectory(options.StagingDirectory);
 
         RemoveAssets();
@@ -142,15 +139,10 @@ public sealed class FileSystemStorageService : IStorageService
 
         _changed.TryRemove(lambdaId, out _);
 
-        // the generated assembly stays: it cannot be unloaded and GenHTTP builds
-        // its invocation code from the files behind the loaded assemblies, so
-        // removing one here would break the compilation of every handler that
-        // follows. The next start of the server wipes the directory instead.
+        // the generated assembly stays: it is the process's (see CompiledAssemblies)
 
         Logger.LogInformation("Removed storage of lambda #{LambdaId}", lambdaId);
     }
-
-    public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
 
     public string GetResourceDirectory(long lambdaId, long? featureId = null)
         => featureId is { } feature

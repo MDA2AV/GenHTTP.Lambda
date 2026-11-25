@@ -95,7 +95,9 @@ public sealed class MonitoringOperatorTools(ITelemetryService telemetry, IMetaSe
                 serverGc = GCSettings.IsServerGC,
                 processors = Environment.ProcessorCount,
                 started = telemetry.Started,
-                uptimeSeconds = (long)(DateTime.UtcNow - telemetry.Started).TotalSeconds
+                uptimeSeconds = (long)(DateTime.UtcNow - telemetry.Started).TotalSeconds,
+                // the process is others' as well, and what is read of it zero
+                sharedProcess = telemetry.SharesProcess
             },
             traffic = new
             {

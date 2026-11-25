@@ -45,11 +45,6 @@ public interface IStorageService
     ValueTask DeleteAsync(long lambdaId);
 
     /// <summary>
-    /// The directory the assemblies generated for a lambda are written to.
-    /// </summary>
-    string GetAssemblyDirectory(long lambdaId);
-
-    /// <summary>
     /// The directory the resources shipped with a lambda - or with the preview
     /// of one of its features - are written to.
     /// </summary>

@@ -60,10 +60,43 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     public ValueTask PrepareAsync(CancellationToken cancellation = default) => ValueTask.CompletedTask;
 
     /// <remarks>
-    /// Holds nothing open of its own: SQLite's pools are the process's, shared
-    /// with every other user of the library in it.
+    /// Closes the connections it left in SQLite's pools, which are the
+    /// process's: where that goes on without the platform, its files would
+    /// stay open for good.
     /// </remarks>
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        foreach (var store in Enum.GetValues<DatabaseStore>())
+        {
+            ClearPool(StoreConnection(store));
+        }
+
+        foreach (var file in Databases())
+        {
+            ClearPool(ConnectionString(file, false));
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private static void ClearPool(string connectionString)
+    {
+        using var connection = new SqliteConnection(connectionString);
+
+        SqliteConnection.ClearPool(connection);
+    }
+
+    /// <summary>
+    /// The databases of the lambdas and of their features, wherever one is.
+    /// </summary>
+    private IEnumerable<string> Databases()
+    {
+        static IEnumerable<string> Below(string directory) => Directory.Exists(directory) ? Directory.EnumerateDirectories(directory) : [];
+
+        return Below(Path.Combine(dataDirectory, "databases")).Concat(Below(Path.Combine(dataDirectory, "features")).SelectMany(Below))
+                                                              .Select(folder => Path.Combine(folder, DatabaseName))
+                                                              .Where(File.Exists);
+    }
 
     #endregion
 
@@ -738,10 +771,7 @@ internal sealed class SqliteDatabaseProvider(string dataDirectory, ILogger<Sqlit
     /// </remarks>
     private void Remove(string file)
     {
-        using (var connection = new SqliteConnection(ConnectionString(file, false)))
-        {
-            SqliteConnection.ClearPool(connection);
-        }
+        ClearPool(ConnectionString(file, false));
 
         foreach (var path in new[] { file, $"{file}-wal", $"{file}-shm", $"{file}-journal" })
         {

@@ -20,6 +20,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// built, so installing afterwards leaves it writing to the real console
 /// while everything that reaches Console.Out later comes through here.
 ///
+/// Passed through where a platform has the process for itself, that is. Where
+/// several share it the console is their host's, whose log is read by others
+/// than a lambda's: what one prints is in the log of its installation, and
+/// there only.
+///
 /// Only the four primitive writes are overridden. Every other overload of
 /// <see cref="TextWriter"/> is defined in terms of them, so this sees each
 /// character exactly once however it was written - and because the console
@@ -60,7 +65,9 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
             _installed = true;
 
-            Console.SetOut(new ConsoleTee(Console.Out, false));
+            _console = Console.Out;
+
+            Console.SetOut(new ConsoleTee(_console, false));
             Console.SetError(new ConsoleTee(Console.Error, true));
         }
     }
@@ -69,13 +76,33 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
     private static bool _installed;
 
+    private static TextWriter? _console;
+
+    /// <summary>
+    /// The console itself, whether or not there is a tee over it: what a
+    /// logger writes to, whose records are in the book already.
+    /// </summary>
+    public static TextWriter Underlying
+    {
+        get
+        {
+            lock (Guard)
+            {
+                return _console ?? Console.Out;
+            }
+        }
+    }
+
     public override Encoding Encoding => inner.Encoding;
 
     public override IFormatProvider FormatProvider => inner.FormatProvider;
 
     public override void Write(char value)
     {
-        inner.Write(value);
+        if (Passed)
+        {
+            inner.Write(value);
+        }
 
         Span<char> one = [value];
 
@@ -84,7 +111,10 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
     public override void Write(string? value)
     {
-        inner.Write(value);
+        if (Passed)
+        {
+            inner.Write(value);
+        }
 
         if (value != null)
         {
@@ -94,17 +124,30 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
     public override void Write(char[] buffer, int index, int count)
     {
-        inner.Write(buffer, index, count);
+        if (Passed)
+        {
+            inner.Write(buffer, index, count);
+        }
 
         Feed(buffer.AsSpan(index, count));
     }
 
     public override void Write(ReadOnlySpan<char> buffer)
     {
-        inner.Write(buffer);
+        if (Passed)
+        {
+            inner.Write(buffer);
+        }
 
         Feed(buffer);
     }
+
+    /// <summary>
+    /// Whether what is written goes on to the console: what nobody's lambda
+    /// prints does, and what one prints where a platform has the process for
+    /// itself.
+    /// </summary>
+    private static bool Passed => LambdaOutput.Ambient == null || !LambdaOutput.Process.IsEmpty;
 
     /// <summary>
     /// Files what was written under the lambda being served, or else under

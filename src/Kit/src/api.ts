@@ -719,6 +719,8 @@ export interface Telemetry {
     processors: number;
     started: string;
     uptimeSeconds: number;
+    /** Whether the process serves other installations as well: what is read of it is zero then. */
+    shared?: boolean;
   };
   traffic: { requests: number; failed: number; upgrades: number; openSockets: number };
   platform: { lambdas: number; deployed: number; versions: number };
