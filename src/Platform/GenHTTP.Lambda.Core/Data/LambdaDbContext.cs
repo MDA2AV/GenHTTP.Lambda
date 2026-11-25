@@ -47,6 +47,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<AgentTicketEntity> AgentTickets => Set<AgentTicketEntity>();
 
+    public DbSet<SharedFileEntity> SharedFiles => Set<SharedFileEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -384,6 +386,22 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         tickets.Property(t => t.Model).HasColumnName("model").HasConversion<short>();
         tickets.Property(t => t.Effort).HasColumnName("effort").HasConversion<short>();
         tickets.Property(t => t.Expires).HasColumnName("expires");
+
+        var shared = builder.Entity<SharedFileEntity>();
+
+        shared.ToTable("shared_files");
+
+        shared.HasKey(f => f.Name);
+
+        shared.Property(f => f.Name).HasColumnName("name");
+        shared.Property(f => f.Bytes).HasColumnName("bytes");
+        shared.Property(f => f.Hash).HasColumnName("hash");
+        shared.Property(f => f.Updated).HasColumnName("updated");
+        shared.Property(f => f.FontFamily).HasColumnName("font_family");
+        shared.Property(f => f.FontFrom).HasColumnName("font_from");
+        shared.Property(f => f.FontTo).HasColumnName("font_to");
+        shared.Property(f => f.FontItalic).HasColumnName("font_italic");
+        shared.Property(f => f.FontLetters).HasColumnName("font_letters");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

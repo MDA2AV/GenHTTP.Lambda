@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Services.Guide;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.SharedFiles;
 
 using Microsoft.Extensions.Logging;
 
@@ -198,6 +199,47 @@ public static class OperationLog
 
     public static void LogoRemoved(this ILogger logger)
         => logger.LogInformation("Removed branding logo by operator");
+
+    /// <summary>
+    /// Logs other colours - and nothing where they stayed what they were.
+    /// </summary>
+    public static void BrandingColored(this ILogger logger, BrandLook previous, Brand brand)
+    {
+        if (previous.Accent != brand.Look.Accent || previous.Second != brand.Look.Second)
+        {
+            logger.LogInformation("Changed branding colors accent {Accent} second {Second} by operator", brand.Look.Accent?.Hex ?? "none", brand.Look.Second?.Hex ?? "none");
+        }
+    }
+
+    /// <summary>
+    /// Logs other fonts - and nothing where they stayed what they were.
+    /// </summary>
+    public static void BrandingFonts(this ILogger logger, BrandLook previous, Brand brand)
+    {
+        var (text, headings) = (Names(brand.Look.TextFont), Names(brand.Look.HeadingFont));
+
+        if (Names(previous.TextFont) != text || Names(previous.HeadingFont) != headings)
+        {
+            logger.LogInformation("Changed branding fonts text {Text} headings {Headings} by operator", text, headings);
+        }
+
+        static string Names(IReadOnlyList<SharedFile> files) => files.Count == 0 ? "none" : string.Join(',', files.Select(f => f.Name));
+    }
+
+    public static void SharedFileWritten(this ILogger logger, SharedFile file, bool replaced)
+    {
+        if (replaced)
+        {
+            logger.LogInformation("Replaced shared file {Name} bytes {Bytes} by operator", file.Name, file.Bytes);
+        }
+        else
+        {
+            logger.LogInformation("Shared file {Name} bytes {Bytes} by operator", file.Name, file.Bytes);
+        }
+    }
+
+    public static void SharedFileDeleted(this ILogger logger, SharedFile file)
+        => logger.LogInformation("Deleted shared file {Name} bytes {Bytes} by operator", file.Name, file.Bytes);
 
     #endregion
 

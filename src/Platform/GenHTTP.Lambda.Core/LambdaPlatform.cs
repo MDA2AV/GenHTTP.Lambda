@@ -26,6 +26,7 @@ using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.QuietHours;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Settings;
+using GenHTTP.Lambda.Services.SharedFiles;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Storage;
@@ -173,7 +174,8 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         // what the pages and the serving read from memory: the operator's
         // switches - the site's and the build agent's, with the models it
-        // offers - and what every page is branded with, its logo among the files
+        // offers - and what every page is branded with, its logo and its fonts
+        // among the files
         await Services.GetRequiredService<SettingsService>().LoadAsync(cancellation);
 
         await Services.GetRequiredService<AgentSettingsStore>().LoadAsync(cancellation);
@@ -317,6 +319,9 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<ISettingsService>(provider => provider.GetRequiredService<SettingsService>());
         services.AddSingleton<LimitsService>();
         services.AddSingleton<ILimitsService>(provider => provider.GetRequiredService<LimitsService>());
+        services.AddSingleton<SharedFileStore>();
+        services.AddSingleton<ISharedFiles>(provider => provider.GetRequiredService<SharedFileStore>());
+        services.AddSingleton<ISharedFileService, SharedFileService>();
         services.AddSingleton<BrandingService>();
         services.AddSingleton<IBrandingService>(provider => provider.GetRequiredService<BrandingService>());
         services.AddSingleton<GuideService>();

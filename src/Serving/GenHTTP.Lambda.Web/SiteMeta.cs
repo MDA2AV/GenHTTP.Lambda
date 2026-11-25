@@ -323,7 +323,9 @@ public sealed class SiteMeta
     /// from: they are not prerendered, and a crawler that renders one may only
     /// fetch what it is allowed to - so without it, it would find each page
     /// named and described, and empty. The same goes for the showcase pictures
-    /// those pages show and are previewed with. The zip of a version stays
+    /// those pages show and are previewed with, and for the shared files:
+    /// the pages are set in their fonts, and an app may be drawn with a style
+    /// sheet that is one, wherever the app answers. The zip of a version stays
     /// out: it is a download, and packing it is work nobody reads.
     /// </remarks>
     public string Robots(Brand? brand = null)
@@ -332,7 +334,8 @@ public sealed class SiteMeta
 
         robots.Append("User-agent: *\n")
               .Append("Allow: /api/v1/sources/\n")
-              .Append("Allow: /api/v1/showcases/\n");
+              .Append("Allow: /api/v1/showcases/\n")
+              .Append("Allow: /api/v1/shared/\n");
 
         // the picture a branded installation's pages show as their icon,
         // which a search engine fetches to show beside its results

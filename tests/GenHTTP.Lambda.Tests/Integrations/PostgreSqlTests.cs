@@ -58,6 +58,16 @@ public sealed class PostgreSqlTests
 
         Assert.AreEqual(1L, await database.QueryAsync("SELECT CAST(SUM(hits) AS bigint) FROM analytics.days"));
 
+        await fixture.ShareAsync("Acme.woff2", new TestFont("Acme Sans", Axis: (100, 900), Italic: true).Woff2());
+
+        var font = (await fixture.OperateAsync<SharedFilesResponse>(HttpMethod.Get, "shared")).Files.Single().Font!;
+
+        Assert.AreEqual(("Acme Sans", 100, 900, true), (font.Family, font.From, font.To, font.Italic));
+
+        var branding = await fixture.OperateAsync<BrandingResponse>(HttpMethod.Put, "branding/fonts", new { text = (string[])["Acme.woff2"] });
+
+        Assert.Contains("@font-face", branding.StyleSheet!, "and what the pages are drawn with");
+
         using var integrations = await fixture.GetAsOperatorAsync("/api/v1/admin/integrations");
 
         var listed = await integrations.GetContentAsync<List<IntegrationResponse>>();

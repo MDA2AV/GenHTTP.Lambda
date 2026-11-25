@@ -301,23 +301,77 @@ GenHTTP way. Two hosts, two editions:
 
 ### Branding (community only)
 
-**(owner)** The operator gives the installation a name and a logo in the
-panel's **Branding** section (or `/admin/branding`, `customize_installation`
-on the operator's MCP endpoint) - never environment variables - and every page shows
-them instead of GenHTTP Lambda's: bar, titles, link previews, icon, manifest,
-`llms.txt`. The host decides whether it is offered (`LambdaOptions.Branding`);
-without it the routes, tool and section are absent and nothing stored is read.
+**(owner)** The operator gives the installation a name, a logo, accent colors
+and fonts in the panel's **Branding** section (or `/admin/branding`,
+`customize_installation` on the operator's MCP endpoint) - never environment
+variables. Every page shows the name and the logo instead of GenHTTP Lambda's -
+bar, titles, link previews, icon, manifest, `llms.txt` - and is drawn in the
+colors and fonts. The host decides whether it is offered
+(`LambdaOptions.Branding`); without it the routes, tool and section are absent
+and nothing stored is read.
 
-- A name without a logo is drawn as its first letter (`Monogram`), so a branded
-  installation never shows the platform's mark **(open)**. The brand is written
-  into every index page by the server (`PageBranding`, `#lambda-brand`) and the
-  site is prerendered for it; an unbranded installation gets its pages exactly
-  as built.
+- **Whose it is and how it is drawn are apart**: `Brand.Own` is a name or a
+  logo, `Brand.Look` the colors and fonts. A color makes nobody another
+  installation - the platform's mark, icon and previews stay.
+- A name without a logo is drawn as its first letter (`Monogram`) on a plate of
+  the accent, so a branded installation never shows the platform's mark
+  **(open)**. The brand is written into every index page by the server
+  (`PageBranding`: `#lambda-brand`, `#lambda-look`) and the site is prerendered
+  for a name or logo; an unbranded installation gets its pages exactly as
+  built.
+- **The moving background is in the accent (owner)**. A second accent is
+  optional: its second light, and what is purple otherwise; without one the
+  light is the accent's neighbour and the purple stays **(open)**.
+- **Any color is taken, and what is written in it can be read (open)**:
+  `BrandPalette` draws it as entered on surfaces (buttons, plate, lights) and
+  lighter or darker as text (4.5:1 in each theme), white or dark on a button.
+  Worked out in that one place; the panel asks (`GET /admin/branding/preview`).
+- **The pages are drawn from the values `index.css` of the kit leaves open**
+  (`--accent-*`, `--second-*`, `--aurora-*`, `--font-heading`, the family
+  `Lambda Brand Text`), so no component knows whose they are. No accent is
+  written out as a hex; what is filled with it and written on is
+  `bg-accent-fill text-accent-ink`, never `bg-accent-500 text-white`. Status
+  colors and the charts' categories are not the operator's; the one measure of
+  an owner's chart is (`--accent-chart`).
+- **Fonts are self-hosted (open)**: shared files, one font for text and one for
+  headings, code keeping its own. Weights, slant and letters are
+  read from the files (`FontFile`); which languages a font lacks letters for
+  is said. Nothing is fetched from elsewhere, no font ships with the platform.
 - **Wherever the pages or an app say what the installation is, they say its
   name (owner)**: the "Made with" line, the translated sentences that say what
   an app was built with (`{platform}`), a lambda's repository files. Where the
   software is meant, GenHTTP Lambda stays named: source and Discord links, the
   API description, the MCP server, the export.
+
+### Shared files
+
+**(owner)** A small place for files of the installation itself, which the
+branding and the guide use and the agents read, the build agent included: the
+panel's **Shared files**, `/admin/shared`, the operator's tools;
+public at `/api/v1/shared/{name}`. On both editions, wherever there is an
+operator **(owner)**. Called shared files everywhere: *resources* is a version's
+folder to every agent.
+
+- **Drawn or read, never run (open)**: pictures, fonts, style sheets, texts - no
+  pages and no scripts, since they are served from the platform's origin, with
+  `nosniff`, a sandboxing policy and any origin allowed. The name says what one
+  is and the content has to be that. Few and small, fixed (`SharedFileChecks`:
+  40 files, 2 MB each, 20 MB): not a place for what apps keep.
+- **Replaced, not deleted, while something uses it** (`SharedFileUse`: the
+  fonts, the operator's section of the guide). What apps link to is not known.
+- **Kept under the SHA-256 of what it holds** by the files integration, a row
+  each (`shared_files`), read from the records and not held in memory. The
+  branding and the guide read them through `ISharedFiles`; changing them is
+  `ISharedFileService`'s, which asks those two who uses one.
+- **Agents are told in `platform_guide`**: a section `sharedFiles` with the names,
+  only where there are any, before the operator's; `file` answers with what a
+  readable one says (32 KB), which is the build agent's only way to one. **A
+  page links to one by its address rather than carrying a copy (owner)**, so a
+  file that is replaced is new everywhere; an export still loads it from here,
+  which the guide says. The address is the platform's own path where there is
+  no public one, never what the agent's container was given. What the section
+  lists is bounded; `GET /shared` lists the rest. In the operator's section
+  `shared/{name}` is a link to one, checked on saving.
 
 ### Who an installation is for
 
@@ -355,7 +409,8 @@ banner or prompt.
   options are on (switches, never values), counts and sums over lambdas - no
   key, domain, title, code, record, secret, visitor, address, and **not the
   installation's address (owner)**. Demos are not counted. It says whether an
-  installation is branded and its profile, never as what or whose.
+  installation is branded and its profile, never as what or whose, and how many
+  files it shares, never which.
 - A new field keeps to that, is added rather than renamed, and is described in
   `docs/telemetry.md`. It never delays startup or a request: a background job,
   one attempt a day with a time limit, one warning when it fails.
@@ -1056,7 +1111,8 @@ left it after 0.8.0).
   readings summed up), what strangers wrote said to be data in the
   instructions. A change takes what it names and leaves the rest.
 - **Annotations**: reads `ReadOnly`; `Destructive` exactly what cannot be
-  undone (deleting a lambda, removing the guide section, a logo taken away).
+  undone (deleting a lambda or a shared file, removing the guide section, a
+  logo taken away).
 
 ## Architecture
 
@@ -1155,7 +1211,8 @@ and logging are not integrations, for now.
   text: pages, referrers, countries, crawler names.
 - **The platform uses them too (owner)**: its records and analytics are kept by
   the database integration in its dialect. **No picture is kept in a database
-  (owner)**: the logo and showcase pictures are files of the files integration.
+  (owner)**: the logo, the showcase pictures and the shared files are files of
+  the files integration.
 - **Towards a lambda nothing changes when an integration does (owner)**:
   `Database.GetConnectionAsync()`/`UseDatabase`, `Secret.ReadAsync`, and the
   generated `Workspace` class, which calls functions the platform hands it and
@@ -1420,6 +1477,7 @@ repository's `AGENTS.md`, and the reference.
 | The "Made with" line | `backlink` |
 | Connectivity: the browser first, ask with a purpose | `connectivity` |
 | Asynchronous database, workspace and secrets | - |
+| Shared files, linked by their full address | `sharedFiles` |
 | The showcase through the REST API | `showcase` |
 | Analytics (also the privacy page and the cloud's front page) | `analytics` |
 | Blocking (also the API's introduction, the terms, the privacy page) | `lifecycle` |

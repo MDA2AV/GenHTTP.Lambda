@@ -24,8 +24,8 @@ if (HealthProbe.IsRequested(args))
     return await HealthProbe.CheckAsync(settings.Server);
 }
 
-// whoever runs it may give it a name and a logo of their own, in the panel,
-// and say whom it is for: themselves (home) or an organization (enterprise)
+// whoever runs it may give it a name, a logo, colours and fonts of their own,
+// in the panel, and say whom it is for: themselves (home) or an organization (enterprise)
 await using var platform = await LambdaPlatform.Create()
                                                .Options(settings.Platform with
                                                {

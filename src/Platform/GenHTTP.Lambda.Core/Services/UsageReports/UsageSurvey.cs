@@ -98,6 +98,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
 
         var showcased = await database.Showcases.CountAsync(s => !demos.Contains(s.Lambda!.Tier), cancellation);
 
+        var shared = await database.SharedFiles.CountAsync(cancellation);
+
         var published = await database.Sources.CountAsync(s => s.Published && !demos.Contains(s.Lambda!.Tier), cancellation);
 
         var recent = now.AddDays(-RecentDays);
@@ -127,7 +129,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             now,
             DescribeSystem(),
             DescribeServer(now),
-            DescribeConfiguration(),
+            DescribeConfiguration(shared),
             new UsageLambdas(
                 lambdas.Count,
                 // the sandbox and production under what they were called when
@@ -307,7 +309,7 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
         );
     }
 
-    private UsageConfiguration DescribeConfiguration()
+    private UsageConfiguration DescribeConfiguration(int sharedFiles)
     {
         var site = settings.Get();
         var agent = builds.GetSettings();
@@ -335,7 +337,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             Integration(IntegrationKind.Files),
             Integration(IntegrationKind.Secrets),
             site.OptimizeDatabases,
-            InstallationProfiles.NameOf(site.Profile)
+            InstallationProfiles.NameOf(site.Profile),
+            sharedFiles
         );
     }
 

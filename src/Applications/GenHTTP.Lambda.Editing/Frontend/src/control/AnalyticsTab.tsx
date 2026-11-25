@@ -19,12 +19,12 @@ const RANGES = [7, 30, 90, 365];
 type Measure = 'visitors' | 'views' | 'hits';
 
 /*
- * The accent of the editor for the one measure the chart shows, and for the
- * devices a fixed categorical order - validated as a set against both
+ * The accent of the installation for the one measure the chart shows, and for
+ * the devices a fixed categorical order - validated as a set against both
  * surfaces (light needs its labels, which the legend gives). "Other" is the
  * neutral grey, since it is not an identity of its own.
  */
-const ACCENT: [string, string] = ['#1a73e8', '#4285f4'];
+const ACCENT = 'rgb(var(--accent-chart))';
 
 const DEVICES: Record<string, [string, string]> = {
   desktop: ['#1a73e8', '#4285f4'],
@@ -240,7 +240,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
         <Nudge since={date(state.earliest!, { day: 'numeric', month: 'long', year: 'numeric' })} tier={above} address={absoluteAddress(lambda.address)} />
       )}
 
-      <Figures state={shown} measure={measure} onPick={setMeasure} dark={dark} bots={bots} />
+      <Figures state={shown} measure={measure} onPick={setMeasure} bots={bots} />
 
       <Columns state={shown} measure={measure} dark={dark} date={date} />
 
@@ -428,11 +428,10 @@ function Nudge({ since, tier, address }: { since: string; tier: string; address:
  * range, how it changed against the days before where those are shown, and
  * its days in small.
  */
-function Figures({ state, measure, onPick, dark, bots }: {
+function Figures({ state, measure, onPick, bots }: {
   state: LambdaAnalytics;
   measure: Measure;
   onPick: (m: Measure) => void;
-  dark: boolean;
   bots: boolean;
 }) {
   const said = useEditorT().analytics;
@@ -464,7 +463,7 @@ function Figures({ state, measure, onPick, dark, bots }: {
             <span
               aria-hidden="true"
               className="absolute inset-x-0 top-0 h-0.5"
-              style={{ background: active ? ACCENT[dark ? 1 : 0] : 'transparent' }}
+              style={{ background: active ? ACCENT : 'transparent' }}
             />
             <div className={`flex flex-wrap items-center gap-x-1.5 text-[13px] ${active ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}>
               {figure.label}
@@ -567,7 +566,6 @@ function Columns({ state, measure, dark, date }: {
 
   const ink = dark ? '#9aa0a6' : '#5f6368';
   const grid = dark ? '#3c4043' : '#e8eaed';
-  const colour = ACCENT[dark ? 1 : 0];
 
   const heading = (weekly ? said.perWeek : said.perDay)[measure];
   const label = (start: string) => (weekly ? `${said.week} ${date(start)}` : date(start, { weekday: 'short', day: 'numeric', month: 'short' }));
@@ -650,7 +648,7 @@ function Columns({ state, measure, dark, date }: {
                     {h > 0 && (
                       <path
                         d={column(x, plotH - h, barW, h, Math.min(4, barW / 2))}
-                        fill={colour}
+                        style={{ fill: ACCENT }}
                         opacity={hover === null || hover === i ? 1 : 0.45}
                       />
                     )}

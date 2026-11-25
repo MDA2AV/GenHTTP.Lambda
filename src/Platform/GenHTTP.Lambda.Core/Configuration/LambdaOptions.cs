@@ -287,8 +287,9 @@ public sealed record LambdaOptions
 
     /// <summary>
     /// Whether the operator may give the installation a name and a logo of
-    /// its own, which its pages then show in place of GenHTTP Lambda's - in
-    /// the panel's Branding section, or through the API with the admin token.
+    /// its own, which its pages then show in place of GenHTTP Lambda's, and
+    /// the colours and fonts they are drawn with - in the panel's Branding
+    /// section, or through the API with the admin token.
     /// </summary>
     /// <remarks>
     /// The host's to decide, not the environment's: the community edition

@@ -10,8 +10,12 @@ public sealed record BrandResponse(
     string Name,
     [Summary("Where the picture beside the name is - the operator's logo, or the first letter of the name on a plate where they named it without one; absent where the pages draw the platform's own mark")]
     string? Logo,
-    [Summary("Whether its operator may give it a name and a logo of its own (`PUT /admin/branding`); the host of the installation decides")]
-    bool Changeable
+    [Summary("Whether its operator may brand it (`/admin/branding`); the host of the installation decides")]
+    bool Changeable,
+    [Summary("What its pages draw links, buttons and marks in, as `#rrggbb`; absent where that is the platform's blue")]
+    string? Accent = null,
+    [Summary("Its second accent, as `#rrggbb`; absent where it has none of its own")]
+    string? SecondAccent = null
 )
 {
 
@@ -19,7 +23,7 @@ public sealed record BrandResponse(
     {
         var brand = branding.Current;
 
-        return new(brand.Name, brand.PicturePath, branding.Changeable);
+        return new(brand.Name, brand.PicturePath, branding.Changeable, brand.Look.Accent?.Hex, brand.Look.Second?.Hex);
     }
 
 }

@@ -26,7 +26,9 @@ on next.
   installation a name or logo of its own (never the name or the logo),
   whether the platform optimizes the databases itself or the operator left
   them to their own tools, whom the operator said the installation is for
-  (`home` or `enterprise`, never whose it is), and what keeps its data: the
+  (`home` or `enterprise`, never whose it is), how many files the operator
+  shares across the installation (never what they are called or hold), and
+  what keeps its data: the
   database (`sqlite` or `postgresql`), the apps' files and their secrets, by
   name only - never where they are or how they are reached;
 - the number of apps by tier (`sandbox`, `production`, `system` - and `free`

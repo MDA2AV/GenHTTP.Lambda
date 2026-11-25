@@ -10,7 +10,8 @@ namespace GenHTTP.Lambda.Integrations.Local;
 /// A workspace as a directory: <c>workspaces/{id}</c> for a lambda,
 /// <c>features/{id}/{feature}/workspace</c> for the copy a feature works on,
 /// beside the rest of what the feature keeps. A store of the platform is the
-/// directory of its name: <c>branding/logo</c>, <c>showcase/{id}</c>.
+/// directory of its name: <c>branding/logo</c>, <c>showcase/{id}</c>,
+/// <c>shared/{hash}</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -119,12 +120,13 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
 
     /// <summary>
     /// The directory of a store, spelled out rather than made of its name:
-    /// the pictures of every installation are where it says.
+    /// the files of every installation are where it says.
     /// </summary>
     private string StoreDirectory(FileStore store) => Path.Combine(dataDirectory, store switch
     {
         FileStore.Branding => "branding",
         FileStore.Showcase => "showcase",
+        FileStore.Shared => "shared",
         _ => throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.")
     });
 
@@ -375,7 +377,8 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
                                                  new IntegrationDetail("Lambdas", Path.Combine(dataDirectory, "workspaces", "{lambda}")),
                                                  new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace")),
                                                  new IntegrationDetail("Logo", StoreDirectory(FileStore.Branding)),
-                                                 new IntegrationDetail("Showcase", StoreDirectory(FileStore.Showcase))
+                                                 new IntegrationDetail("Showcase", StoreDirectory(FileStore.Showcase)),
+                                                 new IntegrationDetail("Shared files", StoreDirectory(FileStore.Shared))
                                              ]);
 
     public string? Guide(GuideContext context) => null;

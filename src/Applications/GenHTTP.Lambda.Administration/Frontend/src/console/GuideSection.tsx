@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
-import { ApiError, api, refusedToken, type AdminGuide } from '@genhttp-lambda/kit/api';
+import { ApiError, api, refusedToken, type AdminGuide, type SharedFile } from '@genhttp-lambda/kit/api';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { MarkdownPage } from '@genhttp-lambda/kit/components/MarkdownPage';
@@ -14,6 +15,13 @@ import { Card, Reading, actionButton, bytes } from './parts';
 const ALONE: MarkdownPlace = { name: 'guide.md', picture: () => null, page: () => false };
 
 const EXAMPLE = '- Every app is in German.\n- Keep no personal data beyond an email address.\n- Use the colours of acme.example/brand.';
+
+/**
+ * A text with the links to shared files as agents are handed them, by their
+ * full address (Services/Guide/GuideLinks.cs) - so its preview shows the
+ * pictures and leads where they do.
+ */
+const linked = (text: string) => text.replace(/(\]\(\s*<?)(?:\.\/)?shared\//g, `$1${window.location.origin}/api/v1/shared/`);
 
 /** The text as the server keeps it: line breaks as \n, trimmed. */
 const kept = (text: string) => text.replace(/\r\n?/g, '\n').trim();
@@ -43,6 +51,9 @@ export function GuideSection({ access }: { access: Access }) {
   const [removing, setRemoving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [raw, setRaw] = useState(false);
+  const [shared, setShared] = useState<SharedFile[]>([]);
+
+  const area = useRef<HTMLTextAreaElement>(null);
 
   const take = useCallback((guide: AdminGuide) => {
     setRead(guide);
@@ -54,7 +65,28 @@ export function GuideSection({ access }: { access: Access }) {
     api.admin.guide(token)
       .then(take)
       .catch((error) => (refusedToken(error) ? deny() : setFailure('The guide could not be read.')));
+
+    // what the section may link to; without it the section is written as before
+    api.admin.sharedFiles(token).then((read) => setShared(read.files)).catch(() => undefined);
   }, [token, take, deny]);
+
+  /** A link to a shared file where the cursor is - a picture as a picture. */
+  function link(file: SharedFile) {
+    const field = area.current;
+    const at = field ? field.selectionStart : text.length;
+    const to = field ? field.selectionEnd : text.length;
+
+    const words = text.slice(at, to) || file.name;
+    const written = `${file.kind === 'picture' ? '!' : ''}[${words}](shared/${file.name})`;
+
+    setText(text.slice(0, at) + written + text.slice(to));
+
+    // after the text is drawn, behind what was written
+    window.requestAnimationFrame(() => {
+      field?.focus();
+      field?.setSelectionRange(at + written.length, at + written.length);
+    });
+  }
 
   const section = read?.section ?? null;
   const limits = read?.limits;
@@ -74,7 +106,7 @@ export function GuideSection({ access }: { access: Access }) {
 
   /** The section as agents will read it once saved. */
   const preview = useMemo(
-    () => (dirty && complete ? renderMarkdown(`## ${trimmed}\n\n${body}`, ALONE) : null),
+    () => (dirty && complete ? renderMarkdown(linked(`## ${trimmed}\n\n${body}`), ALONE) : null),
     [dirty, complete, trimmed, body],
   );
 
@@ -183,6 +215,7 @@ export function GuideSection({ access }: { access: Access }) {
                 />
 
                 <textarea
+                  ref={area}
                   id="guide-text"
                   value={text}
                   onChange={(event) => setText(event.target.value)}
@@ -196,6 +229,29 @@ export function GuideSection({ access }: { access: Access }) {
                 <p className={`text-xs tabular-nums ${textProblem ? 'text-red-500' : 'text-slate-400'}`}>
                   {textProblem ?? `${bytes(size)} of ${limits ? bytes(limits.textBytes) : ''}`}
                 </p>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                  {shared.length > 0 ? (
+                    <>
+                      <span>Link to a shared file:</span>
+                      {shared.map((file) => (
+                        <button
+                          key={file.name}
+                          type="button"
+                          onClick={() => link(file)}
+                          className="border border-grey-300 px-2 py-0.5 font-mono hover:border-accent-500 hover:text-accent-600 dark:border-ink-700 dark:hover:text-accent-400"
+                        >
+                          {file.name}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <span>
+                      What is too long for this - a style guide, a style sheet - goes under{' '}
+                      <Link to="/admin/shared" className="text-accent-600 hover:underline dark:text-accent-400">Shared files</Link>, which the text links to.
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

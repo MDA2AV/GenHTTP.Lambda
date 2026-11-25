@@ -1,27 +1,43 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
-import { ApiError, api, refusedToken, type AdminBranding } from '@genhttp-lambda/kit/api';
-import { PLATFORM, changeBrand, type Brand } from '@genhttp-lambda/kit/brand';
-import { BrandMark } from '@genhttp-lambda/kit/components/BrandLink';
+import { ApiError, api, refusedToken, type AdminBranding, type BrandPreview as Preview, type SharedFile, type SharedFiles } from '@genhttp-lambda/kit/api';
+import { PLATFORM, changeBrand, changeLook, type Brand } from '@genhttp-lambda/kit/brand';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
-import { IconSpinner, IconUpload } from '@genhttp-lambda/kit/components/Icons';
+import { IconSpinner } from '@genhttp-lambda/kit/components/Icons';
 import { useToast } from '@genhttp-lambda/kit/components/Toast';
 import { Section } from '@genhttp-lambda/kit/ui/ui';
+import { ColorField, FontField, LogoField, Row, parseColor, type LogoDraft } from './BrandFields';
+import { BrandPreview, DraftFaces } from './BrandPreview';
 import type { Access } from './context';
 import { Card, Reading, actionButton, bytes } from './parts';
+import { isSame, kindOf, refusal, share, sharedName } from './shared';
 
-/** The logo as the form holds it: as saved, a picture chosen and not uploaded yet, or taken away. */
-type LogoDraft = { kind: 'saved' } | { kind: 'chosen'; file: File; url: string } | { kind: 'removed' };
+/** The platform's own accents, as index.css of the kit has them. */
+const BLUE = '#1a73e8';
+
+const PURPLE = '#aa55ff';
+
+/** The fonts as the form holds them: the shared files each is made of. */
+interface Fonts {
+  text: SharedFile[];
+  headings: SharedFile[];
+}
+
+const names = (files: SharedFile[]) => files.map((file) => file.name).join('\n');
 
 /**
- * The name and the logo the installation's pages show in place of GenHTTP
- * Lambda's - where its host lets the operator give it some.
+ * What the installation's pages show in place of GenHTTP Lambda and how they
+ * are drawn - its name, its logo, its colours and its fonts - where its host
+ * lets the operator say so.
  *
- * The two are fields of one form, saved together, with what the bar and a
- * tab will look like drawn above it as they are typed and chosen: in both
- * themes, since a logo drawn for one may vanish on the other. Going back to
- * the platform's own is the one action, in the header, and says what it does
- * first.
+ * All of it is one form, saved together, with the top of the front page drawn
+ * above it as it is typed and chosen: in both themes, since a logo or a
+ * colour made for one may vanish on the other. What a colour comes to is
+ * asked of the server, which draws the pages with it. A font is a shared
+ * file, so one that is uploaded here is shared at once and only used once
+ * the form is saved. Going back to the platform's own is the one action, in
+ * the header, and says what it does first.
  */
 export function BrandingSection({ access }: { access: Access }) {
   const { token, deny } = access;
@@ -29,10 +45,16 @@ export function BrandingSection({ access }: { access: Access }) {
   const toast = useToast();
 
   const [saved, setSaved] = useState<AdminBranding | null>(null);
+  const [shared, setShared] = useState<SharedFiles | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [logo, setLogo] = useState<LogoDraft>({ kind: 'saved' });
-  const [problem, setProblem] = useState<string | null>(null);
+  const [accent, setAccent] = useState('');
+  const [second, setSecond] = useState('');
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [fonts, setFonts] = useState<Fonts>({ text: [], headings: [] });
+  const [uploading, setUploading] = useState<keyof Fonts | null>(null);
+  const [problems, setProblems] = useState<{ logo?: string; text?: string; headings?: string }>({});
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -41,7 +63,7 @@ export function BrandingSection({ access }: { access: Access }) {
     if (error instanceof ApiError && error.status === 404) {
       // the panel answers, so it is not the token: this installation's host
       // does not let its operator brand it
-      setFailure('The name and the logo of this installation are its host’s, and are not changed here.');
+      setFailure('How this installation presents itself is its host’s, and is not changed here.');
     } else if (refusedToken(error)) {
       deny();
     } else {
@@ -53,11 +75,19 @@ export function BrandingSection({ access }: { access: Access }) {
     setSaved(branding);
     setName(branding.name ?? '');
     setLogo({ kind: 'saved' });
+    setAccent(branding.colors.accent ?? '');
+    setSecond(branding.colors.second ?? '');
+    setPreview({ colors: branding.colors, fonts: branding.fonts });
+    setFonts(branding.fonts);
+    setProblems({});
   }, []);
 
   useEffect(() => {
-    api.admin.branding(token)
-      .then(take)
+    Promise.all([api.admin.branding(token), api.admin.sharedFiles(token)])
+      .then(([branding, files]) => {
+        setShared(files);
+        take(branding);
+      })
       .catch((error) => fail(error, 'The branding could not be read.'));
   }, [token, take, fail]);
 
@@ -74,7 +104,44 @@ export function BrandingSection({ access }: { access: Access }) {
 
   const nameProblem = limits && trimmed.length > limits.name ? `At most ${limits.name} characters.` : null;
 
-  const dirty = saved !== null && (trimmed !== (saved.name ?? '') || logo.kind === 'chosen' || (logo.kind === 'removed' && saved.logo !== null));
+  // what was entered as colours - undefined for what is none
+  const [first, other] = [parseColor(accent), parseColor(second)];
+
+  const colored = first !== undefined && other !== undefined;
+
+  const [text, headings] = [names(fonts.text), names(fonts.headings)];
+
+  // what they come to is the server's to say, asked as they change: a picker
+  // dragged across its colours names dozens a second, so only where it rests
+  useEffect(() => {
+    if (saved === null || first === undefined || other === undefined) {
+      return;
+    }
+
+    let current = true;
+
+    const timer = window.setTimeout(() => {
+      api.admin.previewBranding(token, first, other, text.split('\n').filter(Boolean), headings.split('\n').filter(Boolean))
+        .then((read) => current && setPreview(read))
+        .catch((error) => refusedToken(error) && deny());
+    }, 60);
+
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [token, deny, saved, first, other, text, headings]);
+
+  const dirty = {
+    name: saved !== null && trimmed !== (saved.name ?? ''),
+    logo: logo.kind === 'chosen' || (logo.kind === 'removed' && saved !== null && saved.logo !== null),
+    colors: saved !== null && (!colored || first !== (saved.colors.accent ?? null) || other !== (saved.colors.second ?? null)),
+    fonts: saved !== null && (text !== names(saved.fonts.text) || headings !== names(saved.fonts.headings)),
+  };
+
+  const changed = dirty.name || dirty.logo || dirty.colors || dirty.fonts;
+
+  const savable = changed && nameProblem === null && colored && !saving && uploading === null;
 
   /** The brand as it will look once saved, for the preview. */
   const drafted = useMemo<Brand>(() => {
@@ -92,8 +159,13 @@ export function BrandingSection({ access }: { access: Access }) {
       return { name: shown, logo: saved.picture };
     }
 
-    return trimmed === '' ? PLATFORM : { name: shown, logo: monogram(shown) };
-  }, [saved, trimmed, logo]);
+    const plate = preview?.colors.light.accent;
+
+    return trimmed === '' ? PLATFORM : { name: shown, logo: monogram(shown, plate?.fill ?? BLUE, plate?.ink ?? '#ffffff') };
+  }, [saved, trimmed, logo, preview]);
+
+  const pictures = shared?.files.filter((file) => file.kind === 'picture') ?? [];
+  const faces = shared?.files.filter((file) => file.kind === 'font') ?? [];
 
   function choose(file: File | undefined) {
     if (!file || !limits) {
@@ -101,21 +173,101 @@ export function BrandingSection({ access }: { access: Access }) {
     }
 
     if (!limits.types.includes(file.type)) {
-      setProblem('That is no PNG, JPEG, GIF, WebP or SVG image.');
+      setProblems((was) => ({ ...was, logo: 'That is no PNG, JPEG, GIF, WebP or SVG image.' }));
       return;
     }
 
-    if (file.size > limits.logoBytes) {
-      setProblem(`That picture is ${bytes(file.size)}; a logo may be ${bytes(limits.logoBytes)} at most.`);
+    takePicture(file, file.name);
+  }
+
+  /** A picture for the logo, from this computer or a shared one. */
+  function takePicture(file: Blob, called: string) {
+    if (limits && file.size > limits.logoBytes) {
+      setProblems((was) => ({ ...was, logo: `That picture is ${bytes(file.size)}; a logo may be ${bytes(limits.logoBytes)} at most.` }));
       return;
     }
 
-    setProblem(null);
-    setLogo({ kind: 'chosen', file, url: URL.createObjectURL(file) });
+    setProblems((was) => ({ ...was, logo: undefined }));
+    setLogo({ kind: 'chosen', file, name: called, url: URL.createObjectURL(file) });
+  }
+
+  async function chooseShared(picture: SharedFile) {
+    try {
+      const response = await fetch(picture.versionedPath);
+
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      takePicture(await response.blob(), picture.name);
+    } catch {
+      setProblems((was) => ({ ...was, logo: `${picture.name} could not be read.` }));
+    }
+  }
+
+  const put = (font: keyof Fonts, files: SharedFile[]) => setFonts((was) => ({ ...was, [font]: files }));
+
+  /** Shares files of this computer and makes the font of them too. */
+  async function upload(font: keyof Fonts, files: File[]) {
+    if (files.length === 0 || shared === null) {
+      return;
+    }
+
+    setUploading(font);
+    setProblems((was) => ({ ...was, [font]: undefined }));
+
+    const added: SharedFile[] = [];
+    let refused: string | null = null;
+
+    try {
+      for (const file of files) {
+        const called = sharedName(file.name);
+        const there = shared.files.find((one) => one.name.toLowerCase() === called.toLowerCase());
+
+        // shared already, as it is: it is that one that was meant
+        if (there && there.kind === 'font' && (await isSame(file, there))) {
+          added.push(there);
+          continue;
+        }
+
+        refused = kindOf(called, shared.limits) !== 'font'
+          ? `${file.name} is no WOFF2, WOFF, TrueType or OpenType font.`
+          : there
+            ? `There is another shared file called ${there.name}: choose it from the list, or replace it under Shared files.`
+            : refusal(called, file, shared.limits);
+
+        if (refused !== null) {
+          break;
+        }
+
+        const answer = await share(token, called, file);
+
+        if (typeof answer === 'string') {
+          refused = answer;
+          break;
+        }
+
+        added.push(answer);
+      }
+
+      if (added.length > 0) {
+        setFonts((was) => ({ ...was, [font]: [...was[font], ...added.filter((file) => !was[font].some((taken) => taken.name === file.name))] }));
+        setShared(await api.admin.sharedFiles(token));
+      }
+    } catch (error) {
+      if (refusedToken(error)) {
+        deny();
+      } else {
+        refused = 'The font could not be uploaded.';
+      }
+    } finally {
+      setUploading(null);
+      setProblems((was) => ({ ...was, [font]: refused ?? undefined }));
+    }
   }
 
   async function save() {
-    if (saved === null || !dirty || nameProblem !== null || saving) {
+    if (saved === null || !savable || first === undefined || other === undefined) {
       return;
     }
 
@@ -124,8 +276,16 @@ export function BrandingSection({ access }: { access: Access }) {
     try {
       let now = saved;
 
-      if (trimmed !== (saved.name ?? '')) {
+      if (dirty.name) {
         now = await api.admin.rename(token, trimmed === '' ? null : trimmed);
+      }
+
+      if (dirty.colors) {
+        now = await api.admin.saveColors(token, first, other);
+      }
+
+      if (dirty.fonts) {
+        now = await api.admin.saveFonts(token, fonts.text.map((file) => file.name), fonts.headings.map((file) => file.name));
       }
 
       if (logo.kind === 'chosen') {
@@ -180,19 +340,22 @@ export function BrandingSection({ access }: { access: Access }) {
     }
   }
 
-  const own = saved !== null && (saved.name !== null || saved.logo !== null);
+  const light = preview?.colors.light ?? {};
+  const dark = preview?.colors.dark ?? {};
+
+  const own = saved !== null && (saved.name !== null || saved.logo !== null || saved.styleSheet !== null);
 
   return (
     <Section
       title="Branding"
-      hint="What the installation's pages show in place of GenHTTP Lambda: in the bar of every page, at the end of every title, in link previews and as the icon of the browser tab. No restart needed."
+      hint="What the installation's pages show in place of GenHTTP Lambda, and the colours and fonts they are drawn with. No restart needed."
       actions={own && (
         <button type="button" onClick={() => setConfirming(true)} className={`btn-ghost ${actionButton}`}>
           Go back to GenHTTP Lambda
         </button>
       )}
     >
-      {saved === null ? (
+      {saved === null || preview === null ? (
         <Reading what="the branding" failure={failure} />
       ) : (
         <form
@@ -202,19 +365,17 @@ export function BrandingSection({ access }: { access: Access }) {
           }}
           className="space-y-6"
         >
-          <Card title="Preview" hint="The bar of a page and a browser tab, as they will look once saved - in the light theme and in the dark one.">
+          <DraftFaces text={fonts.text} headings={fonts.headings} />
+
+          <Card title="Preview" hint="The front page and a browser tab, as they will look once saved.">
             <div className="grid gap-3 lg:grid-cols-2">
-              <Preview brand={drafted} dark={false} />
-              <Preview brand={drafted} dark />
+              <BrandPreview brand={drafted} theme={preview.colors.light} dark={false} text={fonts.text.length > 0} headings={fonts.headings.length > 0} />
+              <BrandPreview brand={drafted} theme={preview.colors.dark} dark text={fonts.text.length > 0} headings={fonts.headings.length > 0} />
             </div>
           </Card>
 
           <div className="surface divide-y divide-grey-300 dark:divide-ink-800">
-            <Row
-              id="branding-name"
-              title="Name"
-              note="What the pages call the installation. Empty for GenHTTP Lambda."
-            >
+            <Row id="branding-name" title="Name" note="What the pages call the installation. Empty for GenHTTP Lambda.">
               <div className="relative">
                 <input
                   id="branding-name"
@@ -239,7 +400,7 @@ export function BrandingSection({ access }: { access: Access }) {
                 <>
                   Beside the name, at the height of a line, and the icon of the browser tab. A square mark reads best, and one with
                   a background of its own on both themes. PNG, JPEG, GIF, WebP or SVG, {limits ? bytes(limits.logoBytes) : ''} at
-                  most. Without one, the first letter of the name on a plate.
+                  most. Without one, the first letter of the name on a plate of the accent.
                 </>
               }
             >
@@ -247,58 +408,126 @@ export function BrandingSection({ access }: { access: Access }) {
                 saved={saved}
                 draft={logo}
                 types={limits?.types ?? []}
+                pictures={pictures}
                 onChoose={choose}
+                onShared={(picture) => void chooseShared(picture)}
                 onRemove={() => {
-                  setProblem(null);
+                  setProblems((was) => ({ ...was, logo: undefined }));
                   setLogo(saved.logo !== null ? { kind: 'removed' } : { kind: 'saved' });
                 }}
               />
-              {problem && <p className="mt-1.5 text-xs text-red-500">{problem}</p>}
+              {problems.logo && <p className="mt-1.5 text-xs text-red-500">{problems.logo}</p>}
+            </Row>
+
+            <Row
+              id="branding-accent"
+              title="Accent"
+              note="Links, buttons and marks, and the first light of the moving background. Text in it takes a shade of it that can be read, in each theme."
+            >
+              <ColorField
+                id="branding-accent"
+                value={accent}
+                platform={BLUE}
+                text={first && light.accent && dark.accent ? { light: light.accent.text, dark: dark.accent.tint } : null}
+                onChange={setAccent}
+              />
+            </Row>
+
+            <Row
+              id="branding-second"
+              title="Second accent"
+              note="What the platform draws in purple, such as a tier's badge, and the second light of the moving background - without one, the neighbour of the accent."
+            >
+              <ColorField
+                id="branding-second"
+                value={second}
+                platform={first ? light.secondLight ?? PURPLE : PURPLE}
+                text={other && light.second && dark.second ? { light: light.second.deep, dark: dark.second.tint } : null}
+                onChange={setSecond}
+              />
+            </Row>
+
+            <Row
+              id="branding-font-text"
+              title="Font"
+              note={
+                <>
+                  What the pages are set in; code keeps its own. One variable font, or a file for each weight - WOFF2 is the smallest.
+                  Served from here, so no visitor&rsquo;s browser asks anybody else. Its license has to allow it on the web.
+                </>
+              }
+            >
+              <FontField
+                id="branding-font-text"
+                chosen={fonts.text}
+                offered={faces.filter((file) => !fonts.text.some((taken) => taken.name === file.name))}
+                limit={limits?.fontFiles ?? 0}
+                accept={accepted(shared)}
+                busy={uploading === 'text'}
+                problem={problems.text ?? null}
+                notes={[thin(fonts.text), lacking(preview.fonts.textLacks)]}
+                onAdd={(file) => put('text', [...fonts.text, file])}
+                onRemove={(file) => put('text', fonts.text.filter((there) => there.name !== file.name))}
+                onUpload={(files) => void upload('text', files)}
+              />
+            </Row>
+
+            <Row id="branding-font-headings" title="Font of headings" note="Headings, and the name in the bar. Without one, the font above.">
+              <FontField
+                id="branding-font-headings"
+                chosen={fonts.headings}
+                offered={faces.filter((file) => !fonts.headings.some((taken) => taken.name === file.name))}
+                limit={limits?.fontFiles ?? 0}
+                accept={accepted(shared)}
+                busy={uploading === 'headings'}
+                problem={problems.headings ?? null}
+                notes={[lacking(preview.fonts.headingLacks)]}
+                onAdd={(file) => put('headings', [...fonts.headings, file])}
+                onRemove={(file) => put('headings', fonts.headings.filter((there) => there.name !== file.name))}
+                onUpload={(files) => void upload('headings', files)}
+              />
             </Row>
           </div>
 
-          <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-grey-300 bg-white/95 px-4 py-3 backdrop-blur dark:border-ink-800 dark:bg-ink-950/95 md:mx-0 md:px-0">
-            <button type="submit" disabled={!dirty || nameProblem !== null || saving} className="btn-primary">
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-grey-300 bg-white/95 px-4 py-3 backdrop-blur dark:border-ink-800 dark:bg-ink-950/95 md:mx-0 md:px-0">
+            <button type="submit" disabled={!savable} className="btn-primary">
               {saving && <IconSpinner />}
               Save branding
             </button>
 
-            {dirty && (
+            {changed && (
               <button type="button" onClick={() => take(saved)} disabled={saving} className="btn-ghost">
                 Discard changes
               </button>
             )}
 
-            <span className="text-[13px] text-slate-500">{dirty ? 'Not saved yet.' : 'Everything is saved.'}</span>
+            <span className="text-[13px] text-slate-500">{changed ? 'Not saved yet.' : 'Everything is saved.'}</span>
           </div>
 
           <Card title="Where it shows">
             <ul className="list-disc space-y-1.5 pl-5 text-[13px] text-slate-600 dark:text-slate-400">
-              <li>The bar of every page: the front page, the showcase, the editor, the published sources and this panel.</li>
-              <li>The end of every page's title, and the name a link preview gives the site.</li>
-              <li>The icon of the browser tab, and of the site added to a phone's home screen.</li>
+              <li>The bar, the colours and the fonts of every page: the front page, the showcase, the editor, the published sources and this panel.</li>
+              <li>The end of every page&rsquo;s title, the name a link preview gives the site, and the icon of the tab and of a phone&rsquo;s home screen.</li>
               <li>
-                Link previews of the front page and the showcase show the logo where it is a PNG, JPEG, GIF or WebP image, and no
-                picture otherwise - their own pictures have GenHTTP Lambda drawn into them.
+                Link previews show the logo where it is a PNG, JPEG, GIF or WebP image, and no picture otherwise - the site&rsquo;s
+                own have GenHTTP Lambda drawn into them.
               </li>
-              <li>
-                The &ldquo;Made with&rdquo; line agents put at the foot of the apps they build here, what the pages of the published
-                sources and of the hosting domain say an app was built with, and a lambda&rsquo;s repository - in what is written
-                after the change.
-              </li>
+              <li>The &ldquo;Made with&rdquo; line, the pages of the hosting domain and a lambda&rsquo;s repository name it, in what is written after the change.</li>
             </ul>
             <p className="mt-3 text-[13px] text-slate-500">
-              GenHTTP Lambda stays named where the software is meant: the link to its source and its community, the API&rsquo;s
-              description, the MCP server, and the project a lambda is exported as.
+              Not in the apps built here, whose looks are their own - for a house style, share its files under{' '}
+              <Link to="/admin/shared" className="text-accent-600 hover:underline dark:text-accent-400">Shared files</Link> and name them in the{' '}
+              <Link to="/admin/guide" className="text-accent-600 hover:underline dark:text-accent-400">Guide</Link>. GenHTTP Lambda stays named where
+              the software is meant.
             </p>
           </Card>
 
           <Card title="For agents">
             <p className="text-[13px] text-slate-600 dark:text-slate-400">
-              An agent you give the admin token changes the same: <code className="font-mono text-[12px]">PUT /api/v1/admin/branding</code>{' '}
-              with the name and <code className="font-mono text-[12px]">PUT /api/v1/admin/branding/logo</code> with the picture as the
-              body, or <code className="font-mono text-[12px]">customize_installation</code> on the operator&apos;s MCP endpoint,{' '}
-              <code className="font-mono text-[12px]">/admin/mcp</code>.
+              An agent you give the admin token changes the same: below <code className="font-mono text-[12px]">/api/v1/admin/branding</code> - the
+              name, <code className="font-mono text-[12px]">/logo</code>, <code className="font-mono text-[12px]">/colors</code> and{' '}
+              <code className="font-mono text-[12px]">/fonts</code> - or with <code className="font-mono text-[12px]">customize_installation</code> on
+              the operator&apos;s MCP endpoint, <code className="font-mono text-[12px]">/admin/mcp</code>.
             </p>
           </Card>
         </form>
@@ -310,7 +539,7 @@ export function BrandingSection({ access }: { access: Access }) {
         onClose={() => setConfirming(false)}
         footer={
           <>
-            <button type="button" onClick={() => setConfirming(false)} className="btn-ghost">Keep them</button>
+            <button type="button" onClick={() => setConfirming(false)} className="btn-ghost">Keep it</button>
             <button type="button" onClick={() => void reset()} disabled={resetting} className="btn-primary">
               {resetting && <IconSpinner />}
               Go back
@@ -319,8 +548,8 @@ export function BrandingSection({ access }: { access: Access }) {
         }
       >
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          The pages show GenHTTP Lambda again, with its own mark, from the next one anybody opens. The name and the logo are
-          deleted: to bring the logo back, upload it again.
+          The pages show GenHTTP Lambda again, with its own mark, colours and fonts, from the next one anybody opens. The name, the
+          logo and the colours are deleted: to bring the logo back, upload it again. The files of the fonts stay shared.
         </p>
       </Dialog>
     </Section>
@@ -330,151 +559,55 @@ export function BrandingSection({ access }: { access: Access }) {
 /** The brand as it is shown to everybody: what the bar and the kit draw from now on. */
 function show(branding: AdminBranding) {
   changeBrand(branding.picture === null ? PLATFORM : { name: branding.shown, logo: branding.picture });
+  changeLook(branding.styleSheet);
 }
 
-/** A setting: what it is on the left, its field on the right. */
-function Row({ id, title, note, children }: { id: string; title: string; note: ReactNode; children: ReactNode }) {
-  return (
-    <div className="grid gap-3 p-4 sm:grid-cols-[1fr_minmax(0,22rem)] sm:items-start sm:gap-6">
-      <div className="min-w-0">
-        <label htmlFor={id} className="text-[15px] font-medium">{title}</label>
-        <p className="mt-1 text-[13px] text-slate-500">{note}</p>
-      </div>
+/** What a file dialog offers for a font. */
+const accepted = (shared: SharedFiles | null) => shared?.limits.types.font.map((end) => `.${end}`).join(',') ?? '';
 
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
+/** What is missing from a font to set a page in: the pages write words in bold, and slant few. */
+function thin(files: SharedFile[]): string | null {
+  const upright = files.flatMap((file) => (file.font && !file.font.italic ? [file.font] : []));
+
+  if (files.length === 0) {
+    return null;
+  }
+
+  if (upright.length === 0) {
+    return 'Only italic: add an upright one.';
+  }
+
+  return upright.some((font) => font.to >= 600) ? null : 'No bold weight: browsers thicken the one there is. Add the bold file, or a variable font.';
 }
 
-/**
- * The logo as it is, or as chosen: a tile with the picture, on which a file
- * may be dropped too, a button to choose one, and one to take it away.
- */
-function LogoField({ saved, draft, types, onChoose, onRemove }: {
-  saved: AdminBranding;
-  draft: LogoDraft;
-  types: string[];
-  onChoose: (file: File | undefined) => void;
-  onRemove: () => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const [over, setOver] = useState(false);
+/** The languages a font has too few letters for, whose words it would draw in two faces. */
+function lacking(languages: string[]): string | null {
+  if (languages.length === 0) {
+    return null;
+  }
 
-  const shown = draft.kind === 'chosen' ? draft.url : draft.kind === 'saved' && saved.logo !== null ? saved.picture : null;
+  const called = languages.map((language) => LANGUAGES[language] ?? language);
+  const listed = called.length === 1 ? called[0] : `${called.slice(0, -1).join(', ')} and ${called[called.length - 1]}`;
 
-  const described = draft.kind === 'chosen'
-    ? `${draft.file.name}, ${bytes(draft.file.size)} - not saved yet`
-    : draft.kind === 'removed'
-      ? 'Taken away - not saved yet'
-      : saved.logo !== null
-        ? `${saved.logo.type.replace('image/', '').replace('+xml', '').toUpperCase()}, ${bytes(saved.logo.bytes)}`
-        : 'None';
-
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        onDragOver={(event) => {
-          event.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setOver(false);
-          onChoose(event.dataTransfer.files[0]);
-        }}
-        className={`flex h-16 w-16 shrink-0 items-center justify-center border border-dashed bg-[repeating-conic-gradient(#e8eaed_0%_25%,#fff_0%_50%)] bg-[length:12px_12px] dark:bg-[repeating-conic-gradient(#303134_0%_25%,#292a2d_0%_50%)] ${
-          over ? 'border-accent-500' : 'border-grey-300 dark:border-ink-700'
-        }`}
-        title="Drop a picture here"
-      >
-        {shown ? <img src={shown} alt="The logo" className="max-h-12 max-w-12 object-contain" /> : <IconUpload className="h-5 w-5 text-slate-400" />}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-slate-600 dark:text-slate-400">{described}</p>
-
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <button type="button" onClick={() => input.current?.click()} className={`btn-ghost border border-grey-300 dark:border-ink-700 ${actionButton}`}>
-            {shown ? 'Choose another' : 'Choose a picture'}
-          </button>
-
-          {shown && (
-            <button type="button" onClick={onRemove} className={`btn-ghost ${actionButton}`}>
-              Take it away
-            </button>
-          )}
-        </div>
-
-        <input
-          ref={input}
-          id="branding-logo"
-          type="file"
-          accept={types.join(',')}
-          className="sr-only"
-          tabIndex={-1}
-          onChange={(event) => {
-            onChoose(event.target.files?.[0]);
-            event.target.value = '';
-          }}
-        />
-      </div>
-    </div>
-  );
+  return `Letters missing for ${listed}: those are drawn in another font, in the middle of a word. Add the file that has them.`;
 }
 
-/** The colours of a theme, written out: the panel is in one of them, and the preview shows both. */
-const THEMES = {
-  light: { page: 'border-grey-300 bg-white text-ink-900', strip: 'bg-grey-200', tab: 'bg-white' },
-  dark: { page: 'border-ink-800 bg-ink-950 text-grey-100', strip: 'bg-ink-900', tab: 'bg-ink-950' },
+/** The languages of the pages in Latin letters, as the panel names them. */
+const LANGUAGES: Record<string, string> = {
+  de: 'German', en: 'English', es: 'Spanish', fr: 'French', it: 'Italian', nl: 'Dutch', pl: 'Polish', pt: 'Portuguese', tr: 'Turkish',
 };
-
-/**
- * The bar of a page and a tab of the browser in one theme, drawn with the
- * kit's own brand so they look as the pages will.
- */
-function Preview({ brand, dark }: { brand: Brand; dark: boolean }) {
-  const theme = dark ? THEMES.dark : THEMES.light;
-
-  return (
-    <div aria-label={dark ? 'In the dark theme' : 'In the light theme'} role="img">
-      <div className={`border ${theme.page}`}>
-        {/* the tab, its icon and its title */}
-        <div className={`flex items-end gap-2 px-2 pt-2 ${theme.strip}`}>
-          <div className={`flex min-w-0 max-w-[16rem] items-center gap-2 px-3 py-1.5 text-xs ${theme.tab}`}>
-            {brand.logo !== null ? (
-              <img src={brand.logo} alt="" className="h-4 w-4 shrink-0 object-contain" />
-            ) : (
-              <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-4 w-4 shrink-0" />
-            )}
-            <span className="truncate">Showcase - {brand.name}</span>
-          </div>
-        </div>
-
-        {/* the bar */}
-        <div className="flex items-center gap-4 px-4 py-3">
-          <div className={`flex ${brand.logo !== null ? 'min-w-0' : 'shrink-0'} items-center gap-2.5 whitespace-nowrap font-semibold tracking-tight`}>
-            <BrandMark brand={brand} />
-          </div>
-
-          <span className="ml-auto shrink-0 px-2 text-sm text-slate-500">Showcase</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * The first letter of a name on a square plate, as the server draws it for an
  * installation named without a logo (Services/Branding/Monogram.cs) - for the
  * preview of a name that is not saved yet.
  */
-function monogram(name: string): string {
+function monogram(name: string, plate: string, ink: string): string {
   const letter = [...new Intl.Segmenter().segment(name)].map((s) => s.segment).find((s) => /[\p{L}\p{N}]/u.test(s)) ?? name.slice(0, 1) ?? '?';
 
   const escaped = letter.toLocaleUpperCase('en').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1a73e8"/><text x="32" y="32" dy=".35em" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="600" fill="#ffffff">${escaped}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="${plate}"/><text x="32" y="32" dy=".35em" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="600" fill="${ink}">${escaped}</text></svg>`;
 
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }

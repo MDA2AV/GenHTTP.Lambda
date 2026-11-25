@@ -214,8 +214,9 @@ with a status and `{ status, error, message }`, where `error` is `Invalid`
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | a new app, built from the workspace on `/build` |
-| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent (`build`: whether it is offered, and the models and efforts it offers), where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), how it presents itself (`brand`: its name, the picture beside it, whether its operator may change them), and whom it is for (`profile`: `cloud`, `home` or `enterprise`, see [Who it is for](#who-it-is-for)) |
+| `GET /system`                                         | terms (only where the installation has any), limits, starters, build agent (`build`: whether it is offered, and the models and efforts it offers), where a lambda answers (`lambdaUrl`), who runs it (`operator`: `contact`, `abuse`, `legal`), how it presents itself (`brand`: its name, the picture beside it, its accents, whether its operator may change them), and whom it is for (`profile`: `cloud`, `home` or `enterprise`, see [Who it is for](#who-it-is-for)) |
 | `GET /system/logo`                                    | the picture beside the installation's name, where its operator branded it, see [Branding](#branding) |
+| `GET /shared`, `GET /shared/{name}`                   | the files its operator shares across the installation, and one of them, for any page to load, see [Shared files](#shared-files) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation; `/admin/branding` only where the installation may be branded |
 
 Creating a lambda asks what somebody would like to build and offers the demos
@@ -1581,8 +1582,8 @@ A host's `Program.cs` is the whole composition. The community edition's:
 // LAMBDA_DATABASE=postgresql
 var settings = LambdaSettings.FromEnvironment(LambdaAddressing.Paths, usageReports: true, databases: CommunityDatabase.Offered);
 
-// whoever runs it may give it a name and a logo of their own, in the panel,
-// and say whom it is for: themselves (home) or an organization (enterprise)
+// whoever runs it may give it a name, a logo, colours and fonts of their own,
+// in the panel, and say whom it is for: themselves (home) or an organization (enterprise)
 await using var platform = await LambdaPlatform.Create()
                                                .Options(settings.Platform with
                                                {
@@ -1779,15 +1780,25 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   among the demos.
 - **Guide** (`Services/Guide`) - what `platform_guide` answers: one Markdown
   document for agents (`GuideDocument`), the same for MCP and the operator's
-  routes, with the section the operator wrote last. The section is two
-  settings held in memory once read, and `GuideChecks` says what it may be
-  (see [Rules for agents](#rules-for-agents)).
+  routes, with the shared files and the section the operator wrote last. The
+  section is two settings held in memory once read, `GuideChecks` says what it
+  may be and `GuideLinks` resolves the shared files it links to (see
+  [Rules for agents](#rules-for-agents)).
 - **Branding** (`Services/Branding`) - how the installation presents itself:
-  the name and the logo its operator gave it, where its host lets them
-  (`LambdaOptions.Branding`), held in memory as a `Brand` once read.
-  `BrandChecks` says what a name and a logo may be, `Monogram` draws the first
-  letter of a name for an installation named without a logo (see
-  [Branding](#branding)).
+  the name, the logo, the colours and the fonts its operator gave it, where
+  its host lets them (`LambdaOptions.Branding`), held in memory as a `Brand`
+  once read - with what its pages are drawn with as its `Look`. `BrandChecks`
+  says what any of it may be, `Monogram` draws the first letter of a name for
+  an installation named without a logo, `BrandPalette` works out the shades of
+  a colour that can be read and `BrandStyle` writes the style sheet a page is
+  sent with (see [Branding](#branding)).
+- **Shared files** (`Services/SharedFiles`) - the files the operator shares
+  across the installation, kept by `SharedFileStore` under what they hold and
+  read through `ISharedFiles` by whatever uses them; `SharedFileService`
+  (`ISharedFileService`) changes them and asks the branding and the guide who
+  uses one. `SharedFileChecks` says what one may be, `FontFile` reads what a
+  font draws and `FontLetters` which languages it has too few letters for (see
+  [Shared files](#shared-files)).
 - **Storage** (`Services/Storage`) - the files of the versions, the features
   and their previews, on the file system (see [How a version is kept](#how-a-version-is-kept)).
   `FileSystemStorageService` (`IStorageService`) reads and writes the
@@ -2042,7 +2053,7 @@ its own:
 | Kind | Contract | Keeps | The platform's own | Others |
 |---|---|---|---|---|
 | database | `IDatabaseProvider` | the platform's records and analytics (`DatabaseStore.Platform` and `Analytics`), and the database of every lambda and draft | SQLite files in the data directory (`SqliteDatabase`) | PostgreSQL (`PostgreSqlDatabase`), community edition only |
-| files | `IFileProvider` | the workspace of every lambda and draft, and the platform's pictures (`FileStore.Branding` and `Showcase`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
+| files | `IFileProvider` | the workspace of every lambda and draft, and the platform's own files (`FileStore.Branding`, `Showcase` and `Shared`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
 | secrets | `ISecretProvider` | the secrets of every lambda and draft | sealed in the platform's own records (`DatabaseSecrets`), wherever the database integration keeps them | - |
 
 A host chooses them on the platform's builder - `LambdaPlatform.Create()
@@ -2087,12 +2098,13 @@ that answers at once may take its time there.
 data is kept - a file, a schema, a directory - is the integration's to spell
 out, and stays what it was: SQLite keeps the stores in `lambda.db` and
 `analytics.db`, PostgreSQL in the schemas `platform` and `analytics`, the
-local files in `branding/` and `showcase/`.
+local files in `branding/`, `showcase/` and `shared/`.
 
 **No picture is kept in a database.** The pictures the platform keeps for
 itself are files of the files integration, in stores as the database's are
 (`FileStore`): the logo at `branding/logo`, the picture of a showcase
-entry at `showcase/{lambda}`. Their rows say what a picture is and how large
+entry at `showcase/{lambda}`, a shared file - a picture or anything else - at
+`shared/` and the SHA-256 of what it holds. Their rows say what a picture is and how large
 (`image_bytes`, V27). An installation from before kept them in their rows: the
 platform moves them out once as it starts (`PictureMove`), reading a picture
 from its row until it is moved, and the emptied columns are dropped in a later
@@ -2186,8 +2198,8 @@ goes into both, since the platform makes addresses on localhost with it. A host 
 genhttp.dev's terms and legal pages, which no variable sets, and its contact
 and abuse mailboxes in place of `LAMBDA_CONTACT` and `LAMBDA_ABUSE_CONTACT`
 (`CloudInstallation`); the community edition's, that its operator may give it
-a name and a logo of their own - which they do in the panel, not with a
-variable (see [Branding](#branding)).
+a name, a logo, colours and fonts of their own - which they do in the panel,
+not with a variable (see [Branding](#branding)).
 
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
@@ -2370,8 +2382,8 @@ written; nothing else changes once written.
 What the server makes again is left out (`assemblies`, `resources`,
 `sources`, `staging`, `geo`, `crawlers`), and so are `dumps` - a crashed
 process's memory, keys and addresses included - and `secrets.key`. Kept are
-the code and its content store, the git store, workspaces, drafts, branding
-and the showcase. Kept are 7 daily, 4 weekly and 3 monthly snapshots
+the code and its content store, the git store, workspaces, drafts, branding,
+the showcase and the shared files. Kept are 7 daily, 4 weekly and 3 monthly snapshots
 (`BACKUP_KEEP` in `.env`); pruning and a check of 5% of the repository run on
 Sundays.
 
@@ -2432,7 +2444,8 @@ of the keys of the lambdas it counts, nor the installation's address. Whether
 its operator branded it is a switch (`configuration.branded`), never the name
 or the logo, and so is whether the platform optimizes the databases
 (`configuration.optimizeDatabases`); whom it is for is its profile
-(`configuration.profile`: `home` or `enterprise`), never whose it is; what keeps its data is named (`configuration.database`, `files`,
+(`configuration.profile`: `home` or `enterprise`), never whose it is; the
+shared files are counted (`configuration.sharedFiles`), never named; what keeps its data is named (`configuration.database`, `files`,
 `secrets`: `sqlite` or `postgresql`, `local`, `database`), never where it is. The
 installation's identifier is random, made the first time and kept in the
 platform's database (`settings`, key `installation`).
@@ -2822,9 +2835,13 @@ data, and ends with documentation, pages meant to be found, the link back,
 the limits and the terms. Its sections are headings named the way the tools,
 the instructions and the briefs point at them ("platform_guide,
 connectivity"), and what a tool's description or a demo already says is not
-repeated in it. Where the operator wrote rules for agents, they come last,
-after the platform's own sections (see [Rules for agents](#rules-for-agents));
-the budget is the platform's, without them.
+repeated in it. Where the operator shares files, a section names them, and
+called with `file` the tool answers with what a readable one says instead of
+the guide - which is how an agent that makes no requests, the build agent
+among them, reads one (see [Shared files](#shared-files)). Where the operator
+wrote rules for agents, they come last, after the platform's own sections (see
+[Rules for agents](#rules-for-agents)); the budget is the platform's, without
+either.
 
 Agents used to leave a version behind for every attempt, and put every attempt
 online. A lambda that exists is now changed in a feature: `write_code`,
@@ -3019,7 +3036,7 @@ the token. Its sections are in groups down a sidebar, the editor's navigation
 | Performance   | **Server**            | what the process is holding and what the engine is carrying (see [Telemetry](#telemetry)) |
 |               | **Storage**           | the free space on the volume of the data directory, read as it is asked for, and what takes the room - by part and by lambda, measured hourly by a walk over every file (`StorageCensusJob`), or at once with **Measure again** - with the lambdas whose data is beyond their tier's allowance |
 |               | **Log**               | what the server and the lambdas print, live, from `/api/v1/logs`                     |
-| Platform      | **Branding**, **Guide**, **Build agent**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name and the logo its pages show - where its host lets the operator brand it (see [Branding](#branding)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); whether the build agent builds and changes apps, on which models and efforts, which need the password, and what its runner says of itself (see [The build agent](#the-build-agent)); whom the installation is for, where its host lets the operator choose (see [Who it is for](#who-it-is-for)), and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
+| Platform      | **Branding**, **Shared files**, **Guide**, **Build agent**, **Settings**, **Limits**, **Integrations**, **Quiet hours**, **Usage report** | the name, the logo, the colours and the fonts of its pages - where its host lets the operator brand it (see [Branding](#branding)); the files shared across it (see [Shared files](#shared-files)); the guide agents read first over MCP - rendered or as the Markdown they are handed - with a section of the operator's own in it for the rules of this installation (see [Rules for agents](#rules-for-agents)); whether the build agent builds and changes apps, on which models and efforts, which need the password, and what its runner says of itself (see [The build agent](#the-build-agent)); whom the installation is for, where its host lets the operator choose (see [Who it is for](#who-it-is-for)), and what the platform does by itself - optimizing the databases (see [Optimizing the databases](#optimizing-the-databases)), with how its last runs went; what a lambda may have in its tier and for every lambda; what keeps the databases, the files and the secrets, with where - read only, chosen by the host as it starts (see [Integrations](#integrations)); when the installation is usually quiet, by the hour of a typical day (see [Quiet hours](#quiet-hours)); and, last, what it reports about itself once a day (see [Usage reports](#usage-reports)) |
 
 A lambda's page sums up everything its editor would show - what its
 documentation says it is and what was asked for, its traffic and problems,
@@ -3114,6 +3131,7 @@ other's content, and a host that leaves it out has no endpoint.
 | `list_address_blocks`, `remove_address_block`, `list_connectivity` | **Blocked addresses**, **Connectivity** |
 | `read_settings`, `change_settings`, `read_limits`, `change_limits` | **Settings**, **Limits** - a change takes what it names and leaves the rest, the limits too |
 | `read_guide`, `change_guide_section`, `remove_guide_section` | **Guide** |
+| `list_shared_files`, `read_shared_file`, `write_shared_file`, `delete_shared_file` | **Shared files** - a text or an SVG as it is, anything else base64 encoded, which only suits what is small: whoever can make requests sends a font to the API |
 | `read_agent_settings`, `change_agent_settings` | **Build agent** |
 | `list_integrations`, `read_usage_report`, `read_quiet_hours`, `read_optimization` | **Integrations**, **Usage report**, **Quiet hours**, the databases' optimization |
 | `read_telemetry`, `list_activity`, `read_logs`, `list_callers` | **Server**, **Log** |
@@ -3135,8 +3153,9 @@ two doors together: every operator route of the REST API is mapped to its tool
   most a thousand log lines with a cursor, the readings of a window summed up
   (lowest, highest, mean) rather than every sample.
 - **Annotated**: every read is `readOnlyHint`; what cannot be undone -
-  `delete_lambda`, `remove_guide_section`, `customize_installation`, which may
-  take the logo away - is `destructiveHint`, and nothing else. The
+  `delete_lambda`, `remove_guide_section`, `delete_shared_file`,
+  `customize_installation`, which may take the logo away - is
+  `destructiveHint`, and nothing else. The
   instructions say to ask the operator before those and before blocking.
 - **What others wrote is data.** Code, change lines, log lines, purposes,
   block reasons and notes were written by owners and visitors; the
@@ -3359,7 +3378,14 @@ bytes - with headings of the third level and below, as `#` and `##` would end
 the section early, and no code block left open (a line in a fenced code
 block is no heading). So a guide
 with a full section stays a tool result an agent reads in full: the
-platform's under 28 KB, the operator's 6 KB, under 34 KB together.
+platform's under 28 KB, the operator's 6 KB, under 34 KB together - and under
+37 with the names of the shared files.
+
+What is too long for the section - a style guide, a style sheet - is a
+[shared file](#shared-files), which the section links to as
+`[house style](shared/house-style.md)`: kept as written, handed to agents with
+its address, and refused where there is no such file. The panel writes
+such a link where the cursor is.
 
 Kept as two settings (`guide.title`, `guide.text`) and read only where the
 installation has an admin token: a copy of another installation's data hands
@@ -3680,42 +3706,47 @@ What it changes:
 ### Branding
 
 Whoever runs the community edition may give it a name and a logo of their
-own, which its pages show in place of GenHTTP Lambda's - in the panel's
-**Branding** section, or through the API and an MCP tool with the admin
-token. There is no environment variable for either: like the limits, they
-are changed while the server runs, and show from the next page anybody opens.
-Whether an installation may be branded is its host's to decide
-(`LambdaOptions.Branding`): the community edition's host switches it on,
-genhttp.dev's leaves it off - there the routes are not there at all (404) and
-the panel has no such section.
+own, which its pages show in place of GenHTTP Lambda's, and choose the colours
+and the fonts they are drawn with - in the panel's **Branding** section, or
+through the API and an MCP tool with the admin token. There is no environment
+variable for any of it: like the limits, it is changed while the server runs,
+and shows from the next page anybody opens. Whether an installation may be
+branded is its host's to decide (`LambdaOptions.Branding`): the community
+edition's host switches it on, genhttp.dev's leaves it off - there the routes
+are not there at all (404) and the panel has no such section.
 
 | Route                                    | What it does                                                          |
 |------------------------------------------|-----------------------------------------------------------------------|
-| `GET /admin/branding`                    | the name and the logo the operator gave the installation, where the pages load the picture beside the name from, and what a name and a logo may be |
+| `GET /admin/branding`                    | the name, the logo, the colours and the fonts, where the pages load the picture beside the name from, the style sheet they are sent with, and what a name, a logo and a font may be |
 | `PUT /admin/branding`                    | names it (`{ "name": … }`): one line of at most 40 characters; empty gives back `GenHTTP Lambda` |
 | `PUT /admin/branding/logo`               | uploads the logo, the body being the picture as it is: PNG, JPEG, GIF, WebP or SVG, at most 512 KB, told apart by its content |
 | `DELETE /admin/branding/logo`            | takes the logo away; the name stays                                    |
-| `DELETE /admin/branding`                 | takes both away: the pages show GenHTTP Lambda again                   |
+| `PUT /admin/branding/colors`             | chooses the accent and the second one (`{ "accent": "#0f766e", "second": … }`), both at once; empty gives one back |
+| `PUT /admin/branding/fonts`              | chooses the fonts, each the names of the [shared files](#shared-files) it is made of (`{ "text": […], "headings": […] }`), both at once; none gives one back |
+| `GET /admin/branding/preview`            | what the pages would be drawn with in other colours and fonts (`accent`, `second`, `text` and `headings`, files with commas between), changing nothing |
+| `DELETE /admin/branding`                 | takes all of it away: the pages show GenHTTP Lambda again, as it is drawn. The fonts' files stay shared |
 | `GET /system/logo`                       | public: the picture beside the name - the logo, or the first letter of the name on a square plate where there is none; cached for good by the versioned address `brand.logo` of `GET /system` names |
 
 An agent the operator handed the token does the same with these routes, or
 with `customize_installation` on [the operator's MCP endpoint](#the-operators-mcp-endpoint)
-(`name`, `logo` - an SVG's markup as it is, or a picture base64 encoded;
-neither reads how it is now). The tool is there only where the installation
-may be branded. Until 0.8.0 it was on `/mcp`, with the token as an argument
-that every agent was shown and that landed in the agent's transcript.
+(`name`, `logo` - an SVG's markup as it is, the name of a shared picture, or a
+picture base64 encoded -, `accent`, `secondAccent`, `textFont`, `headingFont`;
+what is left out stays, `preview` only shows, and nothing at all reads how it
+is now). The tool is there only where the installation may be branded. Until
+0.8.0 it was on `/mcp`, with the token as an argument that every agent was
+shown and that landed in the agent's transcript.
 
-Where it shows: the bar of every page - the front page, the showcase, the
-editor, the published sources, the panel - the end of every title and the name
-a link preview gives the site, the icon of the browser tab and of the site on a
-phone's home screen (`manifest.json` names it too), the heading of
-`llms.txt`, and the eyebrow of the community front page. The picture beside
-the name is drawn at the height of a line; a square mark reads best, and the
-panel previews it in both themes, since one drawn for a light background may
-vanish on the dark one. Link previews of the site's own pages show the logo
-where it is a raster image, small beside the words, and no picture otherwise -
-their own pictures have GenHTTP Lambda drawn into them; a lambda's showcase
-picture stays the lambda's.
+**The name and the logo.** Where they show: the bar of every page - the front
+page, the showcase, the editor, the published sources, the panel - the end of
+every title and the name a link preview gives the site, the icon of the
+browser tab and of the site on a phone's home screen (`manifest.json` names it
+too), the heading of `llms.txt`, and the eyebrow of the community front page.
+The picture beside the name is drawn at the height of a line; a square mark
+reads best, and the panel previews it in both themes, since one drawn for a
+light background may vanish on the dark one. Link previews of the site's own
+pages show the logo where it is a raster image, small beside the words, and no
+picture otherwise - their own pictures have GenHTTP Lambda drawn into them; a
+lambda's showcase picture stays the lambda's.
 
 **Wherever the pages or an app say what the installation is, they say its
 name - decided by the owner**: the "Made with" line agents put at the foot of
@@ -3734,28 +3765,127 @@ the next change to its page. Where the software is meant, GenHTTP Lambda stays
 named: the link to its source and its community, the API's description, the
 MCP server, and the project a lambda is exported as.
 
+**The colours.** The accent is what links, buttons, marks and focus are drawn
+in, the first light of the moving background behind the front page and
+`/ship`, the plate of the letter that stands in for a logo, and the one measure
+an owner's analytics chart shows. The second accent is what the platform draws
+in its purple - the badge of a production lambda, say - and the second light;
+without one, the purple stays and the light is the accent's neighbour. Any
+colour may be one, entered as `#rrggbb`. It is drawn as it is wherever it is a
+surface, and where it is text as much lighter or darker as reading it takes:
+at least 4.5 to 1 on a light page and on the dark one, over the moving
+background too. What is written on a button of it is white, the dark of the
+pages or black, whichever can be read. So a yellow is a yellow button with dark
+words on it, and an olive where a word is in it on white; a navy is a lighter
+navy on the dark page. The shades are worked out in one place (`BrandPalette`,
+by lightness in OKLCH, so the hue stays), which the panel asks as a colour is
+picked. Colours that mean something - a failure, a warning, the categories of a
+chart - are the platform's on every installation.
+
+**The fonts.** One for the text of the pages, one for their headings and the
+installation's name in the bar; code keeps its own face. A font is made of
+shared files: one variable font, or a file for each weight and slant - which
+ones is read from the files - or the parts it was cut into by script, at most
+12. They are served by the installation, so no visitor's browser asks anybody
+else for one, and nothing about it needs the internet. Words are shown in the
+system's face until the font has arrived, which the page names ahead of
+everything else and a browser then keeps. Letters a font does not have are
+drawn in the system's - in Japanese and Korean, the faces those pages name -
+and since a font cut down to one part of Latin would draw Polish words in two
+faces, the panel and the tool say which of the pages' languages it has too few
+letters for. Whoever uploads a font makes sure its license allows it on the
+web.
+
+None of it is in what a lambda serves: an app's looks are its own. A house
+style for the apps is a matter of [shared files](#shared-files) and
+[rules for agents](#rules-for-agents).
+
 How it reaches a page: every index page a component sends - the site's, the
 editor's, the panel's, the published sources' - is named for the installation
 on the server before it is sent (`PageBranding`): its title, the names its link
 preview is given, its icons, and `#lambda-brand`, from which the kit draws the
 bar (`brand.ts`) - so neither a tab nor the first moment of a page shows the
-platform's. An installation nobody branded is sent its pages exactly as they
-were built. The public pages of the community site are prerendered twice,
-once as GenHTTP Lambda and once with the name and the picture as placeholders
-(`branded` in `prerender.json`), since a brand is other markup than the
-platform's mark rather than another value in it; the server takes the second
-for a branded installation and fills it in, and sends a page without content
-for the browser to draw where a build has none.
+platform's. Its colours and fonts are a style sheet in its head
+(`#lambda-look`), after the bundle's, with values for what that leaves open:
+`--accent-*`, `--second-*`, `--aurora-*`, `--font-heading` and the faces of
+`Lambda Brand Text`, the first family every page is set in (the kit's
+`index.css` says what each is and what the platform has). The pages of the
+hosting domain, which have no bundle, take the same. A name or a logo is
+another installation, a colour or a font is not: with only those, the pages
+keep the platform's mark, icon and previews. An installation nobody branded is
+sent its pages exactly as they were built. The public pages of the community
+site are prerendered twice, once as GenHTTP Lambda and once with the name and
+the picture as placeholders (`branded` in `prerender.json`), since a brand is
+other markup than the platform's mark rather than another value in it; the
+server takes the second for an installation with a name or a logo and fills it
+in, and sends a page without content for the browser to draw where a build has
+none.
 
-The name is a setting (`branding.name`), the logo a file of the files
-integration (`branding/logo`) with a row of `branding_pictures` saying what it
-is (V26), both held in memory once read (`Services/Branding`). An SVG is checked
-to be one a browser draws as a picture - well formed, its root in the SVG
-namespace - and is served with `X-Content-Type-Options: nosniff` and a
-`Content-Security-Policy` that runs nothing, should anybody open it on its own;
-as a picture on a page, nothing in it runs anyway. Nothing of it is read where
-the host does not let its operator brand the installation, so a copy of a
-branded installation's data on another host brings nothing of its looks along.
+The name, the colours and the fonts are settings (`branding.name`,
+`branding.accent`, `branding.second`, `branding.font.text`,
+`branding.font.headings` - the names of its files, a line each), the logo a
+file of the files integration (`branding/logo`) with a row of
+`branding_pictures` saying what it is (V26), all held in memory once read
+(`Services/Branding`). An SVG is checked to be one a browser draws as a
+picture - well formed, its root in the SVG namespace - and is served with
+`X-Content-Type-Options: nosniff` and a `Content-Security-Policy` that runs
+nothing, should anybody open it on its own; as a picture on a page, nothing in
+it runs anyway. Nothing of it is read where the host does not let its operator
+brand the installation, so a copy of a branded installation's data on another
+host brings nothing of its looks along.
+
+### Shared files
+
+Whoever runs an installation - either edition - may share a few small files
+across it: fonts and pictures for its own pages, a style guide for the agents
+that build on it, a style sheet or a logo for the apps built there. In the
+panel's **Shared files** section, or through the API and the operator's MCP
+endpoint with the admin token.
+
+| Route                          | What it does                                                          |
+|--------------------------------|-----------------------------------------------------------------------|
+| `GET /admin/shared`            | the files, with what a font draws and what of the installation uses each (`uses`: `textFont`, `headingFont`, `guide`), and what one may be |
+| `PUT /admin/shared/{name}`     | shares a file, the body being the file as it is, or replaces the one of that name |
+| `DELETE /admin/shared/{name}`  | deletes one for good; refused (409) while the branding or the guide uses it |
+| `GET /shared`                  | public: the files, with what a font draws                             |
+| `GET /shared/{name}`           | public: the file, for any page to load (`Access-Control-Allow-Origin: *`) - cached for good with the `v` its `versionedPath` names, for a minute without |
+
+**What one may be** is said by the end of its name and held to its content: a
+picture (`.png`, `.jpg`, `.gif`, `.webp`, `.svg`), a font (`.woff2`, `.woff`,
+`.ttf`, `.otf`), a style sheet (`.css`) or a text (`.md`, `.txt`, `.csv`,
+`.json`), in names of letters and digits without accents, dashes, underscores
+and dots. Neither pages nor scripts: the files are served from the platform's
+own address, and what is served is never sniffed for another type and, opened
+on its own, sandboxed. At most 40 files, 2 MB each and 20 MB together - fixed,
+since this is a place for a logo, some fonts and a style guide rather than for
+what apps keep.
+
+**Who reads them.** The branding is set in the fonts and may take a picture as
+its logo. Agents are told of every file in a section of `platform_guide`
+(`sharedFiles`, there only while there are any) - a line each, with what a page
+has to say to use a font, as many as fit into 2 KB, the texts first - and to
+link to one rather than carry a copy, the exception to relative links beside
+`og:image`: a file that is replaced is then new in every app within a minute.
+By the public address where there is one (`LAMBDA_PUBLIC_URL`), or by the path
+of the platform the lambdas answer below - never by what the build agent's
+container calls it. An exported app still loads what its pages link to from
+here, which the guide says. `platform_guide` called with `file` answers
+with what a text, a style sheet or an SVG says, up to 32 KB; the build agent,
+which makes no requests, reads them that way too. The operator's section of the
+guide links to one as `shared/{name}`
+(see [Rules for agents](#rules-for-agents)).
+
+A file that is used - by a font, by the operator's section - is replaced but
+not deleted: the pages would lose their font, and agents be sent to what is not
+there. What apps link to is not known, and not looked for.
+
+Each is a row of `shared_files` (V33) saying what it is and what a font draws,
+its content a file of the files integration under the SHA-256 of what it holds
+(`shared/`): whoever reads while one is replaced reads the one or the other,
+and two names of the same content are one file there. Read from the records
+with every request rather than held in memory; browsers keep what they were
+given by a versioned address. Uploading, replacing and deleting are logged with
+the name and the size.
 
 `/logs` is the tail of this run, live. It holds everything the server logged
 and everything a lambda printed while it was serving a request - the two are

@@ -116,7 +116,7 @@ export function Composer({
             disabled={!ready || running || disabled}
             aria-label={said.send}
             title={said.send}
-            className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-600 text-white transition hover:bg-accent-700 disabled:bg-slate-300 disabled:text-white dark:bg-accent-500 dark:hover:bg-accent-400 dark:disabled:bg-ink-700 dark:disabled:text-slate-500"
+            className="btn-send mb-0.5 h-9 w-9 shrink-0"
           >
             {busy ? <IconSpinner className="h-4 w-4" /> : <IconArrowUp className="h-4 w-4" />}
           </button>

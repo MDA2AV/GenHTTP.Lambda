@@ -85,7 +85,7 @@ snapshot_databases() {
 #   secrets.key             kept apart - see backup.sh
 #
 # code (versions and their content), git (commits are made once and must stay
-# the same), workspaces, features, branding and showcase are what this is for.
+# the same), workspaces, features, branding, showcase and shared are what this is for.
 excludes() {
   cat <<EOF
 $DATA/assemblies

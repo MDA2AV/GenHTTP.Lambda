@@ -35,6 +35,7 @@ public static class ApiLayout
                             .Add("sources", Resource<SourceResource>(services, mode))
                             .Add("builds", Resource<BuildResource>(services, mode))
                             .Add("system", Resource<SystemResource>(services, mode))
+                            .Add("shared", Resource<SharedFileResource>(services, mode))
                             .Add(Resource<LambdaResource>(services, mode))
                             .Add(Resource<VersionResource>(services, mode))
                             .Add(Resource<DeploymentResource>(services, mode))
@@ -64,13 +65,17 @@ public static class ApiLayout
             // every installation that has an operator
             var admin = Layout.Create()
                               .Add("guide", Resource<GuideResource>(services, mode).Add(AdminAuthentication.Create(options)))
+                              // the files shared across the installation, which
+                              // its branding and its guide use
+                              .Add("shared", Resource<SharedFileAdminResource>(services, mode).Add(AdminAuthentication.Create(options)))
                               // whether the build agent builds and changes apps,
                               // and on which models - there with or without one,
                               // so it is decided before the agent is set up
                               .Add("agent", Resource<AgentSettingsResource>(services, mode).Add(AdminAuthentication.Create(options)));
 
-            // the installation's name and logo, where its host lets the
-            // operator give it some - and not there at all where it does not
+            // the installation's name, logo, colours and fonts, where its
+            // host lets the operator give it some - and not there at all
+            // where it does not
             if (options.Branding)
             {
                 admin.Add("branding", Resource<BrandingResource>(services, mode).Add(AdminAuthentication.Create(options)));

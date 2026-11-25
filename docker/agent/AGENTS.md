@@ -19,7 +19,7 @@ These, and nothing else:
 
 | tool | what it does |
 | --- | --- |
-| `platform_guide` | how lambdas work here, whom the apps built here are for, and the rules of this installation's operator - read it first when building |
+| `platform_guide` | how lambdas work here, whom the apps built here are for, the files this installation shares for them, and the rules of its operator - read it first when building; with `file`, what one of the readable files says |
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key - building only, with `view: "Simple"` |
 | `read_lambda` | the status, what is written about it, the recent history, the open features and the files of a lambda - read it first when changing |
@@ -238,6 +238,12 @@ its own address, but a feature answers at `/features/<key>/` on the
 platform, where a leading slash leaves it and the full address is the live
 lambda: a feature's page linking there would read and write the real data
 instead of the feature's copy. `platform_guide` says more under `paths`.
+
+A file this installation shares - its logo, a font, a style sheet - is the
+exception: a page links to it by the address `platform_guide` gives under
+`sharedFiles`, where there are any, exactly as given and rather than carrying a
+copy. Use one where
+it fits what was asked for, and where the operator's rules say so.
 
 ## When it is meant to be found
 
