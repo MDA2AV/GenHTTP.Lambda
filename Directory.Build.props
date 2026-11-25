@@ -11,7 +11,7 @@
 
         <InvariantGlobalization>true</InvariantGlobalization>
 
-        <Version>0.10.0</Version>
+        <Version>0.11.0</Version>
 
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
