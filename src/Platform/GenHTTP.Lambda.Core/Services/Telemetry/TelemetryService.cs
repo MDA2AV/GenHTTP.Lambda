@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 using GenHTTP.Lambda.Configuration;
 
 namespace GenHTTP.Lambda.Services.Telemetry;
@@ -21,7 +19,7 @@ public sealed class TelemetryService : ITelemetryService
 
     private readonly LambdaTelemetry _lambdas;
 
-    private readonly Process _process = Process.GetCurrentProcess();
+    private readonly IProcessReadings _process;
 
     private readonly Lock _lock = new();
 
@@ -37,20 +35,15 @@ public sealed class TelemetryService : ITelemetryService
     private long _lastRequests;
     private long _lastFailed;
     private long _lastUpgrades;
-    private long _lastAccepted;
     private long _lastElapsedTicks;
-    private TimeSpan _lastCpu;
-    private DateTime _lastTaken;
 
     #region Initialization
 
-    public TelemetryService(LambdaOptions options, LambdaTelemetry lambdas)
+    public TelemetryService(LambdaOptions options, LambdaTelemetry lambdas, IProcessReadings process)
     {
         _options = options;
         _lambdas = lambdas;
-
-        _lastCpu = _process.TotalProcessorTime;
-        _lastTaken = DateTime.UtcNow;
+        _process = process;
 
         Started = DateTime.UtcNow;
     }
@@ -60,6 +53,8 @@ public sealed class TelemetryService : ITelemetryService
     #region Get-/Setters
 
     public DateTime Started { get; }
+
+    public bool SharesProcess => _process.Shared;
 
     public long TotalRequests => Interlocked.Read(ref _requests);
 
@@ -75,7 +70,7 @@ public sealed class TelemetryService : ITelemetryService
     /// reported every upgrade since boot as though they were all still open
     /// - an arena with one player in it showed four hundred and fifty eight.
     /// </remarks>
-    public int OpenSockets => ProcessProbe.Connections().Established;
+    public int OpenSockets => _process.OpenConnections;
 
     #endregion
 
@@ -105,17 +100,7 @@ public sealed class TelemetryService : ITelemetryService
     {
         var now = DateTime.UtcNow;
 
-        var info = GC.GetGCMemoryInfo();
-
-        _process.Refresh();
-
-        var memory = ProcessProbe.Memory();
-
-        var connections = ProcessProbe.Connections();
-
-        var descriptors = ProcessProbe.Descriptors();
-
-        var cpu = _process.TotalProcessorTime;
+        var process = _process.Take();
 
         var requests = Interlocked.Read(ref _requests);
         var failed = Interlocked.Read(ref _failed);
@@ -126,57 +111,46 @@ public sealed class TelemetryService : ITelemetryService
 
         lock (_lock)
         {
-            var wall = (now - _lastTaken).TotalSeconds;
-
-            // over the interval, across every core the process was given
-            var busy = (cpu - _lastCpu).TotalSeconds;
-
             var handled = requests - _lastRequests;
 
             sample = new TelemetrySample(
                 now,
-                GC.GetTotalMemory(false),
-                info.TotalCommittedBytes,
-                info.FragmentedBytes,
-                _process.WorkingSet64,
-                _process.PrivateMemorySize64,
-                memory.Resident,
-                memory.Anonymous,
-                memory.Jit,
-                memory.Assemblies,
-                memory.OtherFiles,
-                memory.Swap,
-                GC.CollectionCount(0),
-                GC.CollectionCount(1),
-                GC.CollectionCount(2),
-                GC.GetTotalAllocatedBytes(),
-                info.PauseTimePercentage,
-                wall > 0 ? Math.Round(busy / wall / Environment.ProcessorCount * 100, 2) : 0,
-                _process.Threads.Count,
+                process.ManagedBytes,
+                process.HeapCommittedBytes,
+                process.HeapFragmentedBytes,
+                process.WorkingSetBytes,
+                process.PrivateBytes,
+                process.Memory.Resident,
+                process.Memory.Anonymous,
+                process.Memory.Jit,
+                process.Memory.Assemblies,
+                process.Memory.OtherFiles,
+                process.Memory.Swap,
+                process.Gen0Collections,
+                process.Gen1Collections,
+                process.Gen2Collections,
+                process.AllocatedBytes,
+                process.PausePercentage,
+                process.CpuPercentage,
+                process.Threads,
                 handled,
                 failed - _lastFailed,
                 upgrades - _lastUpgrades,
                 Volatile.Read(ref _inFlight),
-                connections.Established,
+                process.Connections.Established,
                 handled > 0 ? Math.Round(TimeSpan.FromTicks(ticks - _lastElapsedTicks).TotalMilliseconds / handled, 2) : 0,
-                connections.Established,
-                connections.Accepted,
-                // the first sample has nothing to subtract from, and reporting
-                // every connection since boot as though they arrived in one
-                // interval would put a spike at the left of every graph
-                _lastAccepted > 0 ? Math.Max(0, connections.Accepted - _lastAccepted) : 0,
-                descriptors.Total,
-                descriptors.Sockets,
-                descriptors.Rings
+                process.Connections.Established,
+                process.Connections.Accepted,
+                process.Accepted,
+                process.Descriptors.Total,
+                process.Descriptors.Sockets,
+                process.Descriptors.Rings
             );
 
-            _lastAccepted = connections.Accepted;
             _lastRequests = requests;
             _lastFailed = failed;
             _lastUpgrades = upgrades;
             _lastElapsedTicks = ticks;
-            _lastCpu = cpu;
-            _lastTaken = now;
 
             _samples.Enqueue(sample);
 

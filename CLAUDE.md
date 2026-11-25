@@ -376,6 +376,8 @@ needs is given to its builder, not read from the environment.
 | Operator's panel | `GenHTTP.Lambda.Administration` | `AdminPanel.Create(platform)` | `/admin` |
 | Published sources, public git | `GenHTTP.Lambda.Sources` | `SourcePages.Create(platform)` | `/{lang}/source` |
 | Serving the lambdas | `GenHTTP.Lambda.Execution` | `Runner.Create(platform).Site(site)` | around the site |
+| A platform in somebody else's server | `GenHTTP.Lambda.Execution` | `PlatformHandler.Create(platform)` | a host of its own |
+| What several platforms of a process share | `GenHTTP.Lambda.Core` | `LambdaRuntime.Create().Options(...)` | `.Runtime(...)` |
 | Serving a bundle's pages | `GenHTTP.Lambda.Web` | `SitePages`, `ClientApplication`, `Bundle` | - |
 | Engine, ports, TLS, environment | `GenHTTP.Lambda.Server` | `LambdaServer.Create(platform)` | - |
 | Integration contracts | `GenHTTP.Lambda.Integrations` | - | - |
@@ -397,6 +399,20 @@ needs is given to its builder, not read from the environment.
 - **A host's `Program.cs` is the composition, short and plain**: read the
   settings, build the platform, lay out the components, hand it to the runner
   and the server. Read both before adding a component.
+- **Several platforms may run in one process (owner)**, as handlers of one
+  GenHTTP application - an installation per customer, at a host each - without
+  the two hosts being any different. What belongs to the process and what
+  belongs to an installation are kept apart: the process's is in
+  `LambdaRuntime`, made by the platform itself unless a host hands it one.
+  - Before adding something to the platform, decide whose it is. What is read
+    once for everybody, costs memory or CPU the process has once, or is about
+    the process (the console, the run, its readings) is the runtime's, or
+    exists only where the platform owns its process
+    (`LambdaPlatform.OwnsProcess`). Never anything that is somebody's data.
+  - Nothing of a platform's is kept on the server or in a static: a server may
+    have several. A static holding what a platform made keeps it alive after
+    it is gone (`SeveralPlatformsTests.OneThatIsGoneIsLetGoOf`).
+  - It is not isolation, and not described as such.
 - **Nothing below the hosts reads the environment (owner).**
   `LambdaSettings.FromEnvironment()` (in `Server`) reads `LAMBDA_*` into
   `LambdaOptions` (the DTO components share) and `ServerSettings`; a host adds
@@ -1078,12 +1094,15 @@ Read the reference's "How it is put together" before touching services.
   scrolling row **(owner)** (`components/Navigation.tsx`, shared with the
   panel).
 - **Wired through the container**, not by hand or statics: a concern needing
-  only services is an `IDependentConcern` added with `Dependent.Concern<T>()`.
-  The scope is opened by the host's outermost concern. A component's
+  only services is an `IDependentConcern` added with
+  `ServiceConcern.Of<T>(services)`, which takes it from the platform's
+  container as the chain is built - never with `Dependent.Concern<T>()`, whose
+  container is the server's, of which there is one. A component's
   singletons are made once by its builder (`ActivatorUtilities`); the
   container is Core's and registers nothing of the components. What only one
   door needs stays at the door (`WorkspaceFiles`). What is one per process
-  (the console) is installed by a service the platform owns (`ConsoleCapture`).
+  (the console, the compiled assemblies) is the runtime's, or installed by a
+  service the platform owns where the process is its own (`ConsoleCapture`).
 
 ### Integrations
 

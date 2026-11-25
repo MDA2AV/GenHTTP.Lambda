@@ -43,6 +43,8 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         foreach (var demo in DemoCatalog.All)
         {
+            cancellation.ThrowIfCancellationRequested();
+
             try
             {
                 if (await SeedAsync(demo, cancellation))
@@ -50,7 +52,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
                     seeded++;
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OperationCanceledException || !cancellation.IsCancellationRequested)
             {
                 // one demo that will not compile is not a reason for the
                 // installation to be without the others

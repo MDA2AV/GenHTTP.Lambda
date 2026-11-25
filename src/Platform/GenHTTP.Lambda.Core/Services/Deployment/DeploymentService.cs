@@ -38,12 +38,18 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// </summary>
     private readonly ConcurrentDictionary<Slot, Breakage> _broken = [];
 
-    // compilation is memory hungry, so only one snippet is built at a time
-    private readonly SemaphoreSlim _compiling = new(1, 1);
+    /// <summary>
+    /// What the lambdas were handed to reach the platform with, taken back as it goes.
+    /// </summary>
+    private readonly LambdaConnections _connections = new();
 
     #region Get-/Setters
 
     private IStorageService Storage { get; }
+
+    private CompiledAssemblies Assemblies { get; }
+
+    private CompilationGate Compiling { get; }
 
     private ServerRegistry Servers { get; }
 
@@ -61,10 +67,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Initialization
 
-    public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, IDatabaseVault databases, IWorkspaceVault workspaces,
-                             IDatabaseProvider provider, ILogger<DeploymentService> logger)
+    public DeploymentService(IStorageService storage, CompiledAssemblies assemblies, CompilationGate compiling, ServerRegistry servers, ISecretVault secrets,
+                             IDatabaseVault databases, IWorkspaceVault workspaces, IDatabaseProvider provider, ILogger<DeploymentService> logger)
     {
         Storage = storage;
+        Assemblies = assemblies;
+        Compiling = compiling;
         Servers = servers;
         Secrets = secrets;
         Databases = databases;
@@ -84,14 +92,14 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        await _compiling.WaitAsync(cancellation);
+        using var turn = await Compiling.EnterAsync(cancellation);
 
         try
         {
             // seconds of work, which a reactor would spend not serving (see
             // Offload) - the C# read for it as well, and nothing else
             var (outcome, _) = await Offload.Run(() => LambdaCompiler.CompileAsync(new CompilationRequest(LambdaSource.Compiled(files), Storage.GetResourceDirectory(id),
-                                                                                                          Storage.GetAssemblyDirectory(id), $"check_{id}", false,
+                                                                                                          Assemblies.DirectoryOf(id), $"check_{id}", false,
                                                                                                           settings ?? BuildSettings.Standard, Provider.Binding)),
                                                   cancellation);
 
@@ -102,10 +110,6 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             Logger.LogWarning(e, "Failed to check code of lambda #{LambdaId}", lambdaId);
 
             return CompilationOutcome.Failed(e.Message);
-        }
-        finally
-        {
-            _compiling.Release();
         }
     }
 
@@ -144,27 +148,20 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
          * and read its C# before queueing for the compiler. The first one does
          * it and the others find it done.
          */
-        await _compiling.WaitAsync(cancellation);
+        using var turn = await Compiling.EnterAsync(cancellation);
 
-        try
+        if (IsDeployed(slot, stamp, settings))
         {
-            if (IsDeployed(slot, stamp, settings))
-            {
-                return CompilationOutcome.Succeeded();
-            }
+            return CompilationOutcome.Succeeded();
+        }
 
-            /*
-             * Copying out the resources of a version and compiling it takes
-             * from a moment to seconds. The request that asked for it waits
-             * either way; the other connections of its reactor should not
-             * have to (see Offload).
-             */
-            return await Offload.Run(() => BuildAsync(slot, stamp, settings, read, cancellation), cancellation);
-        }
-        finally
-        {
-            _compiling.Release();
-        }
+        /*
+         * Copying out the resources of a version and compiling it takes
+         * from a moment to seconds. The request that asked for it waits
+         * either way; the other connections of its reactor should not
+         * have to (see Offload).
+         */
+        return await Offload.Run(() => BuildAsync(slot, stamp, settings, read, cancellation), cancellation);
     }
 
     /// <summary>
@@ -197,7 +194,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         var (lambdaId, featureId) = (slot.LambdaId, slot.FeatureId);
 
         var request = new CompilationRequest(LambdaSource.Compiled(files), Storage.GetResourceDirectory(lambdaId, featureId),
-                                             Storage.GetAssemblyDirectory(lambdaId), name, true, settings, Provider.Binding,
+                                             Assemblies.DirectoryOf(lambdaId), name, true, settings, Provider.Binding, _connections,
                                              Secrets.ReaderFor(lambdaId, featureId),
                                              Databases.ConnectorFor(lambdaId, featureId),
                                              Provider.ConfigureContext,
@@ -420,7 +417,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         _deployed.Clear();
         _broken.Clear();
 
-        _compiling.Dispose();
+        _connections.Cut();
     }
 
     #endregion

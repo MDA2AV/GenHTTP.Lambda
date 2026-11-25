@@ -19,11 +19,12 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Settings">Whether the lambda has a workspace and whether it may connect to other servers, compiled into it</param>
 /// <param name="Binding">How the lambda is bound to its database, as the database integration says</param>
+/// <param name="Connections">What remembers what the lambda is handed, so it can be taken back - where it is to run</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 /// <param name="Database">What the lambda connects to its database with, once it runs</param>
 /// <param name="Context">What a context of Entity Framework is configured with on its connection, once it runs</param>
 /// <param name="Workspace">What it reads and writes its files through, once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Resources, string AssemblyDirectory, string Name, bool Run,
-                                          BuildSettings Settings, DatabaseBinding Binding, SecretReader? Secrets = null,
+                                          BuildSettings Settings, DatabaseBinding Binding, LambdaConnections? Connections = null, SecretReader? Secrets = null,
                                           DatabaseConnector? Database = null, Action<DbContextOptionsBuilder, DbConnection>? Context = null,
                                           WorkspaceBinding? Workspace = null);

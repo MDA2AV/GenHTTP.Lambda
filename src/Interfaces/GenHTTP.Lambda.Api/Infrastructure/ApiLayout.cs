@@ -4,11 +4,12 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 
 using GenHTTP.Modules.ApiBrowsing;
-using GenHTTP.Modules.DependencyInjection.Infrastructure;
 using GenHTTP.Modules.ErrorHandling;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices.Provider;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Api.Infrastructure;
 
@@ -19,34 +20,38 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 public static class ApiLayout
 {
 
-    public static IHandlerBuilder Create(LambdaOptions options, bool compiled)
+    public static IHandlerBuilder Create(LambdaPlatform platform, bool compiled)
     {
+        var options = platform.Options;
+
+        var services = platform.Services;
+
         var mode = compiled ? ExecutionMode.Auto : ExecutionMode.Reflection;
 
         var version = Layout.Create()
-                            .Add("keys", Resource<KeyResource>(mode))
-                            .Add("demos", Resource<DemoResource>(mode))
-                            .Add("showcases", Resource<ShowcaseResource>(mode))
-                            .Add("sources", Resource<SourceResource>(mode))
-                            .Add("builds", Resource<BuildResource>(mode))
-                            .Add("system", Resource<SystemResource>(mode))
-                            .Add(Resource<LambdaResource>(mode))
-                            .Add(Resource<VersionResource>(mode))
-                            .Add(Resource<DeploymentResource>(mode))
-                            .Add(Resource<FileResource>(mode))
-                            .Add(Resource<DataResource>(mode))
-                            .Add(Resource<SecretResource>(mode))
-                            .Add(Resource<DatabaseResource>(mode))
-                            .Add(Resource<FeatureResource>(mode))
-                            .Add(Resource<FeatureWorkspaceResource>(mode))
-                            .Add(Resource<CodeResource>(mode))
-                            .Add(Resource<MonitoringResource>(mode))
-                            .Add(Resource<LambdaShowcaseResource>(mode))
-                            .Add(Resource<LambdaSourceResource>(mode))
-                            .Add(Resource<LambdaAnalyticsResource>(mode))
-                            .Add(Resource<LambdaDomainResource>(mode))
-                            .Add(Resource<LambdaConnectivityResource>(mode))
-                            .Add(Resource<LambdaAgentResource>(mode))
+                            .Add("keys", Resource<KeyResource>(services, mode))
+                            .Add("demos", Resource<DemoResource>(services, mode))
+                            .Add("showcases", Resource<ShowcaseResource>(services, mode))
+                            .Add("sources", Resource<SourceResource>(services, mode))
+                            .Add("builds", Resource<BuildResource>(services, mode))
+                            .Add("system", Resource<SystemResource>(services, mode))
+                            .Add(Resource<LambdaResource>(services, mode))
+                            .Add(Resource<VersionResource>(services, mode))
+                            .Add(Resource<DeploymentResource>(services, mode))
+                            .Add(Resource<FileResource>(services, mode))
+                            .Add(Resource<DataResource>(services, mode))
+                            .Add(Resource<SecretResource>(services, mode))
+                            .Add(Resource<DatabaseResource>(services, mode))
+                            .Add(Resource<FeatureResource>(services, mode))
+                            .Add(Resource<FeatureWorkspaceResource>(services, mode))
+                            .Add(Resource<CodeResource>(services, mode))
+                            .Add(Resource<MonitoringResource>(services, mode))
+                            .Add(Resource<LambdaShowcaseResource>(services, mode))
+                            .Add(Resource<LambdaSourceResource>(services, mode))
+                            .Add(Resource<LambdaAnalyticsResource>(services, mode))
+                            .Add(Resource<LambdaDomainResource>(services, mode))
+                            .Add(Resource<LambdaConnectivityResource>(services, mode))
+                            .Add(Resource<LambdaAgentResource>(services, mode))
                             .AddScalar(title: "GenHTTP Lambda API")
                             .Add(ApiDocumentation.Create())
                             .Add(ErrorHandler.From(new ApiErrorMapper()));
@@ -58,36 +63,35 @@ public static class ApiLayout
             // the guide agents read, and the operator's section of it - on
             // every installation that has an operator
             var admin = Layout.Create()
-                              .Add("guide", Resource<GuideResource>(mode).Add(AdminAuthentication.Create(options)))
+                              .Add("guide", Resource<GuideResource>(services, mode).Add(AdminAuthentication.Create(options)))
                               // whether the build agent builds and changes apps,
                               // and on which models - there with or without one,
                               // so it is decided before the agent is set up
-                              .Add("agent", Resource<AgentSettingsResource>(mode).Add(AdminAuthentication.Create(options)));
+                              .Add("agent", Resource<AgentSettingsResource>(services, mode).Add(AdminAuthentication.Create(options)));
 
             // the installation's name and logo, where its host lets the
             // operator give it some - and not there at all where it does not
             if (options.Branding)
             {
-                admin.Add("branding", Resource<BrandingResource>(mode).Add(AdminAuthentication.Create(options)));
+                admin.Add("branding", Resource<BrandingResource>(services, mode).Add(AdminAuthentication.Create(options)));
             }
 
             // on the resource itself rather than a layout of its own, which
             // would redirect /telemetry to /telemetry/ before asking it; the
             // layout around it has no path of its own to answer
-            admin.Add(Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options)));
+            admin.Add(Resource<AdminResource>(services, mode).Add(AdminAuthentication.Create(options)));
 
             version.Add("admin", admin)
-                   .Add("telemetry", Resource<TelemetryResource>(mode).Add(AdminAuthentication.Create(options)))
-                   .Add("logs", Resource<LogResource>(mode).Add(AdminAuthentication.Create(options)));
+                   .Add("telemetry", Resource<TelemetryResource>(services, mode).Add(AdminAuthentication.Create(options)))
+                   .Add("logs", Resource<LogResource>(services, mode).Add(AdminAuthentication.Create(options)));
         }
 
         return Layout.Create().Add("v1", version);
     }
 
     /// <summary>
-    /// A webservice resolved from the service provider, the way
-    /// <c>AddDependentService</c> builds one, but with the execution mode
-    /// chosen by the configuration.
+    /// A webservice made for every request from the services of the platform,
+    /// with the execution mode chosen by the configuration.
     /// </summary>
     /// <remarks>
     /// Everything below <c>/lambdas</c> is split into one resource per concern,
@@ -102,10 +106,13 @@ public static class ApiLayout
     /// anything in it is asked, which a POST to create a lambda would follow
     /// as a GET.
     /// </remarks>
-    private static ServiceResourceBuilder Resource<T>(ExecutionMode mode) where T : class
-        => new ServiceResourceBuilder().Type(typeof(T))
-                                       .InstanceProvider(async r => await InstanceProvider.ProvideAsync<T>(r))
-                                       .Injectors(Injection.Default().Add(new DependencyInjector()))
-                                       .ExecutionMode(mode);
+    private static ServiceResourceBuilder Resource<T>(IServiceProvider services, ExecutionMode mode) where T : class
+    {
+        var factory = ActivatorUtilities.CreateFactory<T>([]);
+
+        return new ServiceResourceBuilder().Type(typeof(T))
+                                           .InstanceProvider(_ => ValueTask.FromResult<object>(factory(services, null)))
+                                           .ExecutionMode(mode);
+    }
 
 }

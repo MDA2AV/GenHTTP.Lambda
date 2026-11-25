@@ -191,38 +191,38 @@ internal static class LambdaCompiler
     {
         if (request.Secrets is { } secrets)
         {
-            Connect(lambda, SourceBuilder.SecretType, secrets.Read);
-            Connect(lambda, SourceBuilder.SecretType, secrets.ReadAsync, SourceBuilder.AsyncSource);
+            Connect(request, lambda, SourceBuilder.SecretType, secrets.Read);
+            Connect(request, lambda, SourceBuilder.SecretType, secrets.ReadAsync, SourceBuilder.AsyncSource);
         }
 
         if (request.Database is { } database)
         {
-            Connect(lambda, SourceBuilder.DatabaseType, database.Connect);
-            Connect(lambda, SourceBuilder.DatabaseType, database.ConnectAsync, SourceBuilder.AsyncSource);
+            Connect(request, lambda, SourceBuilder.DatabaseType, database.Connect);
+            Connect(request, lambda, SourceBuilder.DatabaseType, database.ConnectAsync, SourceBuilder.AsyncSource);
         }
 
         if (request.Context != null)
         {
-            Connect(lambda, SourceBuilder.ScopeType, request.Context, SourceBuilder.ContextSource);
+            Connect(request, lambda, SourceBuilder.ScopeType, request.Context, SourceBuilder.ContextSource);
         }
 
         if (request.Workspace is { } files)
         {
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Exists, SourceBuilder.WorkspaceFields.Exists);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Read, SourceBuilder.WorkspaceFields.Read);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Write, SourceBuilder.WorkspaceFields.Write);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Delete, SourceBuilder.WorkspaceFields.Delete);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.List, SourceBuilder.WorkspaceFields.List);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Folders, SourceBuilder.WorkspaceFields.Folders);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.CreateFolder, SourceBuilder.WorkspaceFields.CreateFolder);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.Tree, SourceBuilder.WorkspaceFields.Tree);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.ExistsAsync, SourceBuilder.WorkspaceFields.ExistsAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.ReadAsync, SourceBuilder.WorkspaceFields.ReadAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.WriteAsync, SourceBuilder.WorkspaceFields.WriteAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.DeleteAsync, SourceBuilder.WorkspaceFields.DeleteAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.ListAsync, SourceBuilder.WorkspaceFields.ListAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.FoldersAsync, SourceBuilder.WorkspaceFields.FoldersAsync);
-            Connect(lambda, SourceBuilder.WorkspaceType, files.CreateFolderAsync, SourceBuilder.WorkspaceFields.CreateFolderAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Exists, SourceBuilder.WorkspaceFields.Exists);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Read, SourceBuilder.WorkspaceFields.Read);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Write, SourceBuilder.WorkspaceFields.Write);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Delete, SourceBuilder.WorkspaceFields.Delete);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.List, SourceBuilder.WorkspaceFields.List);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Folders, SourceBuilder.WorkspaceFields.Folders);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.CreateFolder, SourceBuilder.WorkspaceFields.CreateFolder);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.Tree, SourceBuilder.WorkspaceFields.Tree);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.ExistsAsync, SourceBuilder.WorkspaceFields.ExistsAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.ReadAsync, SourceBuilder.WorkspaceFields.ReadAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.WriteAsync, SourceBuilder.WorkspaceFields.WriteAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.DeleteAsync, SourceBuilder.WorkspaceFields.DeleteAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.ListAsync, SourceBuilder.WorkspaceFields.ListAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.FoldersAsync, SourceBuilder.WorkspaceFields.FoldersAsync);
+            Connect(request, lambda, SourceBuilder.WorkspaceType, files.CreateFolderAsync, SourceBuilder.WorkspaceFields.CreateFolderAsync);
         }
 
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
@@ -247,10 +247,8 @@ internal static class LambdaCompiler
     /// <summary>
     /// Hands a generated class the function it reads through.
     /// </summary>
-    private static void Connect(LoadedLambda lambda, string type, object source, string field = SourceBuilder.SecretSource)
-        => lambda.Assembly.GetType($"{lambda.Scope}.{type}")?
-                 .GetField(field, BindingFlags.Static | BindingFlags.NonPublic)?
-                 .SetValue(null, source);
+    private static void Connect(CompilationRequest request, LoadedLambda lambda, string type, object source, string field = SourceBuilder.SecretSource)
+        => request.Connections?.Connect(lambda.Assembly, $"{lambda.Scope}.{type}", field, source);
 
     /// <summary>
     /// Identifies a snippet by what it compiles to, so redeploying unchanged

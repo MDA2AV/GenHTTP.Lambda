@@ -106,15 +106,9 @@ public sealed class LambdaServerBuilder(LambdaPlatform platform)
 
         await host.StartAsync();
 
-        platform.StartBackgroundJobs();
-
-        // after the server is up, for the same reason as the demos below, and
-        // before them: these are the apps people use
-        platform.WarmUp();
-
-        // after the server is up: the demos have to be compiled, and doing it first
-        // would be seconds spent refusing connections
-        platform.SeedDemos();
+        // after the server is up: the lambdas kept warm and the demos have to be
+        // compiled, and doing it first would be seconds spent refusing connections
+        platform.Start();
 
         if (certificates != null)
         {

@@ -1,7 +1,9 @@
 using System.Diagnostics;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +39,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// before the restart is likeliest to be back first.
 /// </remarks>
 public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deployments, IDbContextFactory<LambdaDbContext> databases,
-                                 ILimitsService limits, ILogger<LambdaWarmup> logger)
+                                 ILimitsService limits, ILogBook book, LambdaOptions options, ILogger<LambdaWarmup> logger)
 {
 
     #region Functionality
@@ -74,7 +76,14 @@ public sealed class LambdaWarmup(IMetaService meta, IDeploymentService deploymen
 
             try
             {
-                await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.Settings, cancellation);
+                // under the lambda's own name, as a deployment and a request
+                // are: its startup runs here, and what it prints is its own
+                using (options.CaptureLambdaOutput
+                       ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, options.MaxOutputLines, lambda.Id))
+                       : null)
+                {
+                    await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.Settings, cancellation);
+                }
 
                 warmed++;
             }

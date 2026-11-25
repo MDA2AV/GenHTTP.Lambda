@@ -302,7 +302,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             running?.EndPoints.Any(e => e.Secure) ?? false,
             Math.Round((now - telemetry.Started).TotalHours, 1),
             telemetry.TotalRequests,
-            process.WorkingSet64
+            // of everything in the process, where it is not this installation's alone
+            telemetry.SharesProcess ? 0 : process.WorkingSet64
         );
     }
 

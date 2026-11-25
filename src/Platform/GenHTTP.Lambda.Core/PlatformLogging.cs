@@ -28,11 +28,13 @@ public static class PlatformLogging
     /// tee is there - the engine saying what its reactors are doing, whatever
     /// a lambda prints - goes through the tee and into the book instead.
     /// Keeping the two apart by which writer they hold, rather than by a check
-    /// at the point of writing, is what stops a record being kept twice.
+    /// at the point of writing, is what stops a record being kept twice. Where
+    /// the tee is there already - another platform of the process put it
+    /// there - it is the console under it that is taken.
     /// </remarks>
     public static ILoggerFactory CreateLoggers(LambdaOptions options, LogBook book)
     {
-        var console = Console.Out;
+        var console = ConsoleTee.Underlying;
 
         var floor = options.Development ? LogLevel.Debug : LogLevel.Information;
 

@@ -19,5 +19,7 @@ public sealed record ServerDescription(
     [Summary("When the server came up")]
     DateTime Started,
     [Summary("How long it has been up, in seconds")]
-    long UptimeSeconds
+    long UptimeSeconds,
+    [Summary("Whether the process serves other installations as well. What is read of the process is zero then: its memory, its processor time and its connections are not this installation's.")]
+    bool Shared
 );

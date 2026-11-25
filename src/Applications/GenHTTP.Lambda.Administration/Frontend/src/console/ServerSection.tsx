@@ -108,6 +108,10 @@ export function ServerSection({ access }: { access: Access }) {
 
   const { server, traffic, platform, latest, samples } = data;
 
+  // a process that serves other installations as well is none of this one's
+  // operator's: nothing is read of it, so there is nothing to draw
+  const own = !server.shared;
+
   const labels = samples.map((s) => time(s.taken));
 
   const line = (label: string, color: [string, string], pick: (s: TelemetrySample) => number): Series => ({
@@ -129,6 +133,7 @@ export function ServerSection({ access }: { access: Access }) {
           Running on <strong className="font-medium">{server.engine}</strong>, GenHTTP {server.version},{' '}
           {server.runtime}. Sampled every {data.intervalSeconds}s
           {latest?.taken ? <>, the figures as of {time(latest.taken)}</> : null}.
+          {!own && ' The process is shared with other installations, so its memory and connections are not shown.'}
         </>
       }
       pills={pills}
@@ -137,12 +142,16 @@ export function ServerSection({ access }: { access: Access }) {
 
       <Tiles>
         <Tile label="Uptime" value={duration(server.uptimeSeconds)} />
-        <Tile label="Managed heap" value={bytes(latest.managedBytes)} />
-        <Tile label="Working set" value={bytes(latest.workingSetBytes)} />
-        <Tile label="CPU" value={`${latest.cpuPercentage.toFixed(1)}%`} />
+        {own && (
+          <>
+            <Tile label="Managed heap" value={bytes(latest.managedBytes)} />
+            <Tile label="Working set" value={bytes(latest.workingSetBytes)} />
+            <Tile label="CPU" value={`${latest.cpuPercentage.toFixed(1)}%`} />
+          </>
+        )}
         <Tile label="Requests" value={latest ? count(traffic.requests) : '—'} />
         <Tile label="Server errors" value={count(traffic.failed)} tone={traffic.failed > 0 ? 'bad' : undefined} />
-        <Tile label="Open sockets" value={count(traffic.openSockets)} />
+        {own && <Tile label="Open sockets" value={count(traffic.openSockets)} />}
         <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} to="/admin/statistics" detail="online, of all" />
       </Tiles>
 
@@ -167,30 +176,34 @@ export function ServerSection({ access }: { access: Access }) {
       )}
 
       <div className="mt-6 space-y-5">
-        <Chart
-          title="Managed heap"
-          hint="The leak chart. A heap that keeps climbing across gen 2 collections is holding references it should have dropped. Committed rising while the live heap stays flat is the collector keeping pages it could hand back, which is not the same thing."
-          labels={labels}
-          dark={dark}
-          format={bytes}
-          series={[
-            line('Live', BLUE, (s) => s.managedBytes),
-            line('Committed', ORANGE, (s) => s.heapCommittedBytes),
-            line('Fragmented', PURPLE, (s) => s.heapFragmentedBytes),
-          ]}
-        />
+        {own && (
+          <>
+            <Chart
+              title="Managed heap"
+              hint="The leak chart. A heap that keeps climbing across gen 2 collections is holding references it should have dropped. Committed rising while the live heap stays flat is the collector keeping pages it could hand back, which is not the same thing."
+              labels={labels}
+              dark={dark}
+              format={bytes}
+              series={[
+                line('Live', BLUE, (s) => s.managedBytes),
+                line('Committed', ORANGE, (s) => s.heapCommittedBytes),
+                line('Fragmented', PURPLE, (s) => s.heapFragmentedBytes),
+              ]}
+            />
 
-        <Chart
-          title="Process memory"
-          hint="What the operating system thinks the process is using. Kept apart from the heap above because the two live an order of magnitude apart, and one axis holding both would flatten whichever is smaller."
-          labels={labels}
-          dark={dark}
-          format={bytes}
-          series={[
-            line('Working set', BLUE, (s) => s.workingSetBytes),
-            line('Private', ORANGE, (s) => s.privateBytes),
-          ]}
-        />
+            <Chart
+              title="Process memory"
+              hint="What the operating system thinks the process is using. Kept apart from the heap above because the two live an order of magnitude apart, and one axis holding both would flatten whichever is smaller."
+              labels={labels}
+              dark={dark}
+              format={bytes}
+              series={[
+                line('Working set', BLUE, (s) => s.workingSetBytes),
+                line('Private', ORANGE, (s) => s.privateBytes),
+              ]}
+            />
+          </>
+        )}
 
         {latest.residentBytes > 0 && (
           <Chart
@@ -238,23 +251,25 @@ export function ServerSection({ access }: { access: Access }) {
           />
         )}
 
-        <Chart
-          title="Collections per interval"
-          hint="Gen 2 runs should be rare and should bring the heap back down. If they run often and the heap does not fall, something is holding references."
-          labels={labels}
-          dark={dark}
-          shape="step"
-          format={(v) => v.toFixed(0)}
-          series={[
-            { label: 'Gen 0', color: GEN0, values: deltas((s) => s.gen0Collections) },
-            { label: 'Gen 1', color: GEN1, values: deltas((s) => s.gen1Collections) },
-            { label: 'Gen 2', color: GEN2, values: deltas((s) => s.gen2Collections) },
-          ]}
-        />
+        {own && (
+          <Chart
+            title="Collections per interval"
+            hint="Gen 2 runs should be rare and should bring the heap back down. If they run often and the heap does not fall, something is holding references."
+            labels={labels}
+            dark={dark}
+            shape="step"
+            format={(v) => v.toFixed(0)}
+            series={[
+              { label: 'Gen 0', color: GEN0, values: deltas((s) => s.gen0Collections) },
+              { label: 'Gen 1', color: GEN1, values: deltas((s) => s.gen1Collections) },
+              { label: 'Gen 2', color: GEN2, values: deltas((s) => s.gen2Collections) },
+            ]}
+          />
+        )}
 
         <Chart
           title="Requests per interval"
-          hint="What the engine actually carried while the memory above was measured."
+          hint={own ? 'What the engine actually carried while the memory above was measured.' : 'What was answered in each interval.'}
           labels={labels}
           dark={dark}
           shape="step"
@@ -336,10 +351,14 @@ export function ServerSection({ access }: { access: Access }) {
         <Fact label="Platform" value={server.platform} />
         <Fact label="Server GC" value={server.serverGarbageCollection ? 'on' : 'off'} />
         <Fact label="Processors" value={String(server.processors)} />
-        <Fact label="Threads" value={String(latest.threads)} />
-        <Fact label="GC pause" value={`${latest.pausePercentage.toFixed(2)}%`} />
-        <Fact label="Heap fragmented" value={bytes(latest.heapFragmentedBytes)} />
-        <Fact label="Allocated total" value={bytes(latest.allocatedBytes)} />
+        {own && (
+          <>
+            <Fact label="Threads" value={String(latest.threads)} />
+            <Fact label="GC pause" value={`${latest.pausePercentage.toFixed(2)}%`} />
+            <Fact label="Heap fragmented" value={bytes(latest.heapFragmentedBytes)} />
+            <Fact label="Allocated total" value={bytes(latest.allocatedBytes)} />
+          </>
+        )}
         <Fact label="Upgrades" value={count(traffic.upgrades)} />
         <Fact label="Versions stored" value={count(platform.versions)} />
       </dl>

@@ -64,7 +64,7 @@ public sealed partial class SitePrerender
 
     #region Get-/Setters
 
-    private string File { get; }
+    private PrerenderFile File { get; }
 
     private string? PublicUrl { get; }
 
@@ -76,16 +76,14 @@ public sealed partial class SitePrerender
 
     private ILogger<SitePrerender> Logger { get; }
 
-    private Snapshot? Cached { get; set; }
-
     #endregion
 
     #region Initialization
 
-    public SitePrerender(Bundle bundle, string? publicUrl, ILimitsService limits, IShowcaseService showcases, ILambdaAddresses addresses,
+    public SitePrerender(PrerenderFile file, string? publicUrl, ILimitsService limits, IShowcaseService showcases, ILambdaAddresses addresses,
                          ILogger<SitePrerender> logger)
     {
-        File = bundle.PrerenderFile;
+        File = file;
         PublicUrl = publicUrl;
         Limits = limits;
         Showcases = showcases;
@@ -105,7 +103,7 @@ public sealed partial class SitePrerender
     {
         brand ??= Brand.Platform;
 
-        var read = Read();
+        var read = File.Read();
 
         // the rendering of the pages as this installation presents itself,
         // to whom it speaks
@@ -261,100 +259,6 @@ public sealed partial class SitePrerender
             Logger.LogWarning(e, "The showcase could not be listed for the rendered page");
             return null;
         }
-    }
-
-    private Renderings? Read()
-    {
-        // read again whenever it changes, because "npm run build" updates a
-        // running server - and only then, because it is a few megabytes
-        try
-        {
-            var written = System.IO.File.GetLastWriteTimeUtc(File);
-
-            if (Cached is { } cached && cached.Written == written)
-            {
-                return cached.Content;
-            }
-
-            var content = System.IO.File.Exists(File)
-                        ? JsonSerializer.Deserialize<Prerendered>(System.IO.File.ReadAllText(File), Json)
-                        : null;
-
-            var renderings = content == null ? null : new Renderings(content);
-
-            Cached = new Snapshot(written, renderings);
-
-            return renderings;
-        }
-        catch (Exception e) when (e is IOException or JsonException)
-        {
-            // no build, or a broken one: the pages are still served, empty
-            return null;
-        }
-    }
-
-    private sealed record Snapshot(DateTime Written, Renderings? Content);
-
-    /// <summary>
-    /// The pages as each profile and brand shows them, made once as the
-    /// build is read: a profile's own pages over the ones every profile
-    /// shares - the same strings, so it costs the dictionaries alone.
-    /// </summary>
-    private sealed class Renderings(Prerendered content)
-    {
-        private readonly Dictionary<(InstallationProfile Profile, bool Branded), PrerenderedPages?> _made = Make(content);
-
-        public Prerendered Content => content;
-
-        /// <summary>
-        /// The pages as the given profile and brand show them, or nothing
-        /// where the build did not render them so.
-        /// </summary>
-        public PrerenderedPages? For(InstallationProfile profile, bool branded)
-            => content.Profiles == null
-                   ? branded ? content.Branded : content.Plain
-                   : _made.GetValueOrDefault((profile, branded));
-
-        private static Dictionary<(InstallationProfile, bool), PrerenderedPages?> Make(Prerendered content)
-        {
-            var made = new Dictionary<(InstallationProfile, bool), PrerenderedPages?>();
-
-            foreach (var (name, own) in content.Profiles ?? [])
-            {
-                if (InstallationProfiles.TryParse(name, out var profile))
-                {
-                    made[(profile.Value, false)] = Over(content.Plain, own.Plain);
-                    made[(profile.Value, true)] = content.Branded is { } branded && own.Branded is { } brandedOwn ? Over(branded, brandedOwn) : null;
-                }
-            }
-
-            return made;
-        }
-
-        private static PrerenderedPages Over(PrerenderedPages shared, PrerenderedPages own)
-        {
-            var pages = new Dictionary<string, string>(shared.Pages);
-
-            foreach (var (path, page) in own.Pages)
-            {
-                pages[path] = page;
-            }
-
-            var showcase = shared.Showcase.ToDictionary(l => l.Key, l => new Dictionary<string, string>(l.Value));
-
-            foreach (var (language, shapes) in own.Showcase)
-            {
-                var into = showcase.TryGetValue(language, out var existing) ? existing : showcase[language] = [];
-
-                foreach (var (shape, page) in shapes)
-                {
-                    into[shape] = page;
-                }
-            }
-
-            return new PrerenderedPages(pages, showcase);
-        }
-
     }
 
     #endregion

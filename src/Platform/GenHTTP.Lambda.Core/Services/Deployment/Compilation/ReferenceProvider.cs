@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 
 using GenHTTP.Lambda.Integrations.Databases;
@@ -39,6 +40,12 @@ public static class ReferenceProvider
         "SQLitePCLRaw",
         "ioxide"
     ];
+
+    /// <summary>
+    /// The assembly of the host, whatever it is called: a host of somebody's
+    /// own has an application of its own, whose types are no lambda's to name.
+    /// </summary>
+    private static readonly string? Host = Assembly.GetEntryAssembly()?.GetName().Name;
 
     /// <summary>
     /// The client libraries of databases the platform knows of, by the names
@@ -171,7 +178,7 @@ public static class ReferenceProvider
                         .Select(a => a.Location);
     }
 
-    private static bool IsExcluded(string name) => Starts(name, Excluded);
+    private static bool IsExcluded(string name) => Starts(name, Excluded) || name.Equals(Host, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsNetwork(MetadataReference reference)
         => reference is PortableExecutableReference { FilePath: { } path } && Starts(Path.GetFileNameWithoutExtension(path), Network);

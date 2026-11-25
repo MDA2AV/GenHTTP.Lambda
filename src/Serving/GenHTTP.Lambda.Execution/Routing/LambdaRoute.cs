@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -9,7 +10,6 @@ using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Visits;
 
-using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.ErrorHandling;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -33,9 +33,9 @@ namespace GenHTTP.Lambda.Execution;
 /// anything of their own: what has to be shared between the chains - the
 /// concurrency slots, the per-client budgets, the counters, the log - lives in
 /// services. The layers that need nothing but those services are taken from
-/// the container as they are asked (<see cref="Dependent"/>), the same
-/// instance for every chain; the lookup is the one that is built here, since
-/// its locator is what tells the chains apart.
+/// the container (<see cref="ServiceConcern"/>), the same instance for every
+/// chain; the lookup is the one that is built here, since its locator is what
+/// tells the chains apart.
 ///
 /// Concerns are applied inside out, so the list below reads from the code of
 /// the user outwards to the client.
@@ -51,13 +51,13 @@ public static class LambdaRoute
                                                    services.GetRequiredService<ILoggerFactory>().CreateLogger<LambdaExecutionHandler>());
 
         return Concerns.Chain([
-            Dependent.Concern<ThrottleConcern>(),
+            ServiceConcern.Of<ThrottleConcern>(services),
             ErrorHandler.From(new LambdaErrorMapper(services.GetRequiredService<ILogger<LambdaErrorMapper>>())),
             // outside the error handler and the timeout, so a lambda that
             // printed and then failed keeps what it printed, and the warning
             // the error handler writes is filed under it as well
             .. options.CaptureLambdaOutput
-               ? new IConcernBuilder[] { Dependent.Concern<LambdaOutputConcern>() }
+               ? new IConcernBuilder[] { ServiceConcern.Of<LambdaOutputConcern>(services) }
                : [],
             // the visit the request was, made once: outside the error handler
             // and the throttle, inside the lookup - so it is the answer the
@@ -65,16 +65,16 @@ public static class LambdaRoute
             // Inside the throttle it saw neither the timeout nor the
             // rejection - a lambda that timed out on every request was
             // recorded as succeeding, slowly.
-            Dependent.Concern<LambdaVisitConcern>(),
+            ServiceConcern.Of<LambdaVisitConcern>(services),
             // what reads the visit, outside what makes it, so it is on the
             // request as the answer passes: the figures, and the owner's
             // analytics, which only queue it - nothing is written while the
             // visitor waits. The request log reads it at the outside of the
             // host.
-            Dependent.Concern<LambdaActivityConcern>(),
-            Dependent.Concern<AnalyticsConcern>(),
+            ServiceConcern.Of<LambdaActivityConcern>(services),
+            ServiceConcern.Of<AnalyticsConcern>(services),
             new LambdaResolutionConcernBuilder(locator),
-            Dependent.Concern<RateLimitConcern>()
+            ServiceConcern.Of<RateLimitConcern>(services)
         ], execution);
     }
 

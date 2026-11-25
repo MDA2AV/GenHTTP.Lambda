@@ -45,13 +45,19 @@ namespace GenHTTP.Lambda;
 /// the lambdas it compiles and runs, and the jobs that look after them.
 /// </summary>
 /// <remarks>
-/// Built once per process and handed to each component's builder, which takes
-/// what it needs from <see cref="Services"/>. Nothing here serves a request on
-/// its own: the API, the MCP endpoint, the pages and the runner do, and a host
-/// decides which of them it has and where.
+/// Built once per installation and handed to each component's builder, which
+/// takes what it needs from <see cref="Services"/>. Nothing here serves a
+/// request on its own: the API, the MCP endpoint, the pages and the runner do,
+/// and a host decides which of them it has and where.
+///
+/// Usually the only one in its process, which it has for itself then. A host
+/// may run several, each on the runtime it hands them (see <see cref="LambdaRuntime"/>).
 ///
 /// Disposing of it stops the background jobs and the services, gives the
-/// console back and lets go of its integrations.
+/// console back, lets go of its integrations and takes back what the lambdas
+/// were handed to reach it with. Their code stays loaded, as it does when a
+/// lambda is taken offline, so whoever disposes of one that others outlive
+/// stops handing it requests first.
 /// </remarks>
 public sealed class LambdaPlatform : IAsyncDisposable
 {
@@ -74,16 +80,32 @@ public sealed class LambdaPlatform : IAsyncDisposable
     /// </summary>
     public ILoggerFactory Loggers { get; }
 
+    /// <summary>
+    /// What the platform has in common with the others of its process, if
+    /// there are others.
+    /// </summary>
+    public LambdaRuntime Runtime { get; }
+
+    /// <summary>
+    /// Whether the process is this platform's alone: the runtime is its own
+    /// rather than one it was handed.
+    /// </summary>
+    public bool OwnsProcess { get; }
+
     private BackgroundScheduler Scheduler { get; }
 
     private bool OwnsLoggers { get; }
 
     /// <summary>
-    /// Stops the warm-up between two lambdas once the platform is going away.
+    /// Stops the warm-up and the seeding between two lambdas once the platform
+    /// is going away.
     /// </summary>
     private CancellationTokenSource Stopping { get; } = new();
 
-    private Task? Warming { get; set; }
+    /// <summary>
+    /// What was begun as the platform started and goes on beside the requests.
+    /// </summary>
+    private List<Task> Beginning { get; } = [];
 
     private PlatformIntegrations Integrations { get; }
 
@@ -91,18 +113,24 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
     #region Initialization
 
-    internal LambdaPlatform(LambdaOptions options, ILoggerFactory loggers, bool ownsLoggers, LogBook book, RunLog runs, PlatformIntegrations integrations)
+    internal LambdaPlatform(LambdaOptions options, ILoggerFactory loggers, bool ownsLoggers, LogBook book, RunLog? runs, LambdaRuntime runtime, PlatformIntegrations integrations)
     {
         Options = options;
         Loggers = loggers;
         OwnsLoggers = ownsLoggers;
+        Runtime = runtime;
+        OwnsProcess = runs != null;
         Integrations = integrations;
 
-        Services = BuildServices(options, loggers, book, runs, integrations);
+        Services = BuildServices(options, loggers, book, runs, runtime, integrations);
 
         // what is printed to the console goes into this platform's book from
-        // here on, until it is disposed of with the services
-        Services.GetRequiredService<ConsoleCapture>();
+        // here on, until it is disposed of with the services - where there is
+        // nobody else it could be about
+        if (OwnsProcess)
+        {
+            Services.GetRequiredService<ConsoleCapture>();
+        }
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
     }
@@ -160,7 +188,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
     /// </summary>
     public static LambdaPlatformBuilder Create() => new();
 
-    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog runs, PlatformIntegrations integrations)
+    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog? runs, LambdaRuntime runtime, PlatformIntegrations integrations)
     {
         var services = new ServiceCollection();
 
@@ -196,12 +224,33 @@ public sealed class LambdaPlatform : IAsyncDisposable
          */
         services.AddSingleton(book);
         services.AddSingleton<ILogBook>(book);
-        services.AddSingleton(runs);
-        services.AddSingleton<IRunLog>(runs);
-        services.AddSingleton<ConsoleCapture>();
         services.AddSingleton<StringPool>();
-        services.AddSingleton<GeoTable>();
-        services.AddSingleton<GeoPlaces>();
+
+        /*
+         * What the process has once, handed on as it is - by instance, so the
+         * container does not dispose of what is not the platform's.
+         */
+        services.AddSingleton(runtime.Services.GetRequiredService<GeoTable>());
+        services.AddSingleton(runtime.Services.GetRequiredService<GeoPlaces>());
+        services.AddSingleton(runtime.Services.GetRequiredService<CrawlerList>());
+        services.AddSingleton(runtime.Services.GetRequiredService<CrawlerRanges>());
+        services.AddSingleton(runtime.Services.GetRequiredService<CompiledAssemblies>());
+        services.AddSingleton(runtime.Services.GetRequiredService<CompilationGate>());
+
+        if (runs != null)
+        {
+            // the process is this platform's: what it prints, how it runs and
+            // how the run before it ended are its own to keep
+            services.AddSingleton<IRunLog>(runs);
+            services.AddSingleton<ConsoleCapture>();
+            services.AddSingleton<IProcessReadings, OwnProcess>();
+        }
+        else
+        {
+            services.AddSingleton<IRunLog, NoRunLog>();
+            services.AddSingleton<IProcessReadings, SharedProcess>();
+            services.AddSingleton(runtime.Services.GetRequiredService<ProcessThrottle>());
+        }
 
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
@@ -296,8 +345,6 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IAnalyticsStore>(provider => provider.GetRequiredService<AnalyticsStore>());
         services.AddSingleton<AnalyticsQueue>();
         services.AddSingleton<DailyVisitors>();
-        services.AddSingleton<CrawlerList>();
-        services.AddSingleton<CrawlerRanges>();
         services.AddSingleton<VisitorClassifier>();
         services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
@@ -307,10 +354,9 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IOptimizationService, OptimizationService>();
 
         /*
-         * The concerns that need nothing but services, resolved per request
-         * from the scope the outermost concern of the host opens. Singletons,
-         * because they keep nothing of a request's: without a registration
-         * the container would build one for every request.
+         * The concerns that need nothing but services, taken from here as the
+         * chains they are part of are built (see ServiceConcern). Singletons,
+         * because they keep nothing of a request's.
          */
         services.AddSingleton<CallerConcern>();
         services.AddSingleton<TelemetryConcern>();
@@ -324,9 +370,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
-        services.AddSingleton<IBackgroundJob, GeoJob>();
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
-        services.AddSingleton<IBackgroundJob, CrawlerJob>();
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
         services.AddSingleton<IBackgroundJob, AgentTicketJob>();
         services.AddSingleton<IBackgroundJob, UsageReportJob>();
@@ -343,9 +387,38 @@ public sealed class LambdaPlatform : IAsyncDisposable
     #region Functionality
 
     /// <summary>
+    /// Starts what goes on beside the requests: the background jobs, the
+    /// warm-up of the lambdas kept warm, and the demos. Called once, when
+    /// whatever serves the platform has been prepared.
+    /// </summary>
+    /// <remarks>
+    /// In that order: the lambdas kept warm are the apps people use, so they
+    /// come before the demos.
+    /// </remarks>
+    public void Start()
+    {
+        StartBackgroundJobs();
+
+        WarmUp();
+
+        SeedDemos();
+    }
+
+    /// <summary>
     /// Starts the maintenance jobs. Called by the host once it is answering.
     /// </summary>
-    public void StartBackgroundJobs() => Scheduler.Start();
+    /// <remarks>
+    /// With those of the runtime, where that is the platform's own.
+    /// </remarks>
+    public void StartBackgroundJobs()
+    {
+        if (OwnsProcess)
+        {
+            Runtime.Start();
+        }
+
+        Scheduler.Start();
+    }
 
     /// <summary>
     /// Brings the demos online, once the server is already answering.
@@ -359,21 +432,7 @@ public sealed class LambdaPlatform : IAsyncDisposable
     {
         var seeder = Services.GetRequiredService<DemoSeeder>();
 
-        // started in the background at startup, not a hop a request waits
-        // for - the compiling in it goes through Offload where it happens
-#pragma warning disable RS0030
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await seeder.SeedAsync();
-            }
-            catch (Exception e)
-            {
-                Loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "The demos could not be prepared");
-            }
-        });
-#pragma warning restore RS0030
+        Begin(seeder.SeedAsync, "The demos could not be prepared");
     }
 
     /// <summary>
@@ -389,22 +448,35 @@ public sealed class LambdaPlatform : IAsyncDisposable
     {
         var warmup = Services.GetRequiredService<LambdaWarmup>();
 
+        Begin(warmup.WarmUpAsync, "The lambdas could not be warmed up");
+    }
+
+    /// <summary>
+    /// Begins something that goes on beside the requests, until it is done or
+    /// the platform goes away.
+    /// </summary>
+    private void Begin(Func<CancellationToken, ValueTask> work, string problem)
+    {
         var stopping = Stopping.Token;
 
         // started in the background at startup, not a hop a request waits
         // for - the compiling in it goes through Offload where it happens
 #pragma warning disable RS0030
-        Warming = Task.Run(async () =>
+        Beginning.Add(Task.Run(async () =>
         {
             try
             {
-                await warmup.WarmUpAsync(stopping);
+                await work(stopping);
+            }
+            catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+            {
+                // the platform is going away
             }
             catch (Exception e)
             {
-                Loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "The lambdas could not be warmed up");
+                Loggers.CreateLogger<LambdaPlatform>().LogWarning(e, "{Problem}", problem);
             }
-        });
+        }, CancellationToken.None));
 #pragma warning restore RS0030
     }
 
@@ -419,16 +491,13 @@ public sealed class LambdaPlatform : IAsyncDisposable
         // until the process is killed
         await Stopping.CancelAsync();
 
-        if (Warming != null)
+        try
         {
-            try
-            {
-                await Warming.WaitAsync(TimeSpan.FromSeconds(5));
-            }
-            catch (TimeoutException)
-            {
-                Loggers.CreateLogger<LambdaPlatform>().LogWarning("Stopped without waiting for the warm-up of a lambda");
-            }
+            await Task.WhenAll(Beginning).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException)
+        {
+            Loggers.CreateLogger<LambdaPlatform>().LogWarning("Stopped without waiting for a lambda that is being started");
         }
 
         Stopping.Dispose();
@@ -439,6 +508,12 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         // built before the container, so not the container's to dispose of
         await Integrations.DisposeAsync();
+
+        // one that was handed in is its owner's
+        if (OwnsProcess)
+        {
+            await Runtime.DisposeAsync();
+        }
 
         // a factory handed in is its owner's to dispose of
         if (loggers)
