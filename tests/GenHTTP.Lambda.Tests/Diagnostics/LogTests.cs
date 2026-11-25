@@ -417,39 +417,56 @@ public sealed class LogTests
     }
 
     /// <summary>
-    /// Alone, since what is asked is whether any platform has the process for
-    /// itself - and every fixture is one that has.
+    /// Alone, and with the platforms other tests left running set aside: what
+    /// is asked is whether any has the process for itself, as each of them has.
     /// </summary>
     [TestMethod, DoNotParallelize]
     public void WhatALambdaPrintsIsNotPrintedWhereTheConsoleIsAHosts()
     {
-        var book = new LogBook(1000);
+        var others = LambdaOutput.Process.ToArray();
 
-        using var console = new StringWriter();
-        using var tee = new ConsoleTee(console, false);
-
-        using (LambdaOutput.Enter(new OutputScope("quiz", book, 100)))
+        foreach (var other in others)
         {
-            tee.WriteLine("for the owner of the quiz");
+            LambdaOutput.Detach(other);
         }
 
-        tee.WriteLine("from the host");
-
-        Assert.AreEqual($"from the host{Environment.NewLine}", console.ToString());
-
-        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
-
-        Assert.AreEqual("quiz", lines.Single(l => l.Text == "for the owner of the quiz").Lambda);
-
-        // and it is where the console is that of the platform it runs in
-        using var capture = new ConsoleCapture(book);
-
-        using (LambdaOutput.Enter(new OutputScope("quiz", book, 100)))
+        try
         {
-            tee.WriteLine("for whoever runs the server");
-        }
+            var book = new LogBook(1000);
 
-        Assert.Contains("for whoever runs the server", console.ToString());
+            using var console = new StringWriter();
+            using var tee = new ConsoleTee(console, false);
+
+            using (LambdaOutput.Enter(new OutputScope("quiz", book, 100)))
+            {
+                tee.WriteLine("for the owner of the quiz");
+            }
+
+            tee.WriteLine("from the host");
+
+            Assert.AreEqual($"from the host{Environment.NewLine}", console.ToString());
+
+            var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+            Assert.AreEqual("quiz", lines.Single(l => l.Text == "for the owner of the quiz").Lambda);
+
+            // and it is where the console is that of the platform it runs in
+            using var capture = new ConsoleCapture(book);
+
+            using (LambdaOutput.Enter(new OutputScope("quiz", book, 100)))
+            {
+                tee.WriteLine("for whoever runs the server");
+            }
+
+            Assert.Contains("for whoever runs the server", console.ToString());
+        }
+        finally
+        {
+            foreach (var other in others)
+            {
+                LambdaOutput.Attach(other);
+            }
+        }
     }
 
     #region Folding what repeats
