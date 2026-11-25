@@ -43,7 +43,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 import { sitesIn } from './sites.mjs';
-import { hostsFrom, hostFor, directOf, HostsError } from './hosts.mjs';
+import { Installations, directOf, HostsError } from './hosts.mjs';
 import { Lane } from './lanes.mjs';
 
 const PORT = Number(process.env.AGENT_PORT ?? 8401);
@@ -53,11 +53,12 @@ const PORT = Number(process.env.AGENT_PORT ?? 8401);
  * AGENT_MCP_URL and AGENT_PUBLIC_ORIGIN, or those AGENT_HOSTS names. A
  * configuration that is wrong stops the runner here, saying what to fix,
  * rather than sending somebody's build to an installation that did not ask.
+ * A file that becomes wrong later changes nothing (follow).
  */
 let HOSTS;
 
 try {
-  HOSTS = hostsFrom(process.env);
+  HOSTS = new Installations(process.env);
 } catch (e) {
   if (!(e instanceof HostsError)) throw e;
 
@@ -67,6 +68,26 @@ try {
 
 /** Whether several installations share this runner. */
 const SHARED = HOSTS.shared;
+
+/** Takes over what AGENT_HOSTS_FILE says now, and says what that changed. */
+function follow() {
+  const change = HOSTS.refresh();
+
+  if (!change) return;
+
+  if (change.problem) {
+    console.warn(`The installations stay as they were: ${change.problem}`);
+    return;
+  }
+
+  // by name, never by token
+  const what = [
+    change.added.length > 0 ? `added ${change.added.join(', ')}` : null,
+    change.removed.length > 0 ? `removed ${change.removed.join(', ')}` : null
+  ].filter(Boolean).join(', ');
+
+  console.log(`building for ${HOSTS.hosts.length} installations now${what ? ` - ${what}` : ''}`);
+}
 
 /*
  * How many jobs on the clock run at once, of all installations together.
@@ -169,9 +190,9 @@ function mcpConfigOf(job, sites) {
  * What the builds reach without the proxy: the runner's own list, the page
  * fetch - which is on the proxy's host, and would be asked for through the
  * proxy otherwise, and refused - and, where several installations share the
- * runner, their MCP endpoints (directOf).
+ * runner, their MCP endpoints (directOf) - those there are as a build starts.
  */
-const DIRECT = directOf(HOSTS.hosts, SHARED, [process.env.NO_PROXY, FETCH_URL ? new URL(FETCH_URL).hostname : null]);
+const direct = () => directOf(HOSTS.hosts, SHARED, [process.env.NO_PROXY, FETCH_URL ? new URL(FETCH_URL).hostname : null]);
 
 /*
  * Which models a caller may ask for, by short name.
@@ -970,7 +991,7 @@ async function run(job) {
       AGENT_PURPOSE: PURPOSE,
       AGENT_GUIDE: GUIDE,
       AGENT_MCP_CONFIG: mcpConfigOf(job, sites),
-      NO_PROXY: DIRECT
+      NO_PROXY: direct()
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -1730,7 +1751,9 @@ createServer(async (req, res) => {
   // nothing and means a mistake in the network definition is not an open door -
   // and where several installations share the runner, it is what says which
   // of them is asking
-  const host = hostFor(HOSTS.hosts, req.headers['x-agent-token']);
+  follow();
+
+  const host = HOSTS.find(req.headers['x-agent-token']);
 
   if (!host) {
     return send(res, 403, { error: 'no' });
