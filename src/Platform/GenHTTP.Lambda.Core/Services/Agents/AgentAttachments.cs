@@ -174,13 +174,22 @@ public sealed class AgentAttachments(AgentRunRecords records, IFileProvider file
     /// The files of a run, and those attached to earlier messages about its
     /// lambda, as the agent is offered them.
     /// </summary>
-    public async ValueTask<IReadOnlyList<AgentAttachment>> OfferedAsync(string run, long? lambda, CancellationToken cancellation = default)
+    /// <param name="carried">The runs this one carries on from, newest first - files of a build that asked before it made an app are nowhere else</param>
+    public async ValueTask<IReadOnlyList<AgentAttachment>> OfferedAsync(string run, long? lambda, IReadOnlyList<string>? carried = null,
+                                                                        CancellationToken cancellation = default)
     {
         var now = (await records.FilesOfAsync([run], cancellation)).Where(f => f.Direction == AgentFileDirection.Attached).ToList();
 
         var before = lambda is { } id ? (await records.AttachedToAsync(id, Earlier, cancellation)).Where(f => f.RunId != run).ToList() : [];
 
-        return [.. now.Select(f => Describe(f, false)), .. before.Select(f => Describe(f, true))];
+        if (carried is { Count: > 0 })
+        {
+            var known = before.Select(f => f.Id).ToHashSet(StringComparer.Ordinal);
+
+            before.AddRange((await records.FilesOfAsync(carried, cancellation)).Where(f => f.Direction == AgentFileDirection.Attached && known.Add(f.Id)));
+        }
+
+        return [.. now.Select(f => Describe(f, false)), .. before.Take(Earlier).Select(f => Describe(f, true))];
     }
 
     public static AgentAttachment Describe(AgentFileEntity file, bool earlier)

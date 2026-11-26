@@ -32,6 +32,6 @@ public sealed record BuildResult(
     string? Question = null,
     [Summary("What the app waits for, and whom - from the platform's records, not the agent's words")]
     IReadOnlyList<RunBlocker>? WaitsFor = null,
-    [Summary("What cut it short: `timeout`, `turns` (it took as many steps as it may), `unauthorised` (the agent could not sign in), `lost` (the agent forgot it), `cancelled` or `declined`")]
+    [Summary("What cut it short: `timeout`, `turns` (it took as many steps as it may), `unauthorised` (the agent could not sign in), `lost` (the agent forgot it), `failed` (it stopped with an error), `cancelled` or `declined`")]
     string? Reason = null
 );

@@ -47,7 +47,9 @@ public sealed record AdminCensusResponse(
     [Summary("Of those, what the build agent of the installation wrote - through MCP, or as a draft it wrote that was put online - by the model it ran on: every model by its name in `build.offer.models` of `GET /system`")]
     IReadOnlyDictionary<string, int> AgentModels,
     [Summary("The same, by the effort it ran at: `low`, `medium`, `high`, `xhigh` and `max`")]
-    IReadOnlyDictionary<string, int> AgentEfforts
+    IReadOnlyDictionary<string, int> AgentEfforts,
+    [Summary("The same, by every value of every option of the agent's it ran on, by option - whatever options its integration has")]
+    IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>>? AgentOptions = null
 )
 {
 
@@ -55,6 +57,7 @@ public sealed record AdminCensusResponse(
         census.Taken, census.Lambdas, census.Demos, census.Online, census.Offline, census.Blocked,
         census.Tiers.ToDictionary(t => LambdaTierNames.Name(t.Key), t => t.Value),
         census.CreatedDay, census.CreatedWeek, census.CreatedMonth, census.ActiveMonth, census.GoingOffline, census.Removed, census.Expiring,
-        census.Uses, census.Simple, census.Full, census.Versions, census.Saved, census.AgentModels, census.AgentEfforts);
+        census.Uses, census.Simple, census.Full, census.Versions, census.Saved, census.AgentModels, census.AgentEfforts,
+        census.AgentOptions);
 
 }

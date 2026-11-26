@@ -39,7 +39,7 @@ public sealed class AgentContext(AgentRunRecords records, AgentAttachments attac
             conversation = [.. (AgentInput.History(history) ?? []).Select(t => new AgentTurn(t.Prompt ?? "", t.Reply))];
         }
 
-        var files = await attachments.OfferedAsync(run.Id, run.LambdaId, cancellation);
+        var files = await attachments.OfferedAsync(run.Id, run.LambdaId, await CarriedAsync(previous, cancellation), cancellation);
 
         var audience = new AgentAudience(run.Language ?? "en",
                                          run.View == EditorView.Simple ? AgentView.Simple : AgentView.Full,
@@ -82,6 +82,22 @@ public sealed class AgentContext(AgentRunRecords records, AgentAttachments attac
         // which it means
         return [.. turns.Select(t => new AgentTurn(t.Prompt, t.Reply,
                     NamesOf(files.Where(f => f.Direction == AgentFileDirection.Attached && f.RunId == t.Turn.Id))))];
+    }
+
+    /// <summary>
+    /// The runs a run carries on from, newest first - a few, as a
+    /// conversation that went back and forth does not go back further.
+    /// </summary>
+    private async ValueTask<IReadOnlyList<string>> CarriedAsync(AgentRunEntity? previous, CancellationToken cancellation)
+    {
+        var carried = new List<string>();
+
+        for (var run = previous; run != null && carried.Count < AgentInput.MostTurns; run = run.Continues is { } earlier ? await records.GetAsync(earlier, cancellation) : null)
+        {
+            carried.Add(run.Id);
+        }
+
+        return carried;
     }
 
     private static IReadOnlyList<string>? NamesOf(IEnumerable<AgentFileEntity> files)

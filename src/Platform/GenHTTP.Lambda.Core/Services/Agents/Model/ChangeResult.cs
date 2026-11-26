@@ -20,7 +20,7 @@ public sealed record ChangeResult(
     bool? Unchanged = null,
     [Summary("Whether somebody stopped it")]
     bool? Cancelled = null,
-    [Summary("What cut it short: `timeout`, `turns` (it used up its steps), `unauthorised` or `lost` (the agent forgot it); `declined` where the agent would not make the change at all")]
+    [Summary("What cut it short: `timeout`, `turns` (it used up its steps), `unauthorised`, `lost` (the agent forgot it) or `failed` (it stopped with an error - what it saved by then is kept); `declined` where the agent would not make the change at all")]
     string? Reason = null,
     [Summary("What the agent said at the end, for the owner - or, where it declined, why")]
     string? Summary = null,
@@ -48,6 +48,6 @@ public sealed record ChangeResult(
     IReadOnlyList<RunBlocker>? WaitsFor = null,
     [Summary("What undoing it would do and leave; `POST …/agent/undo` does it")]
     UndoOffer? Undo = null,
-    [Summary("New apps it created, by public key: a change may build one beside the app it was asked about, whose editor key the owner then has in their editor")]
+    [Summary("New apps it created, by public key: a change may build one beside the app it was asked about, whose editor link the agent gives in its answer - the platform hands it out nowhere else")]
     IReadOnlyList<string>? Created = null
 );

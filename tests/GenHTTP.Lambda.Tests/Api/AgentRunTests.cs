@@ -284,6 +284,35 @@ public sealed class AgentRunTests
     }
 
     [TestMethod]
+    public async Task ABuildThatAskedBeforeItMadeAnAppPassesItsFilesToTheBuildThatAnswers()
+    {
+        var agent = new FakeAgentProvider();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var logo = await AttachAsync(fixture, "logo.png", "image/png", Png());
+
+        var asked = await BuildAsync(fixture, new BuildRequest("A page for our club, with this logo", Attachments: [logo.Id]));
+
+        agent.Last.End(AgentEnding.Asked, "Which events should it list?");
+
+        var question = await AgentCalls.BuiltAsync(fixture, asked);
+
+        Assert.IsTrue(question.Result!.Asked);
+        Assert.IsNull(question.Result.PrivateKey, "it asked before it made anything");
+
+        await BuildAsync(fixture, new BuildRequest("The summer party and the tournament", Continues: asked));
+
+        var answer = agent.Last.Handed;
+
+        // the app does not exist yet, so the logo is nowhere but with the build that asked
+        var earlier = answer.Attachments.Single();
+
+        Assert.AreEqual("logo.png", earlier.Name);
+        Assert.IsTrue(earlier.Earlier);
+        Assert.AreEqual(AgentContinuationKind.Answer, answer.Continues!.Kind);
+    }
+
+    [TestMethod]
     public async Task WhatTheAppWaitsForIsSaidAndCarriedOnFromWithoutTypingAgain()
     {
         var agent = new FakeAgentProvider();

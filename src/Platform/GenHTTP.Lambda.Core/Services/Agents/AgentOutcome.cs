@@ -153,7 +153,10 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
 
         var steps = new List<AgentStep>();
 
-        foreach (var happened in read.Events)
+        // by when they happened rather than when they were recorded: a line the
+        // agent said before a call reaches the platform through its system,
+        // the call itself straight away - so it may be recorded after it
+        foreach (var happened in read.Events.OrderBy(e => e.At))
         {
             if (happened.Kind is AgentRunEventKind.Effect or AgentRunEventKind.Undone)
             {
@@ -484,6 +487,7 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
         AgentEnding.SignInFailed => "unauthorised",
         AgentEnding.Lost => "lost",
         AgentEnding.Cancelled => "cancelled",
+        AgentEnding.Failed => "failed",
         _ => null
     };
 
