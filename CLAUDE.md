@@ -92,12 +92,13 @@ of the result is.
   Keys and passwords) only once the app keeps something there or, for keys,
   its code waits for one. No switches, folders, code or column types there;
   entering a key switches secrets on.
-- What the agent does reaches the pages as **steps** - facts the runner
-  records per tool call (`begin` in `docker/agent/builder.mjs`) and the
-  agent's own short lines in the request's language - never English sentences
-  from the runner. `/build` and the Change section draw a run with the same
-  parts (`components/AgentRun.tsx`). A new tool the agent may call gets a step
-  kind and words on both pages.
+- What the agent does reaches the pages as **steps** - facts the platform
+  records per tool call of a run (`RunSteps` at the MCP door), a closed set of
+  what it did beyond the platform (a page, a search) and the agent's own short
+  lines in the request's language - never English sentences from the agent
+  system. `/build` and the Change section draw a run with the same parts
+  (`components/AgentRun.tsx`). A new tool gets a step kind and words on both
+  pages.
 - The view a lambda opens in is a default only (`view`): the build agent
   creates `Simple` lambdas, everything else `Full`.
 
@@ -440,8 +441,9 @@ banner or prompt.
   options are on (switches, never values), counts and sums over lambdas - no
   key, domain, title, code, record, secret, visitor, address, and **not the
   installation's address (owner)**. Demos are not counted. It says whether an
-  installation is branded and its profile, never as what or whose, and how many
-  files it shares, never which.
+  installation is branded and its profile, never as what or whose, how many
+  files it shares, never which, and the agent's runs by option and time, never
+  what they were about.
 - A new field keeps to that, is added rather than renamed, and is described in
   `docs/telemetry.md`. It never delays startup or a request: a background job,
   one attempt a day with a time limit, one warning when it fails.
@@ -1525,8 +1527,9 @@ repository's `AGENTS.md`, and the reference.
 
 - **The MCP instructions (`McpEndpoint`) are short**: from nothing to something
   online, how an existing lambda is changed, the rules an agent would break
-  before reading the guide, and what only the REST API does (the showcase).
-  The rest is in `platform_guide` and the tool descriptions - not repeated.
+  before reading the guide - pretending an app can do what it cannot among
+  them. The rest is in `platform_guide` and the tool descriptions - not
+  repeated.
 - **`platform_guide` is written for agents, not people (owner)**: one Markdown
   document read from start to end (`GuideDocument` in `Services/Guide`), terse,
   each rule said once where the agent decides it, no internal detail without
