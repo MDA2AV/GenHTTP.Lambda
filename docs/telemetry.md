@@ -30,7 +30,9 @@ on next.
   shares across the installation (never what they are called or hold), and
   what keeps its data: the
   database (`sqlite` or `postgresql`), the apps' files and their secrets, by
-  name only - never where they are or how they are reached;
+  name only - never where they are or how they are reached - and which agent
+  builds and changes apps (`agent`: the name of its integration, `none`
+  without one);
 - the number of apps by tier (`sandbox`, `production`, `system` - and `free`
   and `premium`, the sandbox and production under the names they had before,
   which older collectors read), online, blocked, created and active in the
@@ -44,12 +46,17 @@ on next.
 - the number of versions saved in the last 30 days, by origin: an agent over
   MCP, the REST API or the editor, a git push, or a new app;
 - of those, how many the installation's own build agent wrote - through MCP,
-  or as a draft of its own that was put online - and how many on each model
-  (`opus`, `sonnet`, `haiku`, `fable`) and at each effort (`low` to `max`), by
-  the names the panel offers them by. An agent of somebody's own tells the
-  platform nothing it could trust, so its versions are counted by origin only.
-  Whether a build agent is configured, and whether building and changing apps
-  with it is switched on, is among the options above.
+  or as a draft of its own that was put online - and how many on each value
+  of each of its options, by the names its integration gives them (`options`;
+  for Claude Code a model - `opus`, `sonnet`, `haiku`, `fable` - and an effort,
+  `low` to `max`, which `models` and `efforts` also count as before). An agent
+  of somebody's own tells the platform nothing it could trust, so its versions
+  are counted by origin only. Whether a build agent is configured, and whether
+  building and changing apps with it is switched on, is among the options
+  above;
+- how its runs went in the last 30 days (`runs`): how many, how many of them
+  built a new app, how long they worked together, and the same by each value
+  of each option - never what anybody asked, attached or got back.
 
 The demo apps, which every installation has, are not counted.
 
