@@ -25,12 +25,6 @@ const ACCESS: { value: ModelAccess; label: string }[] = [
   { value: 'off', label: 'Nobody' },
 ];
 
-const WEB: Record<string, string> = {
-  none: 'None',
-  named: 'Only the sites a request names',
-  any: 'Any public site',
-};
-
 const ENDINGS: Record<string, string> = {
   completed: 'completed',
   asked: 'asked back',
@@ -44,10 +38,10 @@ const ENDINGS: Record<string, string> = {
 };
 
 /**
- * The agent of the installation: whether it builds and changes apps here,
- * what it is and where it sends what, the values of its options people may
- * choose - and which need the password - what a run may take, and how it
- * was used.
+ * What the operator decides about the agent and how it was used: whether it
+ * builds and changes apps here, the values of its options people may choose -
+ * and which need the password - what a run may take, its runs and what they
+ * took. What it is, can do and sends where is its card under Integrations.
  *
  * The options are the agent integration's own - a model and an effort for
  * Claude Code, anything for another - so the section draws whatever it has.
@@ -119,7 +113,7 @@ export function AgentSection({ access }: { access: Access }) {
         <Reading what="the settings of the agent" failure={error} />
       ) : (
         <div className="space-y-6">
-          <System agent={agent} runner={runner} />
+          <Status agent={agent} runner={runner} />
 
           <div className="space-y-3">
             <Setting
@@ -149,8 +143,6 @@ export function AgentSection({ access }: { access: Access }) {
             </Setting>
           </div>
 
-          {agent.agent && <Destinations agent={agent} />}
-
           {options.map((option) => (
             <OptionCard
               key={option.name}
@@ -179,12 +171,16 @@ export function AgentSection({ access }: { access: Access }) {
 
 /* ------------------------------------------------------------ the agent system */
 
-/** What the agent system is and says of itself, as facts. */
-function System({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRunner | null }) {
+/**
+ * Which agent it is and whether it answers, this installation's runs now, and
+ * what the operator gives people: the password, the builds a day. What else it
+ * says of itself is under Integrations.
+ */
+function Status({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRunner | null }) {
   const bad = 'text-red-600 dark:text-red-400';
 
   return (
-    <Card title="Agent">
+    <Card title="Agent" more={agent.agent ? { to: '/admin/integrations', label: 'What it is and sends where' } : undefined}>
       <Facts>
         <Fact label="Is">
           {agent.agent ? (
@@ -196,12 +192,6 @@ function System({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
             <span className={bad}>None - LAMBDA_AGENT_URL is not set</span>
           )}
         </Fact>
-
-        {agent.url && (
-          <Fact label="Address">
-            <span className="break-all font-mono text-[12px]">{agent.url}</span>
-          </Fact>
-        )}
 
         {agent.agent && (
           <Fact label="State">
@@ -215,15 +205,6 @@ function System({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
           </Fact>
         )}
 
-        {runner?.reachable && runner.concurrency != null && <Fact label="At once">{plural(runner.concurrency, 'run')}</Fact>}
-
-        {runner?.reachable &&
-          (runner.facts ?? []).map((fact) => (
-            <Fact key={fact.label} label={fact.label}>
-              {fact.value}
-            </Fact>
-          ))}
-
         <Fact label="Password">{agent.passwordSet ? 'Set - LAMBDA_AGENT_PASSWORD' : 'Not set - LAMBDA_AGENT_PASSWORD'}</Fact>
 
         <Fact label="Builds and changes a day">
@@ -233,51 +214,6 @@ function System({ agent, runner }: { agent: AdminAgentSettings; runner: AgentRun
           </span>
         </Fact>
       </Facts>
-    </Card>
-  );
-}
-
-/**
- * Where a run sends what - for the privacy statement of the installation -
- * and what the agent does: the web, files both ways, asking back, stopping.
- */
-function Destinations({ agent }: { agent: AdminAgentSettings }) {
-  const said = agent.agent!;
-
-  return (
-    <Card title="Where a run sends what" hint="What a run is given - the request, the conversation, the files sent with it, the app’s code - goes to these. Say so in the privacy statement of the installation." flush>
-      <table className="w-full text-[13px]">
-        <thead className="text-left text-xs text-slate-500">
-          <tr className="border-b border-grey-300 dark:border-ink-800">
-            <th className="px-4 py-2 font-medium">To</th>
-            <th className="hidden px-4 py-2 font-medium sm:table-cell">Where</th>
-            <th className="px-4 py-2 font-medium">What</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-grey-300 dark:divide-ink-800">
-          {said.destinations.map((destination) => (
-            <tr key={`${destination.name}-${destination.address}`}>
-              <td className="px-4 py-2.5 font-medium">{destination.name}</td>
-              <td className="hidden px-4 py-2.5 font-mono text-[12px] text-slate-500 sm:table-cell sm:whitespace-nowrap">{destination.address}</td>
-              <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">{destination.what}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="border-t border-grey-300 p-4 dark:border-ink-800">
-        <Facts>
-          <Fact label="Web pages">
-            {WEB[said.web] ?? said.web}
-            {said.webPolicy && <span className="block text-xs text-slate-500">{said.webPolicy}</span>}
-          </Fact>
-          <Fact label="Searches the web">{said.searches ? 'Yes' : 'No'}</Fact>
-          <Fact label="Files sent with a message">{said.attachments?.length ? said.attachments.join(', ') : 'None'}</Fact>
-          <Fact label="Hands files back">{said.returnsFiles ? 'Yes' : 'No'}</Fact>
-          <Fact label="Asks back">{said.asks ? 'Yes - the next message answers' : 'No'}</Fact>
-          <Fact label="Can be stopped">{said.cancels ? 'Yes' : 'No'}</Fact>
-        </Facts>
-      </div>
     </Card>
   );
 }

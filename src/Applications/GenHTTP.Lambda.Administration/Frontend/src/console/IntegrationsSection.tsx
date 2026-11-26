@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { api, refusedToken, type Integration } from '@genhttp-lambda/kit/api';
 import { Section } from '@genhttp-lambda/kit/ui/ui';
+import { AgentIntegration } from './AgentIntegration';
 import type { Access } from './context';
 import { Card, Fact, Reading } from './parts';
 
@@ -9,12 +10,14 @@ const KINDS: Record<Integration['kind'], string> = {
   database: 'Database',
   files: 'Files',
   secrets: 'Secrets',
+  agent: 'Agent',
 };
 
 /**
- * What the installation keeps its data in - read only, since the host chooses
- * it as it starts. A card per kind: the integration, the assembly that names
- * it, and where it keeps what it keeps.
+ * What the installation keeps its data in, and which agent builds its apps -
+ * read only, since the host chooses them as it starts. A card per kind: the
+ * integration, the assembly that names it, and where it keeps what it keeps;
+ * the agent's says what it is and can do, and where a run sends what.
  */
 export function IntegrationsSection({ access }: { access: Access }) {
   const { token, deny } = access;
@@ -35,12 +38,14 @@ export function IntegrationsSection({ access }: { access: Access }) {
   }, [token, deny]);
 
   return (
-    <Section title="Integrations" hint="What the installation keeps its data in, chosen as it starts.">
+    <Section title="Integrations" hint="What the installation keeps its data in, and which agent builds its apps - chosen as it starts.">
       {integrations === null ? (
         <Reading what="the integrations" failure={error} />
       ) : (
         <div className="space-y-3">
-          {integrations.map((integration) => (
+          {integrations.map((integration) => integration.kind === 'agent' ? (
+            <AgentIntegration key={integration.kind} integration={integration} access={access} />
+          ) : (
             <Card
               key={integration.kind}
               title={`${KINDS[integration.kind] ?? integration.kind} · ${integration.name}`}
