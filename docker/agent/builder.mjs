@@ -165,18 +165,22 @@ printf '%s' "$AGENT_MCP_CONFIG" > /work/mcp.json
 exec claude -p "$AGENT_BRIEF" --append-system-prompt "$AGENT_PURPOSE" --mcp-config /work/mcp.json "$@"`;
 
 /*
- * Whose pages a build reads, through the page fetch the proxy serves
- * (fetch.mjs) - the only way a build reaches a site that is not
- * Anthropic's, GET and HEAD to public addresses: any public site
- * (AGENT_WEB=any, the default), only the sites the person named
- * (AGENT_WEB=named, sites.mjs) or none (AGENT_WEB=off, or AGENT_FETCH=false
- * as before).
+ * The MCP server the proxy serves beside the platform's (fetch.mjs): the
+ * page fetch, and handing a file over. AGENT_FETCH=false says the proxy
+ * serves none, which leaves a build both without.
  */
-const WEB = process.env.AGENT_FETCH === 'false' || process.env.AGENT_WEB === 'off'
+const FETCH_URL = process.env.AGENT_FETCH === 'false' ? null : (process.env.AGENT_FETCH_URL || 'http://egress-proxy:3129/mcp');
+
+/*
+ * Whose pages a build reads through it - the only way a build reaches a site
+ * that is not Anthropic's, GET and HEAD to public addresses: any public site
+ * (AGENT_WEB=any, the default), only the sites the person named
+ * (AGENT_WEB=named, sites.mjs) or none (AGENT_WEB=off) - where a build still
+ * hands files over.
+ */
+const WEB = FETCH_URL === null || process.env.AGENT_WEB === 'off'
   ? 'off'
   : process.env.AGENT_WEB === 'named' ? 'named' : 'any';
-
-const FETCH_URL = WEB === 'off' ? null : (process.env.AGENT_FETCH_URL || 'http://egress-proxy:3129/mcp');
 
 /** The tool a build reads a page with, as the CLI names it. */
 const FETCH_TOOL = 'mcp__web__fetch';
@@ -209,7 +213,7 @@ const ATTACHMENTS = { types: ['image/png', 'image/jpeg', 'image/gif', 'image/web
  * in the same conversation, never in what the agent answered, which a page
  * it read could have put there.
  */
-const sitesOf = job => (!FETCH_URL ? [] : WEB === 'any' ? ['*'] : sitesIn([job.prompt, ...(job.history ?? []).map(turn => turn.prompt)]));
+const sitesOf = job => (WEB === 'off' ? [] : WEB === 'any' ? ['*'] : sitesIn([job.prompt, ...(job.history ?? []).map(turn => turn.prompt)]));
 
 /**
  * The MCP servers of a build, as the CLI reads them: the platform's is the
@@ -1372,13 +1376,9 @@ async function run(job) {
 
             // what the platform does not see, a platform of this protocol is
             // told: what the agent does beyond it, and the files it hands over
-            if (!name.startsWith('mcp__genhttp__')) {
-              if (name === HAND_OVER_TOOL) {
-                const file = handedOver(part.input);
-                if (file) emit(job, 'returned', file);
-              } else {
-                emit(job, 'activity', { id: part.id, kind: activityOf(name), subject: name === FETCH_TOOL ? siteStep(part.input?.url).site : clip(name, 80) });
-              }
+            // (a file once the call took it: a refused one is not handed over)
+            if (!name.startsWith('mcp__genhttp__') && name !== HAND_OVER_TOOL) {
+              emit(job, 'activity', { id: part.id, kind: activityOf(name), subject: name === FETCH_TOOL ? siteStep(part.input?.url).site : clip(name, 80) });
             }
           }
 
@@ -1405,7 +1405,13 @@ async function run(job) {
           const call = calls.get(part.tool_use_id);
           const from = call?.tool;
 
-          if (call && !call.platform && call.tool !== HAND_OVER_TOOL) {
+          if (call && !call.platform && call.tool === HAND_OVER_TOOL && part.is_error !== true && !call.handed) {
+            const file = handedOver(call.input);
+
+            call.handed = true;
+
+            if (file) emit(job, 'returned', file);
+          } else if (call && !call.platform && call.tool !== HAND_OVER_TOOL) {
             emit(job, 'activity', { id: part.tool_use_id, kind: activityOf(call.tool), done: true, failed: part.is_error === true || undefined,
               subject: call.tool === FETCH_TOOL ? siteStep(call.input?.url).site : clip(call.tool, 80) });
           }
@@ -2132,7 +2138,7 @@ createServer(async (req, res) => {
       auth: AUTH,
       models: MODELS,
       efforts: EFFORTS,
-      fetch: FETCH_URL !== null,
+      fetch: WEB !== 'off',
       cli: process.env.AGENT_CLI_VERSION || undefined,
       // what a platform of this protocol reads: the runner speaks it, and
       // what a run gets where the platform sets nothing
@@ -2322,7 +2328,8 @@ createServer(async (req, res) => {
 
   console.log(`build agent listening on ${PORT}, signing in with ${signing}, models ${Object.values(MODELS).join(', ')}, ${building}, `
     + `${CONCURRENCY} at once, `
-    + (FETCH_URL ? `reading ${WEB === 'any' ? 'any public site' : 'the sites a request names'} through ${FETCH_URL}` : 'reading no web pages')
+    + (WEB !== 'off' ? `reading ${WEB === 'any' ? 'any public site' : 'the sites a request names'} through ${FETCH_URL}` : 'reading no web pages')
+    + (FETCH_URL ? ', handing files over' : '')
     + (SEARCH ? ', searching the web' : ''));
 
   // read from AGENT_HOSTS instead, so a value left over here changes nothing

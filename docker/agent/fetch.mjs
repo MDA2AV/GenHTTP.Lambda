@@ -13,15 +13,18 @@
  *
  * Three more rules, each held here rather than asked of the model:
  *
- *   which sites   the runner names them per job, from what the person typed,
- *                 in a header of the build's MCP configuration
- *                 (X-Fetch-Sites), which no tool of the build can change. A
- *                 page can tell the agent to fetch an address with the editor
- *                 key in it; it cannot add a site to that list. Whatever else
- *                 is on the build network could send any header - the lambda
- *                 server is the only other thing there, and it has a way out
- *                 of its own - so the header is a rule for the agent, not a
- *                 credential.
+ *   which sites   the runner names them per job in a header of the build's
+ *                 MCP configuration (X-Fetch-Sites), which no tool of the
+ *                 build can change: any public site (*, the runner's default,
+ *                 AGENT_WEB=any) or the ones the person typed
+ *                 (AGENT_WEB=named). With any site, a page can tell the agent
+ *                 to fetch an address with the editor key in it, and nothing
+ *                 here stops it - the key is the person's, and so is what the
+ *                 agent was asked to read; where that matters, the operator
+ *                 names the sites. Whatever else is on the build network could
+ *                 send any header - the lambda server is the only other thing
+ *                 there, and it has a way out of its own - so the header is a
+ *                 rule for the agent, not a credential.
  *   which places  public addresses on the standard ports only. A name is
  *                 resolved once, every address it has is checked, and the
  *                 connection goes to the address checked - so a name cannot
@@ -56,6 +59,9 @@ const LENGTH = 40_000;
 const PATIENCE = 20_000;
 
 const REDIRECTS = 5;
+
+/** The most one call may come to: a file handed over, in base64, and its JSON around it. */
+const LARGEST_CALL = 4 * 1024 * 1024 + 64 * 1024;
 
 /** Requests at a time, over every build: a build reads a page, not a site. */
 const AT_ONCE = 8;
@@ -642,9 +648,10 @@ export function serveFetch(port) {
     const chunks = [];
     let length = 0;
 
+    // a call reading a page is small; one handing over a file is as large as the file
     req.on('data', chunk => {
       length += chunk.length;
-      if (length > 64 * 1024) req.destroy();
+      if (length > LARGEST_CALL) req.destroy();
       else chunks.push(chunk);
     });
 
