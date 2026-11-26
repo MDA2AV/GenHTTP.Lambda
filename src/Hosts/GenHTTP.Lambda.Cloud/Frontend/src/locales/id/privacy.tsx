@@ -40,9 +40,10 @@ export const privacy: Messages['privacy'] = {
         menjawab atau membuat perubahan, agen juga
         membaca lambda itu: kodenya, catatan pada versi-versinya, log-nya, yang berisi request ke lambda itu dan apa yang
         dicetaknya, tetapi tidak berisi alamat IP pengunjungnya, dan, jika Anda menanyakannya, catatan serta jumlah
-        pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Jika Anda menyebut sebuah situs web, agen juga membaca
-        halaman-halaman situs itu, dari server ini - jadi situs itu melihat alamat kami, bukan alamat Anda - dan halaman
-        itu dikirim ke sana dengan cara yang sama. Apa yang dilakukan Anthropic dengan data itu diatur oleh{' '}
+        pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Agen juga dapat membaca halaman situs web - situs yang
+        Anda sebut, atau situs yang dicarinya untuk mengetahui apa yang dibutuhkan aplikasi Anda - dari server ini, jadi
+        situs itu melihat alamat kami, bukan alamat Anda, dan halaman itu dikirim ke sana dengan cara yang sama. Apa yang
+        dilakukan Anthropic dengan data itu diatur oleh{' '}
         {policy('kebijakan privasinya sendiri')}. Perlindungan data pribadi di Amerika Serikat tidak setara dengan di Uni
         Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan untuk membuat atau mengubah apa yang Anda minta (Pasal
         6 ayat (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR). Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.

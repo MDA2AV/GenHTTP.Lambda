@@ -39,9 +39,10 @@ export const privacy: Messages['privacy'] = {
         model dat de app schrijft. Samen met de laatste paar berichten over dezelfde app en wat de agent antwoordde gaat het
         mee, zodat hij begrijpt wat je bedoelt. Om te antwoorden of een wijziging door te voeren, leest de agent ook de
         lambda: de code, de notities bij de versies, het log, met de requests en de output van de lambda maar niet de
-        IP-adressen van bezoekers, en als je ernaar vraagt de items en het aantal bezoekers. Noem je een website, dan leest
-        de agent ook pagina’s van die site, vanaf deze server, zodat de site ons adres ziet en niet het jouwe. Ook wat hij
-        leest, wordt daarheen gestuurd. Wat Anthropic ermee doet, staat in{' '}
+        IP-adressen van bezoekers, en als je ernaar vraagt de items en het aantal bezoekers. De agent kan ook pagina’s van
+        websites lezen, een site die je noemt of een site die hij opzoekt om te weten te komen wat je app nodig heeft. Dat
+        gebeurt vanaf deze server, zodat de site ons adres ziet en niet het jouwe. Ook wat hij leest, wordt daarheen
+        gestuurd. Wat Anthropic ermee doet, staat in{' '}
         {policy('het eigen privacybeleid van Anthropic')}. De Verenigde Staten beschermen persoonsgegevens niet zoals de
         EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen of aan te passen wat je vroeg
         (art. 6 lid 1 sub b en art. 49 lid 1 sub b AVG). Zet er dus niets in wat je niet met anderen wilt delen.

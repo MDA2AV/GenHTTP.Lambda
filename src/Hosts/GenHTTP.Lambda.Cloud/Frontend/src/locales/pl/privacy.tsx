@@ -39,9 +39,10 @@ export const privacy: Messages['privacy'] = {
         kilkoma poprzednimi wiadomościami o tej samej aplikacji i odpowiedziami agenta, żeby zrozumiał, co masz na myśli.
         Żeby odpowiedzieć lub wprowadzić zmianę, agent czyta też lambdę – jej kod, notatki do jej wersji, jej log, w którym
         są żądania i to, co lambda wypisała, ale nie adresy IP odwiedzających, a gdy o nie pytasz, także jej wpisy i liczby
-        odwiedzających. To, co agent przeczyta, również jest tam wysyłane. Gdy podajesz jakąś stronę internetową, agent
-        czyta też strony tej witryny, z tego serwera – dlatego witryna widzi nasz adres, a nie twój – i one również są tam
-        wysyłane w ten sam sposób. Co Anthropic robi z tymi danymi, opisuje {policy('polityka prywatności tej firmy')}.
+        odwiedzających. To, co agent przeczyta, również jest tam wysyłane. Agent może też czytać strony internetowe – jedną,
+        którą podasz, albo taką, którą sam wyszuka, żeby sprawdzić, czego potrzebuje twoja aplikacja – z tego serwera,
+        dlatego witryna widzi nasz adres, a nie twój, a strony te są tam wysyłane w ten sam sposób.
+        Co Anthropic robi z tymi danymi, opisuje {policy('polityka prywatności tej firmy')}.
         Stany Zjednoczone nie chronią danych osobowych tak jak UE. Twoja prośba jest tam wysyłana, bo bez tego nie da się
         zbudować ani zmienić tego, o co prosisz (art. 6 ust. 1 lit. b i art. 49 ust. 1 lit. b RODO). Nie wpisuj więc
         niczego, czym nie chcesz się dzielić.

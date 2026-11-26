@@ -41,8 +41,9 @@ export const privacy: Messages['privacy'] = {
         istediğinizi anlaması için aynı uygulama hakkındaki son birkaç mesaj ve ajanın verdiği yanıt da birlikte gönderilir.
         Yanıt vermek ya da bir değişiklik yapmak için ajan lambdayı da okur: kodunu, sürümlerinin notlarını, logunu (log,
         lambdanın aldığı istekleri ve yazdırdıklarını içerir, ama ziyaretçilerinin IP adreslerini içermez) ve onlar hakkında
-        soru sorduğunuzda kayıtlarını ve ziyaretçi sayılarını. Ajanın okudukları da oraya gönderilir. Bir web sitesi
-        belirttiğinizde ajan o sitenin sayfalarını da okur; bunu bu sunucudan yapar, dolayısıyla site sizin adresinizi değil
+        soru sorduğunuzda kayıtlarını ve ziyaretçi sayılarını. Ajanın okudukları da oraya gönderilir. Ajan ayrıca web
+        sitelerinin sayfalarını da okuyabilir: belirttiğiniz bir siteyi ya da uygulamanızın neye ihtiyacı olduğunu
+        öğrenmek için kendisinin bulduğu bir siteyi. Bunu bu sunucudan yapar, dolayısıyla site sizin adresinizi değil
         bizim adresimizi görür. Okunan sayfalar da aynı şekilde oraya gönderilir. Anthropic’in bunlarla ne
         yaptığı, şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD, kişisel verileri AB’nin koruduğu gibi
         korumaz. İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak ya da değiştirmek için bu gereklidir

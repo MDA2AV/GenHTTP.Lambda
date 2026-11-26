@@ -250,8 +250,7 @@ is polled - so an installation and its runner are upgraded one after the other.
   address connected to. **Any public site by default (owner)** (`AGENT_WEB`),
   as one's own Claude Code reads; `named` keeps to the sites the person named
   (`sites.mjs`, never the names below them, never the agent's replies), `off`
-  none. genhttp.dev stays on `named` until the owner decides **(open)**.
-  Search (`AGENT_SEARCH`) is off by default. `LAMBDA_AGENT_FETCH=false`
+  none - genhttp.dev included. Search (`AGENT_SEARCH`) is off by default. `LAMBDA_AGENT_FETCH=false`
   removes the server, and with it handing files back (`hand_over`, which keeps
   nothing: the runner reads the file off a call that succeeded).
 - `RunnerCatalog` labels name the default versions; the identifiers are the
