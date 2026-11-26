@@ -572,20 +572,25 @@ public sealed class AgentRunTests
 
         var id = await BuildAsync(fixture, new BuildRequest("A recipe card"));
 
-        agent.Last.Start().Return("card.md", "text/markdown", Encoding.UTF8.GetBytes("# Pancakes"), "The recipe as a text");
+        const string poster = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>";
 
-        var progress = await AgentCalls.UntilAsync(() => AgentCalls.BuildAsync(fixture, id), b => b.Files is { Count: 1 });
+        agent.Last.Start().Return("poster.svg", "image/svg+xml", Encoding.UTF8.GetBytes(poster), "A poster to print");
+
+        // the file is kept before its step is told, which is what pushes the pages
+        var progress = await AgentCalls.UntilAsync(() => AgentCalls.BuildAsync(fixture, id), b => b.Files is { Count: 1 } && b.Steps.Count > 0);
 
         var file = progress.Files!.Single();
 
-        Assert.AreEqual("card.md", file.Name);
-        Assert.AreEqual("The recipe as a text", file.Description);
+        Assert.AreEqual("poster.svg", file.Name);
+        Assert.AreEqual("A poster to print", file.Description);
         Assert.AreEqual("file", progress.Steps.Last().Kind, "and said as a step");
 
         using var served = await fixture.GetAsync($"/api/v1/attachments/{file.Id}");
 
-        Assert.AreEqual("# Pancakes", await served.Content.ReadAsStringAsync());
-        Assert.AreEqual("application/octet-stream", served.Content.Headers.ContentType!.MediaType, "saved, not shown as a page");
+        Assert.AreEqual(poster, await served.Content.ReadAsStringAsync());
+        Assert.AreEqual("application/octet-stream", served.Content.Headers.ContentType!.MediaType, "saved, never drawn by the browser on the site's origin");
+        Assert.AreEqual("attachment", served.Content.Headers.ContentDisposition?.DispositionType ?? served.Headers.GetValues("Content-Disposition").First().Split(';')[0]);
+        Assert.Contains("sandbox", served.Headers.GetValues("Content-Security-Policy").Single());
     }
 
     #endregion

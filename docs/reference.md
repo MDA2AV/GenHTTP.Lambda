@@ -1095,8 +1095,10 @@ the agent says), and the pages say it in their words.
 
 **Files.** Where the agent takes them (`offer.attachments`: the kinds, the
 size of one, how many), a message may come with files: uploaded first (`POST
-/attachments?name=…&type=…`, the body as it is), named by id in the message
-(`attachments`). They are kept with the run - a file nobody sends is removed
+/attachments?name=…&type=…`, the body as it is, read only up to the size the
+agent takes; 100 MB an hour per address, 429 beyond - counted in the server's
+memory), named by id in the message (`attachments`). They are kept with the
+run - a file nobody sends is removed
 after an hour - offered to every later run about the app as earlier ones, so
 "the logo from before" is found, and read by the agent through the platform
 (`read_attachment`, a picture as an image the model sees). It puts one into
