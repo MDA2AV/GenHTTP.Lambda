@@ -939,7 +939,8 @@ public sealed class AgentTests
         Assert.AreEqual("an API key", Fact("Signs in with"));
         Assert.AreEqual("claude-fable-5-2", Fact("Model fable"));
         Assert.AreEqual("2.1.329", Fact("Claude Code"));
-        Assert.AreEqual("of the sites a request names", Fact("Reads pages"), "whether a build may read the sites its request names");
+        Assert.AreEqual("named", settings.Agent!.Web, "whether a build may read the sites its request names, as the agent declares it");
+        Assert.IsNull(Fact("Reads pages"), "and not said twice");
 
         var raw = await response.Content.ReadAsStringAsync();
 

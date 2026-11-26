@@ -248,13 +248,6 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
             facts.Add(new IntegrationDetail($"Model {name}", model));
         }
 
-        facts.Add(new IntegrationDetail("Reads pages", health.Web switch
-        {
-            AgentWebScope.Any => "of any public site",
-            AgentWebScope.NamedSites => "of the sites a request names",
-            _ => "of no site"
-        }));
-
         if (health.Installations is { } installations)
         {
             facts.Add(new IntegrationDetail("Installations", installations.ToString(CultureInfo.InvariantCulture)));
