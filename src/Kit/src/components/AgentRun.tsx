@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { AgentStep } from '../api';
+import { api, type AgentStep, type RunBlocker, type RunFile, type RunWait } from '../api';
+import { bytes } from '../ui/format';
 import {
   IconAlert,
   IconBook,
@@ -9,8 +10,10 @@ import {
   IconDatabase,
   IconDots,
   IconDraft,
+  IconDownload,
   IconExternal,
   IconEye,
+  IconFile,
   IconFolder,
   IconGlobe,
   IconHistory,
@@ -18,9 +21,11 @@ import {
   IconKey,
   IconLayers,
   IconList,
+  IconPaperclip,
   IconPencil,
   IconPlay,
   IconPlus,
+  IconSearch,
   IconSpark,
   IconSpinner,
   IconStar,
@@ -50,6 +55,8 @@ export interface Run {
   seconds: number;
   /** How long it may run, in seconds; absent when there is no clock on it. */
   limit?: number | null;
+  /** What it waits for while nobody works on it, where the platform knows. */
+  wait?: RunWait | null;
 }
 
 /** Seconds as a clock reads them: 1:42, or 1:02:03 past the hour. */
@@ -102,6 +109,29 @@ export interface ProgressWords {
   queued: (ahead: number) => string;
   starting: string;
   leaveOpen: string;
+  /** What a run waits for besides its turn: the service behind the agent, its account's limit, room being made. */
+  waits?: { overloaded: string; rateLimited: string; preparing: string; unreachable: string; other: string };
+  /** Until when it waits, where the agent says: "until 14:05". */
+  until?: (at: Date) => string;
+}
+
+/** What a run waits for, in the page's words, or nothing while it waits for nothing but its turn. */
+function waitingFor(wait: RunWait | null | undefined, words: ProgressWords): string | null {
+  if (!wait || wait.reason === 'queue' || !words.waits) {
+    return null;
+  }
+
+  const what = {
+    overloaded: words.waits.overloaded,
+    'rate-limited': words.waits.rateLimited,
+    preparing: words.waits.preparing,
+    unreachable: words.waits.unreachable,
+    other: words.waits.other,
+  }[wait.reason] ?? words.waits.other;
+
+  const until = wait.until ? new Date(wait.until) : null;
+
+  return until && words.until && until.getTime() > Date.now() ? `${what} ${words.until(until)}` : what;
 }
 
 /**
@@ -117,12 +147,17 @@ export function RunProgress({ run, received, doing, words }: { run: Run; receive
   const elapsed = run.state === 'running' ? run.seconds + Math.max(0, (now - received) / 1000) : 0;
   const share = run.limit ? Math.min(1, elapsed / run.limit) : 0;
 
+  // waiting for something other than its turn - the service behind the agent,
+  // a limit of its account - is said as that, whether it started or not
+  const waiting = waitingFor(run.wait, words);
+  const ahead = run.wait?.position ?? run.waiting;
+
   return (
     <div className="px-4 py-3">
       <div className="flex items-center gap-2.5 text-sm">
-        <IconSpinner className={`h-4 w-4 shrink-0 ${run.state === 'queued' ? 'text-amber-500' : 'text-accent-500'}`} />
-        <span role="status" className="min-w-0 flex-1 truncate font-medium">
-          {run.state === 'queued' ? (run.waiting > 0 ? words.queued(run.waiting) : words.starting) : doing}
+        <IconSpinner className={`h-4 w-4 shrink-0 ${run.state === 'queued' || waiting ? 'text-amber-500' : 'text-accent-500'}`} />
+        <span role="status" className={`min-w-0 flex-1 font-medium ${waiting ? '' : 'truncate'}`}>
+          {waiting ?? (run.state === 'queued' ? (ahead > 0 ? words.queued(ahead) : words.starting) : doing)}
         </span>
         {run.state === 'running' && (
           <span className="shrink-0 font-mono text-xs tabular-nums text-slate-500">
@@ -214,6 +249,121 @@ export function RunOutcome({
 
         {children && <div className="mt-4 flex flex-wrap items-center gap-2">{children}</div>}
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ files */
+
+/**
+ * The files that went with a run - those somebody attached, or those the
+ * agent handed back: a picture shown small, any other file by its name and
+ * size, each to open or save. They are read from the platform's API, which
+ * shows a picture and has every other file saved, never run.
+ */
+export function RunFiles({ files, label, download }: { files: RunFile[]; label: string; download: string }) {
+  if (files.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="border-t border-slate-200 px-4 py-3 dark:border-ink-800">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <FileList files={files} download={download} className="mt-2" />
+    </div>
+  );
+}
+
+/** Files as a row of small cards: pictures as themselves, the rest by name. */
+export function FileList({ files, download, className = '', onRemove, remove }: {
+  files: RunFile[];
+  download: string;
+  className?: string;
+  /** Takes one off a message not sent yet. */
+  onRemove?: (file: RunFile) => void;
+  remove?: string;
+}) {
+  return (
+    <ul className={`flex flex-wrap gap-2 ${className}`}>
+      {files.map((file) => {
+        const url = api.attachments.url(file.id);
+        const picture = /^image\/(png|jpeg|gif|webp)$/.test(file.type);
+
+        return (
+          <li key={file.id} className="group relative max-w-full">
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              download={picture ? undefined : file.name}
+              title={file.description ?? file.name}
+              className="flex max-w-[16rem] items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[13px] transition-colors hover:border-slate-300 dark:border-ink-800 dark:bg-ink-950 dark:hover:border-ink-700"
+            >
+              {picture ? (
+                <img src={url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded object-cover" />
+              ) : (
+                <IconFile className="h-4 w-4 shrink-0 text-slate-400" />
+              )}
+              <span className="min-w-0">
+                <span className="block truncate font-medium text-slate-700 dark:text-slate-300">{file.name}</span>
+                <span className="block truncate text-[11px] text-slate-500">{file.description ?? bytes(file.size)}</span>
+              </span>
+              {!onRemove && !picture && <IconDownload className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label={download} />}
+            </a>
+
+            {onRemove && (
+              <button
+                type="button"
+                onClick={() => onRemove(file)}
+                aria-label={remove ? `${remove}: ${file.name}` : file.name}
+                title={remove}
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] leading-none text-white hover:bg-slate-900 dark:bg-slate-300 dark:text-ink-950"
+              >
+                ×
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/* ------------------------------------------------------------ what it waits for */
+
+export interface BlockerWords {
+  /** Waiting for the operator to decide on connecting to other services. */
+  connectivity: string;
+  /** Waiting for keys and passwords to be entered, by name. */
+  keys: (names: string[]) => string;
+}
+
+/**
+ * What the app waits for after a run, and whom - read off the platform's
+ * records rather than off what the agent said - with what the page offers to
+ * go on once it has happened.
+ */
+export function RunBlockers({ blockers, words, children }: { blockers: RunBlocker[]; words: BlockerWords; children?: ReactNode }) {
+  if (blockers.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-3">
+      <ul className="space-y-1.5">
+        {blockers.map((blocker) => (
+          <li key={`${blocker.who}-${blocker.what}`} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+            {blocker.what === 'keys' ? (
+              <IconKey className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            ) : (
+              <IconGlobe className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            )}
+            <span>{blocker.what === 'keys' ? words.keys(blocker.names ?? []) : words.connectivity}</span>
+          </li>
+        ))}
+      </ul>
+
+      {children && <div className="mt-3 flex flex-wrap items-center gap-2">{children}</div>}
     </div>
   );
 }
@@ -330,6 +480,10 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   analytics: IconEye,
   source: IconStar,
   web: IconExternal,
+  search: IconSearch,
+  attachment: IconPaperclip,
+  showcase: IconStar,
+  file: IconFile,
   other: IconDots,
 };
 

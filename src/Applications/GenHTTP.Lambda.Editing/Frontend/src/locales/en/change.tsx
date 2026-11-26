@@ -10,6 +10,9 @@ export const change = {
   label: 'What should be different?',
   placeholder: 'Keep the ten best scores instead of five, add a dark mode, …',
   placeholderNext: 'What else should change?',
+  /** Above the box, while the next message answers the question the agent asked. */
+  answering: 'Your answer to its question',
+  placeholderAnswer: 'Answer it, and it carries on…',
   send: 'Make the change',
   sending: 'Asking…',
   goOnline: 'Put it online when it is done',
@@ -20,8 +23,8 @@ export const change = {
   newFeature: 'A new draft',
   full: (limit: number) =>
     `There are ${limit} drafts already, which is all there may be. Pick one to go on with, or put one online or discard it first.`,
-  /** Under the box, while a model that only runs with the installation's password is chosen. */
-  unlimited: 'With the password it takes its time: no clock and no step limit, in a lane of its own.',
+  /** Under the box, while a value in the lists - a model, say - that only runs with the installation's password is chosen. */
+  unlimited: 'With the password it runs on the limits the operator set for such runs - without a clock or a step limit, unless they set one.',
   left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
   leftTitle: 'The build page and this section share one allowance a day.',
   noneLeft: (time: string) => `That was the last one for today. There are more from ${time}.`,
@@ -87,6 +90,14 @@ export const change = {
     source: 'Publishing the source code',
     /** The agent read a page of a website the owner named in their message; site is its address, like www.example.com. */
     web: (site: Node) => <>Reading a page of {site}</>,
+    search: 'Searching the web',
+    /** The agent reads a file the owner sent with their message; file is its name. */
+    attachment: (file: Node) => <>Looking at {file}, which you sent</>,
+    showcase: 'Listing it in the showcase',
+    /** The agent hands the owner a file, shown beside its answer; file is its name. */
+    file: (file: Node) => <>Handing over {file}</>,
+    /** The agent changed whether the editor opens in the simple or the full view. */
+    view: 'Changing how the editor opens',
     other: (tool: string) => `Using ${tool}`,
   },
   marks: {
@@ -125,10 +136,48 @@ export const change = {
       'It used up the steps it may take before it changed anything. Ask for something smaller, or split it into two changes.',
     timedOut: 'It ran out of time, so this is as far as it got.',
     usedUp: 'It used up the steps it may take, so this is as far as it got.',
+    /** It stopped with an error after it had done part of the work. */
+    brokeOff: 'It stopped with an error, so this is as far as it got.',
     unauthorised:
       "The agent could not sign in, so nothing ran. That is this server's credentials, not anything about what you asked for.",
     nothing: 'It ended without changing anything or saying why.',
+    /** The agent never said how the change ended: it forgot it, or the platform could not reach it for too long. */
+    lost: 'No answer came back from the agent. What it saved is in the history.',
+    asked: 'It asks before it goes on',
+    answerBelow: 'Answer in the box below, and it carries on from there.',
   },
+  /** What the lambda waits for after a change, and whom. */
+  waitsFor: {
+    connectivity: 'Waits for the operator to decide on connecting to other servers.',
+    keys: (names: string[]) => (names.length === 1 ? `Waits for the secret ${names[0]} to be set.` : `Waits for the secrets ${names.join(', ')} to be set.`),
+  },
+  /** Carries a change on where it stopped: it waited for something, or ran out of time. */
+  goOn: 'Go on',
+  goOnTitle: 'Carry on where it stopped, without asking again',
+  /** A lambda the agent created beside this one, by its public key; its editor link is in the answer. */
+  created: (key: string) => `Created the lambda ${key}`,
+  undoDialog: 'Undo this change?',
+  undoes: 'This is undone:',
+  keeps: 'This stays as it is:',
+  undone: {
+    online: 'The version online before goes back online.',
+    draft: 'The draft it started is discarded.',
+    connectivity: 'Its request to connect to other servers is withdrawn.',
+    source: 'The published source is taken down.',
+    showcase: 'The lambda leaves the showcase.',
+    view: 'The editor opens in the view it had before.',
+  } as Record<string, string>,
+  kept: {
+    versions: 'The versions it saved stay in the history.',
+    lambda: 'A lambda it created stays.',
+    data: 'A database, secrets or workspace it switched on stays on - switching it off deletes it.',
+    analytics: 'Analytics stay on - switching them off deletes what was counted.',
+    workspace: 'Files it put into the workspace stay.',
+    draft: 'What it changed in a draft it did not start stays.',
+    undone: 'It was undone already.',
+  } as Record<string, string>,
+  /** After undoing: what changed since the change stayed, as it was not as the change left it. */
+  changedSince: 'Some of it changed since, so that stayed as it is.',
   seeChanges: 'See what changed',
   open: 'Open it',
   openPreview: 'Try it',

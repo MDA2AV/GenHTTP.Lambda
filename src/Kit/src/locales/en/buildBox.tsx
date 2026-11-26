@@ -6,9 +6,8 @@
 export const buildBox = {
   placeholder: 'I would like an app that…',
   password: 'password',
-  /** Under the box, while a model that only runs with the site's password is chosen. */
-  unlimited:
-    'This model needs the password, and then runs with no time limit: it keeps going until your app is finished rather than until the clock runs out.',
+  /** Under the box, while something chosen in the lists under it only runs with the site's password. */
+  unlimited: 'This choice needs the site’s password, and is then given the time and steps set for it rather than the usual ones.',
   ideas: [
     'an app for our club where members sign up for events',
     'a sign-up sheet for our potluck, so nobody brings the same dish',
@@ -44,8 +43,16 @@ export const buildBox = {
     files: 'Looking at what it saved',
     /** The agent asked for the app to use other services on the internet, which the operator of the site allows. */
     services: 'Asking to use other services',
-    /** The agent is reading a page of a website the person named in their message, such as their old homepage; site is its address, like www.example.com. */
+    /** The agent is reading a page of a website - one the person named, such as their old homepage, or one it found; site is its address, like www.example.com. */
     site: (site: string) => `Looking at ${site}`,
+    /** The agent searches the web for something the app needs. */
+    search: 'Looking something up on the web',
+    /** The agent looks at a file the person sent with their message, such as a logo or a list. */
+    attachment: 'Looking at the file you sent',
+    /** The agent lists the app in the showcase of the site, which the person asked for. */
+    showcase: 'Putting it in the showcase',
+    /** The agent writes a file for the person, such as a text or a table, which is shown beside its answer. */
+    file: 'Writing a file for you',
   },
 
   /** Above the editor link, once the app is built. */

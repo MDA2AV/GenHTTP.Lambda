@@ -24,22 +24,8 @@ const RANGES = [
 ];
 
 /** Where the versions came from, in the order the bar shows them; the rest is other. */
-/** The models the build agent runs on, by the names they are offered by - the family's, not the version the runner maps it to. */
-const AGENT_MODELS = [
-  { name: 'opus', label: 'Opus', color: BLUE },
-  { name: 'sonnet', label: 'Sonnet', color: PURPLE },
-  { name: 'haiku', label: 'Haiku', color: GREEN },
-  { name: 'fable', label: 'Fable', color: ORANGE },
-];
-
-/** The efforts it runs at, the least first. */
-const AGENT_EFFORTS = [
-  { name: 'low', label: 'Low', color: GREY },
-  { name: 'medium', label: 'Medium', color: GREEN },
-  { name: 'high', label: 'High', color: BLUE },
-  { name: 'xhigh', label: 'Extra high', color: PURPLE },
-  { name: 'max', label: 'Maximum', color: ORANGE },
-];
+/** The colours the values of an option of the agent's take, in turn - its options are its integration's, whatever they are. */
+const AGENT_COLORS = [BLUE, PURPLE, GREEN, ORANGE, GREY];
 
 const ORIGINS = [
   { origin: 'agent', label: 'An agent, over MCP', color: BLUE },
@@ -92,7 +78,9 @@ export function StatisticsSection({ access }: { access: Access }) {
   const { lambdas } = overview;
   const pick = (kind: string) => events?.series.find((s) => s.kind === kind)?.counts ?? [];
   const other = Object.entries(lambdas.saved).filter(([origin]) => !ORIGINS.some((o) => o.origin === origin)).reduce((sum, [, n]) => sum + n, 0);
-  const written = Object.values(lambdas.agentModels ?? {}).reduce((sum, n) => sum + n, 0);
+  // by every option of the agent's; a server from before counted models and efforts only
+  const agentOptions = lambdas.agentOptions ?? { model: lambdas.agentModels ?? {}, effort: lambdas.agentEfforts ?? {} };
+  const written = Math.max(0, ...Object.values(agentOptions).map((values) => Object.values(values).reduce((sum, n) => sum + n, 0)));
 
   return (
     <Section
@@ -210,20 +198,17 @@ export function StatisticsSection({ access }: { access: Access }) {
           {written > 0 && (
             <Card
               title="What the build agent writes"
-              hint="Of those, what the agent running on this server wrote - through MCP, or as a draft of its own that was put online - by the model and the effort it ran at."
+              hint="Of those, what the agent running on this server wrote - through MCP, or as a draft of its own that was put online - by each of its options it ran on."
             >
-              <Segments
-                label="Models"
-                dark={dark}
-                parts={AGENT_MODELS.map((m) => ({ label: m.label, value: lambdas.agentModels[m.name] ?? 0, color: m.color }))}
-              />
-              <div className="mt-4">
-                <Segments
-                  label="Efforts"
-                  dark={dark}
-                  parts={AGENT_EFFORTS.map((e) => ({ label: e.label, value: lambdas.agentEfforts[e.name] ?? 0, color: e.color }))}
-                />
-              </div>
+              {Object.entries(agentOptions).map(([option, values], index) => (
+                <div key={option} className={index > 0 ? 'mt-4' : undefined}>
+                  <Segments
+                    label={option.charAt(0).toUpperCase() + option.slice(1)}
+                    dark={dark}
+                    parts={Object.entries(values).map(([name, value], at) => ({ label: name, value, color: AGENT_COLORS[at % AGENT_COLORS.length] }))}
+                  />
+                </div>
+              ))}
             </Card>
           )}
         </div>

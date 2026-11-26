@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import type { AgentStep, BuildResult, ChangeResult, ChangeState } from '../api';
+import type { AgentStep, BuildResult, ChangeResult, ChangeState, RunFile } from '../api';
 
 /*
  * The apps this browser knows, and what was said about each - the workspace
@@ -38,6 +38,12 @@ export interface Turn {
   built?: BuildResult | null;
   /** How long it ran, in seconds. */
   seconds?: number;
+  /** The files it was asked with. */
+  attachments?: RunFile[];
+  /** The files the agent handed back. */
+  files?: RunFile[];
+  /** The earlier turn it carries on from: the one whose question it answers, or whose wait is over. */
+  continues?: string;
 }
 
 /** An app this browser knows. */

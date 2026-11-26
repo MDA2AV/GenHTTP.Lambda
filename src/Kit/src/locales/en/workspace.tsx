@@ -88,28 +88,52 @@ export const workspace = {
 
   /** The box at the bottom: for a new app, and for one that exists. */
   placeholderApp: (name: string) => `Ask about ${name}, or say what should change…`,
+  /** The box while the agent waits for an answer to the question it asked. */
+  placeholderAnswer: 'Your answer…',
+  /** Above the box while the next message answers the agent's question. */
+  answering: 'Your next message answers its question.',
+
+  /** Files that go with a message, and files the agent hands back. */
+  files: {
+    /** The paper clip beside the box. */
+    attach: 'Attach a file',
+    /** What the paper clip says when pointed at: how many files and how large each may be. */
+    attachHint: (count: number, size: string) => (count === 1 ? `Attach a file of up to ${size}` : `Attach up to ${count} files of up to ${size} each`),
+    uploading: 'Uploading…',
+    remove: 'Remove',
+    save: 'Save',
+    /** Above the files someone sent with a message. */
+    attached: 'Sent with it',
+    /** Above the files the agent wrote for the person, such as a text or a table. */
+    forYou: 'Files for you',
+    tooMany: (most: number) => (most === 1 ? 'Only one file can go with a message.' : `Only ${most} files can go with a message.`),
+    tooLarge: (name: string, most: string) => `${name} is too large: a file may be up to ${most}.`,
+    /** A file of a kind the agent of this site takes none of, such as a video. */
+    kind: (name: string) => `${name} cannot go with a message: the agent of this site takes no files of this kind.`,
+    failed: (name: string) => `${name} could not be uploaded. Try again in a moment.`,
+  },
+
+  /** What a request waits for besides its turn, while nobody works on it. */
+  waits: {
+    /** The AI service behind the agent has too much to do right now. */
+    overloaded: 'The AI service is busy right now. It goes on by itself.',
+    /** This site used up what its account with the AI service allows for now. */
+    rateLimited: 'This site has reached the AI service’s limit for now. It goes on by itself later.',
+    preparing: 'Getting ready…',
+    /** The agent of this site does not answer; it is asked again. */
+    unreachable: 'The agent does not answer right now. It is asked again in a moment.',
+    other: 'Waiting…',
+  },
+  /** After one of the waits above, where it is known: the time it goes on. */
+  until: (time: string) => `(until about ${time})`,
   send: 'Send',
   stop: 'Stop',
   stopping: 'Stopping…',
   goOnline: 'Put changes online right away',
   goOnlineOn: 'A change goes online as soon as it works.',
   goOnlineOff: 'A change is left in a draft, for you to try first.',
-  /** Beside the list of the models the agent can run on - Opus, Sonnet, Haiku, Fable. */
-  model: 'Model',
-  /** A model in that list that only runs with the site's password. */
-  withPassword: (model: string) => `${model} (password)`,
-  /** Beside the list of how much the agent thinks and how many steps it takes over a request. */
-  effort: 'Effort',
-  /** The efforts in that list, the least first. */
-  efforts: {
-    low: 'Low',
-    medium: 'Medium',
-    high: 'High',
-    xhigh: 'Extra high',
-    max: 'Maximum',
-  },
-  /** What a request ran on, beside it: the model with its version, and one of the efforts above. */
-  ranOn: (model: string, effort: string) => `${model}, effort: ${effort}`,
+  /** A value in the lists under the box - the agent's model, say, named as the agent names it - that only runs with the site's password. */
+  withPassword: (value: string) => `${value} (password)`,
   left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
   noneLeft: (time: string) => `That is all for today. You can ask again from ${time}.`,
   /** Where the operator of the site switched building off, or there is no agent. */
@@ -129,7 +153,6 @@ export const workspace = {
   results: {
     online: 'The change is online',
     undo: 'Undo',
-    undoTitle: 'Put what was online before back online',
     draft: 'Ready to try in a draft',
     draftBroken: 'The draft does not work yet',
     saved: 'The change is saved, but not online',
@@ -137,11 +160,62 @@ export const workspace = {
     earlier: 'Your app is back to how it was before',
     stopped: 'Stopped. Whatever it had saved is kept.',
     failed: 'That did not work.',
+    /** The agent said it was done, but the app is as it was. */
+    unchanged: 'Nothing was changed.',
+    /** It stopped with an error after it had done part of the work. */
+    brokeOff: 'It stopped with an error before it was done. Whatever it saved is kept.',
+    /** It stopped with an error before it saved anything. */
+    nothingSaved: 'It stopped with an error before it changed anything. Try again in a moment.',
+    /** Opens the technical words of what went wrong, for whoever wants them. */
+    whatWentWrong: 'What went wrong',
     timedOut: 'It ran out of time before it was done.',
     usedUp: 'It used up its steps before it was done.',
     unauthorised: 'The agent could not sign in, so nothing ran. That is this site’s fault, not your request’s.',
     /** A message whose answer never came back: the agent forgot it, or another took its place. */
     lost: 'No answer came back. Whatever the agent did is in the history of your app, in its editor.',
+    /** The agent asks something before it goes on; its question follows. */
+    asked: 'A question before it goes on',
+    /** Under its question. */
+    answerBelow: 'Answer in the box below, and it carries on from there.',
+    /** What the app waits for after a message, and whom. */
+    waitsFor: {
+      /** The agent asked for the app to use other services on the internet; whoever runs this site decides. */
+      connectivity: 'Waiting for permission to use other services - whoever runs this site decides.',
+      /** The names are those of the keys and passwords the app's code reads, such as WEATHER_API_KEY. */
+      keys: (names: string[]) => `Waiting for you to enter ${names.join(', ')}.`,
+    },
+    /** Carries on where a message stopped: it waited for something, or ran out of time. */
+    goOn: 'Go on',
+    goOnTitle: 'Carry on where it stopped, without asking again',
+    /** Undoes what a message did, where it can. */
+    undoTitle: 'Undo what this message did',
+    undoDialog: 'Undo this message?',
+    undoes: 'This is undone:',
+    keeps: 'This stays as it is:',
+    /** What undoing a message undoes. */
+    undone: {
+      online: 'What was online before goes back online.',
+      draft: 'The draft it started is discarded.',
+      connectivity: 'Its request to use other services is withdrawn.',
+      source: 'The published code is taken down.',
+      showcase: 'Your app leaves the showcase.',
+      view: 'The editor opens as it did before.',
+    } as Record<string, string>,
+    /** What undoing a message leaves as it is, and why. */
+    kept: {
+      versions: 'What it changed stays in the history of your app, to go back to.',
+      lambda: 'A new app it built stays.',
+      data: 'Records, keys and passwords or saving files stay switched on - switching them off deletes them.',
+      analytics: 'Counting visitors stays on - switching it off deletes what was counted.',
+      workspace: 'Files it saved for your app stay.',
+      draft: 'What it changed in a draft it did not start stays.',
+      undone: 'It was undone already.',
+    } as Record<string, string>,
+    /** After undoing: what changed since the message stayed, as it was not as the message left it. */
+    changedSince: 'Some of it changed since, so that stayed.',
+    undoneDone: 'Undone.',
+    /** A new app the agent built beside this one, by its address name; its editor link is in the answer. */
+    created: (name: string) => `Built a new app: ${name}`,
     /** The settings it changed, each a small mark under the answer. */
     settings: {
       analytics: 'Counting visitors from now on',
@@ -151,6 +225,9 @@ export const workspace = {
       source: 'Code published',
       connectivity: 'Asked for permission to use other services',
       discarded: 'Draft discarded',
+      showcase: 'Listed in the showcase',
+      /** It changed whether the editor opens simple or with everything. */
+      view: 'The editor opens differently',
     },
     seeSource: 'See the code',
     /** After the first build: the editor link is remembered here as well. */

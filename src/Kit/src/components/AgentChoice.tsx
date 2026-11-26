@@ -1,15 +1,68 @@
 import { useEffect, useState } from 'react';
 
-import type { AgentOffer } from '../api';
+import type { AgentOffer, OfferedOption } from '../api';
 import { useT } from '../i18n';
 
-/** Where the model and the effort last chosen are remembered, in this browser - never the password. */
+/** Where the values last chosen are remembered, in this browser - never the password. */
 const REMEMBERED = 'lambda-agent-choice';
 
 /**
- * Which model the agent runs on and at which effort, as the operator offers
- * them, with the password a model may need - what the box on /build, the
- * workspace and the editor's Change section send with a message.
+ * The options of the agent as the offer lists them. An offer from before the
+ * options were the integration's has only models and efforts, which are the
+ * options model and effort.
+ */
+export function optionsOf(offer: AgentOffer | null | undefined): OfferedOption[] {
+  if (!offer) {
+    return [];
+  }
+
+  if (offer.options) {
+    return offer.options;
+  }
+
+  const options: OfferedOption[] = [];
+
+  if (offer.models.length > 0) {
+    options.push({ name: 'model', label: 'Model', values: offer.models, default: offer.model ?? offer.models[0].name });
+  }
+
+  if (offer.efforts.length > 0) {
+    options.push({
+      name: 'effort',
+      label: 'Effort',
+      values: offer.efforts.map((name) => ({ name, label: name, password: false })),
+      default: offer.effort ?? offer.efforts[0],
+    });
+  }
+
+  return options;
+}
+
+/** What was remembered: the values by option - or, kept before there were options, a model and an effort. */
+function remembered(): Record<string, string> {
+  try {
+    const kept = JSON.parse(localStorage.getItem(REMEMBERED) ?? 'null') as { options?: Record<string, string>; model?: string; effort?: string } | null;
+
+    if (!kept) {
+      return {};
+    }
+
+    const values: Record<string, string> = { ...(kept.options ?? {}) };
+
+    if (kept.model && !values.model) values.model = kept.model;
+    if (kept.effort && !values.effort) values.effort = kept.effort;
+
+    return values;
+  } catch {
+    // nothing remembered, or a browser that keeps nothing: the defaults
+    return {};
+  }
+}
+
+/**
+ * The values the agent runs on - one per option its integration has, as the
+ * operator offers them - with the password a value may need: what the box on
+ * /build, the workspace and the editor's Change section send with a message.
  *
  * Nothing is chosen until somebody chooses: the offer's defaults hold, and a
  * choice the offer no longer has falls back to them. What was chosen is
@@ -17,90 +70,88 @@ const REMEMBERED = 'lambda-agent-choice';
  * on the server knows only the defaults.
  */
 export function useAgentChoice(offer: AgentOffer | null | undefined) {
-  const [model, setModel] = useState<string | null>(null);
-  const [effort, setEffort] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Record<string, string>>({});
   const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    try {
-      const kept = JSON.parse(localStorage.getItem(REMEMBERED) ?? 'null') as { model?: string; effort?: string } | null;
+  useEffect(() => setPicked(remembered()), []);
 
-      if (kept) {
-        setModel(kept.model ?? null);
-        setEffort(kept.effort ?? null);
-      }
-    } catch {
-      // nothing remembered, or a browser that keeps nothing: the defaults
-    }
-  }, []);
+  const options = optionsOf(offer);
 
-  const remember = (next: { model?: string | null; effort?: string | null }) => {
-    try {
-      localStorage.setItem(REMEMBERED, JSON.stringify({ model: next.model ?? model, effort: next.effort ?? effort }));
-    } catch {
-      // a browser that keeps nothing asks again next time, which is fine
-    }
-  };
+  // the value of each option: the one picked, where the offer still has it, or its default
+  const values = Object.fromEntries(
+    options.map((option) => {
+      const kept = picked[option.name];
 
-  const models = offer?.models ?? [];
-  const chosen = models.find((m) => m.name === model) ?? models.find((m) => m.name === offer?.model) ?? models[0];
-  const efforts = offer?.efforts ?? [];
-  const at = effort !== null && efforts.includes(effort) ? effort : offer?.effort;
-  const guarded = chosen?.password === true;
+      return [option.name, option.values.some((v) => v.name === kept) ? kept : option.default];
+    }),
+  );
+
+  const guarded = options.some((option) => option.values.find((v) => v.name === values[option.name])?.password === true);
 
   return {
     offer,
-    model: chosen?.name,
-    effort: at,
+    options,
+    values,
     password,
-    /** Whether the model chosen needs the password - and runs without a clock with it. */
+    /** Whether a value chosen needs the password - and runs on the limits the operator set for such runs. */
     guarded,
-    /** Whether a message can go with this choice: a model behind the password needs it typed. */
+    /** Whether a message can go with this choice: a value behind the password needs it typed. */
     ready: !guarded || password.length > 0,
-    setModel: (name: string) => {
-      setModel(name);
-      remember({ model: name });
-    },
-    setEffort: (name: string) => {
-      setEffort(name);
-      remember({ effort: name });
+    choose: (option: string, value: string) => {
+      setPicked((was) => {
+        const next = { ...was, [option]: value };
+
+        try {
+          localStorage.setItem(REMEMBERED, JSON.stringify({ options: next, model: next.model, effort: next.effort }));
+        } catch {
+          // a browser that keeps nothing asks again next time, which is fine
+        }
+
+        return next;
+      });
     },
     setPassword,
-    /** What a request carries: the choice, and the password only for a model that needs it. */
-    request: { model: chosen?.name, effort: at, password: guarded ? password : undefined },
+    /** What a request carries: the values, and the password only where one needs it. */
+    request: { options: values, password: guarded ? password : undefined },
   };
 }
 
 export type AgentChoiceState = ReturnType<typeof useAgentChoice>;
 
 /**
- * What a job runs on, as a page says it beside the job: the model by the
- * label the offer gives it - by its name where the offer no longer has it -
- * and the effort in words.
+ * What a run ran on, as a page says it beside it: each value by the label the
+ * offer gives it - by its name where the offer no longer has it - in the
+ * order of the offer's options. The labels are the integration's own, the
+ * same in every language.
  */
 export function useChoiceLabel() {
-  const said = useT().workspace;
+  return (offer: AgentOffer | null | undefined, values: Record<string, string> | null | undefined) => {
+    if (!values) {
+      return '';
+    }
 
-  return (offer: AgentOffer | null | undefined, model: string, effort?: string | null) => {
-    const label = offer?.models.find((m) => m.name === model)?.label ?? model;
+    const options = optionsOf(offer);
+    const order = [...options.map((o) => o.name), ...Object.keys(values).filter((name) => !options.some((o) => o.name === name))];
 
-    return effort ? said.ranOn(label, said.efforts[effort as keyof typeof said.efforts] ?? effort) : label;
+    return order
+      .filter((name) => values[name])
+      .map((name) => options.find((o) => o.name === name)?.values.find((v) => v.name === values[name])?.label ?? values[name])
+      .join(' · ');
   };
 }
 
 /**
- * The two lists - model and effort - and the password where the model chosen
- * needs one. A list with nothing to choose from is left out, and so is all
- * of it where the operator offers one model at one effort.
+ * A list per option that has something to choose from, and the password
+ * where a value chosen needs one. Nothing at all where the operator offers
+ * one value of each.
  */
 export function AgentChoice({ choice, className = '' }: { choice: AgentChoiceState; className?: string }) {
   const t = useT();
   const said = t.workspace;
 
-  const models = choice.offer?.models ?? [];
-  const efforts = choice.offer?.efforts ?? [];
+  const choosable = choice.options.filter((option) => option.values.length > 1);
 
-  if (models.length <= 1 && efforts.length <= 1) {
+  if (choosable.length === 0) {
     return null;
   }
 
@@ -109,31 +160,18 @@ export function AgentChoice({ choice, className = '' }: { choice: AgentChoiceSta
 
   return (
     <span className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs ${className}`}>
-      {models.length > 1 && (
-        <label className="flex items-center gap-1.5">
-          <span className="text-slate-400">{said.model}</span>
-          <select value={choice.model ?? ''} onChange={(event) => choice.setModel(event.target.value)} className={list}>
-            {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.password ? said.withPassword(m.label) : m.label}
+      {choosable.map((option) => (
+        <label key={option.name} className="flex items-center gap-1.5">
+          <span className="text-slate-400">{option.label}</span>
+          <select value={choice.values[option.name] ?? ''} onChange={(event) => choice.choose(option.name, event.target.value)} className={list}>
+            {option.values.map((value) => (
+              <option key={value.name} value={value.name}>
+                {value.password ? said.withPassword(value.label) : value.label}
               </option>
             ))}
           </select>
         </label>
-      )}
-
-      {efforts.length > 1 && (
-        <label className="flex items-center gap-1.5">
-          <span className="text-slate-400">{said.effort}</span>
-          <select value={choice.effort ?? ''} onChange={(event) => choice.setEffort(event.target.value)} className={list}>
-            {efforts.map((e) => (
-              <option key={e} value={e}>
-                {said.efforts[e as keyof typeof said.efforts] ?? e}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      ))}
 
       {choice.guarded && (
         <input

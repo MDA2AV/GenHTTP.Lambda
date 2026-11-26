@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, isActive, type AgentState, type ChangeJob, type ChangeRequest } from '@genhttp-lambda/kit/api';
+import { ApiError, api, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest, type UndoOutcome } from '@genhttp-lambda/kit/api';
 
 /**
  * The agent changing this lambda, as the whole control center knows it.
@@ -11,9 +11,10 @@ import { ApiError, api, isActive, type AgentState, type ChangeJob, type ChangeRe
  * the lambda is read again wherever the owner happens to be - so the version
  * it made is in the history and, where it went online, in the badge.
  *
- * Nothing about the change is kept in the browser. The server asks the agent
- * for the change of this lambda, so a reload, a second tab or another device
- * all find the same one.
+ * Nothing about the change is kept in the browser. The platform keeps the
+ * runs, so a reload, a second tab or another device all find the same one -
+ * read once as the page opens, then pushed to it as it goes on, wherever it
+ * was asked.
  */
 export interface AgentControl {
   /** Null until the first answer, and for a demo, which nobody changes. */
@@ -27,6 +28,8 @@ export interface AgentControl {
   start: (change: ChangeRequest) => Promise<string | null>;
   /** Stops the change under way; answers with why that did not work, or null. */
   stop: () => Promise<string | null>;
+  /** Undoes what a change did, where it can; answers with what was done, or why not. */
+  undo: (run: string) => Promise<UndoOutcome | string>;
   /** The owner has looked at how the last change ended. */
   seen: () => void;
 }
@@ -67,7 +70,7 @@ export function useAgent({
   const [failure, setFailure] = useState<string | null>(null);
   const [unseen, setUnseen] = useState(false);
 
-  /** Bumped to start polling again, after a change is asked for. */
+  /** Bumped to read and listen again, after a change was refused. */
   const [round, setRound] = useState(0);
 
   const last = useRef<ChangeJob | null>(null);
@@ -116,8 +119,9 @@ export function useAgent({
 
     let alive = true;
     let timer: number | undefined;
+    let close: (() => void) | undefined;
 
-    const tick = async () => {
+    const begin = async () => {
       try {
         const next = await api.agent.state(privateKey);
 
@@ -126,38 +130,34 @@ export function useAgent({
         }
 
         take(next);
+
+        // what happens from now on is pushed, until the page closes; a stream
+        // that cannot be had is asked for again in a while
+        close = followRun<AgentState>(api.agent.events(privateKey), 'state', (state) => alive && take(state), () => false, () => {
+          if (alive) timer = window.setTimeout(begin, 5000);
+        });
       } catch (error) {
         if (alive) {
           setFailure(error instanceof ApiError ? error.message : failed);
+          timer = window.setTimeout(begin, 10_000);
         }
-      }
-
-      if (!alive) {
-        return;
-      }
-
-      // only a change that is still waiting or working is worth asking after;
-      // a hidden tab asks less often, but still notices it ending
-      if (isActive(last.current)) {
-        timer = window.setTimeout(tick, document.visibilityState === 'visible' ? 2000 : 10_000);
       }
     };
 
-    void tick();
+    void begin();
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
+      close?.();
     };
-    // opening the section asks again, for an allowance that is up to date
-  }, [privateKey, enabled, take, round, watching, failed]);
+  }, [privateKey, enabled, take, round, failed]);
 
   const start = useCallback(
     async (change: ChangeRequest) => {
       try {
         take(await api.agent.start(privateKey, change));
         setUnseen(false);
-        setRound((n) => n + 1);
         return null;
       } catch (error) {
         // most likely one already under way, asked for elsewhere: show it
@@ -177,7 +177,21 @@ export function useAgent({
     }
   }, [privateKey, take, failed]);
 
+  const undo = useCallback(
+    async (run: string) => {
+      try {
+        const outcome = await api.agent.undo(privateKey, run);
+        await hooks.current.refresh().catch(() => undefined);
+        take(await api.agent.state(privateKey));
+        return outcome;
+      } catch (error) {
+        return error instanceof ApiError ? error.message : failed;
+      }
+    },
+    [privateKey, take, failed],
+  );
+
   const seen = useCallback(() => setUnseen(false), []);
 
-  return { state: enabled ? state : null, received, failure, unseen, start, stop, seen };
+  return { state: enabled ? state : null, received, failure, unseen, start, stop, undo, seen };
 }

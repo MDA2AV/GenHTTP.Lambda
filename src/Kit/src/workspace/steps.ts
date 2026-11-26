@@ -92,6 +92,14 @@ function shared(step: AgentStep, words: Words): string | null {
       return words.files;
     case 'web':
       return step.site ? words.site(step.site) : null;
+    case 'search':
+      return words.search;
+    case 'attachment':
+      return words.attachment;
+    case 'showcase':
+      return words.showcase;
+    case 'file':
+      return words.file;
     default:
       return null;
   }
