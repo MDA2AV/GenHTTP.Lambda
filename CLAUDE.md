@@ -137,7 +137,9 @@ question, a setting or a change.
   owner (an app offline, keys its code waits for - entered there through the
   REST API, never the agent - a draft to try, a block); under an answer: open
   the app, try or put online its draft, files it handed back, what it waits
-  for, undo. Everything else links to the editor. What happens is pushed
+  for, undo - the version online before back online, nothing more **(owner)**:
+  the way back from anything else is History or asking the agent. Everything
+  else links to the editor. What happens is pushed
   while a run is under way, never polled; a page reads again when it is
   looked at (a browser keeps six connections to a site for all its tabs).
 - Before anything is asked it is the prerendered page that creates a website;
@@ -178,8 +180,7 @@ from those records. These rules hold for any agent; the runner's own follow.
   it did kept.
 - **Outcomes from the records, never the agent's word**: steps at the MCP door
   (`RunSteps`), effects where they are saved (`AgentJournal`), the result
-  (`AgentOutcome`), undo of what is still as the run left it (`AgentUndo`).
-  A build that wrote no code is no success.
+  (`AgentOutcome`). A build that wrote no code is no success.
 - **Honest about limits**: a run says what it waits for and whom; the guide's
   `possible` says what an app cannot do, or does only with the operator, a key
   of the user's own or another tier - an app here has no AI of its own.
@@ -873,7 +874,7 @@ in the background - **not drafts' copies (owner)**.
   (owner)**: a file the user attached or a resource of the version - a picture
   in base64 is too large for a tool call. `PUT /lambdas/{privateKey}/showcase`
   with the body written to a file does the same (`platform_guide`,
-  `showcase`). Only when the owner asks; undoing the run takes it out.
+  `showcase`). Only when the owner asks.
 - **The code belongs to whoever created the lambda.** No lock-in; keep the
   export working.
 - The export (`GET …/export`) is **as small as a GenHTTP project can be**: .NET
@@ -1268,7 +1269,10 @@ integrations, for now.
   in its budget.
 - **The panel's Integrations section (owner)**: terse cards (kind, name,
   assembly, facts) from `Describe` - never a password, key or connection
-  string. The usage report names them, never where they are.
+  string; the agent's with what it says of itself and where a run sends what.
+  What the operator decides about the agent and how it was used are the
+  **Build agent** section's **(owner)**. The usage report names them, never
+  where they are.
 - **PostgreSQL is the community edition's (owner)**; genhttp.dev keeps SQLite.
   Its shape is **(open)**: one database (`LAMBDA_POSTGRES_CONNECTION`), schemas
   `platform`, `analytics`, one per lambda and per draft, a role per lambda

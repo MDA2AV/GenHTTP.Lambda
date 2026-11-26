@@ -1121,16 +1121,11 @@ other servers, keys and passwords to enter - read from the lambda, not from
 what the agent said, and only for a run that wrote code or asked to connect. Once that is there, the run goes on with nothing typed
 (`continues`, no `prompt`), as does one that ran out of time or steps.
 
-**Undoing a message.** `result.undo` says what undoing it would do - the
-version online before back online, a draft it started discarded, a request to
-connect withdrawn, the source taken down, the showcase entry taken out, the
-view set back - and what it leaves: its versions in the history, a new app,
-a kind of data or analytics switched on (switching off deletes), files in the
-workspace. `POST …/agent/undo` (`run`, the newest where left out) does it as
-one step, and only what is still as the run left it; what changed since stays
-and is said so (`changed:…` - a draft somebody saved into since among it), as
-does what failed (`failed:online`: the version before is gone, or does not
-run any more). Undoing twice does nothing more.
+**The version before.** `result.before` names the version that was online
+before the message. While what the message put online still is, the pages
+offer to put it back (`POST …/deployment/start`) - a plain deployment, which
+leaves everything else as it is: the way back from anything else a message
+did is the editor's history, or asking the agent.
 
 **New apps beside it.** A change may create a new app where the owner asks
 for one; the result names it (`created`) and hands its editor key to the owner
@@ -1219,7 +1214,7 @@ questions people ask first.
 - **What the agent offers, the box offers**: a paper clip where it takes files
   (and pasting or dropping one), stopping where it can stop, an answer box
   where it asked. Under an answer: files it handed back, what the app waits for
-  with a button to go on, undo with what it undoes and leaves. What happens is
+  with a button to go on. What happens is
   pushed to the page, never asked after.
 
 ### The simple view
@@ -2214,7 +2209,9 @@ keeps (`IIntegration.Describe`) - never a password, a key or a connection
 string - and is named by the assembly it is in, which the panel's
 **Integrations** section shows (`GET
 /admin/integrations`), and the usage report names (`database`, `files`,
-`secrets`).
+`secrets`, `agent`). The agent's card there adds what its system says of
+itself and where a run sends what; what the operator decides about it and how
+it was used are the **Build agent** section's.
 
 **The platform's own schema** is kept once per dialect a database
 integration may speak (`IDatabaseProvider.Dialect`): `Data/Migrations` and
@@ -2289,10 +2286,9 @@ another (`AgentFollowJob`). Every call that carries the run's credential is the
 run's: what it saved and changed is recorded where it is saved
 (`AgentJournal`), the step it was is recorded at the MCP door
 (`RunSteps`), so the steps are the same in every language whatever the
-agent, and how a run ended - online, a draft to try, what waits for whom,
-what it would undo - is read from those records, never from what the agent
-said (`AgentOutcome`). Undoing a run (`POST …/agent/undo`) reverses what it
-recorded, where nothing changed it since (`AgentUndo`). The pages are pushed
+agent, and how a run ended - online, a draft to try, what waits for whom -
+is read from those records, never from what the agent said
+(`AgentOutcome`). The pages are pushed
 what changes (`GET /builds/:id/events`, `GET …/agent/events`, server-sent
 events) rather than asking - while a run is under way; a page reads again when
 it is looked at, since a browser keeps six connections to a site for all its
@@ -3569,13 +3565,17 @@ to the next run asked for; a run under way goes on as it was asked for.
   its steps, and the same for a run on a value behind the password. Empty is
   what the agent gives a run (Claude Code: ten minutes and sixty steps), zero
   is none; a run behind the password has none until the operator sets some.
-- **What the agent is and where it sends what** - for the installation's
-  privacy statement - whose web pages it reads and whether it searches, which
-  files a message may come with, whether it hands files back, asks back and can
-  be stopped; what its system says of itself; how it was used in the last
-  thirty days (runs and time by each value, never what they were about); and
-  its newest runs, with their files, what they spent where the agent says, and
-  what went wrong.
+- **How it was used**: whether it answers and this installation's runs now;
+  the last thirty days (runs and time by each value, never what they were
+  about); and its newest runs, with their files, what they spent where the
+  agent says, and what went wrong.
+
+What the agent is lives with the other integrations: its card in the panel's
+**Integrations** section has what it says of itself (`Describe`, and its
+system's facts) and **where a run sends what** - for the installation's
+privacy statement - whose web pages it reads and whether it searches, which
+files a message may come with, whether it hands files back, asks back and can
+be stopped (`GET /admin/agent`, `agent`).
 
 They are rows of the `settings` table - `agent.option.{option}.{value}` =
 `open`, `password` or `off`, `agent.default.{option}`, `agent.limit.time`,
