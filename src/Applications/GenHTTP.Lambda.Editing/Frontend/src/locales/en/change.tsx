@@ -156,30 +156,6 @@ export const change = {
   goOnTitle: 'Carry on where it stopped, without asking again',
   /** A lambda the agent created beside this one, by its public key; its editor link is in the answer. */
   created: (key: string) => `Created the lambda ${key}`,
-  undoDialog: 'Undo this change?',
-  undoes: 'This is undone:',
-  keeps: 'This stays as it is:',
-  undone: {
-    online: 'The version online before goes back online.',
-    draft: 'The draft it started is discarded.',
-    connectivity: 'Its request to connect to other servers is withdrawn.',
-    source: 'The published source is taken down.',
-    showcase: 'The lambda leaves the showcase.',
-    view: 'The editor opens in the view it had before.',
-  } as Record<string, string>,
-  kept: {
-    versions: 'The versions it saved stay in the history.',
-    lambda: 'A lambda it created stays.',
-    data: 'A database, secrets or workspace it switched on stays on - switching it off deletes it.',
-    analytics: 'Analytics stay on - switching them off deletes what was counted.',
-    workspace: 'Files it put into the workspace stay.',
-    draft: 'What it changed in a draft it did not start stays.',
-    undone: 'It was undone already.',
-  } as Record<string, string>,
-  /** After undoing: what changed since the change stayed, as it was not as the change left it. */
-  changedSince: 'Some of it changed since, so that stayed as it is.',
-  /** After undoing: the version online before could not go back online - it is gone from the history, or does not compile any more. */
-  notUndone: 'The version online before could not be put back, so what is online now stays.',
   seeChanges: 'See what changed',
   open: 'Open it',
   openPreview: 'Try it',

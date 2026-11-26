@@ -41,7 +41,7 @@ public interface ISourceService
     /// Takes the source down. Its stars are kept for when it is published
     /// again; nothing happens when it was not published.
     /// </summary>
-    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, VersionAuthor? by = null, CancellationToken cancellation = default);
+    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
 
     #endregion
 

@@ -58,8 +58,6 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
 
         public IReadOnlyList<AgentEffect> Effects { get; } = [.. Events.Where(e => e.Kind == AgentRunEventKind.Effect).Select(AgentRunRecords.Read<AgentEffect>).OfType<AgentEffect>()];
 
-        public UndoOutcome? Undone { get; } = Events.Where(e => e.Kind == AgentRunEventKind.Undone).Select(AgentRunRecords.Read<UndoOutcome>).LastOrDefault();
-
         public IReadOnlyDictionary<string, string> Options { get; } = StoredOptions.Read(Run.Options);
 
     }
@@ -158,7 +156,7 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
         // the call itself straight away - so it may be recorded after it
         foreach (var happened in read.Events.OrderBy(e => e.At))
         {
-            if (happened.Kind is AgentRunEventKind.Effect or AgentRunEventKind.Undone)
+            if (happened.Kind == AgentRunEventKind.Effect)
             {
                 continue;
             }
@@ -378,8 +376,6 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
             }
         }
 
-        var undo = run.Kind == AgentRunKind.Change ? AgentUndo.Offer(read) : null;
-
         return new ChangeResult(
             Ok: acted && !declined,
             Version: deeds.Saved,
@@ -409,7 +405,6 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
             WaitsFor: privateKey != null && (deeds.Wrote || deeds.Settings.Contains("connectivity") || deeds.Settings.Contains("secrets"))
                 ? await WaitsOfAsync(privateKey, cancellation)
                 : null,
-            Undo: undo,
             Created: created.Count > 0 ? created : null,
             Apps: apps.Count > 0 ? apps : null);
     }

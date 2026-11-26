@@ -76,9 +76,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
              """)]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var source = await sources.WithdrawAsync(privateKey, AgentCallerConcern.Of(call));
+        var source = await sources.WithdrawAsync(privateKey);
 
         logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
     }

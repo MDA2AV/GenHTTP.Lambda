@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest, type UndoOutcome } from '@genhttp-lambda/kit/api';
+import { ApiError, api, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest } from '@genhttp-lambda/kit/api';
 
 /**
  * The agent changing this lambda, as the whole control center knows it.
@@ -28,8 +28,6 @@ export interface AgentControl {
   start: (change: ChangeRequest) => Promise<string | null>;
   /** Stops the change under way; answers with why that did not work, or null. */
   stop: () => Promise<string | null>;
-  /** Undoes what a change did, where it can; answers with what was done, or why not. */
-  undo: (run: string) => Promise<UndoOutcome | string>;
   /** The owner has looked at how the last change ended. */
   seen: () => void;
 }
@@ -203,21 +201,7 @@ export function useAgent({
     }
   }, [privateKey, take, failed]);
 
-  const undo = useCallback(
-    async (run: string) => {
-      try {
-        const outcome = await api.agent.undo(privateKey, run);
-        await hooks.current.refresh().catch(() => undefined);
-        take(await api.agent.state(privateKey));
-        return outcome;
-      } catch (error) {
-        return error instanceof ApiError ? error.message : failed;
-      }
-    },
-    [privateKey, take, failed],
-  );
-
   const seen = useCallback(() => setUnseen(false), []);
 
-  return { state: enabled ? state : null, received, failure, unseen, start, stop, undo, seen };
+  return { state: enabled ? state : null, received, failure, unseen, start, stop, seen };
 }

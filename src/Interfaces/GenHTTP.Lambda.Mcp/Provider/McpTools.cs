@@ -1078,7 +1078,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (withdraw)
         {
-            info = await connectivity.WithdrawAsync(privateKey, author);
+            info = await connectivity.WithdrawAsync(privateKey);
 
             logger.LogInformation("Withdrew connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
@@ -1995,7 +1995,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         if (remove)
         {
-            await showcases.RemoveAsync(privateKey, author);
+            await showcases.RemoveAsync(privateKey);
 
             logger.LogInformation("Removed lambda {Lambda} from showcase", await meta.PublicKeyOfAsync(privateKey));
 
@@ -2041,7 +2041,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (remove)
         {
-            source = await sources.WithdrawAsync(privateKey, by);
+            source = await sources.WithdrawAsync(privateKey);
 
             logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
 

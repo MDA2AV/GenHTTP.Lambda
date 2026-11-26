@@ -86,9 +86,9 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     [Remarks("Its entry and its picture are deleted. Nothing happens if it has none.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        await showcases.RemoveAsync(privateKey, AgentCallerConcern.Of(call));
+        await showcases.RemoveAsync(privateKey);
 
         logger.LogInformation("Removed lambda {Lambda} from showcase", await meta.PublicKeyOfAsync(privateKey));
     }

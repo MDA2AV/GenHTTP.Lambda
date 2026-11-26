@@ -98,8 +98,6 @@ export function AppChat({
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [merging, setMerging] = useState<Feature | null>(null);
-  const [undoing, setUndoing] = useState<Turn | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [, setParams] = useSearchParams();
 
   /** The draft the next message goes to, where the owner chose one; a new one otherwise. */
@@ -441,7 +439,6 @@ export function AppChat({
       setPrompt(text);
       window.requestAnimationFrame(() => field.current?.focus());
     },
-    undo: (turn) => setUndoing(turn),
     goOn,
     possible,
     open: openApp,
@@ -460,27 +457,6 @@ export function AppChat({
       return still.length > 0 ? still : null;
     },
   };
-
-  async function undo(turn: Turn) {
-    setNotice(null);
-
-    await act(async () => {
-      const outcome = await api.agent.undo(key, turn.id);
-
-      // undone now, so it is not offered again; what changed since stayed
-      keepTurn(key, { ...turn, result: turn.result ? { ...turn.result, undo: { possible: false, undoes: [], keeps: ['undone'] } } : turn.result });
-
-      if (outcome.kept.some((kept) => kept.startsWith('failed:'))) {
-        throw new Error(said.results.notUndone);
-      }
-
-      if (outcome.kept.some((kept) => kept.startsWith('changed:'))) {
-        throw new Error(said.results.changedSince);
-      }
-
-      setNotice(said.results.undoneDone);
-    });
-  }
 
   /** Opens an app a message built beside this one - remembered here, as a build's is. */
   function openApp(publicKey: string) {
@@ -592,8 +568,6 @@ export function AppChat({
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" /> {problem}
             </p>
           )}
-
-          {notice && <p role="status" className="mb-2 px-1 text-sm text-emerald-700 dark:text-emerald-400">{notice}</p>}
 
           {answering && !target && (
             <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs">
@@ -713,33 +687,6 @@ export function AppChat({
       </Dialog>
 
       <Dialog
-        title={said.results.undoDialog}
-        open={undoing !== null}
-        onClose={() => setUndoing(null)}
-        footer={
-          <>
-            <button type="button" className="btn-ghost" onClick={() => setUndoing(null)}>
-              {said.cancel}
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => {
-                const turn = undoing;
-                setUndoing(null);
-
-                if (turn) void undo(turn);
-              }}
-            >
-              {said.results.undo}
-            </button>
-          </>
-        }
-      >
-        <UndoWhat offer={undoing?.result?.undo ?? null} />
-      </Dialog>
-
-      <Dialog
         title={said.forgetTitle}
         open={forgetting}
         onClose={() => setForgetting(false)}
@@ -765,43 +712,6 @@ export function AppChat({
         <p className="text-slate-600 dark:text-slate-400">{said.forgetText}</p>
       </Dialog>
     </>
-  );
-}
-
-/** What undoing a message does, and what it leaves - as the platform says, before it is done. */
-function UndoWhat({ offer }: { offer: { undoes: string[]; keeps: string[] } | null }) {
-  const said = useT().workspace.results;
-
-  if (!offer) {
-    return null;
-  }
-
-  const undoes = offer.undoes.filter((what) => said.undone[what]);
-  const keeps = offer.keeps.filter((what) => said.kept[what]);
-
-  return (
-    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-      {undoes.length > 0 && (
-        <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{said.undoes}</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {undoes.map((what) => (
-              <li key={what}>{said.undone[what]}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {keeps.length > 0 && (
-        <div>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{said.keeps}</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {keeps.map((what) => (
-              <li key={what}>{said.kept[what]}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
   );
 }
 

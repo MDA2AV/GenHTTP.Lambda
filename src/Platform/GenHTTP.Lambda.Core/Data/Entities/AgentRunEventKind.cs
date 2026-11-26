@@ -15,13 +15,10 @@ public enum AgentRunEventKind
     /// <summary>Something the agent did beyond the platform, as the integration told it.</summary>
     Activity = 2,
 
-    /// <summary>Something the run changed, as the platform recorded it where it was changed - what it is undone by.</summary>
+    /// <summary>Something the run changed, as the platform recorded it where it was changed.</summary>
     Effect = 3,
 
     /// <summary>A file the agent handed the person.</summary>
-    Returned = 4,
-
-    /// <summary>The owner undid the run: what was undone, and what was left.</summary>
-    Undone = 5
+    Returned = 4
 
 }

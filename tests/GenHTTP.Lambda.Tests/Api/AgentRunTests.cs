@@ -158,7 +158,6 @@ public sealed class AgentRunTests
         Assert.IsTrue(result.Preview, "online at its preview");
         Assert.IsFalse(result.Deployed, "and nothing put online, whatever the agent said");
         Assert.AreEqual("I put the dark mode online for everybody.", result.Summary, "its words are shown as its words");
-        Assert.IsTrue(result.Undo!.Undoes.Contains("draft"), "a draft it started can be thrown away again");
     }
 
     [TestMethod]
@@ -380,80 +379,32 @@ public sealed class AgentRunTests
 
     #endregion
 
-    #region Undoing
+    #region The version before
 
     [TestMethod]
-    public async Task UndoPutsBackWhatWasOnlineDiscardsItsDraftAndSaysWhatItLeft()
+    public async Task TheVersionOnlineBeforeIsNamedSoItCanBePutBackOnline()
     {
         var agent = new FakeAgentProvider();
         await using var fixture = await WithAgentAsync(agent);
 
-        var lambda = await fixture.CreateLambdaAsync("undone");
+        var lambda = await fixture.CreateLambdaAsync("back");
         await fixture.DeployAsync(lambda.PrivateKey);
 
         await StartAsync(fixture, lambda.PrivateKey, new ChangeRequest("Change everything"));
 
-        var run = agent.Last;
-
         await AgentCalls.ToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["files"] = AgentCalls.Code("new"), ["deploy"] = true },
-                                   run.Credential);
-        await AgentCalls.ToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["name"] = "Later" }, run.Credential);
-        await AgentCalls.ToolAsync(fixture, "enable_data", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["kind"] = "database" }, run.Credential);
-
-        run.End(AgentEnding.Completed, "Done.");
-
-        var offer = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!.Result!.Undo!;
-
-        Assert.IsTrue(offer.Possible);
-        CollectionAssert.IsSubsetOf(new[] { "online", "draft" }, offer.Undoes.ToArray());
-        CollectionAssert.IsSubsetOf(new[] { "versions", "data" }, offer.Keeps.ToArray(), "what would delete data stays, and says so");
-
-        using var undone = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/undo", new UndoRequest());
-
-        Assert.AreEqual(HttpStatusCode.OK, undone.StatusCode, await undone.Content.ReadAsStringAsync());
-
-        var outcome = await undone.GetContentAsync<UndoOutcome>();
-
-        CollectionAssert.IsSubsetOf(new[] { "online", "draft" }, outcome.Undone.ToArray());
-        Assert.AreEqual(1, outcome.Online, "what was online before is again");
-
-        using var features = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features");
-
-        Assert.AreEqual("[]", await features.Content.ReadAsStringAsync(), "and its draft is gone");
-
-        var after = (await AgentCalls.StateAsync(fixture, lambda.PrivateKey)).Job!.Result!.Undo!;
-
-        Assert.IsFalse(after.Possible, "once undone, there is nothing more to undo");
-        Assert.Contains("undone", after.Keeps);
-    }
-
-    [TestMethod]
-    public async Task UndoLeavesWhatSomebodyElseChangedSince()
-    {
-        var agent = new FakeAgentProvider();
-        await using var fixture = await WithAgentAsync(agent);
-
-        var lambda = await fixture.CreateLambdaAsync("since");
-        await fixture.DeployAsync(lambda.PrivateKey);
-
-        await StartAsync(fixture, lambda.PrivateKey, new ChangeRequest("New front page"));
-
-        await AgentCalls.ToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["files"] = AgentCalls.Code("agent"), ["deploy"] = true },
                                    agent.Last.Credential);
 
-        agent.Last.End(AgentEnding.Completed);
+        agent.Last.End(AgentEnding.Completed, "Done.");
 
-        await AgentCalls.EndedAsync(fixture, lambda.PrivateKey);
+        var result = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!.Result!;
 
-        // the owner puts another version online meanwhile
-        await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"owner\"));");
+        Assert.AreEqual(2, result.Online, "what it put online");
+        Assert.AreEqual(1, result.Before, "and what was online before, which the pages offer to put back");
 
-        using var undone = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/undo", new UndoRequest());
+        using var back = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new DeploymentRequest(result.Before));
 
-        var outcome = await undone.GetContentAsync<UndoOutcome>();
-
-        Assert.Contains("changed:online", outcome.Kept);
-        Assert.AreEqual(3, outcome.Online, "the owner's version stays online");
+        Assert.IsTrue((await back.GetContentAsync<DeploymentOutcomeResponse>()).Success, "a plain deployment, as any");
     }
 
     #endregion
@@ -884,7 +835,7 @@ public sealed class AgentRunTests
     }
 
     [TestMethod]
-    public async Task TheShowcaseTakesAPictureByReferenceAndIsUndoneWithTheRun()
+    public async Task TheShowcaseTakesAPictureByReference()
     {
         var agent = new FakeAgentProvider();
         await using var fixture = await WithAgentAsync(agent);
@@ -906,15 +857,10 @@ public sealed class AgentRunTests
         var result = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!.Result!;
 
         Assert.Contains("showcase", result.Settings!);
-        Assert.Contains("showcase", result.Undo!.Undoes);
 
         using var listed = await fixture.GetAsync("/api/v1/showcases");
 
         Assert.Contains("Shown", await listed.Content.ReadAsStringAsync());
-
-        using var undone = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/undo", new UndoRequest());
-
-        Assert.Contains("showcase", (await undone.GetContentAsync<UndoOutcome>()).Undone);
     }
 
     [TestMethod]

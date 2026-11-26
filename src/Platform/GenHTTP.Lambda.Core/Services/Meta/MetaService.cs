@@ -188,7 +188,7 @@ public sealed class MetaService : IMetaService
             Logger.LogInformation("Changed view of lambda {Lambda} #{LambdaId} from {Previous} to {View}",
                                   lambda.PublicKey, lambda.Id, previous, view);
 
-            await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Viewed, lambda.Id, Name: EditorViewNames.Name(previous)), CancellationToken.None);
+            await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Viewed, lambda.Id, Name: EditorViewNames.Name(view)), CancellationToken.None);
         }
 
         return await Describer.DescribeAsync(database, lambda, CancellationToken.None);
@@ -659,8 +659,6 @@ public sealed class MetaService : IMetaService
 
         var now = DateTime.UtcNow;
 
-        var before = lambda.ActiveVersion;
-
         lambda.ActiveVersion = target;
         lambda.Deployed = now;
         lambda.Modified = now;
@@ -673,7 +671,7 @@ public sealed class MetaService : IMetaService
 
         await History.PruneActivationsAsync(database, lambda.Id);
 
-        await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Deployed, lambda.Id, target, before), CancellationToken.None);
+        await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Deployed, lambda.Id, target), CancellationToken.None);
 
         return new DeploymentResult(true, await Describer.DescribeAsync(database, lambda), outcome.Diagnostics);
     }

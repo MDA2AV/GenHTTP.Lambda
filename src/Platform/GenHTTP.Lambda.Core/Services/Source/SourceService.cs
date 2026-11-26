@@ -65,8 +65,6 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         var now = DateTime.UtcNow;
 
-        var was = source?.Published == true;
-
         if (source == null)
         {
             source = new SourceEntity
@@ -106,12 +104,12 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         logger.LogInformation("Published source of lambda #{LambdaId} license {License}", lambda.Id, source.License);
 
-        await journal.RecordAsync(by, new AgentEffect(AgentEffectKind.Published, lambda.Id, Name: source.License, Was: was), CancellationToken.None);
+        await journal.RecordAsync(by, new AgentEffect(AgentEffectKind.Published, lambda.Id, Name: source.License), CancellationToken.None);
 
         return Settings(lambda.PublicKey, source);
     }
 
-    public async ValueTask<SourceSettings?> WithdrawAsync(string privateKey, VersionAuthor? by = null, CancellationToken cancellation = default)
+    public async ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default)
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
@@ -127,8 +125,6 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
             await database.SaveChangesAsync(cancellation);
 
             logger.LogInformation("Unpublished source of lambda #{LambdaId}", lambda.Id);
-
-            await journal.RecordAsync(by, new AgentEffect(AgentEffectKind.Withdrawn, lambda.Id, Was: true), CancellationToken.None);
         }
 
         // nobody may read it any more, so there is nothing to keep it packed for

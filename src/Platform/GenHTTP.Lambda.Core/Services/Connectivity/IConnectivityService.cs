@@ -42,7 +42,7 @@ public interface IConnectivityService
     /// code that connects then no longer compiles. Nothing happens when
     /// nothing was asked or it was declined.
     /// </summary>
-    ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default);
+    ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// The operator's decision: allow the lambda to connect, asked for or not,

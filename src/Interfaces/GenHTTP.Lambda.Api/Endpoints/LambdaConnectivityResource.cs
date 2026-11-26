@@ -79,9 +79,9 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public async ValueTask<ConnectivityResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
+    public async ValueTask<ConnectivityResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
-        var withdrawn = await connectivity.WithdrawAsync(privateKey, AgentCallerConcern.Of(call));
+        var withdrawn = await connectivity.WithdrawAsync(privateKey);
 
         logger.LogInformation("Withdrew connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
 

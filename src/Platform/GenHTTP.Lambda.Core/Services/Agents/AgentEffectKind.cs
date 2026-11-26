@@ -54,36 +54,24 @@ public enum AgentEffectKind
     [JsonStringEnumMemberName("Published")]
     Published = 9,
 
-    /// <summary>It took the source down.</summary>
-    [JsonStringEnumMemberName("Withdrawn")]
-    Withdrawn = 10,
-
     /// <summary>It asked for the lambda to connect to other servers.</summary>
     [JsonStringEnumMemberName("Requested")]
-    Requested = 11,
-
-    /// <summary>It withdrew such a request.</summary>
-    [JsonStringEnumMemberName("Unrequested")]
-    Unrequested = 12,
+    Requested = 10,
 
     /// <summary>It listed the lambda in the showcase, or changed its entry.</summary>
     [JsonStringEnumMemberName("Showcased")]
-    Showcased = 13,
-
-    /// <summary>It took the lambda out of the showcase.</summary>
-    [JsonStringEnumMemberName("Unshowcased")]
-    Unshowcased = 14,
+    Showcased = 11,
 
     /// <summary>It changed how the lambda's editor opens.</summary>
     [JsonStringEnumMemberName("Viewed")]
-    Viewed = 15,
+    Viewed = 12,
 
     /// <summary>It wrote a file into the lambda's workspace.</summary>
     [JsonStringEnumMemberName("Wrote")]
-    Wrote = 16,
+    Wrote = 13,
 
     /// <summary>It removed a file from the lambda's workspace.</summary>
     [JsonStringEnumMemberName("Removed")]
-    Removed = 17
+    Removed = 14
 
 }

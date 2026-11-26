@@ -52,8 +52,6 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
             return Describe(lambda);
         }
 
-        var was = lambda.Connectivity == ConnectivityStatus.Requested;
-
         if (lambda.Connectivity != ConnectivityStatus.Requested)
         {
             // asked anew: it waits from now, and what was said about the
@@ -69,12 +67,12 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
         logger.LogInformation("Requested connectivity for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
 
-        await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Requested, lambda.Id, Was: was), CancellationToken.None);
+        await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Requested, lambda.Id), CancellationToken.None);
 
         return Describe(lambda);
     }
 
-    public async ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default)
+    public async ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, CancellationToken cancellation = default)
     {
         var id = await meta.RequireEditableAsync(privateKey, cancellation);
 
@@ -95,8 +93,6 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
 
             logger.LogInformation(previous == ConnectivityStatus.Allowed ? "Gave up connectivity of lambda {Lambda} #{LambdaId}" : "Withdrew connectivity request of lambda {Lambda} #{LambdaId}",
                                   lambda.PublicKey, lambda.Id);
-
-            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Unrequested, lambda.Id, Was: true), CancellationToken.None);
         }
 
         return Describe(lambda);

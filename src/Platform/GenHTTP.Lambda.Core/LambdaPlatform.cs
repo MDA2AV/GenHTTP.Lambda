@@ -348,7 +348,6 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<AgentContext>();
         services.AddSingleton<AgentFollower>();
         services.AddSingleton<AgentOutcome>();
-        services.AddSingleton<AgentUndo>();
         services.AddSingleton<IAgentJournal, AgentJournal>();
         services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<EventReader>();

@@ -309,8 +309,6 @@ export interface AppHand {
   putOnline: (feature: Feature) => void;
   /** Puts a message into the box, for the agent to do in a draft. */
   ask: (text: string, feature: Feature) => void;
-  /** Undoes what a turn did, where the platform says it can. */
-  undo: (turn: Turn) => void;
   /** Carries a turn on where it stopped: it waited for somebody, or ran out of time. */
   goOn: (turn: Turn) => void;
   /** Opens an app this browser knows, by its public key - one a message built beside this one. */
@@ -450,11 +448,7 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
   // left to undo, and a draft put online is no draft any more
   const draft = result?.feature ? app.features.find((feature) => feature.key === result.feature) : undefined;
   const live = online != null && app.active === online;
-  // what the platform says it can undo; a turn kept from before it said so
-  // offers what it always did - the version online before, back online
-  // only the newest: what an older message did may have been undone or
-  // changed since, and its record says nothing of that
-  const undoable = newest && (result?.undo ? result.undo.possible : live && before != null && before !== online);
+  const undoable = live && before != null && before !== online;
   const deployable = version != null && online == null && result?.compiles !== false && app.active !== version;
   const cut = result?.reason === 'timeout' || result?.reason === 'turns';
   const retry = !cut && (turn.state === 'failed' || (result != null && !result.ok && !result.answered && !result.declined && !result.summary));
@@ -514,7 +508,7 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
         {undoable && (
           <button
             type="button"
-            onClick={() => (result?.undo ? app.undo(turn) : app.deploy(before!))}
+            onClick={() => app.deploy(before!)}
             disabled={app.busy}
             title={said.results.undoTitle}
             className="btn-ghost !px-3 !py-1.5 text-[13px]"

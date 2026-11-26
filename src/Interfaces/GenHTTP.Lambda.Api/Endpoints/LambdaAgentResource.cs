@@ -35,8 +35,8 @@ namespace GenHTTP.Lambda.Api;
 
          What a message came to - what it saved, put online, switched on, what the app waits for afterwards - is read from what
          the platform recorded of its calls, never from what the agent said. It may end with a question (`result.asked`), which the
-         next message answers (`continues`); and what it did can be undone, where that can be (`result.undo`,
-         `POST …/agent/undo`).
+         next message answers (`continues`). The version that was online before (`result.before`) is put back online with
+         `POST …/deployment/start`.
 
          One message of a lambda runs at a time. Messages count against the same daily allowance as builds, per address, which
          starts again at midnight UTC. Demos cannot be changed. Errors that come from the agent carry `status` and `message`
@@ -136,31 +136,6 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
 
         // the service logs what it stopped, where there was something
         return await agents.StopAsync(lambda, request.Client.Address);
-    }
-
-    [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/undo")]
-    [Summary("Undoes what a message did")]
-    [Remarks("""
-             As one step, where it can be undone, and only where it is still as the message left it: the version that was online
-             before goes back online - the message's versions stay in the history - a draft it started is discarded, a request to
-             connect it made is withdrawn, the source it published taken down, the showcase entry it made taken out, the view it
-             changed set back. What would delete data stays - a kind of data or analytics switched on, files in the workspace - and
-             so does a new app; the answer says what was undone and what was left. Undoing twice does nothing more.
-             """)]
-    [Response(ResponseStatus.NotFound, "No lambda has this editor key, there is no such message about it, or no agent.",
-              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [Response(ResponseStatus.Conflict, "The message is still under way. Stop it first.")]
-    [return: Summary("What was undone, and what was left")]
-    public async ValueTask<UndoOutcome> Undo([Summary(ApiDocumentation.PrivateKey)] string privateKey, UndoRequest? body)
-    {
-        var lambda = await meta.RequireEditableAsync(privateKey);
-
-        var undone = await agents.UndoAsync(lambda, privateKey, body?.Run);
-
-        logger.LogInformation("Undid change {Change} of lambda {Lambda} undone {Undone} kept {Kept}", body?.Run ?? "(newest)", await meta.PublicKeyOfAsync(privateKey),
-                              string.Join(',', undone.Undone), string.Join(',', undone.Kept));
-
-        return undone;
     }
 
     [ResourceMethod("lambdas/:privateKey/agent/files")]

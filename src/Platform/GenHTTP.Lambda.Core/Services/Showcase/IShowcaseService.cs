@@ -26,7 +26,7 @@ public interface IShowcaseService
     /// <summary>
     /// Takes the lambda out of the showcase. Nothing happens when it was not in it.
     /// </summary>
-    ValueTask RemoveAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default);
+    ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Forgets the entry of a lambda that is being deleted, and its picture.

@@ -189,35 +189,7 @@ export const workspace = {
     /** Carries on where a message stopped: it waited for something, or ran out of time. */
     goOn: 'Go on',
     goOnTitle: 'Carry on where it stopped, without asking again',
-    /** Undoes what a message did, where it can. */
-    undoTitle: 'Undo what this message did',
-    undoDialog: 'Undo this message?',
-    undoes: 'This is undone:',
-    keeps: 'This stays as it is:',
-    /** What undoing a message undoes. */
-    undone: {
-      online: 'What was online before goes back online.',
-      draft: 'The draft it started is discarded.',
-      connectivity: 'Its request to use other services is withdrawn.',
-      source: 'The published code is taken down.',
-      showcase: 'Your app leaves the showcase.',
-      view: 'The editor opens as it did before.',
-    } as Record<string, string>,
-    /** What undoing a message leaves as it is, and why. */
-    kept: {
-      versions: 'What it changed stays in the history of your app, to go back to.',
-      lambda: 'A new app it built stays.',
-      data: 'Records, keys and passwords or saving files stay switched on - switching them off deletes them.',
-      analytics: 'Counting visitors stays on - switching it off deletes what was counted.',
-      workspace: 'Files it saved for your app stay.',
-      draft: 'What it changed in a draft it did not start stays.',
-      undone: 'It was undone already.',
-    } as Record<string, string>,
-    /** After undoing: what changed since the message stayed, as it was not as the message left it. */
-    changedSince: 'Some of it changed since, so that stayed.',
-    /** After undoing: what was online before could not go back online - it is gone, or does not run any more. */
-    notUndone: 'What was online before could not be put back, so what is online now stays.',
-    undoneDone: 'Undone.',
+    undoTitle: 'Put what was online before back online',
     /** A new app the agent built beside this one, by its address name; its editor link is in the answer. */
     created: (name: string) => `Built a new app: ${name}`,
     /** The settings it changed, each a small mark under the answer. */

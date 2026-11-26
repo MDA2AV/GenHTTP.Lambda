@@ -187,12 +187,6 @@ public interface IAgentService
     /// </summary>
     ValueTask<AgentState> StopAsync(long lambda, IPAddress? caller);
 
-    /// <summary>
-    /// Undoes what a run did to its lambda, where that can be undone.
-    /// </summary>
-    /// <param name="run">The run, or nothing for the newest one</param>
-    ValueTask<UndoOutcome> UndoAsync(long lambda, string privateKey, string? run, CancellationToken cancellation = default);
-
     #endregion
 
 }

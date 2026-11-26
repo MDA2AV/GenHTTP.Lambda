@@ -39,8 +39,8 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// <see cref="BuildAllowance"/> counts the runs of each address,
 /// <see cref="AgentAttachments"/> keeps the files, <see cref="AgentContext"/>
 /// puts together what the agent is handed, <see cref="AgentFollower"/> takes
-/// what it tells into the records, <see cref="AgentOutcome"/> reads what came
-/// of a run from them and <see cref="AgentUndo"/> undoes it.
+/// what it tells into the records and <see cref="AgentOutcome"/> reads what
+/// came of a run from them.
 /// </para>
 /// <para>
 /// Without an integration the installation has no agent: the boxes are not
@@ -50,7 +50,7 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// </remarks>
 public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, BuildAllowance allowance, UploadAllowance uploads, AgentCredentials credentials,
                                  AgentRunRecords records,
-                                 AgentAttachments attachments, AgentContext context, AgentFollower follower, AgentOutcome outcome, AgentUndo undo,
+                                 AgentAttachments attachments, AgentContext context, AgentFollower follower, AgentOutcome outcome,
                                  AgentSignals signals, IMetaService meta, ILogger<AgentService> logger,
                                  IAgentProvider? provider = null) : IAgentService
 {
@@ -503,29 +503,6 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
         }
 
         logger.LogInformation("Stopped run {Run}", current.Id);
-    }
-
-    public async ValueTask<UndoOutcome> UndoAsync(long lambda, string privateKey, string? run, CancellationToken cancellation = default)
-    {
-        Require();
-
-        var chosen = run is { Length: > 0 }
-            ? await records.GetAsync(run, cancellation)
-            : await records.NewestOfAsync(lambda, cancellation);
-
-        if (chosen == null || chosen.LambdaId != lambda || chosen.Kind != AgentRunKind.Change)
-        {
-            throw new ProviderException(ResponseStatus.NotFound, "There is no such change of this lambda to undo.");
-        }
-
-        if (chosen.State != AgentRunState.Ended)
-        {
-            throw new ProviderException(ResponseStatus.Conflict, "The change is still under way. Stop it first.");
-        }
-
-        var read = await outcome.ReadAsync(chosen, cancellation);
-
-        return await undo.UndoAsync(read, privateKey, cancellation);
     }
 
     #endregion

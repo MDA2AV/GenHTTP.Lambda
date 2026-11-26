@@ -487,23 +487,6 @@ export interface RunBlocker {
   names?: string[] | null;
 }
 
-/** What undoing a run would do, and what it would leave. */
-export interface UndoOffer {
-  possible: boolean;
-  /** online, draft, connectivity, source, showcase, view */
-  undoes: string[];
-  /** versions, lambda, data, analytics, workspace, draft, undone */
-  keeps: string[];
-}
-
-/** What undoing a run did. */
-export interface UndoOutcome {
-  undone: string[];
-  /** As keeps, with changed:… for what changed since and so stayed. */
-  kept: string[];
-  online?: number | null;
-}
-
 /** How a build is getting on. */
 export interface BuildProgress {
   state: string;
@@ -613,8 +596,6 @@ export interface ChangeResult {
   question?: string | null;
   /** What the app waits for after it, and whom - read off the platform's records. */
   waitsFor?: RunBlocker[] | null;
-  /** What undoing it would do and leave. */
-  undo?: UndoOffer | null;
   /** New apps it created beside this one, by public key. */
   created?: string[] | null;
   /** Those apps with their editor keys, which the platform hands to nobody but the owner who asked. */
@@ -1962,8 +1943,8 @@ export interface UsageReportStatus {
 
 /** What the installation keeps some of its data in: its database, its files or its secrets. */
 export interface Integration {
-  /** What it keeps: the database, the lambdas' files, or their secrets. */
-  kind: 'database' | 'files' | 'secrets';
+  /** What it is: what keeps the database, the lambdas' files or their secrets, or the agent that builds apps. */
+  kind: 'database' | 'files' | 'secrets' | 'agent';
   /** What it is called, such as SQLite or PostgreSQL. */
   name: string;
   /** The assembly it is in, which names it - what a host references to use it. */
@@ -2304,8 +2285,6 @@ export const api = {
     stop: (privateKey: string) => request<AgentState>(`/lambdas/${privateKey}/agent/stop`, { method: 'POST' }),
     /** Where the run under way is pushed as it goes on: see followRun. */
     events: (privateKey: string) => `${base}/lambdas/${privateKey}/agent/events`,
-    /** Undoes what a message did, where it can - the newest, or the one named. */
-    undo: (privateKey: string, run?: string) => request<UndoOutcome>(`/lambdas/${privateKey}/agent/undo`, send({ run })),
   },
 
   showcase: (privateKey: string) => request<OwnShowcase>(`/lambdas/${privateKey}/showcase`),

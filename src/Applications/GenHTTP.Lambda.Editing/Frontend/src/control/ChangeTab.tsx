@@ -743,7 +743,6 @@ function Outcome({ control, job, choice, onAgain }: { control: Control; job: Cha
   const kit = useT();
   const language = useLanguage();
   const { simple } = control;
-  const [undoing, setUndoing] = useState(false);
   const [going, setGoing] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -774,9 +773,7 @@ function Outcome({ control, job, choice, onAgain }: { control: Control; job: Cha
   // left to undo
   const live = online != null && lambda.activeVersion === online;
   const deployable = version != null && online == null && result?.compiles !== false && lambda.activeVersion !== version;
-  // what the platform says it can undo; a change from before it said so
-  // offers what it always did - the version online before, back online
-  const undoable = result?.undo ? result.undo.possible : live && before != null && before !== online;
+  const undoable = live && before != null && before !== online;
   const cut = result?.reason === 'timeout' || result?.reason === 'turns';
   const retry = !cut && !result?.answered && !result?.asked && (!result?.ok || (version == null && !left && !gone && result.online == null));
 
@@ -864,12 +861,12 @@ function Outcome({ control, job, choice, onAgain }: { control: Control; job: Cha
           {undoable && (
             <button
               type="button"
-              onClick={() => (result?.undo ? setUndoing(true) : control.deploy(before))}
+              onClick={() => control.deploy(before)}
               disabled={busy !== null}
               title={simple ? t.simple.undoTitle : said.undoTitle}
               className="btn-ghost !px-3 !py-1.5 text-[13px]"
             >
-              {simple || result?.undo ? t.simple.undo : said.undo(before!)}
+              {simple ? t.simple.undo : said.undo(before!)}
             </button>
           )}
 
@@ -910,70 +907,7 @@ function Outcome({ control, job, choice, onAgain }: { control: Control; job: Cha
     )}
 
     {problem && <p className="border-t border-slate-200 px-4 py-2 text-sm text-red-500 dark:border-ink-800">{problem}</p>}
-
-    <Dialog
-      title={words.undoDialog}
-      open={undoing}
-      onClose={() => setUndoing(false)}
-      footer={
-        <>
-          <button type="button" className="btn-ghost" onClick={() => setUndoing(false)}>
-            {t.frame.cancel}
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={async () => {
-              setUndoing(false);
-
-              const outcome = await control.agent.undo(job.id);
-
-              setProblem(
-                typeof outcome === 'string'
-                  ? outcome
-                  : outcome.kept.some((kept) => kept.startsWith('failed:'))
-                    ? words.notUndone
-                    : outcome.kept.some((kept) => kept.startsWith('changed:'))
-                      ? words.changedSince
-                      : null,
-              );
-            }}
-          >
-            {t.simple.undo}
-          </button>
-        </>
-      }
-    >
-      <UndoList undoes={result?.undo?.undoes ?? []} keeps={result?.undo?.keeps ?? []} words={words} />
-    </Dialog>
     </>
-  );
-}
-
-/** What undoing a change does and leaves, as the platform says before it is done. */
-function UndoList({ undoes, keeps, words }: {
-  undoes: string[];
-  keeps: string[];
-  words: { undoes: string; keeps: string; undone: Record<string, string>; kept: Record<string, string> };
-}) {
-  const parts: [string, string[], Record<string, string>][] = [
-    [words.undoes, undoes.filter((what) => words.undone[what]), words.undone],
-    [words.keeps, keeps.filter((what) => words.kept[what]), words.kept],
-  ];
-
-  return (
-    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-      {parts.filter(([, list]) => list.length > 0).map(([title, list, text]) => (
-        <div key={title}>
-          <p className="font-medium text-slate-800 dark:text-slate-200">{title}</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {list.map((what) => (
-              <li key={what}>{text[what]}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
   );
 }
 
