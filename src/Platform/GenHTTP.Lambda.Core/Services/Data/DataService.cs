@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Integrations.Databases;
@@ -18,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Data;
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
                                 IFeatureService features, ISecretVault secrets, IDatabaseVault stores, IDatabaseProvider provider, IDeploymentService deployments,
-                                ILogger<DataService> logger) : IDataService
+                                IAgentJournal journal, ILogger<DataService> logger) : IDataService
 {
 
     #region Functionality
@@ -50,7 +52,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
         return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], null, cancellation);
     }
 
-    public async ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default)
+    public async ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         var wanted = DataKinds.Require(kind);
 
@@ -68,6 +70,8 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             await SwitchAsync(id, wanted, true);
 
             logger.LogInformation("Enabled {Kind} of lambda #{LambdaId}", wanted.Id, id);
+
+            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Enabled, id, Name: wanted.Id), CancellationToken.None);
         }
 
         return await DescribeAsync(id, wanted, (await ReadAsync(id, CancellationToken.None))[wanted.Id], null, CancellationToken.None);

@@ -22,7 +22,8 @@ public interface IMetaService
     /// seeding it with the given template (the default one if none was named).
     /// </summary>
     /// <param name="view">How its editor opens for somebody who has not chosen a view of their own</param>
-    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, CancellationToken cancellation = default);
+    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, VersionAuthor? author = null,
+                                      CancellationToken cancellation = default);
 
     /// <summary>
     /// Reads a lambda by the private key of its editor.
@@ -77,7 +78,8 @@ public interface IMetaService
     /// Builds the given version (or the latest one) and makes it the active deployment.
     /// </summary>
     /// <param name="origin">Who is putting it online, for the deployment history</param>
-    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, CancellationToken cancellation = default);
+    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, VersionAuthor? author = null,
+                                            CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the lambda off the air, keeping its code.
@@ -115,7 +117,7 @@ public interface IMetaService
     /// Changes how the editor of the lambda opens for somebody who has not
     /// chosen a view of their own.
     /// </summary>
-    ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default);
+    ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Moves the lambda to another tier. Only ever done by an administrator.
@@ -209,6 +211,13 @@ public interface IMetaService
     /// lambda the operator blocked. Notes where the change comes from.
     /// </remarks>
     ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// The id of a lambda whose owner reads what is theirs - its messages to the
+    /// agent, say - which stays readable while it is blocked.
+    /// </summary>
+    /// <remarks>Refuses a demo, whose editor key is announced.</remarks>
+    ValueTask<long> RequireOwnAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// One page of the lambdas on the installation, narrowed and ordered as asked.

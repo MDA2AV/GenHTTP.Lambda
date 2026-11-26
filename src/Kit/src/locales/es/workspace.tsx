@@ -68,23 +68,45 @@ export const workspace: KitMessages['workspace'] = {
   ],
 
   placeholderApp: (name) => `Pregunte sobre ${name}, o diga qué debe cambiar…`,
+  placeholderAnswer: 'Su respuesta…',
+  answering: 'Su próximo mensaje responde a su pregunta.',
+  askSomethingElse: 'Preguntar otra cosa',
+  files: {
+    /** The paper clip beside the box. */
+    attach: 'Adjuntar un archivo',
+    /** What the paper clip says when pointed at: how many files and how large each may be. */
+    attachHint: (count, size) => (count === 1 ? `Adjuntar un archivo de hasta ${size}` : `Adjuntar hasta ${count} archivos de hasta ${size} cada uno`),
+    uploading: 'Subiendo…',
+    remove: 'Quitar',
+    save: 'Guardar',
+    /** Above the files someone sent with a message. */
+    attached: 'Enviado con él',
+    /** Above the files the agent wrote for the person, such as a text or a table. */
+    forYou: 'Archivos para usted',
+    tooMany: (most) => (most === 1 ? 'Solo se puede enviar un archivo con un mensaje.' : `Solo se pueden enviar ${most} archivos con un mensaje.`),
+    tooLarge: (name, most) => `${name} es demasiado grande: un archivo puede ocupar hasta ${most}.`,
+    /** A file of a kind the agent of this site takes none of, such as a video. */
+    kind: (name) => `${name} no se puede enviar con un mensaje: el agente de este sitio no acepta archivos de este tipo.`,
+    failed: (name) => `No se pudo subir ${name}. Inténtelo de nuevo en un momento.`,
+  },
+  waits: {
+    /** The AI service behind the agent has too much to do right now. */
+    overloaded: 'El servicio de IA está ocupado ahora mismo. Continúa por sí solo.',
+    /** This site used up what its account with the AI service allows for now. */
+    rateLimited: 'Este sitio ha alcanzado por ahora el límite del servicio de IA. Continuará por sí solo más tarde.',
+    preparing: 'Preparando…',
+    /** The agent of this site does not answer; it is asked again. */
+    unreachable: 'El agente no responde ahora mismo. Se le vuelve a preguntar en un momento.',
+    other: 'Esperando…',
+  },
+  until: (time) => `(hasta aproximadamente las ${time})`,
   send: 'Enviar',
   stop: 'Detener',
   stopping: 'Deteniendo…',
   goOnline: 'Poner los cambios en línea enseguida',
   goOnlineOn: 'Un cambio se pone en línea en cuanto funciona.',
   goOnlineOff: 'Un cambio queda en un borrador, para que lo pruebe antes.',
-  model: 'Modelo',
   withPassword: (model) => `${model} (contraseña)`,
-  effort: 'Esfuerzo',
-  efforts: {
-    low: 'Bajo',
-    medium: 'Medio',
-    high: 'Alto',
-    xhigh: 'Muy alto',
-    max: 'Máximo',
-  },
-  ranOn: (model, effort) => `${model}, esfuerzo: ${effort}`,
   left: (left, perDay) => `Quedan ${left} de ${perDay} hoy`,
   noneLeft: (time) => `Eso es todo por hoy. Podrá volver a preguntar a partir de ${time}.`,
   noBuilds: 'En este sitio no se crean apps nuevas. Conecte su propio asistente de IA para crear una.',
@@ -101,6 +123,7 @@ export const workspace: KitMessages['workspace'] = {
     online: 'El cambio está en línea',
     undo: 'Deshacer',
     undoTitle: 'Volver a poner en línea lo que estaba antes',
+    created: (name) => `Se construyó una app nueva: ${name}`,
     draft: 'Listo para probar en un borrador',
     draftBroken: 'El borrador aún no funciona',
     saved: 'El cambio está guardado, pero no en línea',
@@ -108,10 +131,24 @@ export const workspace: KitMessages['workspace'] = {
     earlier: 'Su app ha vuelto a como estaba antes',
     stopped: 'Detenido. Se conserva lo que había guardado.',
     failed: 'No ha funcionado.',
+    unchanged: 'No se cambió nada.',
+    brokeOff: 'Se detuvo con un error antes de terminar. Lo que haya guardado se conserva.',
+    nothingSaved: 'Se detuvo con un error antes de cambiar nada. Inténtelo de nuevo en un momento.',
+    whatWentWrong: 'Qué salió mal',
     timedOut: 'Se agotó el tiempo antes de terminar.',
     usedUp: 'Agotó sus pasos antes de terminar.',
     unauthorised: 'El agente no pudo iniciar sesión, así que no se ejecutó nada. Es un fallo de este sitio, no de su petición.',
     lost: 'No llegó ninguna respuesta. Lo que hiciera el agente está en el historial de su app, en su editor.',
+    asked: 'Una pregunta antes de continuar',
+    answerBelow: 'Responda en el cuadro de abajo y continuará desde ahí.',
+    waitsFor: {
+      /** The agent asked for the app to use other services on the internet; whoever runs this site decides. */
+      connectivity: 'Esperando permiso para usar otros servicios: lo decide quien administra este sitio.',
+      /** The names are those of the keys and passwords the app's code reads, such as WEATHER_API_KEY. */
+      keys: (names) => `Esperando a que introduzca ${names.join(', ')}.`,
+    },
+    goOn: 'Continuar',
+    goOnTitle: 'Continuar donde se detuvo, sin volver a preguntar',
     settings: {
       analytics: 'Contando visitantes desde ahora',
       database: 'Registros activados',
@@ -120,6 +157,8 @@ export const workspace: KitMessages['workspace'] = {
       source: 'Código publicado',
       connectivity: 'Se pidió permiso para usar otros servicios',
       discarded: 'Borrador descartado',
+      showcase: 'Incluida en la galería',
+      view: 'El editor se abre de otra forma',
     },
     seeSource: 'Ver el código',
     remembered: 'Este navegador también lo recuerda, en Sus apps.',

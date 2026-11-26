@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isDemo } from '../api';
 import { IconBranch, IconDots, IconInfo, IconSpark } from '../components/Icons';
@@ -219,6 +219,13 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
 }
 
 /**
+ * The order of the agent's options, as its integration has them, where the
+ * page knows it - so the mark says "opus · high" rather than the order they
+ * are kept in.
+ */
+export const AgentOrderContext = createContext<string[] | null>(null);
+
+/**
  * That an agent wrote something, or - where the page is for somebody who
  * works with code - that it was pushed with git. The only origins worth
  * marking: the rest - the template, the owner, the platform - are what
@@ -227,24 +234,32 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
 export function AgentMark({ origin, git = false, written, detail = false }: {
   origin?: string | null;
   git?: boolean;
-  /** Who wrote it, where the platform knows it - the agent running on this server, and on which model and effort. */
-  written?: { writer?: string | null; model?: string | null; effort?: string | null };
-  /** Whether the model and effort are said beside the mark, for somebody who works with code, or only in its title. */
+  /** Who wrote it, where the platform knows it - the agent running on this server, and on which of its options' values. */
+  written?: { writer?: string | null; model?: string | null; effort?: string | null; options?: Record<string, string> | null };
+  /** Whether what it ran on is said beside the mark, for somebody who works with code, or only in its title. */
   detail?: boolean;
 }) {
   const words = useShared();
+  const order = useContext(AgentOrderContext);
 
-  // the agent of this server: the model by its family's name - the version
-  // the runner ran it as is the runner's, and may have changed since
+  // the agent of this server, with the values it ran on by the names its
+  // integration gives them - opus · high - the same in every language; a
+  // version saved before the options were the integration's has a model and
+  // an effort, which are two of them
   if (written?.writer === 'build-agent') {
-    const model = written.model ? written.model.charAt(0).toUpperCase() + written.model.slice(1) : '';
-    const effort = (written.effort && words.agentEfforts[written.effort]) ?? written.effort ?? '';
-    const title = words.writtenByBuildAgent(model, effort);
+    const values = written.options ?? { model: written.model ?? '', effort: written.effort ?? '' };
+    const place = (name: string) => (order && order.includes(name) ? order.indexOf(name) : Number.MAX_SAFE_INTEGER);
+    const ranOn = Object.keys(values)
+      .sort((a, b) => place(a) - place(b))
+      .map((name) => values[name])
+      .filter(Boolean)
+      .join(' · ');
+    const title = words.writtenByBuildAgent(ranOn);
 
     return (
       <span title={title} className="inline-flex items-center gap-1 text-accent-500 dark:text-accent-400">
         <IconSpark className="h-3.5 w-3.5" />
-        {detail ? <span className="whitespace-nowrap text-[11px]">{words.ranOn(model, effort)}</span> : <span className="sr-only">{title}</span>}
+        {detail && ranOn ? <span className="whitespace-nowrap text-[11px]">{ranOn}</span> : <span className="sr-only">{title}</span>}
       </span>
     );
   }

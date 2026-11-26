@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -89,9 +90,10 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version to start from.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask<Result<FeatureResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey, CreateFeatureRequest request)
+    public async ValueTask<Result<FeatureResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey, CreateFeatureRequest request, IRequest call)
     {
-        var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigin.Api));
+        var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigin.Api,
+                                                                               Author: AgentCallerConcern.Of(call)));
 
         logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
@@ -138,9 +140,9 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Summary("Deletes a feature")]
     [Remarks("With its preview and its copy of the data. Its files are gone for good unless they were merged. The lambda is not touched.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature, IRequest call)
     {
-        var name = await features.DeleteAsync(privateKey, feature);
+        var name = await features.DeleteAsync(privateKey, feature, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, await meta.PublicKeyOfAsync(privateKey));
     }
@@ -163,8 +165,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [return: Summary("The feature afterwards, and what came of its preview where that was asked for")]
     public async ValueTask<FeatureSavedResponse> PutFiles([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                           [Summary("Whether to put its preview online with what was saved")] bool? deploy,
-                                                          FeatureFilesRequest request)
-        => await SaveAsync(privateKey, feature, VersionResource.FilesOf(request.Files), deploy, request.Specification, request.Change, request.Revision);
+                                                          FeatureFilesRequest request, IRequest call)
+        => await SaveAsync(privateKey, feature, VersionResource.FilesOf(request.Files), deploy, request.Specification, request.Change, AgentCallerConcern.Of(call), request.Revision);
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/changes")]
     [Summary("Changes some files of a feature")]
@@ -180,14 +182,14 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [return: Summary("The feature afterwards, and what came of its preview where that was asked for")]
     public async ValueTask<FeatureSavedResponse> Change([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                         [Summary("Whether to put its preview online with what was saved")] bool? deploy,
-                                                        VersionChangeRequest request)
+                                                        VersionChangeRequest request, IRequest call)
     {
         var read = await features.GetAsync(privateKey, feature);
 
         var files = LambdaChanges.Apply(read.Files, request.Files, request.Remove, request.Edits);
 
         // made on top of what was read, and refused if something else was saved meanwhile
-        return await SaveAsync(privateKey, feature, files, deploy, request.Specification, request.Change, read.Feature.Revision);
+        return await SaveAsync(privateKey, feature, files, deploy, request.Specification, request.Change, AgentCallerConcern.Of(call), read.Feature.Revision);
     }
 
     [ResourceMethod("lambdas/:privateKey/features/:feature/zip")]
@@ -227,7 +229,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
                                                             [Summary("Whether to put its preview online with what was saved")] bool? deploy,
                                                             [Summary("What the user wants from the feature and why; left out, the one it has is kept")] string? specification,
                                                             [Summary("What it changes, in a line; left out, the one it has is kept")] string? change,
-                                                            [Summary(ApiDocumentation.Layout)] string? layout, Stream body)
+                                                            [Summary(ApiDocumentation.Layout)] string? layout, Stream body, IRequest call)
     {
         var laid = VersionResource.LayoutOf(layout);
 
@@ -238,7 +240,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         using var staged = await VersionResource.UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, (await features.GetAsync(privateKey, feature)).Files,
                                                              options.StagingDirectory);
 
-        return await SaveAsync(privateKey, feature, staged.Files, deploy, specification, change);
+        return await SaveAsync(privateKey, feature, staged.Files, deploy, specification, change, AgentCallerConcern.Of(call));
     }
 
     #endregion
@@ -358,9 +360,9 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [Response(ResponseStatus.BadRequest, "The feature holds exactly what the version it is based on holds, so there is nothing to merge.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<FeatureMergeResponse>> Merge([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                                               MergeFeatureRequest? request)
+                                                               MergeFeatureRequest? request, IRequest call)
     {
-        var note = new VersionNote(request?.Specification, request?.Change, VersionOrigin.Api);
+        var note = new VersionNote(request?.Specification, request?.Change, VersionOrigin.Api, AgentCallerConcern.Of(call));
 
         var merged = await features.MergeAsync(privateKey, feature, note, request?.Deploy == true);
 
@@ -395,9 +397,9 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     #region Helpers
 
     private async ValueTask<FeatureSavedResponse> SaveAsync(string privateKey, string feature, IReadOnlyList<VersionFile> files, bool? deploy,
-                                                            string? specification, string? change, int? after = null)
+                                                            string? specification, string? change, VersionAuthor? author, int? after = null)
     {
-        var saved = await features.SaveAsync(privateKey, feature, files, new VersionNote(specification, change), after);
+        var saved = await features.SaveAsync(privateKey, feature, files, new VersionNote(specification, change, Author: author), after);
 
         var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
@@ -422,7 +424,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     internal static FeatureResponse Describe(FeatureInfo feature)
         => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.Base, feature.Newest, feature.Mergeable,
                feature.Origin, feature.Created, feature.Modified, feature.Online, feature.Current, feature.Previewed, feature.Path, feature.Revision,
-               feature.Writer, feature.Model, feature.Effort);
+               feature.Writer, feature.Model, feature.Effort, feature.Options);
 
     private static FeaturePreviewResponse Describe(FeatureDeployment deployment)
         => new(deployment.Success, Describe(deployment.Feature), deployment.Diagnostics);

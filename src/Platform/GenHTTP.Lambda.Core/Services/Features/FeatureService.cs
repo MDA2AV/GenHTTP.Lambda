@@ -5,7 +5,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -31,7 +31,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
                                    IDeploymentService deployments, ISecretVault secrets, IDatabaseVault stores, IWorkspaceVault workspaces, LambdaOptions options, ILimitsService limits, ILogBook book,
-                                   DatabaseChanges changes, ILogger<FeatureService> logger)
+                                   DatabaseChanges changes, IAgentJournal journal, ILogger<FeatureService> logger)
     : IFeatureService
 {
 
@@ -281,6 +281,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         logger.LogInformation("Created feature #{FeatureId} of lambda #{LambdaId} base {Version}", entity.Id, lambdaId, from);
 
+        await journal.RecordAsync(draft.Author, new AgentEffect(AgentEffectKind.Started, lambdaId, Version: from, Feature: entity.Key, Name: entity.Name), CancellationToken.None);
+
         return Describe(entity, newest);
     }
 
@@ -378,10 +380,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         entity.Change = VersionInput.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;
 
         // who wrote what it holds now - every door saves through here, so a
-        // save the build agent did not make clears what it had written
+        // save the agent did not make clears what it had written, and what
+        // was stored as model and effort before goes with it
         entity.Writer = note?.Author?.Writer;
-        entity.AgentModel = note?.Author?.Model;
-        entity.AgentEffort = note?.Author?.Effort;
+        entity.AgentRun = note?.Author?.Run;
+        entity.AgentOptions = note?.Author is { } author ? StoredOptions.Write(author.Options) : null;
+        entity.AgentModel = null;
+        entity.AgentEffort = null;
 
         var now = DateTime.UtcNow;
 
@@ -391,6 +396,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // the files are written, so what says which revision they are is too
         await database.SaveChangesAsync(CancellationToken.None);
+
+        await journal.RecordAsync(note?.Author, new AgentEffect(AgentEffectKind.Drafted, lambda.Id, Feature: entity.Key, Name: entity.Name), CancellationToken.None);
 
         return Describe(entity, await NewestAsync(database, lambda.Id, CancellationToken.None));
     }
@@ -678,13 +685,16 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // however the caller fares, or a feature would stay behind that was merged
         await RemoveAsync(lambdaId, featureId);
 
+        // for whoever merged it, which need not be whoever wrote it
+        await journal.RecordAsync(note?.Author, new AgentEffect(AgentEffectKind.Merged, lambdaId, version.Version, Feature: feature, Name: name), CancellationToken.None);
+
         DeploymentResult? deployment = null;
 
         if (deploy)
         {
             try
             {
-                deployment = await meta.DeployAsync(privateKey, version.Version, origin, CancellationToken.None);
+                deployment = await meta.DeployAsync(privateKey, version.Version, origin, note?.Author, CancellationToken.None);
             }
             catch (Exception e)
             {
@@ -727,7 +737,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // work a version
         var merged = new VersionNote(string.IsNullOrWhiteSpace(note?.Specification) ? entity.Specification : note.Specification,
                                      string.IsNullOrWhiteSpace(note?.Change) ? entity.Change ?? $"Merges the feature '{entity.Name}'" : note.Change,
-                                     origin, AuthorOf(entity));
+                                     origin, AuthorOf(entity), Merged: true);
 
         // refused if a version was saved since the feature was based on its
         // newest, by the same turn every save of the lambda takes - the
@@ -741,7 +751,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return (version, lambda.Id, entity.Id, origin);
     }
 
-    public async ValueTask<string> DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default)
+    public async ValueTask<string> DeleteAsync(string privateKey, string feature, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         var (lambdaId, featureId, name) = await DeletedAsync(privateKey, feature, cancellation);
 
@@ -749,6 +759,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         await RemoveAsync(lambdaId, featureId);
 
         logger.LogInformation("Deleted feature #{FeatureId} of lambda #{LambdaId}", featureId, lambdaId);
+
+        await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Discarded, lambdaId, Feature: feature, Name: name), CancellationToken.None);
 
         return name;
     }
@@ -871,13 +883,17 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// Who wrote what a feature holds, where the platform knows it.
     /// </summary>
     private static VersionAuthor? AuthorOf(FeatureEntity feature)
-        => feature is { Writer: { } writer, AgentModel: { } model, AgentEffort: { } effort } ? new VersionAuthor(writer, model, effort) : null;
+        => feature.Writer is { } writer ? new VersionAuthor(writer, StoredOptions.Of(feature.AgentOptions, feature.AgentModel, feature.AgentEffort), feature.AgentRun) : null;
 
     private static FeatureInfo Describe(FeatureEntity feature, int? newest)
-        => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, VersionOriginNames.Name(feature.Origin),
-               feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
-               feature.Previewed, feature.Revision, VersionWriterNames.Name(feature.Writer), AgentCatalog.NameOf(feature.AgentModel),
-               AgentCatalog.NameOf(feature.AgentEffort));
+    {
+        var options = feature.Writer != null ? StoredOptions.Of(feature.AgentOptions, feature.AgentModel, feature.AgentEffort) : null;
+
+        return new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, VersionOriginNames.Name(feature.Origin),
+                   feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
+                   feature.Previewed, feature.Revision, VersionWriterNames.Name(feature.Writer), options?.GetValueOrDefault(AgentModelNames.ModelOption),
+                   options?.GetValueOrDefault(AgentModelNames.EffortOption), options is { Count: > 0 } ? options : null, feature.AgentRun);
+    }
 
     /// <summary>
     /// Whether a key is one this service could have handed out: 32 lower case

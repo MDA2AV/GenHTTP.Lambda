@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { api, ApiError, type AgentOffer, type AgentStep, type BuildResult } from '../api';
+import { api, ApiError, followRun, isOver, type AgentOffer, type BuildProgress, type BuildResult } from '../api';
 import { AgentChoice, useAgentChoice } from '../components/AgentChoice';
-import { useT } from '../i18n';
+import { useAttachments } from '../components/useAttachments';
+import { useLanguage, useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { Composer } from './Composer';
 import { Asked, BuildAnswer, type Following } from './Turns';
-import { pend, pendingOf, remember, saidIn, useWorkspace, type KnownApp, type Turn } from './store';
+import { keepTurn, pend, pendingOf, remember, saidIn, useWorkspace, type KnownApp, type Turn } from './store';
 
 /**
  * A new app: the first message, before there is anything to talk about.
@@ -22,6 +23,9 @@ import { pend, pendingOf, remember, saidIn, useWorkspace, type KnownApp, type Tu
  * conversation goes on where the build ended. The build is remembered while
  * it runs too, so a reload - or a tab closed and opened again within the hour
  * the agent keeps it - finds it again, and with it the editor key it makes.
+ *
+ * A build that asks something before it makes an app stays here: the next
+ * message answers it, and the build carries on from there.
  */
 export function NewApp({
   intro,
@@ -50,14 +54,25 @@ export function NewApp({
   const words = t.workspace;
   const kept = useWorkspace();
 
+  const language = useLanguage();
+
   const [prompt, setPrompt] = useState('');
   const [turn, setTurn] = useState<Turn | null>(null);
+  /** The turns before it, while a build asks before it makes an app. */
+  const [earlier, setEarlier] = useState<Turn[]>([]);
+  const before = useRef(earlier);
+  before.current = earlier;
   const [following, setFollowing] = useState<Following | null>(null);
   const choice = useAgentChoice(offer);
+  const attachments = useAttachments(offer?.attachments, words.files);
   const [sending, setSending] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const field = useRef<HTMLTextAreaElement>(null);
-  const polling = useRef<number | null>(null);
+  const listening = useRef<(() => void) | null>(null);
+  const retry = useRef<number | undefined>(undefined);
+  const alive = useRef(true);
   const hooks = useRef({ onBuilt });
   hooks.current = { onBuilt };
 
@@ -73,98 +88,157 @@ export function NewApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending?.id]);
 
-  useEffect(() => () => {
-    if (polling.current) window.clearInterval(polling.current);
+  useEffect(() => {
+    alive.current = true;
+
+    return () => {
+      alive.current = false;
+      window.clearTimeout(retry.current);
+      listening.current?.();
+    };
   }, []);
 
-  function follow(id: string, asked: string, at: number) {
-    if (polling.current) window.clearInterval(polling.current);
+  /**
+   * Follows a build as the platform pushes it, until it ended. Where the
+   * stream cannot be had, it is read once: forgotten, ended, or still under
+   * way - and then followed again a moment later.
+   */
+  function follow(id: string, asked: string, at: number, files?: Turn['attachments']) {
+    if (!alive.current) return;
 
-    const poll = async () => {
-      let job: Awaited<ReturnType<typeof api.builds.progress>>;
+    listening.current?.();
+    window.clearTimeout(retry.current);
 
-      try {
-        job = await api.builds.progress(id);
-      } catch (error) {
-        // forgotten by the agent: nothing more will come of it
-        if (error instanceof ApiError && error.status === 404) {
-          if (polling.current) window.clearInterval(polling.current);
-          pend(null);
-          setTurn(null);
-          setFollowing(null);
-        }
+    const again = (after: number) => {
+      window.clearTimeout(retry.current);
+      retry.current = window.setTimeout(() => follow(id, asked, at, files), after);
+    };
 
-        return;
-      }
+    const take = (job: BuildProgress) => {
+      if (!alive.current) return;
 
       setFollowing({
-        run: { state: job.state, waiting: job.waiting ?? 0, seconds: job.seconds ?? 0, limit: job.limit ?? null },
+        run: { state: job.state, waiting: job.waiting ?? 0, seconds: job.seconds ?? 0, limit: job.limit ?? null, wait: job.wait ?? null },
         steps: job.steps ?? [],
         received: Date.now(),
+        files: job.files ?? null,
       });
 
-      if (job.state === 'done' || job.state === 'failed' || job.state === 'cancelled') {
-        if (polling.current) window.clearInterval(polling.current);
-
-        finish(id, asked, at, job.state, job.result ?? { ok: false, error: said.noAnswer }, job.steps ?? [], job.seconds ?? 0);
+      if (isOver(job.state)) {
+        finish(id, asked, at, job, files ?? job.attachments ?? undefined);
       } else {
         setTurn((was) => (was && was.state !== job.state ? { ...was, state: job.state as Turn['state'] } : was));
       }
     };
 
-    // asked once straight away, so a queue shows up without a wait of its own
-    void poll();
-    polling.current = window.setInterval(poll, 2500);
+    const gone = async () => {
+      try {
+        const job = await api.builds.progress(id);
+
+        take(job);
+
+        if (!isOver(job.state)) {
+          again(3000);
+        }
+      } catch (error) {
+        if (!alive.current) return;
+
+        // forgotten: nothing more will come of it
+        if (error instanceof ApiError && error.status === 404) {
+          pend(null);
+          setTurn(null);
+          setEarlier([]);
+          setFollowing(null);
+        } else {
+          again(5000);
+        }
+      }
+    };
+
+    listening.current = followRun<BuildProgress>(api.builds.events(id), 'progress', take, (job) => isOver(job.state), () => void gone());
   }
 
-  function finish(id: string, asked: string, at: number, state: string, result: BuildResult, steps: AgentStep[], seconds: number) {
+  function finish(id: string, asked: string, at: number, job: BuildProgress, files?: Turn['attachments']) {
+    const result: BuildResult = job.result ?? { ok: false, error: said.noAnswer };
     const ended: Turn = {
       id,
       kind: 'build',
       at,
       prompt: asked,
-      state: state === 'done' && result.ok ? 'done' : 'failed',
+      state: job.state === 'done' && (result.ok || result.asked === true) ? 'done' : 'failed',
       built: result,
-      said: saidIn(steps),
-      seconds,
+      said: saidIn(job.steps ?? []),
+      seconds: job.seconds ?? 0,
+      attachments: files,
+      files: job.files ?? undefined,
     };
 
-    pend(null);
+    // a question with no app yet waits here for its answer, after a reload too
+    pend(result.asked && !result.privateKey ? { id, prompt: asked, at, asked: true } : null);
     setFollowing(null);
 
+    // made an app - asking something or not: the conversation goes on there
     if (ended.state === 'done' && result.privateKey && result.publicKey) {
       const app = { privateKey: result.privateKey, publicKey: result.publicKey, online: result.deployed !== false };
 
-      remember(app, ended);
+      // the questions asked on the way to it are its conversation too
+      const turns = [...before.current, ended];
+
+      remember(app, turns[0]);
+      turns.slice(1).forEach((next) => keepTurn(app.privateKey, next));
       setTurn(null);
-      hooks.current.onBuilt({ ...app, added: Date.now(), opened: Date.now(), turns: [ended] });
+      setEarlier([]);
+      hooks.current.onBuilt({ ...app, added: Date.now(), opened: Date.now(), turns });
       return;
     }
 
     setTurn(ended);
   }
 
+  // a build that asked something and made no app yet: the next message answers it
+  const answering = turn?.built?.asked === true && !turn.built.privateKey ? turn : null;
+
   async function start() {
     const asked = prompt.trim();
 
-    if (asked.length < 3 || sending) return;
+    if (asked.length < 3 || sending || attachments.uploading) return;
 
     setSending(true);
+    setProblem(null);
 
     try {
-      const started = await api.builds.start(asked, choice.request);
+      const sent = attachments.files;
+      const started = await api.builds.start(asked, {
+        ...choice.request,
+        attachments: attachments.ids.length > 0 ? attachments.ids : undefined,
+        language,
+        continues: answering?.id,
+        history: answering ? [{ prompt: answering.prompt, reply: answering.built?.question ?? null }] : undefined,
+      });
       const at = Date.now();
 
-      pend({ id: started.id, prompt: asked, at, model: started.model ?? choice.model });
+      pend({ id: started.id, prompt: asked, at, model: started.model ?? undefined });
 
       if (started.left != null) {
         onLeft(started.left);
       }
 
       setPrompt('');
-      setTurn({ id: started.id, kind: 'build', at, prompt: asked, state: 'queued' });
-      follow(started.id, asked, at);
+      attachments.clear();
+
+      if (answering) {
+        setEarlier((was) => [...was, answering]);
+      }
+
+      setTurn({ id: started.id, kind: 'build', at, prompt: asked, state: 'queued', attachments: sent, continues: answering?.id });
+      follow(started.id, asked, at, sent);
     } catch (error) {
+      // answering a question: the question stays, and what went wrong is said beside it
+      if (answering) {
+        setProblem(error instanceof ApiError ? error.message : said.failedToStart);
+        return;
+      }
+
       setTurn({
         id: `refused-${Date.now()}`,
         kind: 'build',
@@ -178,18 +252,43 @@ export function NewApp({
     }
   }
 
-  const ready = prompt.trim().length >= 3 && !sending && choice.ready;
+  const ready = prompt.trim().length >= 3 && !sending && !attachments.uploading && choice.ready;
   const running = turn?.state === 'queued' || turn?.state === 'running';
 
   const again = () => {
     if (!turn) return;
 
     setPrompt(turn.prompt);
-    setTurn(null);
+
+    // an answer that failed is asked again as the answer, the question back in its place
+    const question = turn.continues ? earlier.at(-1) : undefined;
+
+    if (question && question.id === turn.continues) {
+      setTurn(question);
+      setEarlier(earlier.slice(0, -1));
+    } else {
+      setTurn(null);
+      setEarlier([]);
+    }
+
     window.requestAnimationFrame(() => field.current?.focus());
   };
 
-  const choosing = (offer?.models.length ?? 0) > 1 || (offer?.efforts.length ?? 0) > 1;
+  async function stop() {
+    if (!turn) return;
+
+    setStopping(true);
+
+    try {
+      await api.builds.stop(turn.id);
+    } catch (error) {
+      setProblem(error instanceof ApiError ? error.message : said.failedToStart);
+    } finally {
+      setStopping(false);
+    }
+  }
+
+  const choosing = choice.options.some((option) => option.values.length > 1);
 
   const footer =
     choosing || allowance ? (
@@ -220,6 +319,7 @@ export function NewApp({
                 large
                 field={field}
                 footer={footer}
+                attachments={offer?.attachments ? attachments : null}
               />
 
               {choice.guarded && <p className="mt-2 px-1 text-xs text-slate-500">{said.unlimited}</p>}
@@ -261,24 +361,38 @@ export function NewApp({
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-8 sm:px-6">
-          <Asked>{turn.prompt}</Asked>
+          {earlier.map((before) => (
+            <div key={before.id} className="space-y-5">
+              <Asked files={before.attachments}>{before.prompt}</Asked>
+              <BuildAnswer turn={before} />
+            </div>
+          ))}
+          <Asked files={turn.attachments}>{turn.prompt}</Asked>
           <BuildAnswer turn={turn} following={following} onAgain={again} />
         </div>
       </div>
 
       <div className="shrink-0 px-4 pb-4 sm:px-6">
         <div className="mx-auto w-full max-w-3xl">
+          {problem && (
+            <p className="mb-2 px-1 text-sm text-red-600 dark:text-red-400">{problem}</p>
+          )}
+          {answering && <p className="mb-2 px-1 text-xs font-medium text-accent-700 dark:text-accent-400">{words.answering}</p>}
           <Composer
             value={prompt}
             onChange={setPrompt}
             onSend={start}
-            placeholder={said.placeholder}
-            label={said.placeholder}
+            placeholder={answering ? words.placeholderAnswer : said.placeholder}
+            label={answering ? words.placeholderAnswer : said.placeholder}
             ready={ready && !running}
             busy={sending}
-            disabled={running || !offered}
+            running={running}
+            stopping={stopping}
+            onStop={offer?.cancels === false ? undefined : stop}
+            disabled={!offered}
             field={field}
             footer={footer}
+            attachments={offer?.attachments ? attachments : null}
           />
         </div>
       </div>

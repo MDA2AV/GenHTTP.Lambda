@@ -4,7 +4,7 @@ export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Vorrei un’app che…',
   password: 'password',
   unlimited:
-    'Questo modello richiede la password e poi lavora senza limite di tempo: va avanti finché la Sua app non è finita, invece di fermarsi allo scadere del tempo.',
+    'Questa scelta richiede la password del sito e poi dispone del tempo e dei passaggi stabiliti per lei, invece di quelli consueti.',
   ideas: [
     'un’app per la nostra associazione dove i soci si iscrivono agli eventi',
     'una lista per la cena in cui ognuno porta un piatto, così non ci sono doppioni',
@@ -39,6 +39,10 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Uno sguardo a ciò che ha salvato',
     services: 'Richiesta di usare altri servizi',
     site: (site) => `Consultazione di ${site}`,
+    search: 'Ricerca di qualcosa sul web',
+    attachment: 'Lettura del file che ha inviato',
+    showcase: 'Inserimento nella Vetrina',
+    file: 'Scrittura di un file per Lei',
   },
   further: 'Il suo link di modifica',
   keep:

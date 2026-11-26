@@ -220,7 +220,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             try
             {
-                version = await meta.SaveAsync(lambda.PrivateKey, step.Read.Files!, new VersionNote(specification, change, VersionOrigin.Git), after);
+                version = await meta.SaveAsync(lambda.PrivateKey, step.Read.Files!, new VersionNote(specification, change, VersionOrigin.Git, lambda.Author), after);
             }
             catch (LambdaException e) when (saved.Count > 0)
             {
@@ -271,7 +271,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         foreach (var (key, tip) in index.Features.Where(f => made.Contains(f.Value.Commit)).ToList())
         {
-            var name = await features.DeleteAsync(lambda.PrivateKey, key);
+            var name = await features.DeleteAsync(lambda.PrivateKey, key, lambda.Author);
 
             index.Features.Remove(key);
 
@@ -304,7 +304,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
                 return;
             }
 
-            var name = await features.DeleteAsync(lambda.PrivateKey, feature.Key);
+            var name = await features.DeleteAsync(lambda.PrivateKey, feature.Key, lambda.Author);
 
             index.Features.Remove(feature.Key);
 
@@ -378,7 +378,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         if (feature == null)
         {
-            feature = await features.CreateAsync(lambda.PrivateKey, new FeatureDraft(Name(branch), Base: based, Origin: VersionOrigin.Git, Branch: branch));
+            feature = await features.CreateAsync(lambda.PrivateKey, new FeatureDraft(Name(branch), Base: based, Origin: VersionOrigin.Git, Branch: branch, Author: lambda.Author));
         }
         else if (feature.Base != based)
         {
@@ -387,13 +387,13 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         try
         {
-            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, read.Files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigin.Git),
+            feature = await features.SaveAsync(lambda.PrivateKey, feature.Key, read.Files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigin.Git, Author: lambda.Author),
                                               after: feature.Revision);
         }
         catch (LambdaException) when (started)
         {
             // refused, so the branch is not there: neither is the feature started for it
-            await features.DeleteAsync(lambda.PrivateKey, feature.Key);
+            await features.DeleteAsync(lambda.PrivateKey, feature.Key, lambda.Author);
             throw;
         }
 
@@ -498,7 +498,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             return;
         }
 
-        var merged = await features.MergeAsync(lambda.PrivateKey, feature.Key, new VersionNote(Origin: VersionOrigin.Git), deploy);
+        var merged = await features.MergeAsync(lambda.PrivateKey, feature.Key, new VersionNote(Origin: VersionOrigin.Git, Author: lambda.Author), deploy);
 
         if (!merged.Merged)
         {
@@ -560,7 +560,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
     private async ValueTask DeployAsync(GitLambda lambda, int version, Said said)
     {
-        var result = await meta.DeployAsync(lambda.PrivateKey, version, VersionOrigin.Git);
+        var result = await meta.DeployAsync(lambda.PrivateKey, version, VersionOrigin.Git, lambda.Author);
 
         await DeployedAsync(lambda, result, version, said);
     }

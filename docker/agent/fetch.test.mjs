@@ -135,8 +135,20 @@ test('the server speaks MCP and refuses what is not a named public site', async 
     assert.equal((await call({ jsonrpc: '2.0', method: 'notifications/initialized' })).status, 202);
 
     const list = await call({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-    assert.deepEqual(list.body.result.tools.map(t => t.name), ['fetch']);
+    assert.deepEqual(list.body.result.tools.map(t => t.name), ['fetch', 'hand_over']);
     assert.equal(list.body.result.tools[0].annotations.readOnlyHint, true);
+
+    // a build that may read no site has nothing to fetch with, but may hand a file over
+    const none = await call({ jsonrpc: '2.0', id: 9, method: 'tools/list' }, '');
+    assert.deepEqual(none.body.result.tools.map(t => t.name), ['hand_over']);
+
+    const handed = await call({ jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'hand_over', arguments: { name: 'notes.md', mediaType: 'text/markdown', content: '# Hi' } } });
+    assert.match(handed.body.result.content[0].text, /Handed notes.md over/, 'kept nowhere here: the runner reads it off the call');
+
+    // where the runner reads any public site, any name is one - and its address is checked all the same
+    const any = await call({ jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'fetch', arguments: { url: 'http://127.0.0.1/' } } }, '*');
+    assert.match(any.body.result.content[0].text, /not a public address/);
+    assert.match((await call({ jsonrpc: '2.0', id: 12, method: 'tools/list' }, '*')).body.result.tools[0].description, /any public site/);
 
     const inside = await call({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'fetch', arguments: { url: `http://127.0.0.1:${port}/mcp` } } });
     assert.equal(inside.body.result.isError, true);
@@ -156,4 +168,27 @@ test('the server speaks MCP and refuses what is not a named public site', async 
   } finally {
     server.close();
   }
+});
+
+test('a page made to take long is read in time, and nothing waits for it meanwhile', async () => {
+  const { readable, readableApart } = forTests;
+
+  // what took minutes with the patterns alone
+  for (const hostile of ['<!--'.repeat(200_000), '<a x=1 '.repeat(100_000), '<script>'.repeat(100_000)]) {
+    const started = Date.now();
+    readable(hostile, 'https://example.org/');
+    assert.ok(Date.now() - started < 2000, `read in ${Date.now() - started} ms`);
+  }
+
+  // and apart from the thread that serves every build, given up after a while
+  const text = await readableApart('<html><body><h1>Hi</h1><!-- not closed', 'https://example.org/');
+  assert.match(text, /# Hi/);
+});
+
+test('addresses that carry an IPv4 address inside an IPv6 one are not public', () => {
+  const { isPublic } = forTests;
+
+  assert.equal(isPublic('::7f00:1', 6), false);
+  assert.equal(isPublic('::ffff:0:7f00:1', 6), false);
+  assert.equal(isPublic('2606:4700::6810:84e5', 6), true);
 });

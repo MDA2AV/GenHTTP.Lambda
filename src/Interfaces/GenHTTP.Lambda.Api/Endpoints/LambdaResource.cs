@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -65,14 +66,14 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.BadRequest, "The terms were not accepted where the installation has terms, or the key, the template or the view cannot be used. The message says which.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "Another lambda has the public key that was asked for.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask<Result<LambdaResponse>> Create(CreateLambdaRequest request)
+    public async ValueTask<Result<LambdaResponse>> Create(CreateLambdaRequest request, IRequest call)
     {
         if (options.Terms != null && !request.AcceptedTerms)
         {
             throw LambdaException.Invalid("The terms of service need to be accepted.");
         }
 
-        var lambda = await meta.CreateAsync(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
+        var lambda = await meta.CreateAsync(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey, request.Template ?? "(none)", lambda.View);
 
@@ -107,7 +108,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public async ValueTask<LambdaResponse> Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, UpdateLambdaRequest request)
+    public async ValueTask<LambdaResponse> Update([Summary(ApiDocumentation.PrivateKey)] string privateKey, UpdateLambdaRequest request, IRequest call)
     {
         var view = EditorViews.Parse(request.View);
 
@@ -124,7 +125,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         if (view is { } wanted)
         {
-            lambda = await meta.ChangeViewAsync(privateKey, wanted);
+            lambda = await meta.ChangeViewAsync(privateKey, wanted, AgentCallerConcern.Of(call));
 
             logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
         }
@@ -144,8 +145,10 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.NoContent, "The lambda and everything kept for it are gone.")]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is one of the installation's own, which only the operator deletes.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "delete apps");
+
         var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         await meta.DeleteAsync(privateKey);

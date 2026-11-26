@@ -72,11 +72,15 @@ services:
       HTTPS_PROXY: http://egress-proxy:3128
       HTTP_PROXY: http://egress-proxy:3128
       NO_PROXY: lambda,localhost,127.0.0.1
-      # whether a build may read the pages of the sites its request names
-      # ("look at myoldhomepage.com"): GET and HEAD, public addresses, those
-      # sites only - LAMBDA_AGENT_FETCH=false in .env leaves it off
+      # the server beside the platform's: reading web pages (GET and HEAD,
+      # public addresses) and handing files back - LAMBDA_AGENT_FETCH=false in
+      # .env leaves both off. Whose pages: any public site, the sites a
+      # request names (LAMBDA_AGENT_WEB=named) or none (off); searching the
+      # web unless LAMBDA_AGENT_SEARCH=false
       AGENT_FETCH: ${LAMBDA_AGENT_FETCH:-true}
       AGENT_FETCH_URL: http://egress-proxy:3129/mcp
+      AGENT_WEB: ${LAMBDA_AGENT_WEB:-any}
+      AGENT_SEARCH: ${LAMBDA_AGENT_SEARCH:-true}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # the group that owns the docker socket on this machine:

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, isActive, type AgentState, type ChangeJob, type ChangeRequest } from '@genhttp-lambda/kit/api';
+import { ApiError, api, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest } from '@genhttp-lambda/kit/api';
 
 /**
  * The agent changing this lambda, as the whole control center knows it.
@@ -11,9 +11,10 @@ import { ApiError, api, isActive, type AgentState, type ChangeJob, type ChangeRe
  * the lambda is read again wherever the owner happens to be - so the version
  * it made is in the history and, where it went online, in the badge.
  *
- * Nothing about the change is kept in the browser. The server asks the agent
- * for the change of this lambda, so a reload, a second tab or another device
- * all find the same one.
+ * Nothing about the change is kept in the browser. The platform keeps the
+ * runs, so a reload, a second tab or another device all find the same one -
+ * read once as the page opens, then pushed to it as it goes on, wherever it
+ * was asked.
  */
 export interface AgentControl {
   /** Null until the first answer, and for a demo, which nobody changes. */
@@ -67,7 +68,7 @@ export function useAgent({
   const [failure, setFailure] = useState<string | null>(null);
   const [unseen, setUnseen] = useState(false);
 
-  /** Bumped to start polling again, after a change is asked for. */
+  /** Bumped to read and listen again, after a change was refused. */
   const [round, setRound] = useState(0);
 
   const last = useRef<ChangeJob | null>(null);
@@ -116,8 +117,21 @@ export function useAgent({
 
     let alive = true;
     let timer: number | undefined;
+    let close: (() => void) | undefined;
+    let patience = 10_000;
 
-    const tick = async () => {
+    const later = () => {
+      if (!alive) return;
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(begin, patience);
+      patience = Math.min(patience * 2, 120_000);
+    };
+
+    // read once, and again when the section opens or the tab is looked at;
+    // while a change is under way, told what happens as it happens - and
+    // only then, since a browser keeps six connections to a site for every tab
+    const begin = async () => {
       try {
         const next = await api.agent.state(privateKey);
 
@@ -126,30 +140,38 @@ export function useAgent({
         }
 
         take(next);
-      } catch (error) {
-        if (alive) {
-          setFailure(error instanceof ApiError ? error.message : failed);
+        patience = 10_000;
+
+        if (isActive(next.job)) {
+          close?.();
+          close = followRun<AgentState>(api.agent.events(privateKey), 'state', (state) => alive && take(state), (state) => !isActive(state.job), later);
         }
-      }
+      } catch (error) {
+        if (!alive) return;
 
-      if (!alive) {
-        return;
-      }
+        setFailure(error instanceof ApiError ? error.message : failed);
 
-      // only a change that is still waiting or working is worth asking after;
-      // a hidden tab asks less often, but still notices it ending
-      if (isActive(last.current)) {
-        timer = window.setTimeout(tick, document.visibilityState === 'visible' ? 2000 : 10_000);
+        // not there, or not to be read: asking again changes nothing
+        if (!(error instanceof ApiError && [400, 403, 404].includes(error.status))) {
+          later();
+        }
       }
     };
 
-    void tick();
+    const onLook = () => {
+      if (document.visibilityState === 'visible') void begin();
+    };
+
+    void begin();
+    document.addEventListener('visibilitychange', onLook);
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
+      close?.();
+      document.removeEventListener('visibilitychange', onLook);
     };
-    // opening the section asks again, for an allowance that is up to date
+    // opening the section reads again, for an allowance that is up to date
   }, [privateKey, enabled, take, round, watching, failed]);
 
   const start = useCallback(
@@ -157,6 +179,8 @@ export function useAgent({
       try {
         take(await api.agent.start(privateKey, change));
         setUnseen(false);
+
+        // under way now: followed as it goes on
         setRound((n) => n + 1);
         return null;
       } catch (error) {

@@ -8,7 +8,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Integrations;
@@ -32,7 +32,7 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// </remarks>
 public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, IDatabaseVault databaseVault, IWorkspaceVault workspaces,
                                 ITelemetryService telemetry, ISettingsService settings, ILimitsService limits, IBrandingService branding, ServerRegistry server,
-                                IIntegrationService integrations, IBuildService builds, LambdaOptions options)
+                                IIntegrationService integrations, IAgentService agents, LambdaOptions options)
 {
 
     /// <summary>
@@ -116,9 +116,15 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
 
         var written = await database.Deployments.AsNoTracking()
                                     .Where(d => d.Created >= recent && d.Writer == VersionWriter.BuildAgent && !demos.Contains(d.Lambda!.Tier))
-                                    .GroupBy(d => new { d.AgentModel, d.AgentEffort })
-                                    .Select(g => new { g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
+                                    .GroupBy(d => new { d.AgentOptions, d.AgentModel, d.AgentEffort })
+                                    .Select(g => new { g.Key.AgentOptions, g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
                                     .ToListAsync(cancellation);
+
+        var known = agents.Capabilities?.Options.ToDictionary(o => o.Name, o => (IReadOnlyList<string>)[.. o.Values.Select(v => v.Name)], StringComparer.Ordinal);
+
+        var byOption = StoredOptions.Tally(written.Select(w => (StoredOptions.Of(w.AgentOptions, w.AgentModel, w.AgentEffort), w.Count)), known);
+
+        var runs = await agents.UsageAsync(RecentDays, cancellation);
 
         var installation = await InstallationAsync(database, cancellation);
 
@@ -161,8 +167,12 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
                 CountRepositories(ids)
             ),
             new UsageActivity(RecentDays, CountOrigins(origins.Select(o => (o.Origin, o.Count))), written.Sum(w => w.Count),
-                              Count(AgentCatalog.Models.Select(m => m.Name), written.Select(w => (AgentCatalog.NameOf(w.AgentModel), w.Count))),
-                              Count(AgentCatalog.Efforts.Select(e => e.Name), written.Select(w => (AgentCatalog.NameOf(w.AgentEffort), w.Count))))
+                              byOption.GetValueOrDefault(AgentModelNames.ModelOption) ?? new Dictionary<string, int>(),
+                              byOption.GetValueOrDefault(AgentModelNames.EffortOption) ?? new Dictionary<string, int>(),
+                              byOption,
+                              new UsageRuns(runs.Runs, runs.Builds, runs.Seconds,
+                                            runs.Options.ToDictionary(o => o.Option,
+                                                                      o => (IReadOnlyDictionary<string, UsageRunTime>)o.Values.ToDictionary(v => v.Value, v => new UsageRunTime(v.Runs, v.Seconds)))))
         );
     }
 
@@ -312,12 +322,12 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     private UsageConfiguration DescribeConfiguration(int sharedFiles)
     {
         var site = settings.Get();
-        var agent = builds.GetSettings();
+        var agent = agents.GetSettings();
 
         return new UsageConfiguration(
             options.Addressing.ToString(),
             options.HostingUrl != null,
-            !string.IsNullOrWhiteSpace(options.AgentUrl),
+            agents.Available,
             agent.Builds,
             agent.Changes,
             options.Administrable,
@@ -338,7 +348,8 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
             Integration(IntegrationKind.Secrets),
             site.OptimizeDatabases,
             InstallationProfiles.NameOf(site.Profile),
-            sharedFiles
+            sharedFiles,
+            agents.Available ? Integration(IntegrationKind.Agent) : "none"
         );
     }
 
@@ -393,21 +404,6 @@ public sealed class UsageSurvey(IDbContextFactory<LambdaDbContext> databases, ID
     /// How many of each there were, every known name present - at zero where
     /// there was none - and nothing that is not one of them.
     /// </summary>
-    private static Dictionary<string, int> Count(IEnumerable<string> known, IEnumerable<(string? Name, int Count)> counted)
-    {
-        var counts = known.ToDictionary(name => name, _ => 0);
-
-        foreach (var (name, count) in counted)
-        {
-            if (name != null && counts.ContainsKey(name))
-            {
-                counts[name] += count;
-            }
-        }
-
-        return counts;
-    }
-
     private static Dictionary<string, int> CountOrigins(IEnumerable<(VersionOrigin? Origin, int Count)> origins)
     {
         var counted = new Dictionary<string, int> { ["mcp"] = 0, ["api"] = 0, ["git"] = 0, ["template"] = 0, ["other"] = 0 };

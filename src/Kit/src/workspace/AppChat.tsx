@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
-import { api, ApiError, isActive, type AgentState, type ChangeJob, type Feature, type LambdaSummary } from '../api';
+import { api, ApiError, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest, type Feature, type LambdaSummary } from '../api';
 import { AgentChoice, useAgentChoice } from '../components/AgentChoice';
+import { useAttachments } from '../components/useAttachments';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconDots, IconExternal, IconKey, IconSpinner } from '../components/Icons';
 import { tagOf, useLanguage, useT } from '../i18n';
@@ -11,7 +13,7 @@ import { useOrigin } from '../site';
 import { Switch } from '../ui/ui';
 import { Composer } from './Composer';
 import { Asked, BuildAnswer, ChangeAnswer, type AppHand, type Following } from './Turns';
-import { activeState, describe, forget, keepTurn, saidIn, touch, type KnownApp, type Turn } from './store';
+import { activeState, describe, forget, keepTurn, remember, saidIn, touch, type KnownApp, type Turn } from './store';
 
 /**
  * The conversation about one app: what it is and whether it is online at the
@@ -27,10 +29,18 @@ import { activeState, describe, forget, keepTurn, saidIn, touch, type KnownApp, 
  * editor's Change section, so the operator's switch, the daily allowance and
  * one message at a time hold here as they do there. The conversation is
  * kept in this browser, and the newest turns go along with every message.
+ *
+ * What the agent does is pushed to the page as it happens, from wherever it
+ * was asked; a message that ended with a question is answered by the next,
+ * and one that waited for somebody, or ran out of time, goes on with a
+ * button rather than being asked again.
  */
 
 /** How many turns go along with a message, the newest ones; the server cuts them further. */
 const HISTORY = 8;
+
+/** How long the platform keeps a run - a question older than that has nothing to carry on from. */
+const KEPT_RUNS = 29 * 24 * 60 * 60 * 1000;
 
 /** Whether changes go online once they work - remembered with the editor's Change section, which asks the same. */
 const ONLINE = 'lambda-change-online';
@@ -45,8 +55,13 @@ function rememberedOnline(): boolean {
 
 /** What the agent answered to a turn, as the next message carries it along. */
 function replyOf(turn: Turn): string | null {
-  return turn.kind === 'build' ? (turn.built?.summary ?? turn.built?.error ?? null) : (turn.result?.summary ?? turn.result?.error ?? null);
+  return turn.kind === 'build'
+    ? (turn.built?.question ?? turn.built?.summary ?? turn.built?.error ?? null)
+    : (turn.result?.question ?? turn.result?.summary ?? turn.result?.error ?? null);
 }
+
+/** Whether a turn ended with a question, which the next message answers. */
+const askedIn = (turn: Turn | undefined) => (turn?.kind === 'build' ? turn.built?.asked === true : turn?.result?.asked === true);
 
 export function AppChat({
   app,
@@ -77,11 +92,13 @@ export function AppChat({
   const [prompt, setPrompt] = useState('');
   const [online, setOnline] = useState(rememberedOnline);
   const choice = useAgentChoice(agent?.offer);
+  const attachments = useAttachments(agent?.offer.attachments, said.files);
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [merging, setMerging] = useState<Feature | null>(null);
+  const [, setParams] = useSearchParams();
 
   /** The draft the next message goes to, where the owner chose one; a new one otherwise. */
   const [target, setTarget] = useState<Feature | null>(null);
@@ -164,10 +181,13 @@ export function AppChat({
       hooks.current.onWorking(active);
 
       if (active) {
-        setFollowing({ run: job, steps: job.steps, received: Date.now() });
+        setFollowing({ run: job, steps: job.steps, received: Date.now(), files: job.files ?? null });
 
         if (!existing || existing.state !== job.state) {
-          keepTurn(key, { ...(existing ?? { id: job.id, kind: 'change', at: Date.now(), prompt: job.prompt }), state: job.state });
+          keepTurn(key, {
+            ...(existing ?? { id: job.id, kind: 'change', at: Date.now(), prompt: job.prompt, attachments: job.attachments ?? undefined }),
+            state: job.state,
+          });
         }
 
         return;
@@ -184,6 +204,8 @@ export function AppChat({
           result: job.result ?? null,
           said: saidIn(job.steps),
           seconds: job.seconds,
+          attachments: existing?.attachments ?? job.attachments ?? undefined,
+          files: job.files ?? undefined,
         });
 
         // what it did shows in what the app is now: online, its drafts, its keys
@@ -195,33 +217,64 @@ export function AppChat({
     [key, read, lost],
   );
 
+  // read once, so a page opened after a reload finds where things stand, and
+  // again whenever the page is looked at again; while a message is under way,
+  // told what happens as it happens. Listening only then: a browser keeps six
+  // connections to a site, which every open tab shares
   useEffect(() => {
     let alive = true;
     let timer: number | undefined;
+    let close: (() => void) | undefined;
+    let patience = 5000;
 
-    const tick = async () => {
+    const later = () => {
+      if (!alive) return;
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(start, patience);
+      patience = Math.min(patience * 2, 60_000);
+    };
+
+    const listen = () => {
+      close?.();
+      close = followRun<AgentState>(api.agent.events(key), 'state', (state) => alive && take(state), (state) => !isActive(state.job), later);
+    };
+
+    const start = async () => {
       try {
         const state = await api.agent.state(key);
 
         if (!alive) return;
 
         take(state);
+        patience = 5000;
 
-        if (isActive(state.job)) {
-          timer = window.setTimeout(tick, document.visibilityState === 'visible' ? 2000 : 10_000);
-        }
+        if (isActive(state.job)) listen();
       } catch (error) {
-        if (alive && error instanceof ApiError && error.status === 404) {
-          setAgent(null);
+        if (!alive) return;
+
+        // not there, not this browser's to read, or no agent: asking again changes nothing
+        if (error instanceof ApiError && [400, 403, 404].includes(error.status)) {
+          if (error.status === 404) setAgent(null);
+          return;
         }
+
+        later();
       }
     };
 
-    void tick();
+    const onLook = () => {
+      if (document.visibilityState === 'visible') void start();
+    };
+
+    void start();
+    document.addEventListener('visibilitychange', onLook);
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
+      close?.();
+      document.removeEventListener('visibilitychange', onLook);
     };
   }, [key, take, round]);
 
@@ -248,11 +301,22 @@ export function AppChat({
   const offered = agent?.available ?? true;
   const spent = agent != null && agent.available && agent.left <= 0;
   const wanted = prompt.trim();
-  const ready = wanted.length >= 3 && !sending && !running && !spent && offered && !blocked && !gone && choice.ready;
+  const possible = !sending && !running && !spent && offered && !blocked && !gone && choice.ready && !attachments.uploading;
+  const ready = wanted.length >= 3 && possible;
 
-  async function send() {
-    if (!ready) return;
+  // the newest turn asked something - recently enough that its run is still
+  // kept - and the owner did not choose to ask something else: the next
+  // message answers it
+  const newest = turns.at(-1);
+  const [notAnswering, setNotAnswering] = useState<string | null>(null);
+  const answering =
+    !running && askedIn(newest) && newest && newest.id !== notAnswering && Date.now() - newest.at < KEPT_RUNS ? newest : undefined;
 
+  /**
+   * Sends a message to the agent: what was typed - or, going on from a turn
+   * that waited or was cut short, nothing but that it should go on.
+   */
+  async function ask(message: string | undefined, continues?: Turn) {
     setSending(true);
     setProblem(null);
 
@@ -261,25 +325,54 @@ export function AppChat({
       .slice(-HISTORY)
       .map((turn) => ({ prompt: turn.prompt, reply: replyOf(turn) }));
 
+    const sent = message ? attachments.files : [];
+
+    const change: ChangeRequest = {
+      prompt: message,
+      deploy: online,
+      ...choice.request,
+      language,
+      history,
+      view: 'simple',
+      attachments: sent.length > 0 ? sent.map((file) => file.id) : undefined,
+      // a message for a draft the owner chose is no answer to a question
+      continues: target ? undefined : continues?.id,
+      feature: target && features.some((feature) => feature.key === target.key) ? target.key : undefined,
+    };
+
     try {
-      const state = await api.agent.start(key, {
-        prompt: wanted,
-        deploy: online,
-        ...choice.request,
-        language,
-        history,
-        feature: target && features.some((feature) => feature.key === target.key) ? target.key : undefined,
-      });
+      const state = await api.agent.start(key, change);
 
       if (state.job) {
-        keepTurn(key, { id: state.job.id, kind: 'change', at: Date.now(), prompt: state.job.prompt || wanted, state: state.job.state });
+        const turn: Turn = {
+          id: state.job.id,
+          kind: 'change',
+          at: Date.now(),
+          prompt: message ?? said.results.goOn,
+          state: state.job.state,
+          attachments: sent.length > 0 ? sent : undefined,
+          continues: change.continues,
+        };
+
+        keepTurn(key, turn);
+
+        // what take reads before the page draws again, so it does not make
+        // the turn anew from what the agent was asked
+        known.current = [...known.current.filter((was) => was.id !== turn.id), turn];
       }
 
       touch(key);
       following_down.current = true;
-      setPrompt('');
+
+      if (message) {
+        setPrompt('');
+        attachments.clear();
+      }
+
       setTarget(null);
       take(state);
+
+      // under way now: followed as it goes on
       setRound((n) => n + 1);
     } catch (error) {
       setProblem(error instanceof ApiError ? error.message : t.buildBox.failedToStart);
@@ -287,6 +380,14 @@ export function AppChat({
     } finally {
       setSending(false);
     }
+  }
+
+  function send() {
+    if (ready) void ask(wanted, answering);
+  }
+
+  function goOn(turn: Turn) {
+    if (possible) void ask(undefined, turn);
   }
 
   async function stop() {
@@ -338,7 +439,34 @@ export function AppChat({
       setPrompt(text);
       window.requestAnimationFrame(() => field.current?.focus());
     },
+    goOn,
+    possible,
+    open: openApp,
+    // what still waits as the app is now: keys entered since, a decision the
+    // operator made since, are nothing to wait for any more
+    live: (blockers) => {
+      const lambda = summary?.lambda;
+      const missing = summary?.storage.missingSecrets ?? [];
+
+      const still = (blockers ?? [])
+        .map((blocker) =>
+          blocker.what === 'keys' ? { ...blocker, names: (blocker.names ?? []).filter((name) => missing.includes(name)) } : blocker)
+        .filter((blocker) =>
+          blocker.what === 'keys' ? (blocker.names ?? []).length > 0 : !lambda || lambda.connectivity?.status === 'Requested');
+
+      return still.length > 0 ? still : null;
+    },
   };
+
+  /** Opens an app a message built beside this one - remembered here, as a build's is. */
+  function openApp(publicKey: string) {
+    const made = turns.flatMap((turn) => turn.result?.apps ?? []).find((app) => app.publicKey === publicKey);
+
+    if (made) {
+      remember({ privateKey: made.privateKey, publicKey: made.publicKey, online: true });
+      setParams({ app: made.publicKey });
+    }
+  }
 
   const again = (turn: Turn) => {
     setPrompt(turn.prompt);
@@ -416,15 +544,16 @@ export function AppChat({
 
           {turns.map((turn) => (
             <div key={turn.id} className="space-y-4">
-              <Asked>{turn.prompt}</Asked>
+              <Asked files={turn.attachments}>{turn.prompt}</Asked>
               {turn.kind === 'build' ? (
-                <BuildAnswer turn={turn} />
+                <BuildAnswer turn={turn} newest={turn === newest} live={hand.live} onGoOn={turn === newest && possible ? () => goOn(turn) : undefined} />
               ) : (
                 <ChangeAnswer
                   turn={turn}
                   following={agent?.job?.id === turn.id ? following : null}
                   app={hand}
                   onAgain={() => again(turn)}
+                  newest={turn === newest}
                 />
               )}
             </div>
@@ -437,6 +566,15 @@ export function AppChat({
           {problem && (
             <p className="mb-2 flex items-start gap-2 px-1 text-sm text-red-600 dark:text-red-400">
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" /> {problem}
+            </p>
+          )}
+
+          {answering && !target && (
+            <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs">
+              <span className="font-medium text-accent-700 dark:text-accent-400">{said.answering}</span>
+              <button type="button" onClick={() => setNotAnswering(answering.id)} className="text-slate-500 underline hover:text-slate-800 dark:hover:text-slate-200">
+                {said.askSomethingElse}
+              </button>
             </p>
           )}
 
@@ -466,15 +604,16 @@ export function AppChat({
               value={prompt}
               onChange={setPrompt}
               onSend={send}
-              onStop={stop}
-              placeholder={said.placeholderApp(name)}
-              label={said.placeholderApp(name)}
+              onStop={agent?.offer.cancels === false ? undefined : stop}
+              placeholder={answering ? said.placeholderAnswer : said.placeholderApp(name)}
+              label={answering ? said.placeholderAnswer : said.placeholderApp(name)}
               ready={ready}
               busy={sending}
               running={running}
               stopping={stopping}
               disabled={blocked || gone}
               field={field}
+              attachments={agent?.offer.attachments ? attachments : null}
               footer={
                 <>
                   <span className="flex items-center gap-2" title={online ? said.goOnlineOn : said.goOnlineOff}>

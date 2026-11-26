@@ -4,7 +4,7 @@ export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Şöyle bir uygulama istiyorum…',
   password: 'şifre',
   unlimited:
-    'Bu model şifre gerektirir ve ardından süre sınırı olmadan çalışır: süre dolana kadar değil, uygulamanız bitene kadar devam eder.',
+    'Bu seçim sitenin şifresini gerektirir; ardından olağan sınırlar yerine bunun için belirlenen süre ve adım tanınır.',
   ideas: [
     'üyelerin etkinliklere kaydolabildiği bir kulüp uygulaması',
     'kimse aynı yemeği getirmesin diye bir piknik listesi',
@@ -39,6 +39,10 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Kaydedilenlere bakılıyor',
     services: 'Başka hizmetleri kullanma izni isteniyor',
     site: (site) => `${site} sayfasına bakılıyor`,
+    search: 'Web’de bir şey araştırılıyor',
+    attachment: 'Gönderdiğiniz dosyaya bakılıyor',
+    showcase: 'Vitrine ekleniyor',
+    file: 'Sizin için bir dosya yazılıyor',
   },
   further: 'Editör linkiniz',
   keep:

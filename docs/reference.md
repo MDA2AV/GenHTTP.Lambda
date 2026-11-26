@@ -1063,8 +1063,9 @@ limit. Afterwards it offers the preview and the feature - or, once merged, the
 difference to the version before, the address, and putting the previous version
 back. The change is followed by the frame of the editor rather than
 the section, so the sidebar marks it and the lambda is read again when it
-ends wherever the owner is; and it is kept by the agent under the lambda, so a
-reload, a second tab or a redeploy of the server finds it where it got to.
+ends wherever the owner is - pushed to it as it goes on (`GET
+…/agent/events`), not asked after; and it is kept by the platform, so a
+reload, a second tab or a restart of the server finds it where it got to.
 
 `/build` shows a build the way the simple view of this section shows a change,
 drawn by the same parts (`src/Kit/src/components/AgentRun.tsx`): what was asked, the step
@@ -1072,16 +1073,68 @@ it is on and the time it has used of its limit, what the agent says between
 its tools - the build agent too is told that somebody reads along, and asked
 for one short line at a time in the language of the request - and how it
 ended, with what it said at the end. `GET /builds/:id` answers with the steps,
-the seconds and the limit. The step it is on is said in the words of that
+the seconds and the limit, `GET /builds/:id/events` pushes them as they
+change. The step it is on is said in the words of that
 page rather than those of the tools: getting ready, looking at examples,
 choosing an address for the website, checking it for mistakes, putting it
 online. The full view of this section shows every tool by name.
 
-It shares the queue and the daily allowance of `/build`, one change of a
-lambda runs at a time, and it can be stopped - whatever it saved stays, in its
-feature or as a version. It runs on the model and at the effort the owner
-chose, of those the operator offers (see [The build agent](#the-build-agent)). A change runs without `create_lambda`, and its editor key travels in
-the brief inside the build container, never in a log line.
+It shares the daily allowance of `/build`, one change of a lambda runs at a
+time - held by the records, so two servers or a message sent twice cannot
+start two - and it can be stopped where the agent can stop (`POST
+…/agent/stop`; a build `POST /builds/:id/stop`; 409 where the agent cannot
+stop) - whatever it saved stays, in its feature or as a version. It runs on the values of the agent's
+options the owner chose, of those the operator offers (see [The build
+agent](#the-build-agent)). Its editor key is handed to the agent with the run,
+never in a log line.
+
+**Where it waits, and why.** A run says what it waits for besides its turn
+(`wait`: `queue` with its place, `overloaded` - the service behind the agent -
+`rate-limited`, `preparing`, `unreachable`, `other`, with until when where
+the agent says), and the pages say it in their words.
+
+**Files.** Where the agent takes them (`offer.attachments`: the kinds, the
+size of one, how many), a message may come with files: uploaded first (`POST
+/attachments?name=…&type=…`, the body as it is, read only up to the size the
+agent takes; 100 MB an hour per address, 429 beyond - counted in the server's
+memory), named by id in the message (`attachments`). They are kept with the
+run - a file nobody sends is removed
+after an hour - offered to every later run about the app as earlier ones, so
+"the logo from before" is found, and read by the agent through the platform
+(`read_attachment`, a picture as an image the model sees). It puts one into
+the app by its id (`attachment` in a file of `write_code`/`change_code`, or of
+`upload_file`), never by its bytes. Files the agent hands back are kept with
+the run as well. Either kind is read at `GET /attachments/:id`: a picture
+(PNG, JPEG, GIF, WebP) to be shown, any other file - SVG and HTML among them -
+to be saved, never as a page or a script of the site (`Content-Disposition:
+attachment`, `nosniff`, a sandboxing policy). The operator may open every
+file, as they read every prompt; they go with the run after thirty days.
+
+**Asking back.** Where the agent may ask, a run that cannot go on well
+without something only the owner knows ends with a question (`result.asked`,
+`result.question`); the next message answers it (`continues`: the run's id),
+and the agent is told the question and the answer.
+
+**What it waits for, and going on.** How a run ended says what the app waits
+for and whom (`result.waitsFor`): the operator's decision on connecting to
+other servers, keys and passwords to enter - read from the lambda, not from
+what the agent said, and only for a run that wrote code or asked to connect. Once that is there, the run goes on with nothing typed
+(`continues`, no `prompt`), as does one that ran out of time or steps.
+
+**The version before.** `result.before` names the version that was online
+before the message. While what the message put online still is, the pages
+offer to put it back (`POST …/deployment/start`) - a plain deployment, which
+leaves everything else as it is: the way back from anything else a message
+did is the editor's history, or asking the agent.
+
+**New apps beside it.** A change may create a new app where the owner asks
+for one; the result names it (`created`) and hands its editor key to the owner
+who asked (`apps`), as a build does - the workspace remembers it.
+
+**What only the owner does** - entering or deleting a key or password,
+switching data off (which deletes it), deleting the app - the platform refuses
+to a run's calls at every door (403, or an error from the MCP tool), whatever
+agent it is and whatever tools it was given.
 
 Not every message is a change. The agent first works out what it was asked:
 a **question** about the lambda - who visits it, what was entered, whether it
@@ -1092,8 +1145,10 @@ a kind of data switched on, an earlier version put back online, a feature merged
 or one the owner names deleted, the source published (`open_source`); and only
 a **change** of the application goes into a feature. The result says which:
 `answered` for a question, `settings` for what was switched, published or
-discarded. What no tool does - a domain, the showcase, switching anything off,
-the value of a secret - the agent tells the owner to do in the editor.
+discarded. What no tool does - a domain, switching anything off, the value of
+a secret - the agent tells the owner to do in the editor; listing the app in
+the showcase, publishing its source or how the editor opens it, it does when
+asked.
 
 A message may carry the conversation before it (`history`, from the workspace):
 the server keeps the newest turns that fit - eight at most, each message cut to
@@ -1130,9 +1185,11 @@ that creates a website: what the site says about it, the box, ideas, and the
 questions people ask first.
 
 - **The first message builds an app** (`POST /builds`). While it runs, its id
-  is kept in the browser, so a reload within the hour the agent keeps a build
-  finds it again - and with it the editor key it makes. Once built, the app
-  joins the list and its conversation goes on from the build.
+  is kept in the browser, so a reload within the hour finds it again - and with
+  it the editor key it makes. Once built, the app joins the list and its
+  conversation goes on from the build. A build that asks before it makes an
+  app stays there: the next message is a build that answers it
+  (`continues`), with the files of the first.
 - **Every message after is a change** (`POST /lambdas/:privateKey/agent/start`)
   with the newest turns of the conversation as `history`, so the operator's
   switches (building new apps, and asking about the rest), the models and
@@ -1154,6 +1211,11 @@ questions people ask first.
   agent), and a draft to try and put online. Under an answer: open the app, try
   or put online the draft it left, undo a change that went online. Everything
   else is the editor, a link away.
+- **What the agent offers, the box offers**: a paper clip where it takes files
+  (and pasting or dropping one), stopping where it can stop, an answer box
+  where it asked. Under an answer: files it handed back, what the app waits for
+  with a button to go on. What happens is
+  pushed to the page, never asked after.
 
 ### The simple view
 
@@ -2046,19 +2108,20 @@ and the seccomp profile is left alone.
 ### Integrations
 
 What the platform keeps its data in is an integration of one of three kinds,
-each behind a contract of `GenHTTP.Lambda.Integrations` - a project that takes
-nothing of the platform's, so an integration can be built and exchanged on
-its own:
+and the agent that builds and changes apps a fourth, each behind a contract of
+`GenHTTP.Lambda.Integrations` - a project that takes nothing of the
+platform's, so an integration can be built and exchanged on its own:
 
 | Kind | Contract | Keeps | The platform's own | Others |
 |---|---|---|---|---|
 | database | `IDatabaseProvider` | the platform's records and analytics (`DatabaseStore.Platform` and `Analytics`), and the database of every lambda and draft | SQLite files in the data directory (`SqliteDatabase`) | PostgreSQL (`PostgreSqlDatabase`), community edition only |
 | files | `IFileProvider` | the workspace of every lambda and draft, and the platform's own files (`FileStore.Branding`, `Showcase` and `Shared`) | directories in the data directory (`LocalFiles`, `GenHTTP.Lambda.Integrations.Local`) | - |
 | secrets | `ISecretProvider` | the secrets of every lambda and draft | sealed in the platform's own records (`DatabaseSecrets`), wherever the database integration keeps them | - |
+| agent | `IAgentProvider` | nothing: it runs what it is handed (see [The agent](#the-agent)) | Claude Code in containers, through the runner (`ClaudeCodeRunner`, `GenHTTP.Lambda.Integrations.ClaudeCode`), where `LAMBDA_AGENT_URL` names one | none at all |
 
 A host chooses them on the platform's builder - `LambdaPlatform.Create()
-.Database(...).Files(...).Secrets(...)` - and the platform uses its own for a
-kind it is given nothing for. They live as GenHTTP's handlers do: built
+.Database(...).Files(...).Secrets(...).Agent(...)` - and the platform uses its
+own for a kind it is given nothing for; an installation may have no agent. They live as GenHTTP's handlers do: built
 with what the platform hands their builder (`IIntegrationBuilder<T>.Build`,
 with an `IntegrationContext`: the data directory, the loggers), which only
 configures; prepared once, awaited, before anything is migrated
@@ -2146,7 +2209,9 @@ keeps (`IIntegration.Describe`) - never a password, a key or a connection
 string - and is named by the assembly it is in, which the panel's
 **Integrations** section shows (`GET
 /admin/integrations`), and the usage report names (`database`, `files`,
-`secrets`).
+`secrets`, `agent`). The agent's card there adds what its system says of
+itself and where a run sends what; what the operator decides about it and how
+it was used are the **Build agent** section's.
 
 **The platform's own schema** is kept once per dialect a database
 integration may speak (`IDatabaseProvider.Dialect`): `Data/Migrations` and
@@ -2164,6 +2229,85 @@ number no member has reads as the sandbox, the full view
 (`Data/StoredValues.cs`) or nothing recorded. V30 (V5 in PostgreSQL) converted
 the names an installation had saved, and cannot be undone by an older
 release.
+
+#### The agent
+
+The agent is the fourth kind: what builds an app from a sentence on `/build`
+and changes one when its owner asks, in the workspace or the editor's Change
+section. The platform does not care what it is - Claude Code in a container,
+another vendor's agent, a system somebody runs for several platforms at once
+- only that it takes a run and tells what happens in it.
+
+**What a run is.** `IAgentProvider.StartAsync` is handed an `AgentRun`: its
+id (the platform's), what it is (`Build`, `Change`), the message, the files it
+came with and those of the conversation before it (`AgentAttachment`, each to
+be read by its id), the conversation as the platform keeps it, whom it is for
+(`AgentAudience`: the language, the simple or the full view, the kind of
+installation and its name), how it reaches the platform (`AgentAccess`: the
+MCP endpoint and the REST API, the header and the credential its calls
+carry), the app where it changes one (its editor key, a draft to go on with,
+whether to put it online, the version online), the values of the agent's own
+options, the limits the operator set, and what it carries on from (an answer
+to its question, a wait that is over, another try). Everything the agent
+needs is in there; it keeps nothing between runs, and the platform asks it
+nothing back but what it was told.
+
+**What the agent tells.** `FollowAsync` streams what happens, from a
+position, as events in the order they happened (`AgentEvent`, numbered):
+queued (with its place), started, waiting (for the service behind it, a rate
+limit, room being made - with until when), said (a short line for the person),
+activity beyond the platform (a page read, a search, another tool - a closed
+set, so every page has words for it), returned (a file for the person), spent
+(tokens and money, for the operator) and ended - completed, asked (with the
+question), declined, cancelled, timed out, out of steps, sign-in failed,
+failed or lost. `CancelAsync` stops a run; `LoadAsync` says whether the
+system answers, what it works on and what it says of itself for the panel.
+
+**What it says it can do.** `Capabilities` is read as the pages are drawn:
+where it sends what (`AgentDisclosure`: for the operator's privacy
+statement), its options (a model, an effort - anything, each value with a
+label in the integration's own words and whether it needs the installation's
+password), which files a message may come with and how large, whether it hands
+files back, whose web pages it reads and whether it searches, whether a run
+can be stopped or ask back, and which limits it holds a run to. The pages
+offer what it says and nothing else: no paper clip where it takes no files,
+no stop button where it cannot stop, no options where it has one value.
+
+**What the platform does itself.** It keeps every run in its records
+(`agent_runs`, `agent_run_events`, `agent_files`; V34, V9 in PostgreSQL) for
+thirty days after it ended, its files with it - so a page finds a run after a
+reload, a server finds it after a restart and follows it on from where it
+got to (`AgentFollower`), and a run the agent system forgot ends as `lost`
+with what it did kept. One server of an installation follows a run: it claims
+it in the records (`follower`, `follower_until`; V35, V10 in PostgreSQL),
+renews the claim every forty seconds and lets go as it stops; a claim that
+lapsed - its server went away - is taken over within a minute or two by
+another (`AgentFollowJob`). Every call that carries the run's credential is the
+run's: what it saved and changed is recorded where it is saved
+(`AgentJournal`), the step it was is recorded at the MCP door
+(`RunSteps`), so the steps are the same in every language whatever the
+agent, and how a run ended - online, a draft to try, what waits for whom -
+is read from those records, never from what the agent said
+(`AgentOutcome`). The pages are pushed
+what changes (`GET /builds/:id/events`, `GET …/agent/events`, server-sent
+events) rather than asking - while a run is under way; a page reads again when
+it is looked at, since a browser keeps six connections to a site for all its
+tabs. The streams say `Cache-Control: no-cache` and `X-Accel-Buffering: no`,
+so a proxy in between passes each event on as it comes.
+
+**The platform's own: Claude Code through the runner.** `ClaudeCodeRunner`
+talks to the runner of `docker/agent` (see [The build agent](#the-build-agent)):
+it offers a model and an effort, reads the runner's health for the rest, and
+speaks either protocol - the runner of this release streams a run's events
+(`GET /build/:id/events`, protocol 2) and takes files, questions back and the
+platform's limits; a runner from before is asked how a job is getting on and
+its answers are told as events, without files, questions or limits. Either
+way an installation and its runner are upgraded one after the other.
+
+**Another agent** implements `IAgentProvider` in a project of its own and is
+handed to the platform's builder (`.Agent(...)`). The tests play one in the
+test's own process (`FakeAgentProvider`), with options no real agent has, to
+prove the platform offers, records and counts whatever an integration brings.
 
 **What it takes to add one.** Implement the contract in a project of its own
 that references `GenHTTP.Lambda.Integrations`, offer a builder
@@ -2246,7 +2390,7 @@ not with a variable (see [Branding](#branding)).
 | `LAMBDA_ABUSE_CONTACT`              | -                | where a lambda that does harm is reported; without, the pages offer no way to report one |
 | `LAMBDA_AGENT_URL`                  | -                | where the build agent listens; without, nothing is built from a request and its text boxes are not offered |
 | `LAMBDA_AGENT_TOKEN`                | -                | the secret the server sends the agent, so only it can ask - and, where installations share a runner, how it tells them apart (see [The build agent](#the-build-agent)) |
-| `LAMBDA_AGENT_PASSWORD`             | -                | the password for the models of the build agent the panel puts behind one (Fable, at first); without, those are not offered. `LAMBDA_AGENT_FABLE_PASSWORD`, its name before, is still read (see [The build agent](#the-build-agent)) |
+| `LAMBDA_AGENT_PASSWORD`             | -                | the password for the values of the agent's options the panel puts behind one (Fable, at first); without, those are not offered. `LAMBDA_AGENT_FABLE_PASSWORD`, its name before, is still read (see [The build agent](#the-build-agent)) |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -2818,11 +2962,15 @@ data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
 `read_database`, `set_secret`, `list_secrets` and `delete_secret`, `open_source`
 for publishing its code - only when its owner asks for it - `analytics` for
 reading who visits a lambda, and switching that on when the user asks, and
-`list_demos` for reading something that already works. No tool lists a lambda
-on the showcase: its picture, base64 in a tool call, was too large for the
-agents that tried, so the instructions point to `platform_guide` (`showcase`),
-which sends them to `PUT /lambdas/{privateKey}/showcase` with the body written
-to a file, and the user to the editor where they cannot make requests. What
+`list_demos` for reading something that already works, `showcase` for
+listing a lambda there when its owner asks - its picture named, never sent: a
+file the user attached or a resource of the version, since a picture in base64
+was too large for the agents that tried a tool call (`PUT
+/lambdas/{privateKey}/showcase`, with the body written to a file, does the same)
+- and `read_attachment` for a file the user sent with a message to the
+installation's agent. The instructions point to `platform_guide` (`possible`)
+for what an app here cannot do, or does only with somebody: an agent says so
+rather than build something that pretends. What
 only the operator does is not here, so no agent is shown a tool it could not
 use: it is on [the operator's MCP endpoint](#the-operators-mcp-endpoint).
 `platform_guide` is the one to call first. It answers
@@ -3395,57 +3543,72 @@ the endpoint starts, nor the `AGENTS.md` of a lambda's repository.
 
 ### The build agent
 
-Where the installation runs the build agent (`LAMBDA_AGENT_URL`), the panel's
+Where the installation has an agent (see [The agent](#the-agent); the
+platform's own where `LAMBDA_AGENT_URL` names its runner), the panel's
 **Build agent** section (`GET / PUT /admin/agent`) decides what it does here
-and on what. Each switch and list is saved as it changes, and applies to the
-next job asked for; a job under way runs on as it was asked for.
+and on what. Each switch, list and field is saved as it changes, and applies
+to the next run asked for; a run under way goes on as it was asked for.
 
 - **Whether it builds and changes apps**: building new apps on `/build`, and
   owners asking it about theirs - in the workspace and the editor's Change
   section. Off, each page leads to connecting an agent of one's own instead.
-  Both were under **Settings** until the models could be chosen, and are kept
-  in the same rows (`build-box`, `change-box`), so a choice made then holds.
-- **Which models people may choose**, each for everybody, for whoever knows
-  the installation's password, or for nobody: Opus 5.5, Sonnet 5.5 and Haiku
-  5.5 for everybody and Fable 5.2 behind the password, until the operator
-  decides otherwise.
-- **Which efforts** - how much the model thinks and how many steps it takes:
-  `low`, `medium`, `high`, `xhigh` and `max`, all of them at first - and what
-  a job runs on where nobody chose, Opus at `high` at first. The default model
-  is everybody's, without the password, and at least one effort is offered,
-  the default among them; a change that breaks either is refused with 400 and
-  changes nothing.
+  They are kept in the rows they always were (`build-box`, `change-box`).
+- **Who may choose which value of each of its options** - for everybody, for
+  whoever knows the installation's password, or for nobody - and the default
+  of each, which is everybody's. The options are the agent's own: Claude Code
+  has a model (Opus 5.5, Sonnet 5.5 and Haiku 5.5 for everybody, Fable 5.2
+  behind the password at first) and an effort (`low` to `max`, all offered at
+  first, `high` by default); another agent brings others, and the section
+  draws whatever it has. A change that takes the default from everybody is
+  refused with 400 and changes nothing.
+- **What a run may take**, where the agent holds runs to limits: its time and
+  its steps, and the same for a run on a value behind the password. Empty is
+  what the agent gives a run (Claude Code: ten minutes and sixty steps), zero
+  is none; a run behind the password has none until the operator sets some.
+- **How it was used**: whether it answers and this installation's runs now;
+  the last thirty days (runs and time by each value, never what they were
+  about); and its newest runs, with their files, what they spent where the
+  agent says, and what went wrong.
 
-They are rows of the `settings` table (`agent.model.opus` = `open`,
-`password` or `off`, `agent.default-model`, `agent.efforts`,
-`agent.default-effort`), read as the platform starts and held in memory; a
-missing row is the default above. A change is logged as `Updated agent
-settings builds true changes true models opus:open,sonnet:open,haiku:open,fable:password
-model opus efforts low,medium,high,xhigh,max effort high by operator`.
+What the agent is lives with the other integrations: its card in the panel's
+**Integrations** section has what it says of itself (`Describe`, and its
+system's facts) and **where a run sends what** - for the installation's
+privacy statement - whose web pages it reads and whether it searches, which
+files a message may come with, whether it hands files back, asks back and can
+be stopped (`GET /admin/agent`, `agent`).
+
+They are rows of the `settings` table - `agent.option.{option}.{value}` =
+`open`, `password` or `off`, `agent.default.{option}`, `agent.limit.time`,
+`agent.limit.steps`, `agent.limit.guarded-time`, `agent.limit.guarded-steps` -
+read as the platform starts and held in memory; a missing row is the default
+above. Rows from before the options were the agent's (`agent.model.opus`,
+`agent.default-model`, `agent.efforts`, `agent.default-effort`) are read as
+the options `model` and `effort`, so a choice made then holds. The same reads
+and changes are tools of the operator's MCP endpoint. A change is logged with
+what it set (`Updated agent settings … by operator`).
 
 The pages offer what was decided. `GET /system` (`build.offer`) and the
-Change section's `GET /lambdas/:privateKey/agent` (`offer`) list the models
-offered, each with its label and whether it needs the password, the efforts,
-and the defaults; `/build`, the workspace and the Change section draw them as
-two lists under the box (`components/AgentChoice.tsx` in the kit) and a field
-for the password where the model chosen needs it. A list with nothing to
-choose from is left out. The browser remembers the model and the effort last
-chosen, never the password. A build or a change names them (`model`,
-`effort`; left out, the defaults), and one the operator does not offer is
-refused with 400, a wrong password with 403 - before the agent is asked and
-before the allowance is spent. A started build says what it runs on
-(`model`, `effort`), and so does a change (`job.model`, `job.effort`), which
-the Change section shows beside the request; both are logged with the
-prompt.
+Change section's `GET /lambdas/:privateKey/agent` (`offer`) list the options
+(`options`: each with its label and values, each value with whether it needs
+the password) and what the agent does (`attachments`, `returnsFiles`, `web`,
+`searches`, `cancels`, `asks`); `models`, `model`, `efforts` and `effort` are
+still there for the options of those names. `/build`, the workspace and the
+Change section draw a list per option with something to choose
+(`components/AgentChoice.tsx` in the kit) and a field for the password where a
+value chosen needs it. The labels are the agent's own, the same in every
+language. The browser remembers the values last chosen (`lambda-agent-choice`,
+read in its earlier shape too), never the password. A build or a change names
+them (`options`, or `model` and `effort` as before; left out, the defaults),
+and one the operator does not offer is refused with 400, a wrong password with
+403 - before the agent is asked and before the allowance is spent. A run says
+what it runs on (`options`), and both are logged with the prompt.
 
 **The password** is the installation's: `LAMBDA_AGENT_PASSWORD` - and
-`LAMBDA_AGENT_FABLE_PASSWORD`, which is still read, from when it unlocked
-Fable alone. The panel says whether there is one, never what it is, and
-without one a model behind it is offered to nobody rather than to everybody.
-A job on a model behind it runs without the clock and the limit on its steps,
-in a lane of its own beside the one everybody shares. The server tells the
-runner so (`unbounded`), and only for a job whose password it checked, so a
-model taken from behind the password runs on the clock like every other.
+`LAMBDA_AGENT_FABLE_PASSWORD`, which is still read. The panel says whether
+there is one, never what it is, and without one a value behind it is offered
+to nobody rather than to everybody. A run on a value behind it runs on the
+limits for such runs - none until the operator sets some - and the server
+decides that for a run whose password it checked, never from a value's name.
 
 **The runner** maps each model to an identifier of Anthropic's -
 `AGENT_MODEL` for Opus (named before there was a choice), `AGENT_SONNET_MODEL`,
@@ -3467,14 +3630,13 @@ deploy ran from - should not take over every build unseen. `samples/community`
 passes the key as `LAMBDA_AGENT_API_KEY` for the same reason, so a shell's own
 `ANTHROPIC_API_KEY` is not picked up. genhttp.dev builds on its subscription.
 
-The section shows what the runner says of itself, from its health, asked with
-three seconds to answer: where it listens, whether it answers, what its
-builds sign in with - the kind, never the credential - the identifier each
-model runs as, the version of Claude Code its builds run, whether its builds
-read web pages (`readsPages`, below), this installation's jobs running and
-waiting, how many builds run at once (`concurrency`) and, where other
-installations share the runner, how many there are (`installations`; both
-below). A runner from before says neither of the last two.
+The section shows what the runner says of itself, from its health, asked in
+the background at most once a minute: where it listens, whether it answers,
+this installation's runs working and waiting, how many run at once - and as
+facts, label and value: what its builds sign in with (the kind, never the
+credential), the identifier each model runs as, the version of Claude Code its
+builds run, whose pages they read and, where other installations share the
+runner, how many there are.
 
 Offer only what the credential runs. A job on a model it cannot run - one a
 subscription does not include, or one a key has no access to - ends as the
@@ -3482,87 +3644,102 @@ CLI ends it, with an error rather than a closing note: the build or the change
 fails with the CLI's words in `detail`, rather than being taken for an answer
 or a run that ran out of time.
 
-**What the agent writes is marked as its own.** Every build and change is
-handed to the runner with a ticket the server made for it (`ticket`: 32 hex
-characters, random, never logged), which the runner
-writes into the agent's configuration of the MCP endpoint as the header
-`X-Lambda-Agent` - so every call of the job carries it - and leaves out where
-it is not one. A save through MCP that carries a ticket the server issued
-records who wrote it (`writer`: `build-agent`) and the model and effort of the
-job, as the server issued them - never as the runner or the agent says.
-A draft keeps them for its last save, and any other save into it clears them;
-the version it is merged into takes them over, whoever merges it - so the
-owner putting the agent's draft online makes a version of origin `api` that
-the agent wrote. They are `writer`, `model` and `effort` of a version (`GET
-…/versions`, `GET …/versions/:version`) and of a feature, left out for
-anybody else's work: an agent of somebody's own says nothing over MCP about
-its model, and nothing the platform could trust about itself. The editor
-marks the agent's work with the model's family and the effort - beside the
-mark in the full view, in its title in the simple one - the panel's
-**Statistics** count what it wrote in the last thirty days by model and effort
-(`agentModels`, `agentEfforts` of `GET /admin/overview`), and so does the
-usage report. The public source, the git history and the export say nothing
-of it.
+**What the agent writes is marked as its own.** Every run is handed a
+credential the server made for it (32 hex characters, random, never logged),
+which its calls carry in the header `X-Lambda-Agent` - the runner writes it
+into the agent's configuration of the MCP endpoint, another agent sends it as
+its integration is told (`AgentAccess`). A save that carries the credential of
+a run that is under way, or ended in the last five minutes, records who wrote
+it (`writer`: `build-agent`) and the values of the options the run ran on -
+as the server issued them, never as the agent says. A draft keeps them for its
+last save, and any other save into it clears them; the version it is merged
+into takes them over, whoever merges it. They are `writer` and `options` of a
+version and of a feature (`model` and `effort` too, for those options), left
+out for anybody else's work: an agent of somebody's own says nothing over MCP
+the platform could trust. The editor marks the agent's work with the values it
+ran on, the panel's **Statistics** count what it wrote in the last thirty days
+by each of them (`agentOptions` of `GET /admin/overview`, and `agentModels`,
+`agentEfforts` as before), and so does the usage report. The public source,
+the git history and the export say nothing of it.
 
-The tickets are kept in the platform's records (`agent_tickets`), not in the
-memory of the server that issued them, so a ticket outlives a restart and is
-known to whichever server the job's calls reach. Only a ticket's SHA-256 is
-kept, with the model and effort of its job and when it expires: a day after it
-was issued, since a job without a clock runs for hours, not days. A save
-carrying something that is not a ticket costs no lookup; an expired one marks
-nothing, and the expired ones are removed hourly (`AgentTicketJob`).
+Only a credential's SHA-256 is kept, with its run (`agent_runs`); a call
+carrying something that is no credential costs no lookup. Tickets issued by a
+release before (`agent_tickets`) still mark what they wrote for the day they
+were issued for, and are removed hourly after.
 
 **Reading web pages.** A build reaches nothing outside the machine but
 Anthropic, through the egress proxy beside the runner, which tunnels to the
-hosts it is given (`PROXY_ALLOW`) and no others. Where somebody names a site -
-*"look at myoldhomepage.com and make a new version of it"* - the build may
-also read its pages, through the page fetch the same proxy serves
-(`docker/agent/fetch.mjs`, port 3129, `/mcp`):
+hosts it is given (`PROXY_ALLOW`) and no others. Pages are read through the
+page fetch the same proxy serves (`docker/agent/fetch.mjs`, port 3129, `/mcp`):
 
-- **Only the sites the person named.** The runner finds them in the request
-  and, from the workspace, in the earlier messages of the conversation -
+- **Whose pages** is the runner's `AGENT_WEB`: `any` public site (the
+  default, as a person's own Claude Code would), only the sites the person
+  `named` - in the request and, from the workspace, in their earlier messages,
   never in what the agent answered (`docker/agent/sites.mjs`): a name with
   `https://` or `www.` in front, or ending in a country's two letters or a
-  common top-level domain; at most ten; `index.html` and `Node.js` are
-  files, not sites. A job that names one gets a second MCP server - the
-  fetch, with the sites in the header `X-Fetch-Sites` of the configuration
-  the runner writes, which no tool of the build changes - its one tool
-  (`fetch`), and a paragraph of the brief that names the sites. A job that
-  names none gets neither.
+  common top-level domain, at most ten - or `off`. Which it is goes into the
+  header `X-Fetch-Sites` of the configuration the runner writes (`*` for any),
+  which no tool of the build changes. A run that may read none gets no fetch
+  and no paragraph of the brief about it. **Upgrading a runner changes this**:
+  one from before read the named sites only - and a job of a platform from
+  before still does unless `AGENT_WEB` is set; set `AGENT_WEB=named` to keep
+  that.
 - **GET and HEAD, made by the proxy.** A tunnel carries TLS the proxy cannot
   read, so it could not be held to a method: the fetch makes the request
-  itself. It reads `http` and `https` on the standard ports, at a host that
-  is one of the sites, with or without `www.` - not a name below it, since
+  itself. It reads `http` and `https` on the standard ports, at a host it may
+  read - a named site with or without `www.`, not a name below it, since
   whoever writes `github.io` has not named every site there. Every address the
   name resolves to must be public - not loopback, a private or carrier
   network, link-local (the cloud's metadata), the containers' networks or a
-  multicast range - and the connection goes to the address checked, so a
-  name cannot point elsewhere between the check and the request. Redirects
-  are followed while they stay within the sites, five at most; one that
-  leaves them is reported, not followed. Twenty seconds and 4 MB
+  multicast range - and the connection goes to the address checked, so a name
+  cannot point elsewhere between the check and the request. Redirects are
+  followed while they stay readable, five at most. Twenty seconds and 4 MB
   (decompressed) a page, eight at a time across every build.
 - **What comes back** is text: HTML as readable text, its links and pictures
-  in Markdown and what its head says above it (title, description, language,
-  preview, stylesheets); `raw` for the markup or a stylesheet as sent; other
-  text as it is; anything else described by its type and size. 40,000
-  characters an answer, `start` reads on. Nothing a script puts on a page is
-  there, and no picture can be copied into a lambda.
+  in Markdown and what its head says above it; `raw` for the markup or a
+  stylesheet as sent; other text as it is; anything else described. 40,000
+  characters an answer, `start` reads on.
 - **A page is data.** The brief and the agent's instructions say so, and to
-  put nothing into an address that did not come from the request or a page -
-  but what holds is the rule of the sites: a page that tells the agent to
-  send the editor key of a change somewhere can only have it sent to a site
-  the person named. The runner reads nothing of a page as a fact of the run;
-  the step says which site was read (`web`, `site`: the host without `www.`, never the rest
-  of the address), and `/build` and the Change section show it.
+  put nothing into an address that did not come from the person or the page.
+  With any site readable, a page that tells the agent to send the editor key
+  somewhere is held only by that - the key is the person's, and so is what the
+  agent was asked to read; where that matters, the operator names the sites.
+  The runner reads nothing of a page as a fact of the run; the platform is told
+  which site was read (the host only), and the pages show it as a step.
+- **Searching** is Anthropic's web search, a tool of the CLI's own, which a
+  build loads unless `AGENT_SEARCH=false` - and a job of a platform from
+  before only where `AGENT_SEARCH` was set, since it never searched
+  (`verify-tools.sh` checks what a build loads with it, `--no-search` without).
+- **Handing files back**: beside the fetch, the same server has `hand_over`,
+  with which the agent gives the person a file - a text, a table, a picture as
+  SVG. It keeps nothing: the runner reads the file off a call that succeeded
+  and tells the platform, which keeps it with the run. It is there wherever the
+  fetch server is, also with `AGENT_WEB=off`.
 - **Switched off** with `LAMBDA_AGENT_FETCH=false` in the `.env` of either
   compose file, which reaches both halves: the runner (`AGENT_FETCH`; where
-  the fetch is, `AGENT_FETCH_URL`, `http://egress-proxy:3129/mcp` by default)
-  and the proxy (`PROXY_FETCH`, `PROXY_FETCH_PORT`). Both are on where
-  nothing says otherwise. The proxy logs the host of each page read or
-  refused (`fetched GET example.com`), nothing of the address after it.
+  the server is, `AGENT_FETCH_URL`, `http://egress-proxy:3129/mcp` by default)
+  and the proxy (`PROXY_FETCH`, `PROXY_FETCH_PORT`) - which leaves a build
+  without pages and without handing files back. The proxy logs the host of
+  each page read or refused, nothing of the address after it.
 
-The rules are checked without the internet by `docker/agent/fetch.test.mjs`
-(`node --test 'docker/agent/*.test.mjs'`, in CI).
+**Protocol 2.** A runner of this release takes the platform's id for a run
+(`run`), its limits (`timeout` in seconds, `maxTurns`), whom it is for
+(`view`, `installation`, `installationName`), the files it came with and those
+of the conversation (`attachments`: id, name, type, size, `earlier`) and what it
+carries on from (`continues`), and streams what happens as one JSON object a
+line (`GET /build/:id/events?after=…`: `queued`, `started`, `waiting`, `said`,
+`activity`, `returned`, `spent`, `ended`). Its health says `protocol: 2`,
+`web`, `search`, `timeout`, `maxTurns`, `attachments`, `files` and `asks`. A
+run of this protocol may end with a question (a last line `QUESTION: …`),
+reads its files through the platform (`read_attachment`), may do what the
+owner may do when asked - the showcase, publishing the source, how the editor
+opens, a new app beside the one it works on - and never sets or deletes a
+secret. A platform from before asks for snapshots (`GET /build/:id`) and is
+answered as it always was.
+
+The rules are checked without the internet by `docker/agent/fetch.test.mjs`,
+and both protocols by `runner.test.mjs` (`node --test 'docker/agent/*.test.mjs'`,
+in CI).
 
 **How many run at once.** Jobs on the clock - builds and changes alike - run
 `AGENT_CONCURRENCY` at a time (1 by default; at most 64), each in a container

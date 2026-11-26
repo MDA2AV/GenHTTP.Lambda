@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
@@ -57,9 +58,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("What it is published under now")]
-    public async ValueTask<SourceSettingsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request)
+    public async ValueTask<SourceSettingsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request, IRequest call)
     {
-        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author));
+        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author), AgentCallerConcern.Of(call));
 
         logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
 

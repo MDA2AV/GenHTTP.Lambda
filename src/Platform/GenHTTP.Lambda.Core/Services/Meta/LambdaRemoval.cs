@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -29,7 +30,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
                                   IDatabaseVault databaseVault, IWorkspaceVault workspaces, IShowcaseService showcases, IDomainRegistry domains, IStorageService storage,
-                                  IAnalyticsStore analytics, IQuietHoursService quietHours, IOptimizationService optimization)
+                                  IAnalyticsStore analytics, IQuietHoursService quietHours, IOptimizationService optimization, IAgentJournal agents)
 {
 
     public async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda)
@@ -56,6 +57,16 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         await secrets.ClearAsync(lambda.Id);
 
         await database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDeleteAsync();
+
+        // what its owner asked the agent and attached, and what came back -
+        // the files first, wherever they are kept, then the records of them
+        await agents.ForgetAsync(lambda.Id);
+
+        var runs = database.AgentRuns.Where(r => r.LambdaId == lambda.Id).Select(r => r.Id);
+
+        await database.AgentRunEvents.Where(e => runs.Contains(e.RunId)).ExecuteDeleteAsync();
+        await database.AgentFiles.Where(f => f.LambdaId == lambda.Id || (f.RunId != null && runs.Contains(f.RunId))).ExecuteDeleteAsync();
+        await database.AgentRuns.Where(r => r.LambdaId == lambda.Id).ExecuteDeleteAsync();
 
         database.Lambdas.Remove(lambda);
 

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GenHTTP.Lambda.Services.Hosting;
 
 namespace GenHTTP.Lambda.Services.Features;
@@ -19,8 +20,9 @@ namespace GenHTTP.Lambda.Services.Features;
 /// <param name="Previewed">When its preview was last put online, while it is</param>
 /// <param name="Revision">How many times its files were saved, counting the ones it began with</param>
 /// <param name="Writer">Who wrote what it holds - its last save - where the platform knows it: build-agent</param>
-/// <param name="Model">The model the build agent ran on</param>
-/// <param name="Effort">The effort it ran at</param>
+/// <param name="Model">The value of the agent's option <c>model</c> it ran on, where it had one</param>
+/// <param name="Effort">The value of its option <c>effort</c></param>
+/// <param name="Options">The value of every option the agent ran on, by option</param>
 public sealed record FeatureInfo(
     string Key,
     string Name,
@@ -38,7 +40,9 @@ public sealed record FeatureInfo(
     int Revision,
     string? Writer = null,
     string? Model = null,
-    string? Effort = null
+    string? Effort = null,
+    IReadOnlyDictionary<string, string>? Options = null,
+    [property: JsonIgnore] string? Run = null
 )
 {
 

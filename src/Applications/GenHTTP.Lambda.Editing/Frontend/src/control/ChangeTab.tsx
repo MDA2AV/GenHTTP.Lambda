@@ -3,12 +3,15 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '@genhttp-lambda/kit/address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '@genhttp-lambda/kit/api';
-import { RunHeader, RunLog, RunOutcome, RunProgress, type Tone } from '@genhttp-lambda/kit/components/AgentRun';
-import { AgentChoice, useAgentChoice, useChoiceLabel } from '@genhttp-lambda/kit/components/AgentChoice';
+import { FileList, RunBlockers, RunFiles, RunHeader, RunLog, RunOutcome, RunProgress, type Tone } from '@genhttp-lambda/kit/components/AgentRun';
+import { AgentChoice, useAgentChoice, useChoiceLabel, type AgentChoiceState } from '@genhttp-lambda/kit/components/AgentChoice';
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
-import { IconAlert, IconDraft, IconEye, IconExternal, IconPlay, IconSpark, IconSpinner, IconStop } from '@genhttp-lambda/kit/components/Icons';
-import { tagOf, useLanguage } from '@genhttp-lambda/kit/i18n';
+import { IconAlert, IconDraft, IconEye, IconExternal, IconPaperclip, IconPlay, IconSpark, IconSpinner, IconStop } from '@genhttp-lambda/kit/components/Icons';
+import { useAttachments } from '@genhttp-lambda/kit/components/useAttachments';
+import { tagOf, useLanguage, useT } from '@genhttp-lambda/kit/i18n';
+import { bytes } from '@genhttp-lambda/kit/ui/format';
+import { useProgressWords } from '@genhttp-lambda/kit/workspace/Turns';
 import { useEditorT } from '../i18n';
 import { useOrigin } from '@genhttp-lambda/kit/site';
 import type { Control } from './context';
@@ -46,6 +49,9 @@ export function ChangeTab({ control }: { control: Control }) {
   const state = agent.state;
   const job = state?.job ?? null;
   const running = isActive(job);
+
+  // what the box asks with, which going on from a change asks with as well
+  const choice = useAgentChoice(state?.offer);
 
   const [prompt, setPrompt] = useDraft(control.lambda.publicKey);
   const composer = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +134,7 @@ export function ChangeTab({ control }: { control: Control }) {
   return (
     <Section title={heading} hint={said.hint}>
       <div className="max-w-3xl space-y-6">
-        {job && <JobCard control={control} job={job} onAgain={() => prefill(job.prompt)} />}
+        {job && <JobCard control={control} job={job} choice={choice} onAgain={() => prefill(job.prompt)} />}
 
         {!running && (
           <Composer
@@ -140,6 +146,8 @@ export function ChangeTab({ control }: { control: Control }) {
             field={composer}
             next={job != null}
             target={target}
+            answering={job?.result?.asked ? job : null}
+            choice={choice}
           />
         )}
 
@@ -243,6 +251,8 @@ function Composer({
   field,
   next,
   target,
+  answering,
+  choice,
 }: {
   control: Control;
   state: AgentState;
@@ -253,11 +263,17 @@ function Composer({
   next: boolean;
   /** The feature to go on with, as the page suggests it; a new one when null. */
   target: string | null;
+  /** The change whose question the next message answers, where the last one asked. */
+  answering: ChangeJob | null;
+  choice: AgentChoiceState;
 }) {
   const t = useEditorT();
+  const kit = useT();
   const said = t.change;
   const plain = t.simple;
   const language = useLanguage();
+  const attachments = useAttachments(state.offer.attachments, kit.workspace.files);
+  const picker = useRef<HTMLInputElement>(null);
 
   const [online, setOnline] = useState(remembered);
   const [picked, setWhere] = useState<string>(target ?? '');
@@ -268,14 +284,14 @@ function Composer({
   const where = features.some((f) => f.key === picked) ? picked : '';
   const limit = control.summary?.limits.features ?? Infinity;
   const full = features.length >= limit;
-  const choice = useAgentChoice(state.offer);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const spent = state.left <= 0;
   const wanted = prompt.trim();
   const room = where !== '' || !full;
-  const ready = wanted.length >= 3 && !sending && !spent && room && choice.ready;
+  const ready = wanted.length >= 3 && !sending && !spent && room && choice.ready && !attachments.uploading;
+  const policy = state.offer.attachments ?? null;
 
   // the box grows with what is in it, up to a point, and the page scrolls after that
   useLayoutEffect(() => {
@@ -313,6 +329,9 @@ function Composer({
       ...choice.request,
       language,
       feature: where || undefined,
+      view: control.simple ? 'simple' : 'full',
+      attachments: attachments.ids.length > 0 ? attachments.ids : undefined,
+      continues: answering?.id,
     });
 
     setSending(false);
@@ -321,6 +340,7 @@ function Composer({
       setError(refused);
     } else {
       onPrompt('');
+      attachments.clear();
     }
   }
 
@@ -337,7 +357,7 @@ function Composer({
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
         <label htmlFor="change-prompt" className="block text-[15px] font-medium">
-          {next ? said.placeholderNext : said.label}
+          {answering ? said.answering : next ? said.placeholderNext : said.label}
         </label>
 
         {/* where it works: a draft of its own, or one to go on with - which
@@ -360,12 +380,42 @@ function Composer({
         )}
       </div>
 
-      <div className="surface focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500 dark:focus-within:border-accent-400 dark:focus-within:ring-accent-400">
+      <div
+        className="surface focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500 dark:focus-within:border-accent-400 dark:focus-within:ring-accent-400"
+        onDragOver={(event) => {
+          if (policy && event.dataTransfer.types.includes('Files')) event.preventDefault();
+        }}
+        onDrop={(event) => {
+          if (policy && event.dataTransfer.files.length > 0) {
+            event.preventDefault();
+            attachments.add([...event.dataTransfer.files]);
+          }
+        }}
+      >
+        {(attachments.files.length > 0 || attachments.uploading) && (
+          <div className="flex flex-wrap items-center gap-2 px-3 pt-3">
+            <FileList files={attachments.files} download={kit.workspace.files.save} onRemove={attachments.remove} remove={kit.workspace.files.remove} />
+            {attachments.uploading && (
+              <span role="status" className="inline-flex items-center">
+                <IconSpinner className="h-4 w-4 text-slate-400" />
+                <span className="sr-only">{kit.workspace.files.uploading}</span>
+              </span>
+            )}
+          </div>
+        )}
+
         <textarea
           id="change-prompt"
           ref={field}
           value={prompt}
           onChange={(event) => onPrompt(event.target.value)}
+          onPaste={(event) => {
+            // what comes with text as well - a copy out of a spreadsheet - is pasted as text
+            if (policy && event.clipboardData.files.length > 0 && !event.clipboardData.types.includes('text/plain')) {
+              event.preventDefault();
+              attachments.add([...event.clipboardData.files]);
+            }
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
@@ -375,7 +425,7 @@ function Composer({
           rows={3}
           maxLength={2000}
           disabled={sending}
-          placeholder={said.placeholder}
+          placeholder={answering ? said.placeholderAnswer : said.placeholder}
           className="block min-h-[5.5rem] w-full resize-none bg-transparent px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-slate-400 disabled:opacity-60 dark:placeholder:text-slate-600"
         />
 
@@ -386,6 +436,33 @@ function Composer({
               {said.goOnline}
             </span>
           </div>
+
+          {policy && (
+            <>
+              <input
+                ref={picker}
+                type="file"
+                multiple={policy.maxCount > 1}
+                accept={attachments.accept}
+                className="hidden"
+                tabIndex={-1}
+                onChange={(event) => {
+                  attachments.add([...(event.target.files ?? [])]);
+                  event.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => picker.current?.click()}
+                disabled={sending || attachments.files.length >= policy.maxCount}
+                title={kit.workspace.files.attachHint(policy.maxCount, bytes(policy.maxBytes))}
+                className="flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-slate-900 disabled:opacity-40 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                <IconPaperclip className="h-4 w-4" />
+                {kit.workspace.files.attach}
+              </button>
+            </>
+          )}
 
           <AgentChoice choice={choice} className="text-slate-600 dark:text-slate-400" />
 
@@ -405,6 +482,8 @@ function Composer({
         {control.simple ? (online ? plain.askOnline : plain.askDraft) : online ? said.goOnlineOn : said.goOnlineOff}
         {choice.guarded && ` ${said.unlimited}`}
       </p>
+
+      {attachments.problem && <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">{attachments.problem}</p>}
 
       {!room && (
         <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">{said.full(limit)}</p>
@@ -445,11 +524,14 @@ function Composer({
 
 /* ------------------------------------------------------------ one change */
 
-function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
+function JobCard({ control, job, choice, onAgain }: { control: Control; job: ChangeJob; choice: AgentChoiceState; onAgain: () => void }) {
   const said = useEditorT().change;
+  const kit = useT();
   const shared = useShared();
   const ranOn = useChoiceLabel();
   const running = isActive(job);
+  const offer = control.agent.state?.offer;
+  const ran = ranOn(offer, job.options ?? { ...(job.model ? { model: job.model } : {}), ...(job.effort ? { effort: job.effort } : {}) });
   const given = job.feature ? control.features.find((f) => f.key === job.feature) : undefined;
   const [stopping, setStopping] = useState(false);
   const [halting, setHalting] = useState(false);
@@ -472,12 +554,12 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
           <>
             {given && `${said.inFeature(given.name)} · `}
             {job.deploy ? said.goesOnline : said.review}
-            {` · ${ranOn(control.agent.state?.offer, job.model, job.effort)}`}
+            {ran && ` · ${ran}`}
             {!running && job.seconds > 0 && ` · ${said.took(span(job.seconds, shared))}`}
           </>
         }
         action={
-          running && (
+          running && offer?.cancels !== false && (
             <button type="button" onClick={() => setStopping(true)} disabled={halting} className="btn-danger !px-3 !py-1.5 text-[13px]">
               {halting ? <IconSpinner className="h-3.5 w-3.5" /> : <IconStop className="h-3.5 w-3.5" />}
               {halting ? said.stopping : said.stop}
@@ -486,7 +568,15 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
         }
       />
 
-      {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} onAgain={onAgain} />}
+      {(job.attachments?.length ?? 0) > 0 && (
+        <div className="border-b border-slate-200 px-4 py-2.5 dark:border-ink-800">
+          <FileList files={job.attachments ?? []} download={kit.workspace.files.save} />
+        </div>
+      )}
+
+      {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} choice={choice} onAgain={onAgain} />}
+
+      <RunFiles files={job.files ?? []} label={kit.workspace.files.forYou} download={kit.workspace.files.save} />
 
       {job.steps.some((step) => !control.simple || step.kind === 'say') && <Timeline job={job} running={running} simple={control.simple} />}
 
@@ -536,8 +626,9 @@ function Progress({ control, job }: { control: Control; job: ChangeJob }) {
   // the screen, underneath
   const pending = [...job.steps].reverse().find((step) => step.kind !== 'say');
   const doing = pending && !pending.done && !control.simple ? <StepText step={pending} said={said} /> : said.working;
+  const waits = useProgressWords();
 
-  return <RunProgress run={job} received={control.agent.received} doing={doing} words={said} />;
+  return <RunProgress run={job} received={control.agent.received} doing={doing} words={{ ...waits, queued: said.queued, starting: said.starting, leaveOpen: said.leaveOpen }} />;
 }
 
 /**
@@ -565,8 +656,18 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
     return { tone: 'bad', headline: said.results.failed, notes: [said.results.unauthorised] };
   }
 
+  if (result.reason === 'lost') {
+    return { tone: 'bad', headline: said.results.failed, notes: [said.results.lost] };
+  }
+
+  // a question back: what it asks is all there is to say, until it is answered
+  if (result.asked) {
+    return { tone: 'answer', headline: said.results.asked, notes: [said.results.answerBelow] };
+  }
+
   // cut short after it had saved something: what is there is as far as it got
-  const cut = result.reason === 'timeout' ? [said.results.timedOut] : result.reason === 'turns' ? [said.results.usedUp] : [];
+  const cut =
+    result.reason === 'timeout' ? [said.results.timedOut] : result.reason === 'turns' ? [said.results.usedUp] : result.reason === 'failed' ? [said.results.brokeOff] : [];
 
   // left in a draft rather than put online: asked to, or not done by the end
   if (result.ok && version == null && feature != null) {
@@ -590,8 +691,12 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
 
   // a question answered, or a setting changed: what the agent said is all
   // there is to say, and it says it in the summary
-  if (result.answered || (result.ok && version == null)) {
+  if (result.answered || (result.ok && version == null && cut.length === 0)) {
     return { tone: 'answer', headline: null, notes: [] };
+  }
+
+  if (result.ok && version == null) {
+    return { tone: 'warn', headline: cut[0], notes: [] };
   }
 
   if (!result.ok || version == null) {
@@ -633,9 +738,13 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
   return { tone: 'warn', headline: said.results.saved(version), notes: [said.results.notOnline, still, ...timedOut] };
 }
 
-function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
+function Outcome({ control, job, choice, onAgain }: { control: Control; job: ChangeJob; choice: AgentChoiceState; onAgain: () => void }) {
   const t = useEditorT();
+  const kit = useT();
+  const language = useLanguage();
   const { simple } = control;
+  const [going, setGoing] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   // the simple view says what happened to the change, not which version it became
   const said: Words = simple ? { ...t.change, results: { ...t.change.results, ...t.simple.results } } : t.change;
@@ -665,17 +774,48 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const live = online != null && lambda.activeVersion === online;
   const deployable = version != null && online == null && result?.compiles !== false && lambda.activeVersion !== version;
   const undoable = live && before != null && before !== online;
-  const retry = !result?.answered && (!result?.ok || (version == null && !left && !gone && result.online == null));
+  const cut = result?.reason === 'timeout' || result?.reason === 'turns';
+  const retry = !cut && !result?.answered && !result?.asked && (!result?.ok || (version == null && !left && !gone && result.online == null));
+
+  // going on where it stopped: what it waited for is there now, or it ran out
+  // of time - on what the box offers now, with the password where it needs one
+  const goOn = async () => {
+    if (going || !choice.ready) return;
+
+    setGoing(true);
+
+    const refused = await control.agent.start({
+      continues: job.id,
+      deploy: job.deploy,
+      view: simple ? 'simple' : 'full',
+      ...choice.request,
+      language,
+      feature: left?.key,
+    });
+
+    setProblem(refused);
+    setGoing(false);
+  };
+
+  const words = simple ? kit.workspace.results : said;
 
   return (
+    <>
     <RunOutcome
       tone={tone}
       headline={headline}
       notes={notes}
-      summary={result?.summary ? <Reply text={result.summary} /> : null}
+      summary={result?.asked && result.question ? <Reply text={result.question} /> : result?.summary ? <Reply text={result.summary} /> : null}
       detail={result?.detail}
       detailLabel={said.log}
     >
+          {cut && (
+            <button type="button" onClick={() => void goOn()} disabled={going || !choice.ready} title={said.goOnTitle} className="btn-primary !px-4 !py-1.5 text-[13px]">
+              {going && <IconSpinner className="h-3.5 w-3.5" />}
+              {said.goOn}
+            </button>
+          )}
+
           {/* left as a draft: try it, and put it online from here once it is right */}
           {left?.online && (
             <a href={absoluteAddress(left.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
@@ -736,6 +876,38 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
             </button>
           )}
     </RunOutcome>
+
+    {result?.waitsFor && result.waitsFor.length > 0 && (
+      <RunBlockers blockers={result.waitsFor} words={words.waitsFor}>
+        <button type="button" onClick={() => void goOn()} disabled={going || !choice.ready} title={said.goOnTitle} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+          {said.goOn}
+        </button>
+      </RunBlockers>
+    )}
+
+    {(result?.created?.length ?? 0) > 0 && (
+      <ul className="flex flex-wrap gap-2 border-t border-slate-200 px-4 py-2.5 dark:border-ink-800">
+        {result!.created!.map((name) => {
+          const made = result?.apps?.find((app) => app.publicKey === name);
+
+          return (
+            <li key={name} className="inline-flex items-center gap-1.5 rounded-full bg-accent-500/10 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-400">
+              <IconSpark className="h-3 w-3" />
+              {made?.editorUrl ? (
+                <a href={made.editorUrl} target="_blank" rel="noreferrer" className="underline">
+                  {words.created(name)}
+                </a>
+              ) : (
+                words.created(name)
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+
+    {problem && <p className="border-t border-slate-200 px-4 py-2 text-sm text-red-500 dark:border-ink-800">{problem}</p>}
+    </>
   );
 }
 
@@ -847,8 +1019,16 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.source}</>;
     case 'web':
       return <>{words.web(<strong className="font-medium">{step.site ?? ''}</strong>)}</>;
+    case 'search':
+      return <>{words.search}</>;
+    case 'attachment':
+      return <>{words.attachment(<File name={step.files?.[0] ?? ''} />)}</>;
+    case 'showcase':
+      return <>{words.showcase}</>;
+    case 'file':
+      return <>{words.file(<File name={step.files?.[0] ?? ''} />)}</>;
     default:
-      return <>{words.other(step.tool ?? '')}</>;
+      return <>{step.tool === 'update_lambda' ? words.view : words.other(step.tool ?? '')}</>;
   }
 }
 

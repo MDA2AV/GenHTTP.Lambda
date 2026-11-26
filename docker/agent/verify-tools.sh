@@ -13,8 +13,17 @@
 # asks the model anything, so this stops it there: nothing is spent, and it
 # works before the credentials are set.
 #
-# Run on genhttp.dev, against the runner deploy/cloud started.
+# Run on genhttp.dev, against the runner deploy/cloud started. A build
+# searches the web unless AGENT_SEARCH=false, which loads the CLI's own
+# WebSearch as well; --no-search checks a runner that has it off.
 set -euo pipefail
+
+SEARCH=true
+
+case "${1:-}" in
+  --no-search) SEARCH=false; shift ;;
+  --search) shift ;;
+esac
 
 SERVICE=${1:-agent}
 
@@ -22,7 +31,7 @@ COMPOSE=(docker compose -f "$(dirname "$(readlink -f "$0")")/../../deploy/cloud/
 
 echo "Asking the CLI in the agent's container which tools a build loads..."
 
-"${COMPOSE[@]}" exec -T "$SERVICE" node -e '
+"${COMPOSE[@]}" exec -T -e VERIFY_SEARCH="$SEARCH" "$SERVICE" node -e '
   const { spawn } = require("node:child_process");
   const fs = require("node:fs");
   const os = require("node:os");
@@ -35,7 +44,8 @@ echo "Asking the CLI in the agent's container which tools a build loads..."
     if (!found) throw new Error(`no ${name} in builder.mjs`);
     return [...found[1].matchAll(/["\x27]([A-Za-z_][A-Za-z0-9_]*)["\x27]/g)].map(m => m[1]);
   };
-  const deny = list("DENY");
+  const search = process.env.VERIFY_SEARCH === "true";
+  const deny = list("DENY").filter(t => !(search && t === "WebSearch"));
   const allow = [...new Set([...list("ALLOW"), ...list("CHANGE_ALLOW")])];
 
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "verify-"));
@@ -48,7 +58,7 @@ echo "Asking the CLI in the agent's container which tools a build loads..."
     "--model", "claude-haiku-5-5", "--effort", "low",
     "--permission-mode", "dontAsk", "--max-turns", "1",
     "--output-format", "stream-json", "--verbose",
-    "--tools", "",
+    "--tools", search ? "WebSearch" : "",
     "--allowedTools", ...allow,
     "--disallowedTools", ...deny
   ], { cwd: work, stdio: ["ignore", "pipe", "inherit"] });
@@ -70,8 +80,10 @@ echo "Asking the CLI in the agent's container which tools a build loads..."
       child.kill();
 
       const tools = event.tools ?? [];
-      // the platform'"'"'s MCP, and the page fetch a build that names a site gets
-      const foreign = tools.filter(t => !t.startsWith("mcp__genhttp__") && t !== "mcp__web__fetch");
+      // the platform'"'"'s MCP, the page fetch and hand-over beside it, and the
+      // search where the runner searches
+      const foreign = tools.filter(t => !t.startsWith("mcp__genhttp__") && t !== "mcp__web__fetch" && t !== "mcp__web__hand_over"
+        && !(search && t === "WebSearch"));
 
       console.log(`CLI ${event.claude_code_version ?? "?"}, ${tools.length} tools loaded:`);
       for (const tool of tools) console.log(`  ${foreign.includes(tool) ? "!!" : "  "} ${tool}`);

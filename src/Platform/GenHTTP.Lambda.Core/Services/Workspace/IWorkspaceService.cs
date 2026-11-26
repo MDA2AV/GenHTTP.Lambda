@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Workspace;
 
 /// <summary>
@@ -47,18 +49,18 @@ public interface IWorkspaceService
     /// </summary>
     /// <param name="expected">How many bytes the sender said it would send. An upload that ends short of it broke off, and is not kept</param>
     ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
-                                         CancellationToken cancellation = default);
+                                         VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Writes a file given as base64, replacing it if it exists.
     /// </summary>
     ValueTask<WorkspaceEntry> WriteEncodedAsync(long lambdaId, string path, string? content, long? featureId = null,
-                                                CancellationToken cancellation = default);
+                                                VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a file, if it is there.
     /// </summary>
-    ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
+    ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes everything in the workspace, for when it is switched off.

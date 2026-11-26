@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import type { AgentStep, BuildResult, ChangeResult, ChangeState } from '../api';
+import type { AgentStep, BuildResult, ChangeResult, ChangeState, RunFile } from '../api';
 
 /*
  * The apps this browser knows, and what was said about each - the workspace
@@ -38,6 +38,12 @@ export interface Turn {
   built?: BuildResult | null;
   /** How long it ran, in seconds. */
   seconds?: number;
+  /** The files it was asked with. */
+  attachments?: RunFile[];
+  /** The files the agent handed back. */
+  files?: RunFile[];
+  /** The earlier turn it carries on from: the one whose question it answers, or whose wait is over. */
+  continues?: string;
 }
 
 /** An app this browser knows. */
@@ -60,6 +66,8 @@ export interface PendingBuild {
   prompt: string;
   at: number;
   model?: string;
+  /** Whether it ended with a question and made no app: kept until it is answered, as long as the platform keeps the build. */
+  asked?: boolean;
 }
 
 interface Kept {
@@ -78,6 +86,9 @@ const KEPT_APPS = 200;
 
 /** How long a build is followed again after a reload: the agent forgets one after an hour. */
 const PENDING_FOR = 60 * 60 * 1000;
+
+/** How long a build's question waits for its answer here: a while less than the platform keeps the build. */
+const ASKED_FOR = 29 * 24 * 60 * 60 * 1000;
 
 const EMPTY: Kept = { apps: [] };
 
@@ -225,7 +236,7 @@ export function pend(build: PendingBuild | null) {
 export function pendingOf(kept: Kept): PendingBuild | null {
   const pending = kept.pending;
 
-  return pending && Date.now() - pending.at < PENDING_FOR ? pending : null;
+  return pending && Date.now() - pending.at < (pending.asked ? ASKED_FOR : PENDING_FOR) ? pending : null;
 }
 
 /** Whether a turn is still waiting for the agent, or being worked on. */

@@ -9,7 +9,10 @@ namespace GenHTTP.Lambda.Services.UsageReports;
 /// Of those, how many the build agent of the installation wrote - through MCP, or as a draft it wrote that was put
 /// online; counted under <c>mcp</c> or <c>api</c> above as well
 /// </param>
-/// <param name="Models">The versions the build agent wrote, by the model it ran on: every model the catalog has, by name</param>
-/// <param name="Efforts">The versions the build agent wrote, by the effort it ran at: every effort, by name</param>
+/// <param name="Models">The versions the build agent wrote, by the value of its option <c>model</c>: every value it offers, by name</param>
+/// <param name="Efforts">The versions the build agent wrote, by the value of its option <c>effort</c>: every value, by name</param>
+/// <param name="Options">The versions the agent wrote, by every value of every option of its integration's, by option</param>
+/// <param name="Runs">The runs of the agent in that time: how many, how long, on which values - never what they were about</param>
 public sealed record UsageActivity(int Days, IReadOnlyDictionary<string, int> Versions, int BuildAgent, IReadOnlyDictionary<string, int> Models,
-                                   IReadOnlyDictionary<string, int> Efforts);
+                                   IReadOnlyDictionary<string, int> Efforts, IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>>? Options = null,
+                                   UsageRuns? Runs = null);

@@ -43,14 +43,10 @@ export const SHARED = {
   byAgent: 'by an agent',
   writtenByAgent: 'Written by an agent',
   /**
-   * What the mark says of what the agent running on this server wrote: the
-   * model by the name of its family - Opus, Sonnet - and one of agentEfforts.
+   * What the mark says of what the agent running on this server wrote: what
+   * it ran on, as the agent names it - opus · high.
    */
-  writtenByBuildAgent: (model: string, effort: string) => `Written by the agent on this server, on ${model} at ${effort} effort`,
-  /** The same beside the mark, short, where the page is for somebody who works with code. */
-  ranOn: (model: string, effort: string) => `${model} · ${effort}`,
-  /** The efforts the agent ran at, as those two say them. */
-  agentEfforts: { low: 'low', medium: 'medium', high: 'high', xhigh: 'extra high', max: 'maximum' } as Record<string, string>,
+  writtenByBuildAgent: (ranOn: string) => (ranOn ? `Written by the agent on this server, on ${ranOn}` : 'Written by the agent on this server'),
   byGit: 'with git',
   pushedWithGit: 'Pushed with git',
   more: 'More',

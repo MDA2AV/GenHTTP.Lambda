@@ -191,6 +191,11 @@ when a push is refused, the line says why.
   changed. Push the change from the server - server-sent events
   (`EventSource.Create()`, `new EventSource("events")` in the browser) when
   the page only listens, a websocket when it talks back.
+- Say what the platform cannot do, or does only with somebody - the
+  operator's permission to connect, a key of the user's own, a tier with a
+  domain - rather than build something that pretends: `platform_guide`,
+  possible. A lambda here has no AI of its own; one that needs a model calls
+  a service with a key its owner enters.
 
 ## Data
 

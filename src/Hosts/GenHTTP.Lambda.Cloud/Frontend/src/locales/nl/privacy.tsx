@@ -34,21 +34,22 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Wat je aan de bouwagent vraagt',
     agent: (policy) => (
       <>
-        Wat je op de bouwpagina of in het onderdeel ‘Aanpassen’ in de editor van een lambda in het invoervak typt, wordt
-        naar Anthropic PBC in de Verenigde Staten gestuurd. Anthropic draait Claude, het model dat de app schrijft. Vanaf
-        de bouwpagina gaan ook de laatste paar berichten ervoor en wat de agent antwoordde mee, zodat hij begrijpt wat je
-        bedoelt. Om te antwoorden of een wijziging door te voeren, leest de agent ook de lambda: de code, de notities bij
-        de versies, het log, met de requests en de output van de lambda maar niet de IP-adressen van bezoekers, en als je
-        ernaar vraagt de items en het aantal bezoekers. Noem je een website, dan leest de agent ook pagina’s van die site,
-        vanaf deze server, zodat de site ons adres ziet en niet het jouwe. Ook wat hij leest, wordt daarheen gestuurd. Wat
-        Anthropic ermee doet, staat in{' '}
+        Wat je op de bouwpagina of in het onderdeel ‘Aanpassen’ in de editor van een lambda in het invoervak typt, en de
+        bestanden die je meestuurt, worden naar Anthropic PBC in de Verenigde Staten gestuurd. Anthropic draait Claude, het
+        model dat de app schrijft. Samen met de laatste paar berichten over dezelfde app en wat de agent antwoordde gaat het
+        mee, zodat hij begrijpt wat je bedoelt. Om te antwoorden of een wijziging door te voeren, leest de agent ook de
+        lambda: de code, de notities bij de versies, het log, met de requests en de output van de lambda maar niet de
+        IP-adressen van bezoekers, en als je ernaar vraagt de items en het aantal bezoekers. Om te weten te komen wat je app
+        nodig heeft, kan de agent op het web zoeken met de eigen zoekfunctie van Anthropic en pagina’s van websites lezen,
+        een site die je noemt of een site die hij vindt. Het lezen gebeurt vanaf deze server, zodat de site ons adres ziet en
+        niet het jouwe. Ook wat hij zoekt en leest, wordt daarheen gestuurd. Wat Anthropic ermee doet, staat in{' '}
         {policy('het eigen privacybeleid van Anthropic')}. De Verenigde Staten beschermen persoonsgegevens niet zoals de
         EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen of aan te passen wat je vroeg
         (art. 6 lid 1 sub b en art. 49 lid 1 sub b AVG). Zet er dus niets in wat je niet met anderen wilt delen.
       </>
     ),
     agentKept:
-      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst, waarin ook de namen staan van de websites waarvan de agent pagina’s las; beide hebben ook een vaste grootte. De berichten ervoor, die de bouwpagina meestuurt, worden niet opgeschreven. De bouwpagina bewaart de editorlinks van je apps en het gesprek over elke app in de eigen opslag van je browser en nergens anders: wij bewaren geen kopie, en wie dezelfde browser gebruikt kan ze openen. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
+      'De server bewaart elk verzoek dat je naar de agent stuurt, met de bestanden die je meestuurde, wat de agent antwoordde, de stappen die hij zette en de bestanden die hij je gaf, tot 30 dagen nadat het klaar was. Zo kunnen de bouwpagina en de editor het opnieuw tonen en kan de agent de eerdere berichten over dezelfde app lezen. Een bestand dat je uploadt maar nooit verstuurt, wordt na een uur verwijderd, en alles verdwijnt met de app als de app wordt verwijderd. Beheerders kunnen de verzoeken lezen en de bestanden openen, zoals ze ook het log van de server kunnen lezen. Het verzoek komt daarnaast volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst, waarin ook de namen staan van de websites waarvan de agent pagina’s las; beide hebben een vaste grootte. De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. De bouwpagina bewaart ook de editorlinks van je apps en het gesprek over elke app in de eigen opslag van je browser, waar wie dezelfde browser gebruikt ze kan openen. De rechtsgrond is dezelfde als voor het versturen. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
 
     lambdasTitle: 'Wat een lambda doet, bepaalt de eigenaar',
     lambdas:

@@ -68,23 +68,45 @@ export const workspace: KitMessages['workspace'] = {
   ],
 
   placeholderApp: (name) => `${name} hakkında sorun ya da neyin değişmesi gerektiğini söyleyin…`,
+  placeholderAnswer: 'Yanıtınız…',
+  answering: 'Sonraki mesajınız, sorduğu soruyu yanıtlar.',
+  askSomethingElse: 'Bunun yerine başka bir şey sor',
+  files: {
+    /** The paper clip beside the box. */
+    attach: 'Dosya ekle',
+    /** What the paper clip says when pointed at: how many files and how large each may be. */
+    attachHint: (count, size) => (count === 1 ? `En fazla ${size} boyutunda bir dosya ekleyin` : `Her biri en fazla ${size} boyutunda, en çok ${count} dosya ekleyin`),
+    uploading: 'Yükleniyor…',
+    remove: 'Kaldır',
+    save: 'Kaydet',
+    /** Above the files someone sent with a message. */
+    attached: 'Birlikte gönderilen',
+    /** Above the files the agent wrote for the person, such as a text or a table. */
+    forYou: 'Sizin için dosyalar',
+    tooMany: (most) => (most === 1 ? 'Bir mesajla yalnızca bir dosya gönderilebilir.' : `Bir mesajla yalnızca ${most} dosya gönderilebilir.`),
+    tooLarge: (name, most) => `${name} çok büyük: bir dosya en fazla ${most} olabilir.`,
+    /** A file of a kind the agent of this site takes none of, such as a video. */
+    kind: (name) => `${name} mesajla gönderilemez: bu sitenin ajanı bu türde dosya kabul etmez.`,
+    failed: (name) => `${name} yüklenemedi. Biraz sonra yeniden deneyin.`,
+  },
+  waits: {
+    /** The AI service behind the agent has too much to do right now. */
+    overloaded: 'Yapay zeka hizmeti şu an yoğun. Kendiliğinden devam eder.',
+    /** This site used up what its account with the AI service allows for now. */
+    rateLimited: 'Bu site şimdilik yapay zeka hizmetinin sınırına ulaştı. Daha sonra kendiliğinden devam eder.',
+    preparing: 'Hazırlanıyor…',
+    /** The agent of this site does not answer; it is asked again. */
+    unreachable: 'Ajan şu an yanıt vermiyor. Birazdan yeniden sorulur.',
+    other: 'Bekleniyor…',
+  },
+  until: (time) => `(yaklaşık ${time} saatine kadar)`,
   send: 'Gönder',
   stop: 'Durdur',
   stopping: 'Durduruluyor…',
   goOnline: 'Değişiklikleri hemen yayına al',
   goOnlineOn: 'Bir değişiklik çalışır çalışmaz yayına girer.',
   goOnlineOff: 'Bir değişiklik, önce sizin denemeniz için taslakta bırakılır.',
-  model: 'Model',
-  withPassword: (model) => `${model} (şifre)`,
-  effort: 'Efor',
-  efforts: {
-    low: 'Düşük',
-    medium: 'Orta',
-    high: 'Yüksek',
-    xhigh: 'Çok yüksek',
-    max: 'Maksimum',
-  },
-  ranOn: (model, effort) => `${model}, efor: ${effort}`,
+  withPassword: (value) => `${value} (şifre)`,
   left: (left, perDay) => `Bugün ${perDay} hakkınızdan ${left} tanesi kaldı`,
   noneLeft: (time) => `Bugünlük bu kadar. ${time} saatinden itibaren yeniden sorabilirsiniz.`,
   noBuilds: 'Bu sitede yeni uygulama oluşturulmuyor. Bir tane oluşturmak için kendi yapay zekâ asistanınızı bağlayın.',
@@ -101,6 +123,7 @@ export const workspace: KitMessages['workspace'] = {
     online: 'Değişiklik yayında',
     undo: 'Geri al',
     undoTitle: 'Daha önce yayında olanı yeniden yayına al',
+    created: (name) => `Yeni bir uygulama oluşturuldu: ${name}`,
     draft: 'Bir taslakta denemeye hazır',
     draftBroken: 'Taslak henüz çalışmıyor',
     saved: 'Değişiklik kaydedildi, ama yayında değil',
@@ -108,10 +131,24 @@ export const workspace: KitMessages['workspace'] = {
     earlier: 'Uygulamanız eski haline döndü',
     stopped: 'Durduruldu. Kaydettiği her şey korunur.',
     failed: 'Olmadı.',
+    unchanged: 'Hiçbir şey değişmedi.',
+    brokeOff: 'Bitmeden bir hatayla durdu. Kaydettikleri korunur.',
+    nothingSaved: 'Hiçbir şeyi değiştirmeden bir hatayla durdu. Biraz sonra yeniden deneyin.',
+    whatWentWrong: 'Neyin ters gittiği',
     timedOut: 'Bitmeden süresi doldu.',
     usedUp: 'Bitmeden adımları tükendi.',
     unauthorised: 'Ajan oturum açamadı, bu yüzden hiçbir şey çalışmadı. Bu, isteğinizin değil bu sitenin hatası.',
     lost: 'Yanıt gelmedi. Ajanın yaptığı her şey, uygulamanızın editöründeki geçmişinde.',
+    asked: 'Devam etmeden önce bir soru',
+    answerBelow: 'Aşağıdaki kutuya yanıt verin, ajan oradan devam eder.',
+    waitsFor: {
+      /** The agent asked for the app to use other services on the internet; whoever runs this site decides. */
+      connectivity: 'Başka hizmetleri kullanma izni bekleniyor; siteyi işleten karar verir.',
+      /** The names are those of the keys and passwords the app's code reads, such as WEATHER_API_KEY. */
+      keys: (names) => `${names.join(', ')} değerini girmeniz bekleniyor.`,
+    },
+    goOn: 'Devam et',
+    goOnTitle: 'Kaldığı yerden, yeniden sormadan devam etsin',
     settings: {
       analytics: 'Bundan sonra ziyaretçiler sayılıyor',
       database: 'Kayıtlar açıldı',
@@ -120,6 +157,8 @@ export const workspace: KitMessages['workspace'] = {
       source: 'Kod yayınlandı',
       connectivity: 'Başka hizmetleri kullanmak için izin istendi',
       discarded: 'Taslak silindi',
+      showcase: 'Vitrinde listelendi',
+      view: 'Editör farklı açılıyor',
     },
     seeSource: 'Kodu gör',
     remembered: 'Bu tarayıcı onu Uygulamalarınız altında da hatırlar.',

@@ -1,6 +1,5 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -73,8 +72,8 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
             Change = change,
             Origin = note.Origin,
             Writer = note.Author?.Writer,
-            AgentModel = note.Author?.Model,
-            AgentEffort = note.Author?.Effort
+            AgentRun = note.Author?.Run,
+            AgentOptions = note.Author is { } author ? StoredOptions.Write(author.Options) : null
         });
 
         lambda.Modified = now;
@@ -85,8 +84,11 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         await PruneAsync(database, lambda);
 
+        var options = note.Author?.Options;
+
         return new LambdaVersionInfo(version, now, specification, change, VersionOriginNames.Name(note.Origin), VersionWriterNames.Name(note.Author?.Writer),
-                                     AgentCatalog.NameOf(note.Author?.Model), AgentCatalog.NameOf(note.Author?.Effort));
+                                     options?.GetValueOrDefault(AgentModelNames.ModelOption), options?.GetValueOrDefault(AgentModelNames.EffortOption),
+                                     options is { Count: > 0 } ? options : null);
     }
 
     /// <summary>

@@ -93,6 +93,9 @@ services:
       NO_PROXY: localhost,127.0.0.1
       AGENT_FETCH: ${LAMBDA_AGENT_FETCH:-true}
       AGENT_FETCH_URL: http://egress-proxy:3129/mcp
+      # any public site, the named ones (named) or none (off); and searching
+      AGENT_WEB: ${LAMBDA_AGENT_WEB:-any}
+      AGENT_SEARCH: ${LAMBDA_AGENT_SEARCH:-true}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # the group that owns the docker socket on this machine:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { api, refusedToken, type Activity, type AdminStorage, type EventHistory } from '@genhttp-lambda/kit/api';
+import { api, refusedToken, type Activity, type AdminAgentOption, type AdminStorage, type EventHistory } from '@genhttp-lambda/kit/api';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
 import { Pills, Section } from '@genhttp-lambda/kit/ui/ui';
 import { BLUE, GREEN, GREY, ORANGE, PURPLE, RED, Ranked, Segments } from './charts';
@@ -24,22 +24,12 @@ const RANGES = [
 ];
 
 /** Where the versions came from, in the order the bar shows them; the rest is other. */
-/** The models the build agent runs on, by the names they are offered by - the family's, not the version the runner maps it to. */
-const AGENT_MODELS = [
-  { name: 'opus', label: 'Opus', color: BLUE },
-  { name: 'sonnet', label: 'Sonnet', color: PURPLE },
-  { name: 'haiku', label: 'Haiku', color: GREEN },
-  { name: 'fable', label: 'Fable', color: ORANGE },
-];
+/** Names in the order the agent has them, those it no longer has last. */
+const inOrder = (names: string[], order: string[]) =>
+  [...names].sort((a, b) => (order.includes(a) ? order.indexOf(a) : order.length) - (order.includes(b) ? order.indexOf(b) : order.length));
 
-/** The efforts it runs at, the least first. */
-const AGENT_EFFORTS = [
-  { name: 'low', label: 'Low', color: GREY },
-  { name: 'medium', label: 'Medium', color: GREEN },
-  { name: 'high', label: 'High', color: BLUE },
-  { name: 'xhigh', label: 'Extra high', color: PURPLE },
-  { name: 'max', label: 'Maximum', color: ORANGE },
-];
+/** The colours the values of an option of the agent's take, in turn - its options are its integration's, whatever they are. */
+const AGENT_COLORS = [BLUE, PURPLE, GREEN, ORANGE, GREY];
 
 const ORIGINS = [
   { origin: 'agent', label: 'An agent, over MCP', color: BLUE },
@@ -61,6 +51,7 @@ export function StatisticsSection({ access }: { access: Access }) {
   const [events, setEvents] = useState<EventHistory | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [storage, setStorage] = useState<AdminStorage | null>(null);
+  const [agentOptionsOffered, setAgentOptionsOffered] = useState<AdminAgentOption[]>([]);
 
   useEffect(() => {
     let current = true;
@@ -79,6 +70,9 @@ export function StatisticsSection({ access }: { access: Access }) {
 
     api.activity(token).then(setActivity).catch(failed);
     api.admin.storage(token).then(setStorage).catch(failed);
+
+    // the agent's options, for their order and labels - the counts are kept by name
+    api.admin.agent(token).then((agent) => setAgentOptionsOffered(agent.options ?? [])).catch(() => setAgentOptionsOffered([]));
   }, [token, deny]);
 
   if (overview === null) {
@@ -92,7 +86,9 @@ export function StatisticsSection({ access }: { access: Access }) {
   const { lambdas } = overview;
   const pick = (kind: string) => events?.series.find((s) => s.kind === kind)?.counts ?? [];
   const other = Object.entries(lambdas.saved).filter(([origin]) => !ORIGINS.some((o) => o.origin === origin)).reduce((sum, [, n]) => sum + n, 0);
-  const written = Object.values(lambdas.agentModels ?? {}).reduce((sum, n) => sum + n, 0);
+  // by every option of the agent's; a server from before counted models and efforts only
+  const agentOptions = lambdas.agentOptions ?? { model: lambdas.agentModels ?? {}, effort: lambdas.agentEfforts ?? {} };
+  const written = Math.max(0, ...Object.values(agentOptions).map((values) => Object.values(values).reduce((sum, n) => sum + n, 0)));
 
   return (
     <Section
@@ -210,20 +206,26 @@ export function StatisticsSection({ access }: { access: Access }) {
           {written > 0 && (
             <Card
               title="What the build agent writes"
-              hint="Of those, what the agent running on this server wrote - through MCP, or as a draft of its own that was put online - by the model and the effort it ran at."
+              hint="Of those, what the agent running on this server wrote - through MCP, or as a draft of its own that was put online - by each of its options it ran on."
             >
-              <Segments
-                label="Models"
-                dark={dark}
-                parts={AGENT_MODELS.map((m) => ({ label: m.label, value: lambdas.agentModels[m.name] ?? 0, color: m.color }))}
-              />
-              <div className="mt-4">
-                <Segments
-                  label="Efforts"
-                  dark={dark}
-                  parts={AGENT_EFFORTS.map((e) => ({ label: e.label, value: lambdas.agentEfforts[e.name] ?? 0, color: e.color }))}
-                />
-              </div>
+              {inOrder(Object.keys(agentOptions), agentOptionsOffered.map((o) => o.name)).map((option, index) => {
+                const offered = agentOptionsOffered.find((o) => o.name === option);
+                const values = agentOptions[option];
+
+                return (
+                  <div key={option} className={index > 0 ? 'mt-4' : undefined}>
+                    <Segments
+                      label={offered?.label ?? option.charAt(0).toUpperCase() + option.slice(1)}
+                      dark={dark}
+                      parts={inOrder(Object.keys(values), offered?.values.map((v) => v.name) ?? []).map((name, at) => ({
+                        label: offered?.values.find((v) => v.name === name)?.label ?? name,
+                        value: values[name],
+                        color: AGENT_COLORS[at % AGENT_COLORS.length],
+                      }))}
+                    />
+                  </div>
+                );
+              })}
             </Card>
           )}
         </div>

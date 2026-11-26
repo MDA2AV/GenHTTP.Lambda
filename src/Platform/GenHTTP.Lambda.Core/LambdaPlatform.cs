@@ -9,7 +9,7 @@ using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Guide;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Census;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
@@ -180,6 +180,10 @@ public sealed class LambdaPlatform : IAsyncDisposable
 
         await Services.GetRequiredService<AgentSettingsStore>().LoadAsync(cancellation);
 
+        // the runs of the agent that had not ended as the server stopped are
+        // followed again, so a page finds them where they got to
+        await Services.GetRequiredService<AgentFollower>().ResumeAsync(cancellation);
+
         await Services.GetRequiredService<GuideService>().LoadAsync(cancellation);
 
         await Services.GetRequiredService<BrandingService>().LoadAsync(cancellation);
@@ -214,6 +218,11 @@ public sealed class LambdaPlatform : IAsyncDisposable
         {
             services.AddSingleton<SecretCipher>();
             services.AddSingleton<ISecretProvider, DatabaseSecrets>();
+        }
+
+        if (integrations.Agent is { } agent)
+        {
+            services.AddSingleton(agent);
         }
 
         services.AddSingleton<IIntegrationService, IntegrationService>();
@@ -328,12 +337,19 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<IGuideService>(provider => provider.GetRequiredService<GuideService>());
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<LambdaWarmup>();
-        services.AddSingleton<AgentClient>();
-        services.AddSingleton<AgentTickets>();
+        services.AddSingleton<AgentCredentials>();
         services.AddSingleton<AgentSettingsStore>();
+        services.AddSingleton<AgentGate>();
         services.AddSingleton<BuildAllowance>();
-        services.AddSingleton<ModelGate>();
-        services.AddSingleton<IBuildService, BuildService>();
+        services.AddSingleton<UploadAllowance>();
+        services.AddSingleton<AgentSignals>();
+        services.AddSingleton<AgentRunRecords>();
+        services.AddSingleton<AgentAttachments>();
+        services.AddSingleton<AgentContext>();
+        services.AddSingleton<AgentFollower>();
+        services.AddSingleton<AgentOutcome>();
+        services.AddSingleton<IAgentJournal, AgentJournal>();
+        services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<EventReader>();
         services.AddSingleton<LambdaTally>();
         services.AddSingleton<StorageSurvey>();
@@ -373,12 +389,14 @@ public sealed class LambdaPlatform : IAsyncDisposable
         services.AddSingleton<LambdaActivityConcern>();
         services.AddSingleton<AnalyticsConcern>();
         services.AddSingleton<RateLimitConcern>();
+        services.AddSingleton<AgentCallerConcern>();
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
         services.AddSingleton<IBackgroundJob, AddressBlockJob>();
-        services.AddSingleton<IBackgroundJob, AgentTicketJob>();
+        services.AddSingleton<IBackgroundJob, AgentRetentionJob>();
+        services.AddSingleton<IBackgroundJob, AgentFollowJob>();
         services.AddSingleton<IBackgroundJob, UsageReportJob>();
         services.AddSingleton<IBackgroundJob, StorageCensusJob>();
         services.AddSingleton<IBackgroundJob, QuietHoursJob>();

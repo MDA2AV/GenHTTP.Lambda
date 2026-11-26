@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
@@ -61,9 +62,9 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version - it never existed, or it was not kept.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask<Result<DeploymentOutcomeResponse>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, DeploymentRequest? request)
+    public async ValueTask<Result<DeploymentOutcomeResponse>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, DeploymentRequest? request, IRequest call)
     {
-        var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigin.Api);
+        var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigin.Api, AgentCallerConcern.Of(call));
 
         logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), request?.Version);
 

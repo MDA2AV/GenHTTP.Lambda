@@ -60,8 +60,10 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [return: Summary("The secret, without its value")]
     public async ValueTask<SecretResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey,
                                                [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit, up to 128 characters - `STRIPE_KEY`. Case sensitive.")] string name,
-                                               SecretRequest request)
+                                               SecretRequest request, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "enter keys and passwords");
+
         var secret = await secrets.SetAsync(privateKey, name, request.Value);
 
         logger.LogInformation("Set secret {Name} of lambda {Lambda}", secret.Name, await meta.PublicKeyOfAsync(privateKey));
@@ -75,8 +77,10 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no secret of that name.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Its name, case sensitive")] string name)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Its name, case sensitive")] string name, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "delete keys and passwords");
+
         await secrets.DeleteAsync(privateKey, name);
 
         logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), await meta.PublicKeyOfAsync(privateKey));
@@ -104,8 +108,10 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [return: Summary("The secret, without its value")]
     public async ValueTask<SecretResponse> PutOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
                                                         [Summary("Its name, as the code reads it: letters, digits and underscores, not starting with a digit. Case sensitive.")] string name,
-                                                        SecretRequest request)
+                                                        SecretRequest request, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "enter keys and passwords");
+
         var secret = await secrets.SetAsync(privateKey, name, request.Value, feature);
 
         logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
@@ -120,8 +126,10 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature, or the copy has no secret of that name.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask DeleteOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature,
-                                           [Summary("Its name, case sensitive")] string name)
+                                           [Summary("Its name, case sensitive")] string name, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "delete keys and passwords");
+
         await secrets.DeleteAsync(privateKey, name, feature);
 
         logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),

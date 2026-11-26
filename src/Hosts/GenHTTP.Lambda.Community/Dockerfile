@@ -46,6 +46,7 @@ COPY src/Directory.Build.props src/BannedSymbols.txt src/
 COPY src/Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj src/Integrations/GenHTTP.Lambda.Integrations/
 COPY src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/
 COPY src/Integrations/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj src/Integrations/GenHTTP.Lambda.Integrations.Local/
+COPY src/Integrations/GenHTTP.Lambda.Integrations.ClaudeCode/GenHTTP.Lambda.Integrations.ClaudeCode.csproj src/Integrations/GenHTTP.Lambda.Integrations.ClaudeCode/
 COPY src/Integrations/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj src/Integrations/GenHTTP.Lambda.Integrations.PostgreSql/
 COPY src/Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj src/Platform/GenHTTP.Lambda.Core/
 COPY src/Serving/GenHTTP.Lambda.Web/GenHTTP.Lambda.Web.csproj src/Serving/GenHTTP.Lambda.Web/

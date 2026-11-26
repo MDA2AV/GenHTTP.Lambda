@@ -34,21 +34,24 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Yang Anda minta dari agen build',
     agent: (policy) => (
       <>
-        Apa yang Anda ketik di halaman build, atau di bagian “Ubah” pada editor sebuah lambda, dikirim ke Anthropic PBC di
-        Amerika Serikat, yang menjalankan Claude, model yang menulis aplikasinya - dari halaman build bersama beberapa
-        pesan sebelumnya dan jawaban agen, supaya maksud Anda dipahami. Untuk menjawab atau membuat perubahan, agen juga
+        Apa yang Anda ketik di halaman build, atau di bagian “Ubah” pada editor sebuah lambda, beserta file yang Anda kirim
+        bersamanya, dikirim ke Anthropic PBC di Amerika Serikat, yang menjalankan Claude, model yang menulis aplikasinya -
+        bersama beberapa pesan terakhir tentang aplikasi yang sama dan jawaban agen, supaya maksud Anda dipahami. Untuk
+        menjawab atau membuat perubahan, agen juga
         membaca lambda itu: kodenya, catatan pada versi-versinya, log-nya, yang berisi request ke lambda itu dan apa yang
         dicetaknya, tetapi tidak berisi alamat IP pengunjungnya, dan, jika Anda menanyakannya, catatan serta jumlah
-        pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Jika Anda menyebut sebuah situs web, agen juga membaca
-        halaman-halaman situs itu, dari server ini - jadi situs itu melihat alamat kami, bukan alamat Anda - dan halaman
-        itu dikirim ke sana dengan cara yang sama. Apa yang dilakukan Anthropic dengan data itu diatur oleh{' '}
+        pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Untuk mengetahui apa yang dibutuhkan aplikasi Anda, agen
+        dapat mencari di web dengan pencarian milik Anthropic sendiri, dan membaca halaman situs web - situs yang Anda
+        sebut, atau yang ditemukannya - dari server ini, jadi situs itu melihat alamat kami, bukan alamat Anda; halaman itu
+        dikirim ke sana dengan cara yang sama. Apa yang
+        dilakukan Anthropic dengan data itu diatur oleh{' '}
         {policy('kebijakan privasinya sendiri')}. Perlindungan data pribadi di Amerika Serikat tidak setara dengan di Uni
         Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan untuk membuat atau mengubah apa yang Anda minta (Pasal
         6 ayat (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR). Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.
       </>
     ),
     agentKept:
-      'Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Permintaan itu sendiri dicatat utuh di log server, dan beberapa ratus karakter pertamanya di log layanan build, yang juga mencatat nama situs web yang halamannya dibaca agen; ukuran keduanya juga tetap. Pesan-pesan sebelumnya, yang dikirim bersama oleh halaman build, tidak dicatat. Halaman build menyimpan link editor aplikasi Anda beserta percakapan tentang masing-masing di penyimpanan bawaan browser Anda, dan tidak di tempat lain: kami tidak menyimpan salinannya, dan siapa pun yang memakai browser yang sama dapat membukanya. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
+      'Server menyimpan setiap permintaan yang Anda kirim ke agen - beserta file yang Anda sertakan, jawaban agen, langkah yang diambilnya, dan file yang diserahkannya kepada Anda - selama 30 hari setelah selesai, agar halaman build dan editor dapat menampilkannya lagi dan agen dapat membaca pesan-pesan sebelumnya tentang aplikasi yang sama; file yang Anda unggah tetapi tidak pernah dikirim dihapus setelah satu jam, dan semuanya ikut terhapus saat aplikasinya dihapus. Administrator dapat membaca permintaan itu dan membuka filenya, seperti mereka dapat membaca log server. Permintaan itu juga dicatat utuh di log server, dan beberapa ratus karakter pertamanya di log layanan build, yang juga mencatat nama situs web yang halamannya dibaca agen; ukuran keduanya tetap. Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Halaman build juga menyimpan link editor aplikasi Anda beserta percakapan tentang masing-masing di penyimpanan bawaan browser Anda, tempat siapa pun yang memakai browser yang sama dapat membukanya. Dasar hukumnya sama dengan dasar untuk mengirimkannya. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
 
     lambdasTitle: 'Apa yang dilakukan lambda ditentukan pemiliknya',
     lambdas:

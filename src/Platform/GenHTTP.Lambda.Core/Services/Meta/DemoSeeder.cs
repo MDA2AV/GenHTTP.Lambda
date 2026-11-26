@@ -155,7 +155,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             }
         }
 
-        var result = await meta.DeployAsync(demo.Key, null, VersionOrigin.System, cancellation);
+        var result = await meta.DeployAsync(demo.Key, null, VersionOrigin.System, cancellation: cancellation);
 
         if (!result.Success)
         {

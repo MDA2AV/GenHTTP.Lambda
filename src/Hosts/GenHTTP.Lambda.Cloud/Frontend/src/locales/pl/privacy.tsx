@@ -34,21 +34,23 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Co mówisz agentowi do budowania',
     agent: (policy) => (
       <>
-        To, co wpisujesz na stronie budowania albo w sekcji „Zmień” w edytorze lambdy, trafia do Anthropic PBC w Stanach
-        Zjednoczonych. Ta firma prowadzi model Claude, który pisze aplikację – ze strony budowania razem z kilkoma
-        poprzednimi wiadomościami i odpowiedziami agenta, żeby zrozumiał, co masz na myśli. Żeby odpowiedzieć lub
-        wprowadzić zmianę, agent czyta też lambdę – jej kod, notatki do jej wersji, jej log, w którym są żądania i to, co
-        lambda wypisała, ale nie adresy IP odwiedzających, a gdy o nie pytasz, także jej wpisy i liczby odwiedzających. To,
-        co agent przeczyta, również jest tam wysyłane. Gdy podajesz jakąś stronę internetową, agent czyta też strony tej
-        witryny, z tego serwera – dlatego witryna widzi nasz adres, a nie twój – i one również są tam wysyłane w ten sam
-        sposób. Co Anthropic robi z tymi danymi, opisuje {policy('polityka prywatności tej firmy')}.
+        To, co wpisujesz na stronie budowania albo w sekcji „Zmień” w edytorze lambdy, oraz pliki, które do tego dołączasz,
+        trafia do Anthropic PBC w Stanach Zjednoczonych. Ta firma prowadzi model Claude, który pisze aplikację – razem z
+        kilkoma poprzednimi wiadomościami o tej samej aplikacji i odpowiedziami agenta, żeby zrozumiał, co masz na myśli.
+        Żeby odpowiedzieć lub wprowadzić zmianę, agent czyta też lambdę – jej kod, notatki do jej wersji, jej log, w którym
+        są żądania i to, co lambda wypisała, ale nie adresy IP odwiedzających, a gdy o nie pytasz, także jej wpisy i liczby
+        odwiedzających. To, co agent przeczyta, również jest tam wysyłane. Żeby sprawdzić, czego potrzebuje twoja aplikacja,
+        może przeszukiwać internet za pomocą własnej wyszukiwarki Anthropic i czytać strony internetowe – jedną, którą
+        podasz, albo taką, którą znajdzie – z tego serwera, dlatego witryna widzi nasz adres, a nie twój; strony te są tam
+        wysyłane w ten sam sposób.
+        Co Anthropic robi z tymi danymi, opisuje {policy('polityka prywatności tej firmy')}.
         Stany Zjednoczone nie chronią danych osobowych tak jak UE. Twoja prośba jest tam wysyłana, bo bez tego nie da się
         zbudować ani zmienić tego, o co prosisz (art. 6 ust. 1 lit. b i art. 49 ust. 1 lit. b RODO). Nie wpisuj więc
         niczego, czym nie chcesz się dzielić.
       </>
     ),
     agentKept:
-      'Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Sama prośba trafia w całości do logu serwera, a kilkaset pierwszych znaków także do logu usługi budowania, w którym są też nazwy witryn, których strony agent czytał; oba również mają stały rozmiar. Wcześniejszych wiadomości, które wysyła strona budowania, nie zapisujemy. Strona budowania przechowuje linki do edytorów twoich aplikacji i rozmowy o każdej z nich w pamięci twojej przeglądarki i nigdzie indziej: nie trzymamy kopii, a każdy, kto korzysta z tej samej przeglądarki, może je otworzyć. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
+      'Serwer przechowuje każdą prośbę, którą wysyłasz agentowi – razem z plikami, które dołączyłeś, odpowiedzią agenta, krokami, które wykonał, i plikami, które ci przekazał – przez 30 dni po jej zakończeniu, aby strona budowania i edytor mogły ją pokazać ponownie, a agent mógł przeczytać wcześniejsze wiadomości o tej samej aplikacji. Plik, który wgrasz, ale nie wyślesz, jest usuwany po godzinie, a po usunięciu aplikacji znika z nią wszystko. Administratorzy mogą czytać prośby i otwierać pliki, tak jak mogą czytać log serwera. Prośba trafia też w całości do logu serwera, a kilkaset pierwszych znaków do logu usługi budowania, w którym są też nazwy witryn, których strony agent czytał; oba mają stały rozmiar. Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Strona budowania przechowuje też linki do edytorów twoich aplikacji i rozmowy o każdej z nich w pamięci twojej przeglądarki, gdzie każdy, kto korzysta z tej samej przeglądarki, może je otworzyć. Podstawa prawna jest taka sama jak przy wysyłaniu. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
 
     lambdasTitle: 'O tym, co robi lambda, decyduje jej właściciel',
     lambdas:

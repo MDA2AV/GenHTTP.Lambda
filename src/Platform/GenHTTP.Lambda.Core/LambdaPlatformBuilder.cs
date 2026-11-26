@@ -1,6 +1,8 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Agents;
+using GenHTTP.Lambda.Integrations.ClaudeCode;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Integrations.Local;
@@ -32,6 +34,10 @@ public sealed class LambdaPlatformBuilder
     private IIntegrationBuilder<IFileProvider>? _files;
 
     private IIntegrationBuilder<ISecretProvider>? _secrets;
+
+    private IIntegrationBuilder<IAgentProvider>? _agent;
+
+    private bool _agentChosen;
 
     #region Functionality
 
@@ -112,6 +118,19 @@ public sealed class LambdaPlatformBuilder
     public LambdaPlatformBuilder Secrets(IIntegrationBuilder<ISecretProvider> secrets)
     {
         _secrets = secrets;
+        return this;
+    }
+
+    /// <summary>
+    /// The agent that builds and changes apps for the people who ask on the
+    /// installation's pages - nothing for none. Without, an installation that
+    /// names a runner (<see cref="LambdaOptions.AgentUrl"/>) builds with the
+    /// platform's own, Claude Code in the runner of <c>docker/agent</c>.
+    /// </summary>
+    public LambdaPlatformBuilder Agent(IIntegrationBuilder<IAgentProvider>? agent)
+    {
+        _agent = agent;
+        _agentChosen = true;
         return this;
     }
 
@@ -204,7 +223,8 @@ public sealed class LambdaPlatformBuilder
 
     /// <summary>
     /// Builds what the host chose, and the platform's own where it chose
-    /// nothing, then prepares each - the database, the files, the secrets.
+    /// nothing, then prepares each - the database, the files, the secrets,
+    /// the agent.
     /// </summary>
     /// <remarks>
     /// Building only configures, so all are built before the first reaches
@@ -224,19 +244,35 @@ public sealed class LambdaPlatformBuilder
 
             var secrets = _secrets is { } chosen ? Keep(built, chosen.Build(context)) : null;
 
+            var agent = AgentBuilder() is { } agents ? Keep(built, agents.Build(context)) : null;
+
             foreach (var integration in built)
             {
                 await integration.PrepareAsync(cancellation);
             }
 
             // a host naming the platform's own has not chosen another
-            return new PlatformIntegrations(database, files, secrets);
+            return new PlatformIntegrations(database, files, secrets, agent);
         }
         catch
         {
             await PlatformIntegrations.DisposeAsync(built);
             throw;
         }
+    }
+
+    /// <summary>
+    /// The agent the host chose, or the platform's own where it names a
+    /// runner and chose none.
+    /// </summary>
+    private IIntegrationBuilder<IAgentProvider>? AgentBuilder()
+    {
+        if (_agentChosen)
+        {
+            return _agent;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.AgentUrl) ? null : ClaudeCodeRunner.Create(_options.AgentUrl).Token(_options.AgentToken);
     }
 
     private static T Keep<T>(List<IIntegration> built, T integration) where T : IIntegration

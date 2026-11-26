@@ -39,15 +39,31 @@ if (args[0] !== 'run') process.exit(0);
 const box = args[args.indexOf('--name') + 1];
 const config = JSON.parse(process.env.AGENT_MCP_CONFIG);
 const mcp = new URL(config.mcpServers.genhttp.url);
-writeFileSync(process.env.STAND_IN_DIR + '/' + box + '.json', JSON.stringify({ config, direct: process.env.NO_PROXY }));
+const brief = process.env.AGENT_BRIEF;
+const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--disallowedTools'));
+writeFileSync(process.env.STAND_IN_DIR + '/job-' + process.env.AGENT_JOB + '.json', JSON.stringify({ config, box, direct: process.env.NO_PROXY, brief, allowed, tools: args[args.indexOf('--tools') + 1], turns: args.includes('--max-turns') ? args[args.indexOf('--max-turns') + 1] : null }));
 const say = event => process.stdout.write(JSON.stringify(event) + '\\n');
 const at = mcp.hostname;
 const answer = () => {
+  // HANDME: a file handed over, once refused and then taken
+  if (brief.includes('HANDME')) {
+    say({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'h0', name: 'mcp__web__hand_over', input: { name: 'bad.md', mediaType: 'text/markdown', content: 'no' } }] } });
+    say({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'h0', is_error: true, content: [{ type: 'text', text: 'refused' }] }] } });
+    say({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'h1', name: 'mcp__web__hand_over', input: { name: 'notes.md', mediaType: 'text/markdown', content: '# Notes', description: 'What I found' } }] } });
+    say({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'h1', content: [{ type: 'text', text: 'Handed notes.md over' }] }] } });
+  }
+  // README: a page read beyond the platform
+  if (brief.includes('README')) {
+    say({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'f1', name: 'mcp__web__fetch', input: { url: 'https://example.org/page' } }] } });
+    say({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'f1', content: [{ type: 'text', text: 'GET https://example.org/page' }] }] } });
+  }
   say({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 't1', name: 'mcp__genhttp__write_code', input: { files: [] } }] } });
   say({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: [{ type: 'text', text: JSON.stringify({
     ok: true, version: 1, online: true, publicKey: 'made-at-' + at, privateKey: 'key-of-' + at, publicUrl: 'https://' + at + '.example/'
   }) }] }] } });
-  say({ type: 'result', subtype: 'success', is_error: false, result: 'Built at ' + at + '.' });
+  // ASKME: a run that ends with a question back
+  const closing = brief.includes('ASKME') ? 'I built a first page.\\nQUESTION: Which colour should it have?' : 'Built at ' + at + '.';
+  say({ type: 'result', subtype: 'success', is_error: false, result: closing, usage: { input_tokens: 1000, cache_read_input_tokens: 200, output_tokens: 300 }, total_cost_usd: 0.25 });
 };
 const held = process.env.AGENT_BRIEF.includes('HOLD');
 const wait = () => (!held || existsSync(process.env.STAND_IN_DIR + '/release') ? answer() : setTimeout(wait, 20));
@@ -117,7 +133,7 @@ async function start(env) {
     return { status: response.status, body: await response.json() };
   };
 
-  return { call, output: () => output, stop: () => child.kill() };
+  return { call, port, output: () => output, stop: () => child.kill() };
 }
 
 /** Asks after a job until it has ended. */
@@ -132,7 +148,7 @@ async function settled(call, token, id) {
 }
 
 /** What the stand-in was given for a job. */
-const given = id => JSON.parse(readFileSync(join(folder, `build-${id.replace(/[^a-z0-9]/gi, '').slice(0, 24)}.json`), 'utf8'));
+const given = id => JSON.parse(readFileSync(join(folder, `job-${id}.json`), 'utf8'));
 
 const shared = extra => start({ AGENT_HOSTS: JSON.stringify([A, B]), ...extra });
 
@@ -333,5 +349,217 @@ test('an installation added to the file while the runner runs has its builds mad
   } finally {
     rmSync(join(folder, 'release'), { force: true });
     runner.stop();
+  }
+});
+
+/* ------------------------------------------------------------ protocol 2 */
+
+/** The events of a job as a platform of protocol 2 follows them, until it ended. */
+async function followed(port, token, id, after = 0) {
+  const response = await fetch(`http://127.0.0.1:${port}/build/${id}/events?after=${after}`, { headers: { 'x-agent-token': token } });
+
+  assert.equal(response.status, 200);
+
+  const text = await response.text();
+
+  return text.split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+}
+
+test('a platform of protocol 2 names the run and follows what happens in it as events', { skip }, async () => {
+  const runner = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+  const { port } = runner;
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020100';
+
+    const taken = await runner.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run, view: 'simple', timeout: 120, maxTurns: 7,
+      attachments: [{ id: 'a'.repeat(32), name: 'logo.png', type: 'image/png', size: 2048 }] });
+
+    assert.equal(taken.status, 202);
+    assert.equal(taken.body.id, run, 'filed under the platform\'s own id');
+
+    const events = await followed(port, A.token, run);
+
+    assert.equal(events[0].type, 'queued');
+    assert.ok(events.some(e => e.type === 'started'));
+
+    const ended = events.at(-1);
+
+    assert.equal(ended.type, 'ended');
+    assert.equal(ended.ending, 'completed');
+    assert.equal(ended.message, 'Built at lambda-a.');
+    assert.ok(events.every((e, i) => i === 0 || e.seq > events[i - 1].seq), 'numbered in order');
+
+    // asked again from a position, only what came after it
+    assert.deepEqual((await followed(port, A.token, run, ended.seq - 1)).map(e => e.type), ['ended']);
+
+    // what it spent, as the CLI said
+    const spent = events.find(e => e.type === 'spent');
+    assert.equal(spent.inputTokens, 1200);
+    assert.equal(spent.outputTokens, 300);
+    assert.equal(spent.cost, 0.25);
+
+    // what the agent was told: the limits the platform set, the words of its
+    // view, the file - and no server beside the platform's, where the proxy serves none
+    const box = given(run);
+    assert.equal(box.turns, '7');
+    assert.match(box.brief, /You have about 2 minutes/, "the time the platform set");
+    assert.match(box.brief, /say draft, and putting it online/);
+    assert.match(box.brief, /logo\.png \(image\/png, 2 kB\): id a{32}/);
+    assert.match(box.brief, /QUESTION:/, 'it may ask back');
+    assert.equal(box.config.mcpServers.web, undefined);
+    assert.ok(box.allowed.includes('mcp__genhttp__showcase'), 'what the owner may do, it may do when asked');
+    assert.ok(!box.allowed.includes('mcp__genhttp__set_secret'), 'but never enter a key');
+  } finally {
+    runner.stop();
+  }
+});
+
+test('an older platform is answered as it always was', { skip }, async () => {
+  const runner = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+
+  try {
+    const taken = await runner.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, run: '0f0e0d0c-0b0a-4908-8706-050403020101' });
+
+    const built = await settled(runner.call, A.token, taken.body.id);
+
+    assert.equal(built.state, 'done');
+    assert.equal(built.result.publicKey, 'made-at-lambda-a', 'with the result it reads');
+
+    const health = await runner.call(A.token, 'GET', '/health');
+
+    assert.equal(health.body.protocol, 2, 'and the protocol it may speak instead');
+    assert.equal(health.body.fetch, false, 'still said the way it understands');
+  } finally {
+    runner.stop();
+  }
+});
+
+test('a run of protocol 2 asks back, reads a page and hands a file over - the refused one not', { skip }, async () => {
+  const runner = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_FETCH: 'true', AGENT_FETCH_URL: 'http://egress-proxy:3129/mcp' });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020102';
+
+    await runner.call(A.token, 'POST', '/build', { prompt: 'ASKME HANDME README a club page', ticket, protocol: 2, run, view: 'full' });
+
+    const events = await followed(runner.port, A.token, run);
+    const types = events.map(e => e.type);
+
+    const returned = events.filter(e => e.type === 'returned');
+    assert.equal(returned.length, 1, 'a file the call refused is not handed over');
+    assert.equal(returned[0].name, 'notes.md');
+    assert.equal(Buffer.from(returned[0].content, 'base64').toString('utf8'), '# Notes');
+    assert.equal(returned[0].description, 'What I found');
+
+    const read = events.filter(e => e.type === 'activity');
+    assert.deepEqual(read.map(e => [e.kind, e.subject, e.done ?? false]), [['page', 'example.org', false], ['page', 'example.org', true]]);
+    assert.ok(types.indexOf('activity') < types.indexOf('ended'));
+
+    const ended = events.at(-1);
+    assert.equal(ended.ending, 'asked');
+    assert.equal(ended.message, 'Which colour should it have?');
+
+    // any public site, by default; the fetch and the hand-over beside the platform's
+    const box = given(run);
+    assert.equal(box.config.mcpServers.web.headers['X-Fetch-Sites'], '*');
+    assert.match(box.brief, /any public site with fetch/);
+    assert.match(box.brief, /call hand_over/);
+    assert.match(box.brief, /use the precise words/);
+    assert.ok(box.allowed.includes('mcp__web__fetch') && box.allowed.includes('mcp__web__hand_over'));
+
+    const health = await runner.call(A.token, 'GET', '/health');
+    assert.equal(health.body.web, 'any');
+    assert.equal(health.body.files, true);
+  } finally {
+    runner.stop();
+  }
+});
+
+test('a run searches the web unless the operator switched it off, and one of an older platform only where it was set', { skip }, async () => {
+  const searching = (box) => box.tools === 'WebSearch' && box.allowed.includes('WebSearch') && box.brief.includes('WebSearch');
+  const plain = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020105';
+
+    await plain.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run });
+    await followed(plain.port, A.token, run);
+
+    assert.ok(searching(given(run)), 'on by default');
+
+    const older = await plain.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket });
+    await settled(plain.call, A.token, older.body.id);
+
+    const box = given(older.body.id);
+
+    assert.equal(box.tools, '', 'a platform from before never searched');
+    assert.ok(!box.allowed.includes('WebSearch'));
+  } finally {
+    plain.stop();
+  }
+
+  const off = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_SEARCH: 'false' });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020106';
+
+    await off.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run });
+    await followed(off.port, A.token, run);
+
+    const box = given(run);
+
+    assert.equal(box.tools, '', 'no built-in tool at all');
+    assert.ok(!box.allowed.includes('WebSearch') && !box.brief.includes('WebSearch'));
+  } finally {
+    off.stop();
+  }
+
+  const on = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_SEARCH: 'true' });
+
+  try {
+    const older = await on.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket });
+    await settled(on.call, A.token, older.body.id);
+
+    assert.ok(searching(given(older.body.id)), 'set by the operator, for whichever platform asks');
+  } finally {
+    on.stop();
+  }
+});
+
+test('a runner that reads no page still hands files over, and one that reads the named sites only names them', { skip }, async () => {
+  const off = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_FETCH: 'true', AGENT_WEB: 'off' });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020103';
+
+    await off.call(A.token, 'POST', '/build', { prompt: 'look at example.org and make it new', ticket, protocol: 2, run });
+    await followed(off.port, A.token, run);
+
+    const box = given(run);
+    assert.equal(box.config.mcpServers.web.headers['X-Fetch-Sites'], '');
+    assert.ok(!box.allowed.includes('mcp__web__fetch'));
+    assert.ok(box.allowed.includes('mcp__web__hand_over'));
+    assert.doesNotMatch(box.brief, /You can read the pages/);
+
+    const health = await off.call(A.token, 'GET', '/health');
+    assert.equal(health.body.web, 'off');
+    assert.equal(health.body.fetch, false, 'an older platform reads no page here');
+    assert.equal(health.body.files, true);
+  } finally {
+    off.stop();
+  }
+
+  const named = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_FETCH: 'true', AGENT_WEB: 'named' });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020104';
+
+    await named.call(A.token, 'POST', '/build', { prompt: 'look at example.org and make it new', ticket, protocol: 2, run });
+    await followed(named.port, A.token, run);
+
+    assert.equal(given(run).config.mcpServers.web.headers['X-Fetch-Sites'], 'example.org');
+  } finally {
+    named.stop();
   }
 });

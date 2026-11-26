@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -344,25 +345,35 @@ public sealed class ShowcaseTests
     }
 
     [TestMethod]
-    public async Task AnAgentIsSentToTheApiRatherThanATool()
+    public async Task AnAgentNamesThePictureRatherThanSendingIt()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         // as base64 in a tool call the picture was too large for the agents
-        // that tried, so there is no tool to try: the guide sends them to the
-        // API with the picture in a file
-        CollectionAssert.DoesNotContain(await ToolsAsync(fixture), "showcase");
-
-        // and an agent that sees no tool would say it cannot be done, unless
-        // it is told where to look before it reads the guide
-        Assert.Contains("lists a lambda on the showcase, which no tool does", await InstructionsAsync(fixture));
+        // that tried, so the tool takes it by reference: a file the user
+        // attached, or a resource of the version
+        CollectionAssert.Contains(await ToolsAsync(fixture), "showcase");
 
         var showcase = Guide.Section(await Guide.ReadAsync(fixture), "showcase");
 
-        Assert.Contains("api/v1/lambdas/{privateKey}/showcase", showcase, "where to send it");
-        Assert.Contains("never goes through a tool call, your output or a command line", showcase, "a picture does not fit into one");
-        Assert.Contains("curl -T entry.json", showcase, "it goes from a file");
-        Assert.Contains("the user does it in the editor's Showcase section", showcase, "and an agent that cannot make requests says where the user does it");
+        Assert.Contains("named, never sent", showcase, "a picture does not fit into a tool call");
+        Assert.Contains("api/v1/lambdas/{privateKey}/showcase", showcase, "the REST API does the same");
+        Assert.Contains("curl -T entry.json", showcase, "with its body from a file");
+        Assert.Contains("the user does it in the editor's Showcase section", showcase, "and an agent that can do neither says where the user does it");
+
+        var lambda = await fixture.CreateLambdaAsync("pictured");
+
+        await fixture.DeployAsync(lambda.PrivateKey, [new LambdaFile("lambda.cs", "return Content.From(Resource.FromString(\"x\"));"),
+                                                      new LambdaFile("resources/web/shot.png", "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64")]);
+
+        await AgentCalls.ToolAsync(fixture, "showcase", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey, ["title"] = "Pictured", ["description"] = "A lambda with its own picture.", ["resource"] = "resources/web/shot.png"
+        }, null);
+
+        using var listed = await fixture.GetAsync("/api/v1/showcases");
+
+        Assert.Contains("Pictured", await listed.Content.ReadAsStringAsync(), "listed with a picture of its own resources");
     }
 
     [TestMethod]

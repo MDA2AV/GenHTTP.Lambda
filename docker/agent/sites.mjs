@@ -109,11 +109,20 @@ const bare = host => host.replace(/^www\./, '');
 export function belongs(host, sites) {
   const name = String(host ?? '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
 
+  // where the runner reads any public site, every name belongs - whether its
+  // address is a public one is checked all the same, as for every site
+  if (sites.includes(ANY)) return name.length > 0;
+
   return sites.some(site => isIP(site) ? name === site : bare(name) === bare(site));
 }
 
+/** What the header carries where any public site may be read. */
+export const ANY = '*';
+
 /** The sites as a header carries them, from the runner. */
 export function sitesFrom(header) {
+  if (String(header ?? '').trim() === ANY) return [ANY];
+
   return String(header ?? '')
     .split(',')
     .map(s => s.trim().toLowerCase())

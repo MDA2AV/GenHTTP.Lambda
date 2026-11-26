@@ -162,6 +162,8 @@ export interface VersionInfo {
   model?: string | null;
   /** The effort it ran at: low, medium, high, xhigh, max. */
   effort?: string | null;
+  /** The value of each of the agent's options it ran on, by option - whatever options its integration has. */
+  options?: Record<string, string> | null;
 }
 
 /** One stretch of time a version was online. */
@@ -447,6 +449,57 @@ export interface BuildResult {
   deployed?: boolean;
   /** The agent would not build it; error is what it said, in the language of the request. */
   declined?: boolean;
+  /** The agent needs to know something first: question is what it asks, the next message the answer. */
+  asked?: boolean | null;
+  question?: string | null;
+  /** What the app waits for, and whom - read off the platform's records. */
+  waitsFor?: RunBlocker[] | null;
+  /** What cut it short. */
+  reason?: 'timeout' | 'turns' | 'unauthorised' | 'lost' | 'failed' | 'cancelled' | 'declined' | null;
+}
+
+/** A file that travelled with a run: one somebody attached, or one the agent handed back. */
+export interface RunFile {
+  /** What it is known by: api.attachments.url(id) reads it. */
+  id: string;
+  name: string;
+  /** Its media type. */
+  type: string;
+  size: number;
+  /** A line about it from the agent, for one it handed back. */
+  description?: string | null;
+}
+
+/** What a run waits for while nobody works on it. */
+export interface RunWait {
+  reason: 'queue' | 'overloaded' | 'rate-limited' | 'preparing' | 'unreachable' | 'other';
+  /** Its place in the queue, one being next. */
+  position?: number | null;
+  /** When it expects to go on, where that is known. */
+  until?: string | null;
+}
+
+/** Something the app waits for after a run, and whom. */
+export interface RunBlocker {
+  who: 'operator' | 'owner';
+  /** connectivity: a decision on connecting to other services; keys: keys and passwords to enter. */
+  what: 'connectivity' | 'keys';
+  names?: string[] | null;
+}
+
+/** How a build is getting on. */
+export interface BuildProgress {
+  state: string;
+  steps: AgentStep[];
+  result: BuildResult | null;
+  waiting: number;
+  seconds: number;
+  limit?: number | null;
+  id?: string | null;
+  wait?: RunWait | null;
+  options?: Record<string, string> | null;
+  attachments?: RunFile[] | null;
+  files?: RunFile[] | null;
 }
 
 /**
@@ -463,12 +516,14 @@ export interface AgentStep {
    * kind of data on, records reading the database, secrets listing them;
    * connectivity asking for the lambda to connect to other servers;
    * analytics reading who visits, or switching that on; source publishing the
-   * code; web reading a page of a site the request names.
+   * code; web reading a page; search searching the web; attachment looking at
+   * a file the person attached; showcase listing the app there; file handing a
+   * file back. Kinds a later platform adds are drawn as other.
    */
   kind:
     | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
     | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'connectivity' | 'analytics' | 'source'
-    | 'web' | 'other';
+    | 'web' | 'search' | 'attachment' | 'showcase' | 'file' | 'other';
   /** The kind of data switched on, for "data": database, secrets or workspace. */
   data?: string | null;
   /** The site a page was read of, for "web": its host name only. */
@@ -519,7 +574,7 @@ export interface ChangeResult {
   unchanged?: boolean | null;
   cancelled?: boolean | null;
   /** What cut it short, whether or not it had saved something by then. */
-  reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | 'declined' | null;
+  reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | 'declined' | 'lost' | 'failed' | 'cancelled' | null;
   /** The agent would not make the change; summary is what it said. */
   declined?: boolean | null;
   /** It answered a question rather than change anything; summary is the answer. */
@@ -536,6 +591,15 @@ export interface ChangeResult {
   featureName?: string | null;
   /** Whether that feature's preview is online, to be tried. */
   preview?: boolean | null;
+  /** The agent needs to know something first: question is what it asks, the next message the answer. */
+  asked?: boolean | null;
+  question?: string | null;
+  /** What the app waits for after it, and whom - read off the platform's records. */
+  waitsFor?: RunBlocker[] | null;
+  /** New apps it created beside this one, by public key. */
+  created?: string[] | null;
+  /** Those apps with their editor keys, which the platform hands to nobody but the owner who asked. */
+  apps?: { publicKey: string; privateKey: string; url?: string | null; editorUrl?: string | null }[] | null;
 }
 
 export type ChangeState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
@@ -547,10 +611,19 @@ export interface ChangeJob {
   prompt: string;
   /** Whether it was asked to merge the change and put it online. */
   deploy: boolean;
-  /** The model it is made on, by its name in the offer. */
-  model: string;
-  /** The effort it is made at; absent from a runner from before efforts were chosen. */
+  /** The model it is made on, by its name in the offer; absent where the agent has no option of that name. */
+  model?: string | null;
+  /** The effort it is made at; absent where the agent has no option of that name. */
   effort?: string | null;
+  /** The value of each of the agent's options it is made on, by option. */
+  options?: Record<string, string> | null;
+  /** What it waits for while nobody works on it. */
+  wait?: RunWait | null;
+  /** The files it was asked with, and those the agent handed back so far. */
+  attachments?: RunFile[] | null;
+  files?: RunFile[] | null;
+  /** The run it carries on from, where it does. */
+  continues?: string | null;
   /** The feature it was asked to go on with; absent when it starts one of its own. */
   feature?: string | null;
   /** The version online when it was asked for. */
@@ -588,17 +661,51 @@ export interface OfferedModel {
   password: boolean;
 }
 
-/** The models and efforts the agent may be asked for, and what a job starts on where nobody chooses. */
+/** One option of the agent's - its model, say - with the values the operator offers. */
+export interface OfferedOption {
+  /** What it is asked for by, as the agent integration names it. */
+  name: string;
+  /** What to call it, as the integration does. */
+  label: string;
+  values: OfferedModel[];
+  /** What a run takes where nobody chooses: offered to everybody. */
+  default: string;
+}
+
+/** The files a message may come with. */
+export interface AttachmentPolicy {
+  /** Media types or ranges of them: image/png, image/*, text/*. */
+  types: string[];
+  maxBytes: number;
+  maxCount: number;
+}
+
+/** What the agent may be asked for on, what a job starts on where nobody chooses, and what it does. */
 export interface AgentOffer {
+  /** Every option of the agent's, as its integration names them - the source of truth for choosing. */
+  options?: OfferedOption[];
+  /** The values of the option model, and its default, where there is one. */
   models: OfferedModel[];
-  model: string;
-  /** The least first: low, medium, high, xhigh, max. */
+  model?: string | null;
+  /** The values of the option effort, the least first, and its default, where there is one. */
   efforts: string[];
-  effort: string;
+  effort?: string | null;
+  /** The files a message may come with; absent where the agent takes none. */
+  attachments?: AttachmentPolicy | null;
+  /** Whether the agent may hand files back. */
+  returnsFiles?: boolean;
+  /** Whose web pages it reads: none, the sites the person names, or any public one. */
+  web?: 'none' | 'named' | 'any';
+  searches?: boolean;
+  /** Whether a run can be stopped. */
+  cancels?: boolean;
+  /** Whether a run may end with a question back. */
+  asks?: boolean;
 }
 
 export interface ChangeRequest {
-  prompt: string;
+  /** What to do; may be left out where the message carries on from an earlier one. */
+  prompt?: string;
   /** Merge it and put it online once it works, rather than leave it in its feature to be tried. */
   deploy: boolean;
   model?: string;
@@ -610,6 +717,81 @@ export interface ChangeRequest {
   feature?: string;
   /** The conversation so far, oldest first, as the workspace keeps it - for the agent to understand the message by. */
   history?: { prompt: string; reply?: string | null }[];
+  /** A value for each option of the agent's, by option; left out, its default. */
+  options?: Record<string, string>;
+  /** The files it comes with, by the id uploading each answered. */
+  attachments?: string[];
+  /** The words the owner reads the answer in. */
+  view?: 'simple' | 'full';
+  /** The earlier message this one carries on from: the one whose question it answers, or whose wait is over. */
+  continues?: string;
+}
+
+/** What a build is asked with, besides what to build. */
+export interface BuildChoice {
+  model?: string;
+  effort?: string;
+  password?: string;
+  options?: Record<string, string>;
+  attachments?: string[];
+  language?: string;
+  /** The earlier build this one carries on from: the one whose question it answers, or one to try again. */
+  continues?: string;
+  history?: { prompt: string; reply?: string | null }[];
+}
+
+/** Whether a run has ended: anything but waiting or working. */
+export const isOver = (state?: string | null) => state != null && state !== 'queued' && state !== 'running';
+
+/**
+ * Follows a run as the server pushes it - an event of the name given each
+ * time it changes - until it has ended (over), then closes, before the
+ * browser's own reconnecting would ask again. Where the stream cannot be had (the run is
+ * not there any more, the server restarted) gone is told, and the caller
+ * reads once to know which.
+ */
+export function followRun<T>(url: string, event: string, take: (progress: T) => void, over: (progress: T) => boolean, gone: () => void): () => void {
+  if (typeof EventSource === 'undefined') {
+    gone();
+    return () => {};
+  }
+
+  const source = new EventSource(url);
+  let closed = false;
+
+  const close = () => {
+    closed = true;
+    source.close();
+  };
+
+  source.addEventListener(event, (message) => {
+    if (closed) return;
+
+    let progress: T;
+
+    try {
+      progress = JSON.parse((message as MessageEvent<string>).data) as T;
+    } catch {
+      return;
+    }
+
+    take(progress);
+
+    if (over(progress)) {
+      close();
+    }
+  });
+
+  // a stream that fails before it starts - a 404, a 5xx - is closed for good
+  // by the browser; one that broke on the way is picked up again by it
+  source.onerror = () => {
+    if (!closed && source.readyState === EventSource.CLOSED) {
+      close();
+      gone();
+    }
+  };
+
+  return close;
 }
 
 /** Whether a change is still waiting or working. */
@@ -894,6 +1076,8 @@ export interface Feature {
   model?: string | null;
   /** The effort it ran at: low, medium, high, xhigh, max. */
   effort?: string | null;
+  /** The value of each of the agent's options it ran on, by option. */
+  options?: Record<string, string> | null;
 }
 
 export interface FeatureContent {
@@ -1062,6 +1246,17 @@ export interface AdminCensus {
   /** Of those, what the agent of this installation wrote, by model and by effort - every one, at zero where none. */
   agentModels: Record<string, number>;
   agentEfforts: Record<string, number>;
+  /** The same by every value of every option of the agent's, by option. */
+  agentOptions?: Record<string, Record<string, number>> | null;
+}
+
+/** How the agent was used over some days: runs and their time, by option - never what they were about. */
+export interface AgentUsage {
+  days: number;
+  runs: number;
+  builds: number;
+  seconds: number;
+  options: { option: string; values: { value: string; runs: number; seconds: number }[] }[];
 }
 
 /** The volume of the data directory. */
@@ -1444,25 +1639,54 @@ export type AdminSettingsChange = Partial<Pick<AdminSettings, 'optimizeDatabases
 /** Who may have a model of the build agent: everybody, whoever knows the password, or nobody. */
 export type ModelAccess = 'open' | 'password' | 'off';
 
-/** What the runner of the build agent says of itself. */
+/** What the agent system says of itself. */
 export interface AgentRunner {
   reachable: boolean;
-  /** subscription (a token of a Claude subscription) or api-key; absent where it has neither. */
-  signsInWith?: string | null;
-  /** Which model of Anthropic's each model runs as, by name. */
-  models?: Record<string, string> | null;
-  efforts?: string[] | null;
-  /** The version of Claude Code its builds run. */
-  cli?: string | null;
-  /** This installation's jobs that run now, and that wait. */
+  /** This installation's runs it works on now, and that wait. */
   running: number;
   queued: number;
-  /** Whether a build may read the pages of the sites its request names; absent from a runner that does not say. */
-  readsPages?: boolean | null;
-  /** How many jobs on the clock run at once, of every installation it builds for; absent from a runner that does not say. */
+  /** How many runs it works on at once, every installation's together, where it says. */
   concurrency?: number | null;
-  /** How many installations share the runner, this one among them; absent where it builds for this one alone. */
-  installations?: number | null;
+  /** Whatever else it says of itself, as label and value - never a credential. */
+  facts?: { label: string; value: string }[] | null;
+}
+
+/** One value of an option of the agent's, and who may choose it. */
+export interface AdminAgentValue {
+  name: string;
+  label: string;
+  description?: string | null;
+  access: ModelAccess;
+  /** Whether the pages offer it now: one behind the password only where there is a password. */
+  offered: boolean;
+}
+
+/** One option of the agent's, as its integration has it, and what the operator decided about it. */
+export interface AdminAgentOption {
+  name: string;
+  label: string;
+  values: AdminAgentValue[];
+  default: string;
+}
+
+/** What a run may take: seconds and steps, zero for no limit, absent for what the agent holds a run to. */
+export interface AgentLimits {
+  seconds?: number | null;
+  steps?: number | null;
+}
+
+/** What the agent of the installation is, where it sends what, and what it does. */
+export interface AgentDescription {
+  agent: string;
+  vendor?: string | null;
+  destinations: { name: string; address: string; what: string }[];
+  web: 'none' | 'named' | 'any';
+  searches: boolean;
+  webPolicy?: string | null;
+  attachments?: string[] | null;
+  returnsFiles: boolean;
+  asks: boolean;
+  cancels: boolean;
 }
 
 /** What the operator decided about the build agent, and how its runner is. */
@@ -1483,8 +1707,17 @@ export interface AdminAgentSettings {
   perDay: number;
   /** Where the runner listens; absent without one. */
   url?: string | null;
-  /** What the runner says of itself; absent without one, and in the answer to a change. */
+  /** What the agent system says of itself; absent without one, and in the answer to a change. */
   runner?: AgentRunner | null;
+  /** Every option of the agent's - the source of truth; models and efforts are two of them, where it has them. */
+  options?: AdminAgentOption[] | null;
+  /** What a run may take, and a run on a value behind the password. */
+  limits?: AgentLimits | null;
+  guardedLimits?: AgentLimits | null;
+  /** Which limits the agent holds a run to, and to what by default. */
+  limitSupport?: { time: boolean; steps: boolean; defaultSeconds?: number | null; defaultSteps?: number | null } | null;
+  /** What the agent is and where it sends what; absent without an agent. */
+  agent?: AgentDescription | null;
 }
 
 /** What the operator decides about the build agent; what is left out stays as it is. */
@@ -1495,6 +1728,33 @@ export interface AdminAgentChange {
   model?: string;
   efforts?: string[];
   effort?: string;
+  /** Who may choose which values of each option, and its default; what is left out stays. */
+  options?: { name: string; values?: { name: string; access: ModelAccess }[]; default?: string }[];
+  limits?: AgentLimits;
+  guardedLimits?: AgentLimits;
+}
+
+/** One run of the agent, as the panel lists it. */
+export interface AdminAgentRun {
+  /** The start of its id, as the log names it - never the whole. */
+  ref: string;
+  kind: 'build' | 'change';
+  /** The lambda it was about or made, by public key. */
+  lambda?: string | null;
+  state: string;
+  ending?: string | null;
+  prompt: string;
+  options?: Record<string, string> | null;
+  created: string;
+  seconds?: number | null;
+  attachments?: RunFile[] | null;
+  files?: RunFile[] | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  cost?: number | null;
+  currency?: string | null;
+  /** What went wrong, in the words of whatever it went wrong in. */
+  detail?: string | null;
 }
 
 /**
@@ -1683,8 +1943,8 @@ export interface UsageReportStatus {
 
 /** What the installation keeps some of its data in: its database, its files or its secrets. */
 export interface Integration {
-  /** What it keeps: the database, the lambdas' files, or their secrets. */
-  kind: 'database' | 'files' | 'secrets';
+  /** What it is: what keeps the database, the lambdas' files or their secrets, or the agent that builds apps. */
+  kind: 'database' | 'files' | 'secrets' | 'agent';
   /** What it is called, such as SQLite or PostgreSQL. */
   name: string;
   /** The assembly it is in, which names it - what a host references to use it. */
@@ -1810,13 +2070,28 @@ export const api = {
 
   /** The text box on /build, and the agent behind it. Whether there is one is in `platform`. */
   builds: {
-    start: (prompt: string, choice: { model?: string; effort?: string; password?: string } = {}) =>
+    start: (prompt: string, choice: BuildChoice = {}) =>
       request<{ id: string; queued: number; left?: number | null; model?: string | null; effort?: string | null }>(
         '/builds',
         send({ prompt, ...choice }),
       ),
-    progress: (id: string) =>
-      request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number; seconds: number; limit?: number | null }>(`/builds/${id}`),
+    progress: (id: string) => request<BuildProgress>(`/builds/${id}`),
+    /** Stops a build: at once while it waited, or once the agent says it stopped. */
+    stop: (id: string) => request<BuildProgress>(`/builds/${id}/stop`, { method: 'POST' }),
+    /** Where a build is pushed as it goes on: see followRun. */
+    events: (id: string) => `${base}/builds/${id}/events`,
+  },
+
+  /** Files a message to the agent comes with, and those it hands back. */
+  attachments: {
+    upload: (file: File) =>
+      request<RunFile>(`/attachments/?name=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type || 'application/octet-stream')}`, {
+        method: 'POST',
+        body: file,
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      }),
+    /** Where one is read: a picture shown, any other file saved, never run. */
+    url: (id: string) => `${base}/attachments/${id}`,
   },
 
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
@@ -1895,6 +2170,10 @@ export const api = {
 
     saveAgent: (token: string, change: AdminAgentChange) =>
       request<AdminAgentSettings>('/admin/agent', withToken(token, { method: 'PUT', body: JSON.stringify(change) })),
+    /** The newest runs of the agent, for looking into one that went wrong. */
+    agentRuns: (token: string, take = 20) => request<AdminAgentRun[]>(`/admin/agent/runs?take=${take}`, withToken(token)),
+    /** Runs and their time by option, over the days asked for. */
+    agentUsage: (token: string, days = 30) => request<AgentUsage>(`/admin/agent/usage?days=${days}`, withToken(token)),
 
     limits: (token: string) => request<AdminLimits>('/admin/limits', withToken(token)),
 
@@ -2004,6 +2283,8 @@ export const api = {
     start: (privateKey: string, change: ChangeRequest) =>
       request<AgentState>(`/lambdas/${privateKey}/agent/start`, send(change)),
     stop: (privateKey: string) => request<AgentState>(`/lambdas/${privateKey}/agent/stop`, { method: 'POST' }),
+    /** Where the run under way is pushed as it goes on: see followRun. */
+    events: (privateKey: string) => `${base}/lambdas/${privateKey}/agent/events`,
   },
 
   showcase: (privateKey: string) => request<OwnShowcase>(`/lambdas/${privateKey}/showcase`),

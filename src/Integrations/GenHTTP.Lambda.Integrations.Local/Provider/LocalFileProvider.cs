@@ -127,6 +127,7 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
         FileStore.Branding => "branding",
         FileStore.Showcase => "showcase",
         FileStore.Shared => "shared",
+        FileStore.AgentFiles => "agent-files",
         _ => throw new ArgumentOutOfRangeException(nameof(store), store, "The platform keeps no such store.")
     });
 
@@ -378,7 +379,8 @@ internal sealed class LocalFileProvider(string dataDirectory) : IFileProvider
                                                  new IntegrationDetail("Drafts", Path.Combine(dataDirectory, "features", "{lambda}", "{draft}", "workspace")),
                                                  new IntegrationDetail("Logo", StoreDirectory(FileStore.Branding)),
                                                  new IntegrationDetail("Showcase", StoreDirectory(FileStore.Showcase)),
-                                                 new IntegrationDetail("Shared files", StoreDirectory(FileStore.Shared))
+                                                 new IntegrationDetail("Shared files", StoreDirectory(FileStore.Shared)),
+                                                 new IntegrationDetail("Agent files", StoreDirectory(FileStore.AgentFiles))
                                              ]);
 
     public string? Guide(GuideContext context) => null;

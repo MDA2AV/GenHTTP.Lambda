@@ -16,7 +16,8 @@ public sealed class IntegrationService(PlatformIntegrations integrations, ISecre
     [
         IntegrationState.Of(integrations.Database),
         IntegrationState.Of(integrations.Files),
-        IntegrationState.Of(secrets)
+        IntegrationState.Of(secrets),
+        .. integrations.Agent is { } agent ? [IntegrationState.Of(agent)] : Array.Empty<IntegrationState>()
     ];
 
 }

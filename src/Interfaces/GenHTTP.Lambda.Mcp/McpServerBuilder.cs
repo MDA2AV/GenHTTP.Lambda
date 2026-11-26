@@ -1,5 +1,8 @@
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Mcp;
@@ -29,7 +32,8 @@ public sealed class McpServerBuilder(LambdaPlatform platform) : IHandlerBuilder<
         // once, rather than per call: the tools keep nothing of a call's
         var tools = ActivatorUtilities.CreateInstance<McpTools>(platform.Services);
 
-        return Concerns.Chain(_concerns, McpEndpoint.Create(platform.Options, tools).Build());
+        // a call of a run of the agent is the run's: found before the module reads the body
+        return Concerns.Chain([.. _concerns, ServiceConcern.Of<AgentCallerConcern>(platform.Services)], McpEndpoint.Create(platform.Options, tools).Build());
     }
 
     #endregion

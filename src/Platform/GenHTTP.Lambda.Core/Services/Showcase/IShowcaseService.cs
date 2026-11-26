@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Showcase;
 
 /// <summary>
@@ -19,7 +21,7 @@ public interface IShowcaseService
     /// <summary>
     /// Creates or replaces the entry of a lambda.
     /// </summary>
-    ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default);
+    ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the lambda out of the showcase. Nothing happens when it was not in it.

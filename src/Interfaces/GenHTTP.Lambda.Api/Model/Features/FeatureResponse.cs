@@ -38,8 +38,10 @@ public sealed record FeatureResponse(
     int Revision,
     [Summary("Who wrote what it holds - its last save - where the platform knows it: `build-agent`, the installation's own agent, on a job it was given; absent for anybody else's work, an agent of somebody's own included")]
     string? Writer = null,
-    [Summary("The model the build agent wrote it on, by its name in `build.offer.models` of `GET /system` (`opus`); absent unless `writer` is there")]
+    [Summary("The value of the agent's option `model` it was written on (`opus`), where it had one; absent unless `writer` is there")]
     string? Model = null,
-    [Summary("The effort the build agent wrote it at: `low`, `medium`, `high`, `xhigh` or `max`; absent unless `writer` is there")]
-    string? Effort = null
+    [Summary("The value of the agent's option `effort` it was written at (`high`), where it had one; absent unless `writer` is there")]
+    string? Effort = null,
+    [Summary("The value of every option of the agent's it was written on, by option, as `build.offer.options` of `GET /system` names them; absent unless `writer` is there")]
+    IReadOnlyDictionary<string, string>? Options = null
 );

@@ -34,21 +34,22 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'O que você pede ao agente de criação',
     agent: (policy) => (
       <>
-        O que você digita na página de criação, ou na seção Mudar do editor de uma lambda, é enviado à Anthropic PBC, nos
-        Estados Unidos, que opera o Claude, o modelo que escreve o app - na página de criação, junto com as últimas
-        mensagens anteriores e o que o agente respondeu, para que ele entenda o que você quer dizer. Para responder ou
-        fazer uma mudança, o agente também lê a lambda (o código, as notas das versões, o log, que contém as requisições e
-        o que ela imprimiu, mas não os endereços IP dos visitantes, e, quando você pergunta sobre eles, os registros e as
-        contagens de visitantes), e o que ele lê também é enviado para lá. Quando você indica um site, o agente também lê
-        páginas dele, a partir deste servidor - assim o site vê o nosso endereço, e não o seu - e elas são enviadas para lá
-        do mesmo modo. O que a Anthropic faz com isso está descrito
+        O que você digita na página de criação, ou na seção Mudar do editor de uma lambda, e os arquivos que você envia
+        junto são enviados à Anthropic PBC, nos Estados Unidos, que opera o Claude, o modelo que escreve o app - junto com
+        as últimas mensagens sobre o mesmo app e o que o agente respondeu, para que ele entenda o que você quer dizer. Para
+        responder ou fazer uma mudança, o agente também lê a lambda (o código, as notas das versões, o log, que contém as
+        requisições e o que ela imprimiu, mas não os endereços IP dos visitantes, e, quando você pergunta sobre eles, os
+        registros e as contagens de visitantes), e o que ele lê também é enviado para lá. Para descobrir do que o seu app
+        precisa, ele pode pesquisar na web com a busca da própria Anthropic e ler páginas de sites - um que você indicar,
+        ou um que ele mesmo encontrar - a partir deste servidor, de modo que o site vê o nosso endereço, e não o seu; elas
+        são enviadas para lá do mesmo modo. O que a Anthropic faz com isso está descrito
         na {policy('política de privacidade da própria empresa')}. Os Estados Unidos não protegem dados pessoais do
         mesmo jeito que a UE. Seu pedido é enviado para lá porque isso é necessário para criar ou mudar o que você pediu
         (art. 6º, 1, b, e art. 49, 1, b, do RGPD). Então não coloque nele nada que você não queira compartilhar.
       </>
     ),
     agentKept:
-      'O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. O pedido em si é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação, que também anota os nomes dos sites cujas páginas o agente leu; os dois também têm tamanho fixo. As mensagens anteriores, que a página de criação envia junto, não são gravadas. A página de criação guarda os links de edição dos seus apps e a conversa sobre cada um no armazenamento do seu próprio navegador, e em nenhum outro lugar: não guardamos cópia, e quem usar o mesmo navegador pode abri-los. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
+      'O servidor guarda cada pedido que você envia ao agente - com os arquivos enviados junto, o que o agente respondeu, os passos que ele deu e os arquivos que ele entregou a você - por 30 dias depois de terminar, para que a página de criação e o editor possam mostrá-lo de novo e o agente possa ler as mensagens anteriores sobre o mesmo app; um arquivo que você carrega mas nunca envia é apagado após uma hora, e tudo vai embora junto com o app quando ele é excluído. Os administradores podem ler os pedidos e abrir os arquivos, assim como podem ler o log do servidor. O pedido também é gravado por inteiro no log do servidor, e as primeiras centenas de caracteres dele no log do serviço de criação, que também anota os nomes dos sites cujas páginas o agente leu; os dois têm tamanho fixo. O agente salva o seu pedido, muitas vezes com outras palavras, como nota da versão que ele escreve. A página de criação também guarda os links de edição dos seus apps e a conversa sobre cada um no armazenamento do seu próprio navegador, onde quem usar o mesmo navegador pode abri-los. A base legal é a mesma do envio. Se você usar o seu próprio agente, como o Claude ou o Claude Code, o que você diz a ele vai para o fornecedor desse agente, não para nós: só recebemos o código e as notas que ele envia para cá.',
 
     lambdasTitle: 'O que uma lambda faz depende do dono dela',
     lambdas:

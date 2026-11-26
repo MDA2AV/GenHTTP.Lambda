@@ -4,7 +4,7 @@ export const buildBox: KitMessages['buildBox'] = {
   placeholder: 'Saya ingin aplikasi yang…',
   password: 'kata sandi',
   unlimited:
-    'Model ini memerlukan kata sandi, lalu berjalan tanpa batas waktu: terus bekerja sampai aplikasi Anda selesai, bukan sampai waktunya habis.',
+    'Pilihan ini memerlukan kata sandi situs, lalu diberi waktu dan langkah yang ditetapkan untuknya, bukan yang biasa.',
   ideas: [
     'aplikasi untuk komunitas kami tempat anggota mendaftar acara',
     'daftar bawaan untuk acara makan bersama kami, supaya tidak ada yang membawa masakan yang sama',
@@ -39,6 +39,10 @@ export const buildBox: KitMessages['buildBox'] = {
     files: 'Melihat yang sudah disimpannya',
     services: 'Meminta izin untuk menggunakan layanan lain',
     site: (site) => `Melihat ${site}`,
+    search: 'Mencari sesuatu di web',
+    attachment: 'Melihat file yang Anda kirim',
+    showcase: 'Memasukkannya ke showcase',
+    file: 'Menulis file untuk Anda',
   },
   further: 'Link editor Anda',
   keep:

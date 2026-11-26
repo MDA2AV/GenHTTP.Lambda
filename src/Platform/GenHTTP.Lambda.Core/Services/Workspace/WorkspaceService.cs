@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Files;
@@ -22,7 +24,7 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// integration's.
 /// </remarks>
 public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILimitsService tiers, IWorkspaceVault vault, IDatabaseVault databases,
-                                    ILogger<WorkspaceService> logger) : IWorkspaceService
+                                    IAgentJournal journal, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     /// <summary>
@@ -103,7 +105,21 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     }
 
     public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
-                                                      CancellationToken cancellation = default)
+                                                      VersionAuthor? author = null, CancellationToken cancellation = default)
+    {
+        var written = await WrittenAsync(lambdaId, path, content, expected, featureId, cancellation);
+
+        // what a run put into the app's own data, which undoing it leaves - a
+        // feature's copy goes with the feature
+        if (featureId == null)
+        {
+            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Wrote, lambdaId, Name: path), CancellationToken.None);
+        }
+
+        return written;
+    }
+
+    private async ValueTask<WorkspaceEntry> WrittenAsync(long lambdaId, string path, Stream content, long? expected, long? featureId, CancellationToken cancellation)
     {
         var limits = await RequireEnabledAsync(lambdaId, cancellation);
 
@@ -162,7 +178,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     }
 
     public async ValueTask<WorkspaceEntry> WriteEncodedAsync(long lambdaId, string path, string? content, long? featureId = null,
-                                                             CancellationToken cancellation = default)
+                                                             VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         byte[] bytes;
 
@@ -177,7 +193,7 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
 
         using var stream = new MemoryStream(bytes);
 
-        return await WriteAsync(lambdaId, path, stream, featureId: featureId, cancellation: cancellation);
+        return await WriteAsync(lambdaId, path, stream, featureId: featureId, author: author, cancellation: cancellation);
     }
 
     public async ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
@@ -227,11 +243,16 @@ public sealed class WorkspaceService(IFileProvider files, IMetaService meta, ILi
     /// and a folder that refuses to go while it holds something is a folder
     /// somebody has to empty by hand one file at a time.
     /// </remarks>
-    public async ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public async ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         await files.DeleteAsync(new DataScope(lambdaId, featureId), Resolve(path), cancellation);
 
         vault.Changed(lambdaId, featureId);
+
+        if (featureId == null)
+        {
+            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Removed, lambdaId, Name: path), CancellationToken.None);
+        }
     }
 
     public async ValueTask ClearAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)

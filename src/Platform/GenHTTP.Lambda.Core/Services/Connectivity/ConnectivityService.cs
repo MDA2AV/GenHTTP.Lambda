@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
@@ -19,7 +21,7 @@ namespace GenHTTP.Lambda.Services.Connectivity;
 /// replaced on that request.
 /// </remarks>
 public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, ILimitsService limits,
-                                        ILogger<ConnectivityService> logger) : IConnectivityService
+                                        IAgentJournal journal, ILogger<ConnectivityService> logger) : IConnectivityService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -32,7 +34,7 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
         return Describe(await LambdaGuard.RequireAsync(database, privateKey, cancellation));
     }
 
-    public async ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, CancellationToken cancellation = default)
+    public async ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         var said = VersionInput.Tidy(purpose?.Replace("\r\n", "\n"), ConnectivityRule.MaxPurpose)
                 ?? throw LambdaException.Invalid("Say what the lambda connects to and why - the addresses or services, and what for. The operator decides on that.");
@@ -64,6 +66,8 @@ public sealed class ConnectivityService(IDbContextFactory<LambdaDbContext> datab
         await database.SaveChangesAsync(cancellation);
 
         logger.LogInformation("Requested connectivity for lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
+
+        await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Requested, lambda.Id), CancellationToken.None);
 
         return Describe(lambda);
     }

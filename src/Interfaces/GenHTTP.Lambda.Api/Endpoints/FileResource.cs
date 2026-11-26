@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -95,8 +96,8 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The file as it was written")]
     public async ValueTask<WorkspaceEntry> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path,
-                                               FileRequest request)
-        => await WrittenAsync(privateKey, await workspace.WriteEncodedAsync(await meta.RequireEditableAsync(privateKey), path, request.Content));
+                                               FileRequest request, IRequest call)
+        => await WrittenAsync(privateKey, await workspace.WriteEncodedAsync(await meta.RequireEditableAsync(privateKey), path, request.Content, author: AgentCallerConcern.Of(call)));
 
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/files/:path")]
     [Summary("Deletes a file, or a folder and everything in it")]
@@ -104,9 +105,9 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.BadRequest, "The path is empty or leads outside of the workspace.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest call)
     {
-        await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path);
+        await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path, author: AgentCallerConcern.Of(call));
 
         logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
     }

@@ -1,10 +1,10 @@
+using GenHTTP.Api.Content;
 using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
-
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -14,38 +14,34 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
-/// The text box on the front page: a sentence in, a new application out.
+/// The text box on /build: a sentence in, a new application out.
 /// </summary>
 /// <remarks>
 /// Public and unauthenticated on purpose - the point of it is that somebody
 /// who has never written a line of C# can type what they want and get a link.
-/// What keeps that from being reckless is not on this side: the agent it
-/// hands the sentence to runs in a container with no route off the machine
-/// and no tools except this server's own MCP, so the worst a prompt can talk
-/// it into is creating a lambda, which is what it is for.
-///
-/// What is on this side is the counting: a few builds per address per day,
-/// because each one spends somebody's subscription or API key - and the
-/// models and efforts the operator offers, the dearer ones behind a password
-/// where they put them there.
+/// What keeps that sane is the counting here - a few builds per address per
+/// day, because each spends what the installation's agent runs on - the
+/// options its operator offers, the dearer ones behind a password where they
+/// put them there, and what the agent declines.
 /// </remarks>
 [Tag(ApiDocumentation.Builds)]
-[Summary("The build agent of the installation: a sentence in, a new lambda out - for anybody, without a key.")]
+[Summary("The agent of the installation: a sentence in, a new lambda out - for anybody, without a key.")]
 [Remarks("""
          What `/build` on this site does. Somebody says what they would like; the agent of the installation creates a lambda
-         for it, writes it, and puts it online, and the build's result names the address and the editor key. It only builds
-         applications: a request that is not one, or is about the platform rather than an app on it, or is meant to do harm,
-         is declined with a sentence saying why.
+         for it, writes it, and puts it online, and the build's result names the address and the editor key - read from what the
+         platform recorded of the build's calls, not from what the agent said. It only builds applications: a request that is not
+         one, or is about the platform rather than an app on it, or is meant to do harm, is declined with a sentence saying why. It
+         may end with a question instead (`result.asked`), which a new build carrying on from this one answers (`continues`).
 
-         Whether this installation builds anything at all is in `GET /system` (`build`), with how many builds one address
-         may ask for a day and the models and efforts its operator offers (`build.offer`) - a model may need the
-         installation's password, and runs without a clock and a limit on its steps with it. Each build is counted against
-         that allowance, which starts again at midnight UTC and is shared with the changes asked for in the editor. An agent
-         may also be reached directly through MCP at `/mcp`.
+         Whether this installation builds anything at all is in `GET /system` (`build`), with how many builds one address may ask
+         for a day, the options its operator offers (`build.offer.options`) - a value may need the installation's password - and
+         the files a request may come with (`build.offer.attachments`), uploaded first with `POST /attachments`. Each build is
+         counted against that allowance, which starts again at midnight UTC and is shared with the messages to the agent in the
+         editor. An agent of one's own reaches the platform directly through MCP at `/mcp`.
 
          Errors here carry `status` and `message` only.
          """)]
-public sealed class BuildResource(IBuildService builds, ILogger<BuildResource> logger)
+public sealed class BuildResource(IAgentService agents, ILogger<BuildResource> logger)
 {
 
     /// <remarks>
@@ -54,25 +50,28 @@ public sealed class BuildResource(IBuildService builds, ILogger<BuildResource> l
     /// than offering one that answers with an error.
     /// </remarks>
     [ResourceMethod(Method.Post)]
-    [Summary("Asks the build agent to build something")]
+    [Summary("Asks the agent to build something")]
     [Remarks("""
-             The build is queued and runs in the background; `GET /builds/{id}` follows it. The prompt is logged in full, so the
-             operator knows what people ask for - put nothing into it that should not be read. It is cut past 2000 characters.
+             The build is queued and runs in the background; `GET /builds/{id}` reads how it is getting on, and
+             `GET /builds/{id}/events` pushes it each time it changes. The prompt is logged in full, so the operator knows what
+             people ask for - put nothing into it that should not be read - and so are the names, types and sizes of the files it
+             comes with, which the operator may open. It is cut past 2000 characters. With `continues`, the prompt may be left out:
+             the build carries on with what the earlier one was asked.
              """)]
     [Response(ResponseStatus.Accepted, "The build was taken on. Follow it by its `id`.")]
-    [Response(ResponseStatus.BadRequest, "The prompt says too little, or the model or the effort is not one offered here.")]
-    [Response(ResponseStatus.Forbidden, "The model asked for needs the installation's password, and this is not it.")]
+    [Response(ResponseStatus.BadRequest, "The prompt says too little, an option or a value is not one offered here, a file is not there any more, or the build to carry on from is not.")]
+    [Response(ResponseStatus.Forbidden, "A value asked for needs the installation's password, and this is not it.")]
     [Response(ResponseStatus.NotFound, "This installation builds nothing: it has no agent, or the operator switched building off.")]
     [Response(ResponseStatus.TooManyRequests, "This address asked for as many builds today as one may.")]
-    [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering. Nothing was counted.")]
+    [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering, or too busy to take another. Nothing was counted.")]
     public async ValueTask<Result<BuildStarted>> Create(BuildRequest body, IRequest request)
     {
-        var started = await builds.StartAsync(body?.Prompt, body?.Model, body?.Effort, body?.Password, request.Client.Address);
+        var started = await agents.StartAsync(body.Ask(), request.Client.Address);
 
         // the one argument logged in full however long it is: what people ask
         // to have built is what the operator most needs to know
-        logger.LogInformation("Started build {Build} model {Model} effort {Effort} prompt {Prompt}",
-                              started.Id, started.Model, started.Effort, body?.Prompt?.Trim());
+        logger.LogInformation("Started build {Build} options {Options} attachments {Attachments} prompt {Prompt}",
+                              started.Id, OptionsOf(started.Options), body?.Attachments?.Count ?? 0, body?.Prompt?.Trim());
 
         return new Result<BuildStarted>(started).Status(ResponseStatus.Accepted);
     }
@@ -80,13 +79,45 @@ public sealed class BuildResource(IBuildService builds, ILogger<BuildResource> l
     [ResourceMethod(":id")]
     [Summary("Reads how a build is getting on")]
     [Remarks("""
-             Asked again while it runs: its place in the queue, the steps the agent took so far, and once it is done how it
-             ended. The result of a build that worked holds the editor key of the new lambda, so whoever has the id of a build
-             can take the lambda it made - keep it as private as the key. The agent forgets a build some time after it ended.
+             Its place in the queue, what it waits for, the steps it took so far, and once it is done how it ended. The result of a
+             build that worked holds the editor key of the new lambda, so whoever has the id of a build can take the lambda it
+             made - keep it as private as the key. The platform keeps a build for a while after it ended.
              """)]
     [Response(ResponseStatus.BadRequest, "That is not the id of a build.")]
-    [Response(ResponseStatus.NotFound, "The agent knows no build of this id, any more - or this installation has no agent.")]
+    [Response(ResponseStatus.NotFound, "There is no build of this id, any more - or this installation has no agent.")]
     [return: Summary("Its state, its steps, and how it ended once it has")]
-    public async ValueTask<BuildProgress> Get([Summary("The `id` of the build, as starting it returned")] string id) => await builds.ProgressAsync(id);
+    public async ValueTask<BuildProgress> Get([Summary("The `id` of the build, as starting it returned")] string id) => await agents.ProgressAsync(id);
+
+    [ResourceMethod(Method.Post, ":id/stop")]
+    [Summary("Stops a build")]
+    [Remarks("""
+             One that only waited is over at once; one at work once the agent says it stopped. What it made so far stays - a new
+             lambda among it, whose editor key the build's answer then holds. A build that is stopped is not counted back.
+             """)]
+    [Response(ResponseStatus.BadRequest, "That is not the id of a build.")]
+    [Response(ResponseStatus.NotFound, "There is no build of this id, any more - or this installation has no agent.")]
+    [Response(ResponseStatus.Conflict, "The agent of this installation cannot be stopped (`build.offer.cancels` of `GET /system` is false).")]
+    [return: Summary("How the build is getting on afterwards")]
+    public async ValueTask<BuildProgress> Stop([Summary("The `id` of the build, as starting it returned")] string id) => await agents.StopBuildAsync(id);
+
+    [ResourceMethod(":id/events")]
+    [Summary("Follows a build as it goes on")]
+    [Remarks("""
+             A stream of server-sent events: a `progress` event with what `GET /builds/{id}` answers, sent at once and again each
+             time the build changes, until it ended. A browser's `EventSource` reconnects by itself.
+             """)]
+    [Response(ResponseStatus.Ok, "The events", ContentType = "text/event-stream")]
+    [Response(ResponseStatus.BadRequest, "That is not the id of a build.")]
+    [Response(ResponseStatus.NotFound, "There is no build of this id, any more - or this installation has no agent.")]
+    public async ValueTask<IHandlerBuilder> Events([Summary("The `id` of the build, as starting it returned")] string id)
+    {
+        // refused as a read would be, before the stream starts
+        await agents.ProgressAsync(id);
+
+        return PushedStream.Of("progress", cancellation => agents.FollowBuildAsync(id, cancellation));
+    }
+
+    internal static string OptionsOf(IReadOnlyDictionary<string, string>? options)
+        => options == null ? "(none)" : string.Join(',', options.Select(o => $"{o.Key}={o.Value}"));
 
 }

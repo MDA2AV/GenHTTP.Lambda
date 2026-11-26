@@ -37,12 +37,13 @@ docker compose --profile agent up -d
 ```
 
 Every build runs in a container of its own, which reaches this server and
-Anthropic and nothing else, and is thrown away when it ends. Where somebody
-names a site - *"look at myoldhomepage.com and make a new version of it"* -
-the build may read its pages, which the proxy fetches for it: GET and HEAD,
-at public addresses, that site only. `LAMBDA_AGENT_FETCH=false` in `.env`
-switches that off. Which models and efforts people may choose is set in the
-panel, under **Build agent**.
+Anthropic and nothing else, and is thrown away when it ends. It may read web
+pages, which the proxy fetches for it - GET and HEAD, at public addresses: of
+any public site, or with `LAMBDA_AGENT_WEB=named` in `.env` only the sites a
+request names (*"look at myoldhomepage.com and make a new version of it"*),
+as before this release, or with `off` none. It searches the web as well, with
+Anthropic's web search, unless `LAMBDA_AGENT_SEARCH=false`. Which models and efforts people may choose, and what a run
+may take, is set in the panel, under **Build agent**.
 
 One build runs at a time and the others wait; `LAMBDA_AGENT_CONCURRENCY` in
 `.env` lets more run at once, each taking up to 2 GB and one and a half cores

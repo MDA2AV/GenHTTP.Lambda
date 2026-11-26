@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
@@ -57,7 +58,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The entry, as the showcase lists it")]
-    public async ValueTask<ShowcaseResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ShowcaseRequest request)
+    public async ValueTask<ShowcaseResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ShowcaseRequest request, IRequest call)
     {
         byte[]? image = null;
 
@@ -73,7 +74,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
             }
         }
 
-        var saved = await showcases.SaveAsync(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
+        var saved = await showcases.SaveAsync(privateKey, new ShowcaseDraft(request.Title, request.Description, image), AgentCallerConcern.Of(call));
 
         logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", saved.PublicKey, saved.Title);
 
