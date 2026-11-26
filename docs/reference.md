@@ -2266,7 +2266,11 @@ no stop button where it cannot stop, no options where it has one value.
 thirty days after it ended, its files with it - so a page finds a run after a
 reload, a server finds it after a restart and follows it on from where it
 got to (`AgentFollower`), and a run the agent system forgot ends as `lost`
-with what it did kept. Every call that carries the run's credential is the
+with what it did kept. One server of an installation follows a run: it claims
+it in the records (`follower`, `follower_until`; V35, V10 in PostgreSQL),
+renews the claim every forty seconds and lets go as it stops; a claim that
+lapsed - its server went away - is taken over within a minute or two by
+another (`AgentFollowJob`). Every call that carries the run's credential is the
 run's: what it saved and changed is recorded where it is saved
 (`AgentJournal`), the step it was is recorded at the MCP door
 (`RunSteps`), so the steps are the same in every language whatever the

@@ -91,6 +91,12 @@ public sealed class AgentRunEntity
     /// <summary>The position of the last event of the agent system's taken over - what it is asked again from.</summary>
     public long Followed { get; set; }
 
+    /// <summary>The server following the run - a random id of its platform - while its claim holds.</summary>
+    public string? Follower { get; set; }
+
+    /// <summary>Until when that claim holds, unless it is renewed.</summary>
+    public DateTime? FollowerUntil { get; set; }
+
     /// <summary>The SHA-256 of the run's credential, as lower case hex: what its calls are known by.</summary>
     public required string Ticket { get; set; }
 

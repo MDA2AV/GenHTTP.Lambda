@@ -431,6 +431,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         runs.Property(r => r.Cost).HasColumnName("cost");
         runs.Property(r => r.Currency).HasColumnName("currency");
         runs.Property(r => r.Followed).HasColumnName("followed");
+        runs.Property(r => r.Follower).HasColumnName("follower");
+        runs.Property(r => r.FollowerUntil).HasColumnName("follower_until");
         runs.Property(r => r.Ticket).HasColumnName("ticket");
         runs.Property(r => r.Created).HasColumnName("created");
         runs.Property(r => r.Started).HasColumnName("started");

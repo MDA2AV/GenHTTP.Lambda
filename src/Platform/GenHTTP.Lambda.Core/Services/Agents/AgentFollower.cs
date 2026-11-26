@@ -26,9 +26,12 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// records either way.
 /// </para>
 /// <para>
-/// The loops are this server's. Two servers of one installation would both
-/// follow a run, and record its events once each; the numbers keep them in
-/// order, not apart - known state of the kind CLAUDE.md lists.
+/// Exactly one server of an installation follows a run: it claims the run in
+/// the records before it follows and renews the claim while it does - by
+/// asking again from where it got to every <see cref="Renewal"/> - and lets
+/// go as it goes away. A server that went away without is taken over once its
+/// claim lapsed (<see cref="Lease"/>), as every server looks for runs nobody
+/// follows (<see cref="AgentFollowJob"/>).
 /// </para>
 /// </remarks>
 public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, ILogger<AgentFollower> logger, IAgentProvider? provider = null)
@@ -42,6 +45,15 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
     private static readonly TimeSpan Overdue = TimeSpan.FromMinutes(15);
 
     private static readonly TimeSpan Longest = TimeSpan.FromDays(1);
+
+    /// <summary>How long a server's claim to follow a run holds without being renewed.</summary>
+    public static readonly TimeSpan Lease = TimeSpan.FromMinutes(2);
+
+    /// <summary>How often a claim is renewed while the run is followed.</summary>
+    private static readonly TimeSpan Renewal = TimeSpan.FromSeconds(40);
+
+    /// <summary>What this platform is known by in the claims: random, as nothing else tells servers apart.</summary>
+    private readonly string _me = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(8));
 
     private readonly ConcurrentDictionary<string, Task> _following = new(StringComparer.Ordinal);
 
@@ -109,9 +121,19 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
         {
             while (!stopping.IsCancellationRequested)
             {
+                // another server follows it: it is that one's to record
+                if (!await records.ClaimAsync(run.Id, _me, DateTime.UtcNow + Lease, stopping))
+                {
+                    return;
+                }
+
+                using var turn = CancellationTokenSource.CreateLinkedTokenSource(stopping);
+
+                turn.CancelAfter(Renewal);
+
                 try
                 {
-                    await foreach (var happened in provider!.FollowAsync(new AgentRunHandle(run.Id, run.Reference), after, stopping))
+                    await foreach (var happened in provider!.FollowAsync(new AgentRunHandle(run.Id, run.Reference), after, turn.Token))
                     {
                         _unreachable.TryRemove(run.Id, out _);
 
@@ -134,6 +156,11 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
                 catch (OperationCanceledException) when (stopping.IsCancellationRequested)
                 {
                     return;
+                }
+                catch (OperationCanceledException) when (turn.IsCancellationRequested)
+                {
+                    // time to renew the claim: asked again from where it got to
+                    continue;
                 }
                 catch (Exception e)
                 {
@@ -441,6 +468,18 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
         catch (Exception)
         {
             // loops that did not stop in time must not hold up the shutdown
+        }
+
+        // another server - or this one, started again - takes them over at once
+        try
+        {
+            using var patience = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+            await records.ReleaseAsync(_me, patience.Token);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Failed to let go of the runs this server followed; they are taken over once their claims lapse");
         }
 
         _stopping.Dispose();

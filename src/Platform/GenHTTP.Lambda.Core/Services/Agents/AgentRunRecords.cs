@@ -120,6 +120,37 @@ public sealed class AgentRunRecords(IDbContextFactory<LambdaDbContext> databases
     /// Every run that has not ended, the oldest first: what the follower takes
     /// up again as the platform starts.
     /// </summary>
+    /// <summary>
+    /// Claims a run for a server to follow until the time given: where nobody
+    /// follows it, the server does already, or another's claim has lapsed.
+    /// </summary>
+    /// <returns>Whether the server holds the claim now</returns>
+    public async ValueTask<bool> ClaimAsync(string id, string follower, DateTime until, CancellationToken cancellation = default)
+    {
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var now = DateTime.UtcNow;
+
+        var claimed = await database.AgentRuns
+                                    .Where(r => r.Id == id && r.State != AgentRunState.Ended
+                                                && (r.Follower == null || r.Follower == follower || r.FollowerUntil == null || r.FollowerUntil < now))
+                                    .ExecuteUpdateAsync(r => r.SetProperty(x => x.Follower, follower).SetProperty(x => x.FollowerUntil, until), cancellation);
+
+        return claimed == 1;
+    }
+
+    /// <summary>
+    /// Lets go of the runs a server follows, as it goes away, for another to
+    /// take over at once.
+    /// </summary>
+    public async ValueTask ReleaseAsync(string follower, CancellationToken cancellation = default)
+    {
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        await database.AgentRuns.Where(r => r.Follower == follower)
+                      .ExecuteUpdateAsync(r => r.SetProperty(x => x.Follower, (string?)null).SetProperty(x => x.FollowerUntil, (DateTime?)null), cancellation);
+    }
+
     public async ValueTask<IReadOnlyList<AgentRunEntity>> ActiveAsync(CancellationToken cancellation = default)
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);

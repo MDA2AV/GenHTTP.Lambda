@@ -626,6 +626,29 @@ public sealed class AgentRunTests
     }
 
     [TestMethod]
+    public async Task OneServerOfAnInstallationFollowsARunAndAnotherTakesOverOnceItsClaimLapsed()
+    {
+        var agent = new FakeAgentProvider();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("claimed");
+
+        var started = await StartAsync(fixture, lambda.PrivateKey, new ChangeRequest("Add a page"));
+
+        var records = fixture.Platform.Services.GetRequiredService<AgentRunRecords>();
+
+        await AgentCalls.UntilAsync(async () => (await records.GetAsync(started.Job!.Id))!.Follower, f => f != null, "the server to claim the run");
+
+        // a second server of the same installation finds it followed
+        Assert.IsFalse(await records.ClaimAsync(started.Job!.Id, "another-server", DateTime.UtcNow + AgentFollower.Lease));
+
+        // once the claim lapsed - its server went away without letting go - it takes over
+        await records.UpdateAsync(started.Job.Id, r => r.FollowerUntil = DateTime.UtcNow.AddSeconds(-1));
+
+        Assert.IsTrue(await records.ClaimAsync(started.Job.Id, "another-server", DateTime.UtcNow + AgentFollower.Lease));
+    }
+
+    [TestMethod]
     public async Task ARunTheAgentSystemForgotEndsAsLostAndKeepsWhatItDid()
     {
         var agent = new FakeAgentProvider();
