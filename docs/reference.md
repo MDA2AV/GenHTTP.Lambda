@@ -2298,7 +2298,7 @@ so a proxy in between passes each event on as it comes.
 **The platform's own: Claude Code through the runner.** `ClaudeCodeRunner`
 talks to the runner of `docker/agent` (see [The build agent](#the-build-agent)):
 it offers a model and an effort, reads the runner's health for the rest, and
-speaks either protocol - the runner of this release streams a run's events
+speaks either protocol - a runner since 0.12.0 streams a run's events
 (`GET /build/:id/events`, protocol 2) and takes files, questions back and the
 platform's limits; a runner from before is asked how a job is getting on and
 its answers are told as events, without files, questions or limits. Either
@@ -3664,7 +3664,7 @@ the git history and the export say nothing of it.
 
 Only a credential's SHA-256 is kept, with its run (`agent_runs`); a call
 carrying something that is no credential costs no lookup. Tickets issued by a
-release before (`agent_tickets`) still mark what they wrote for the day they
+release before 0.12.0 (`agent_tickets`) still mark what they wrote for the day they
 were issued for, and are removed hourly after.
 
 **Reading web pages.** A build reaches nothing outside the machine but
@@ -3722,7 +3722,7 @@ page fetch the same proxy serves (`docker/agent/fetch.mjs`, port 3129, `/mcp`):
   without pages and without handing files back. The proxy logs the host of
   each page read or refused, nothing of the address after it.
 
-**Protocol 2.** A runner of this release takes the platform's id for a run
+**Protocol 2.** A runner since 0.12.0 takes the platform's id for a run
 (`run`), its limits (`timeout` in seconds, `maxTurns`), whom it is for
 (`view`, `installation`, `installationName`), the files it came with and those
 of the conversation (`attachments`: id, name, type, size, `earlier`) and what it
