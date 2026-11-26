@@ -44,6 +44,10 @@
              hundred and fifty megabyte file costs page cache and not heap -->
         <PackageVersion Include="MaxMind.Db" Version="5.2.0" />
 
+        <!-- reads the text and the scanned pages of a PDF a person attached to
+             a message to the agent (read_attachment); managed code only -->
+        <PackageVersion Include="PdfPig" Version="0.1.16" />
+
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
         <PackageVersion Include="MSTest" Version="4.5.3" />
 

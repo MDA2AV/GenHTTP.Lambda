@@ -211,9 +211,27 @@ const SEARCH_TOOL = 'WebSearch';
 /*
  * The files a message may come with, of a platform that hands them over:
  * the agent reads them through the platform's MCP (read_attachment), which
- * shows a picture as an image the model sees and a text as its text.
+ * shows a picture as an image the model sees, a text as its text, and a PDF
+ * or an office document as its text, a scanned page as its picture. A
+ * platform from before 0.13 shows the documents as a file it cannot read, so
+ * the agent can still put one into the app - upgrade the installation first.
+ * The old binary formats (.doc, .xls, .ppt) are not read, so not taken.
  */
-const ATTACHMENTS = { types: ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/*', 'application/json'], maxBytes: 5 * 1024 * 1024, maxCount: 5 };
+const ATTACHMENTS = {
+  types: [
+    'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/*', 'application/json',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'application/vnd.oasis.opendocument.presentation'
+  ],
+  // a PDF with pictures in it is soon larger than a photo
+  maxBytes: 10 * 1024 * 1024,
+  maxCount: 5
+};
 
 /**
  * The sites a job may read pages of: any, where the runner reads any - or
@@ -896,7 +914,8 @@ const ATTACHED = `They attached files to their message, which the platform keeps
 {files}
 
 read_attachment shows one by its id - a picture as an image you see, a text
-as its text. To put one into the application, name it by its id as attachment
+as its text, a PDF or an office document as its text with its scanned pages
+as pictures, a long one in parts (from). To put one into the application, name it by its id as attachment
 in a file of write_code or change_code (resources/web/logo.png), in
 upload_file, or as the showcase picture - never retype or encode it yourself.`;
 

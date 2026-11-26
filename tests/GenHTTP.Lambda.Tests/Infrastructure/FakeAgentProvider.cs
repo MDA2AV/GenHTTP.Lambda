@@ -49,7 +49,8 @@ public sealed class FakeAgentProvider : IAgentProvider, IIntegrationBuilder<IAge
             new AgentOption("engine", "Engine", [new AgentOptionValue("swift", "Swift"), new AgentOptionValue("thorough", "Thorough", "Takes its time", Guarded: true)], "swift"),
             new AgentOption("tone", "Tone", [new AgentOptionValue("plain", "Plain"), new AgentOptionValue("warm", "Warm")], "plain")
         ],
-        new AgentAttachmentPolicy(["image/*", "text/*", "application/pdf"], 5 * 1024 * 1024, 3),
+        new AgentAttachmentPolicy(["image/*", "text/*", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"], 5 * 1024 * 1024, 3),
         ReturnsFiles: true,
         new AgentWebAccess(AgentWebScope.Any, true, "Anything"),
         Cancels: true,

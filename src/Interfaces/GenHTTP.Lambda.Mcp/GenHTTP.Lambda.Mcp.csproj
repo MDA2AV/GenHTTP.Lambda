@@ -10,4 +10,8 @@
         <ProjectReference Include="../../Platform/GenHTTP.Lambda.Core/GenHTTP.Lambda.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="PdfPig" />
+    </ItemGroup>
+
 </Project>

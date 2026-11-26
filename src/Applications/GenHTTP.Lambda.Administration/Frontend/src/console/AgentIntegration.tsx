@@ -10,6 +10,24 @@ const WEB: Record<string, string> = {
   any: 'Any public site',
 };
 
+/** The kinds of file a message takes, by the names people know them by; any other as its media type. */
+const KINDS: Record<string, string> = {
+  'image/png': 'PNG',
+  'image/jpeg': 'JPEG',
+  'image/gif': 'GIF',
+  'image/webp': 'WebP',
+  'image/*': 'pictures',
+  'text/*': 'texts',
+  'application/json': 'JSON',
+  'application/pdf': 'PDF',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PowerPoint',
+  'application/vnd.oasis.opendocument.text': 'OpenDocument text',
+  'application/vnd.oasis.opendocument.spreadsheet': 'OpenDocument spreadsheet',
+  'application/vnd.oasis.opendocument.presentation': 'OpenDocument presentation',
+};
+
 /**
  * The agent among the integrations: what it is, how it is doing and what it
  * can do, and where a run sends what - its technicalities, beside the other
@@ -115,7 +133,7 @@ function Destinations({ said }: { said: NonNullable<AdminAgentSettings['agent']>
             {said.webPolicy && <span className="block text-xs text-slate-500">{said.webPolicy}</span>}
           </Fact>
           <Fact label="Searches the web">{said.searches ? 'Yes' : 'No'}</Fact>
-          <Fact label="Files sent with a message">{said.attachments?.length ? said.attachments.join(', ') : 'None'}</Fact>
+          <Fact label="Files sent with a message">{said.attachments?.length ? said.attachments.map((type) => KINDS[type] ?? type).join(', ') : 'None'}</Fact>
           <Fact label="Hands files back">{said.returnsFiles ? 'Yes' : 'No'}</Fact>
           <Fact label="Asks back">{said.asks ? 'Yes - the next message answers' : 'No'}</Fact>
           <Fact label="Can be stopped">{said.cancels ? 'Yes' : 'No'}</Fact>

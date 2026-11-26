@@ -2084,11 +2084,12 @@ export const api = {
 
   /** Files a message to the agent comes with, and those it hands back. */
   attachments: {
-    upload: (file: File) =>
-      request<RunFile>(`/attachments/?name=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type || 'application/octet-stream')}`, {
+    /** Keeps a file for the next message, as the kind of file the page took it for. */
+    upload: (file: File, type: string) =>
+      request<RunFile>(`/attachments/?name=${encodeURIComponent(file.name)}&type=${encodeURIComponent(type)}`, {
         method: 'POST',
         body: file,
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: { 'Content-Type': type },
       }),
     /** Where one is read: a picture shown, any other file saved, never run. */
     url: (id: string) => `${base}/attachments/${id}`,
