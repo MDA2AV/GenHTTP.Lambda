@@ -41,8 +41,8 @@ Anthropic and nothing else, and is thrown away when it ends. It may read web
 pages, which the proxy fetches for it - GET and HEAD, at public addresses: of
 any public site, or with `LAMBDA_AGENT_WEB=named` in `.env` only the sites a
 request names (*"look at myoldhomepage.com and make a new version of it"*),
-as before this release, or with `off` none. `LAMBDA_AGENT_SEARCH=true` lets
-it search the web. Which models and efforts people may choose, and what a run
+as before this release, or with `off` none. It searches the web as well, with
+Anthropic's web search, unless `LAMBDA_AGENT_SEARCH=false`. Which models and efforts people may choose, and what a run
 may take, is set in the panel, under **Build agent**.
 
 One build runs at a time and the others wait; `LAMBDA_AGENT_CONCURRENCY` in

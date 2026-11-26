@@ -250,7 +250,9 @@ is polled - so an installation and its runner are upgraded one after the other.
   address connected to. **Any public site by default (owner)** (`AGENT_WEB`),
   as one's own Claude Code reads; `named` keeps to the sites the person named
   (`sites.mjs`, never the names below them, never the agent's replies), `off`
-  none - genhttp.dev included. Search (`AGENT_SEARCH`) is off by default. `LAMBDA_AGENT_FETCH=false`
+  none - genhttp.dev included. **Search is on by default (owner)**
+  (`AGENT_SEARCH=false` switches it off; a job of a platform from before
+  searches only where it was set). `LAMBDA_AGENT_FETCH=false`
   removes the server, and with it handing files back (`hand_over`, which keeps
   nothing: the runner reads the file off a call that succeeded).
 - `RunnerCatalog` labels name the default versions; the identifiers are the
@@ -268,8 +270,8 @@ is polled - so an installation and its runner are upgraded one after the other.
   unbounded runs one per installation. A new file of the runner is copied in
   its Dockerfile by name, and a rule of it is tested without docker
   (`docker/agent/*.test.mjs`).
-- Builds load no built-in tool (`--tools ""` plus the denylist; `WebSearch`
-  only with `AGENT_SEARCH`). `verify-tools.sh` checks what a build loaded from
+- Builds load no built-in tool (`--tools ""` plus the denylist) but
+  `WebSearch` where they search. `verify-tools.sh` checks what a build loaded from
   the CLI's first line; run it after every change of the CLI's version.
 
 ## Editions and components

@@ -226,7 +226,7 @@ services:
       AGENT_FETCH_URL: http://egress-proxy:3129/mcp
       # any public site, as on every installation (named or off in .env)
       AGENT_WEB: ${LAMBDA_AGENT_WEB:-any}
-      AGENT_SEARCH: ${LAMBDA_AGENT_SEARCH:-false}
+      AGENT_SEARCH: ${LAMBDA_AGENT_SEARCH:-true}
     volumes:
       # The one real privilege in here, and the reason for the split above.
       # Anything that can create a container can create one that mounts the

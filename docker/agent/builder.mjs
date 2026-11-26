@@ -193,10 +193,18 @@ const HAND_OVER_TOOL = 'mcp__web__hand_over';
 
 /*
  * Whether a build searches the web, with Anthropic's web search - a tool of
- * the CLI's own, which the lockdown below otherwise leaves out. Off unless
- * AGENT_SEARCH=true: verify-tools.sh checks what a build loads with it.
+ * the CLI's own, which the lockdown below otherwise leaves out. On unless
+ * AGENT_SEARCH=false: verify-tools.sh checks what a build loads with it.
  */
-const SEARCH = process.env.AGENT_SEARCH === 'true';
+const SEARCH = process.env.AGENT_SEARCH !== 'false';
+
+/*
+ * A platform from before never searched, and its privacy statement says
+ * nothing of it: its jobs search only where the operator set AGENT_SEARCH.
+ */
+const SEARCH_CHOSEN = process.env.AGENT_SEARCH !== undefined && process.env.AGENT_SEARCH !== '';
+
+const searchesFor = job => SEARCH && (v2(job) || SEARCH_CHOSEN);
 
 const SEARCH_TOOL = 'WebSearch';
 
@@ -945,18 +953,20 @@ function continuationOf(job) {
 
 /** What a job of this protocol is told besides the brief of its kind. */
 function extrasOf(job) {
-  if (!v2(job)) return '';
-
   const now = (job.attachments ?? []).filter(f => !f.earlier);
   const before = (job.attachments ?? []).filter(f => f.earlier);
 
+  // what only a platform of protocol 2 knows what to do with, then the search
+  // a job of either may have
   const parts = [
-    job.view === 'full' ? FULL : SIMPLE,
-    ASKING,
-    FETCH_URL ? HANDING : null,
-    now.length > 0 ? ATTACHED.replace('{files}', () => filesOf(now)) : null,
-    before.length > 0 ? EARLIER.replace('{files}', () => filesOf(before)) : null,
-    SEARCH ? SEARCHING : null
+    ...(v2(job) ? [
+      job.view === 'full' ? FULL : SIMPLE,
+      ASKING,
+      FETCH_URL ? HANDING : null,
+      now.length > 0 ? ATTACHED.replace('{files}', () => filesOf(now)) : null,
+      before.length > 0 ? EARLIER.replace('{files}', () => filesOf(before)) : null
+    ] : []),
+    searchesFor(job) ? SEARCHING : null
   ];
 
   return parts.filter(Boolean).map(part => `\n\n${part}`).join('');
@@ -1271,11 +1281,12 @@ async function run(job) {
   const sites = sitesOf(job);
   const brief = briefOf(job, sites);
   const free = unbounded(job);
+  const searches = searchesFor(job);
   const allowed = [
     ...allowedOf(job),
     ...(sites.length > 0 ? [FETCH_TOOL] : []),
     ...(v2(job) && FETCH_URL ? [HAND_OVER_TOOL] : []),
-    ...(SEARCH ? [SEARCH_TOOL] : [])
+    ...(searches ? [SEARCH_TOOL] : [])
   ];
 
   // the MCP server it is allowed to talk to, and the only one:
@@ -1292,10 +1303,10 @@ async function run(job) {
     '--verbose',
     // no built-in tool at all - the files, the shell, the web - only the MCP
     // servers: the platform's, and the page fetch where the job may read pages;
-    // Anthropic's web search only where the operator switched it on
-    '--tools', SEARCH ? SEARCH_TOOL : '',
+    // Anthropic's web search unless the operator switched it off
+    '--tools', searches ? SEARCH_TOOL : '',
     '--allowedTools', ...allowed,
-    '--disallowedTools', ...DENY.filter(tool => !(SEARCH && tool === SEARCH_TOOL))
+    '--disallowedTools', ...DENY.filter(tool => !(searches && tool === SEARCH_TOOL))
   ];
 
   // named by the runner, not by an id a platform chose: installations that

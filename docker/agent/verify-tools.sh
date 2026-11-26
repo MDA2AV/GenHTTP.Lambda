@@ -13,17 +13,17 @@
 # asks the model anything, so this stops it there: nothing is spent, and it
 # works before the credentials are set.
 #
-# Run on genhttp.dev, against the runner deploy/cloud started - with
-# --search where the runner searches the web (AGENT_SEARCH=true), which loads
-# the CLI's own WebSearch as well.
+# Run on genhttp.dev, against the runner deploy/cloud started. A build
+# searches the web unless AGENT_SEARCH=false, which loads the CLI's own
+# WebSearch as well; --no-search checks a runner that has it off.
 set -euo pipefail
 
-SEARCH=false
+SEARCH=true
 
-if [[ "${1:-}" == "--search" ]]; then
-  SEARCH=true
-  shift
-fi
+case "${1:-}" in
+  --no-search) SEARCH=false; shift ;;
+  --search) shift ;;
+esac
 
 SERVICE=${1:-agent}
 

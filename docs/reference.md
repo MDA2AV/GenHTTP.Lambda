@@ -3707,8 +3707,9 @@ page fetch the same proxy serves (`docker/agent/fetch.mjs`, port 3129, `/mcp`):
   The runner reads nothing of a page as a fact of the run; the platform is told
   which site was read (the host only), and the pages show it as a step.
 - **Searching** is Anthropic's web search, a tool of the CLI's own, which a
-  build loads only with `AGENT_SEARCH=true` (off by default;
-  `verify-tools.sh --search` checks what a build loads with it).
+  build loads unless `AGENT_SEARCH=false` - and a job of a platform from
+  before only where `AGENT_SEARCH` was set, since it never searched
+  (`verify-tools.sh` checks what a build loads with it, `--no-search` without).
 - **Handing files back**: beside the fetch, the same server has `hand_over`,
   with which the agent gives the person a file - a text, a table, a picture as
   SVG. It keeps nothing: the runner reads the file off a call that succeeded

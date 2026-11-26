@@ -40,9 +40,10 @@ export const privacy: Messages['privacy'] = {
         versteht, was Sie meinen. Um zu antworten oder eine Änderung vorzunehmen, liest der Agent außerdem das Lambda –
         seinen Code, die Notizen zu seinen Versionen, sein Log, das seine Requests und seine Ausgaben enthält, aber nicht
         die IP-Adressen seiner Besucher, und, wenn Sie danach fragen, seine Einträge und die Zahlen seiner Besucher. Auch
-        was er dabei liest, wird dorthin geschickt. Er kann außerdem Seiten von Websites lesen – von einer, die Sie nennen,
-        oder von einer, die er nachschlägt, um herauszufinden, was Ihre App braucht – und zwar von diesem Server aus, die
-        Website sieht also unsere Adresse und nicht Ihre. Auch diese Seiten werden auf dieselbe Weise dorthin geschickt.
+        was er dabei liest, wird dorthin geschickt. Um herauszufinden, was Ihre App braucht, kann er mit der eigenen Suche
+        von Anthropic im Web suchen und Seiten von Websites lesen – von einer, die Sie nennen, oder von einer, die er
+        gefunden hat – und zwar von diesem Server aus, die Website sieht also unsere Adresse und nicht Ihre. Auch diese
+        Seiten werden auf dieselbe Weise dorthin geschickt.
         Was Anthropic damit macht, steht in{' '}
         {policy('der Datenschutzerklärung von Anthropic')}. Die USA schützen personenbezogene Daten nicht so wie die EU.
         Ihre Anfrage wird dorthin geschickt, weil das nötig ist, um zu bauen oder zu ändern, was Sie möchten

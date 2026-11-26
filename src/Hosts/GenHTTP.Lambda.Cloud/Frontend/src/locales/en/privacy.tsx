@@ -42,9 +42,9 @@ export const privacy = {
         the last few messages about the same app and what the agent answered, so that it understands what you mean. To answer
         or make a change, the agent also reads the lambda - its code, the notes on its versions, its log, which holds its
         requests and what it printed but not its visitors' IP addresses, and where you ask about them its records and the
-        counts of its visitors - and what it reads is sent there too. It may also read pages of websites - one you name,
-        or one it looks up to find out what your app needs - from this server, so the site sees our address, not yours,
-        and they are sent there in the same way.
+        counts of its visitors - and what it reads is sent there too. To find out what your app needs, it may search the
+        web with Anthropic's own search, and read pages of websites - one you name, or one it found - from this server,
+        so the site sees our address, not yours; they are sent there in the same way.
         What Anthropic does with it is covered by{' '}
         {policy('its own privacy policy')}. The United States does not protect personal data the way the EU does. Your
         request is sent there because building or changing what you asked for needs it (Art. 6(1)(b) and Art. 49(1)(b)

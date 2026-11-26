@@ -41,7 +41,7 @@ const config = JSON.parse(process.env.AGENT_MCP_CONFIG);
 const mcp = new URL(config.mcpServers.genhttp.url);
 const brief = process.env.AGENT_BRIEF;
 const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--disallowedTools'));
-writeFileSync(process.env.STAND_IN_DIR + '/job-' + process.env.AGENT_JOB + '.json', JSON.stringify({ config, box, direct: process.env.NO_PROXY, brief, allowed, turns: args.includes('--max-turns') ? args[args.indexOf('--max-turns') + 1] : null }));
+writeFileSync(process.env.STAND_IN_DIR + '/job-' + process.env.AGENT_JOB + '.json', JSON.stringify({ config, box, direct: process.env.NO_PROXY, brief, allowed, tools: args[args.indexOf('--tools') + 1], turns: args.includes('--max-turns') ? args[args.indexOf('--max-turns') + 1] : null }));
 const say = event => process.stdout.write(JSON.stringify(event) + '\\n');
 const at = mcp.hostname;
 const answer = () => {
@@ -473,6 +473,57 @@ test('a run of protocol 2 asks back, reads a page and hands a file over - the re
     assert.equal(health.body.files, true);
   } finally {
     runner.stop();
+  }
+});
+
+test('a run searches the web unless the operator switched it off, and one of an older platform only where it was set', { skip }, async () => {
+  const searching = (box) => box.tools === 'WebSearch' && box.allowed.includes('WebSearch') && box.brief.includes('WebSearch');
+  const plain = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020105';
+
+    await plain.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run });
+    await followed(plain.port, A.token, run);
+
+    assert.ok(searching(given(run)), 'on by default');
+
+    const older = await plain.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket });
+    await settled(plain.call, A.token, older.body.id);
+
+    const box = given(older.body.id);
+
+    assert.equal(box.tools, '', 'a platform from before never searched');
+    assert.ok(!box.allowed.includes('WebSearch'));
+  } finally {
+    plain.stop();
+  }
+
+  const off = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_SEARCH: 'false' });
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020106';
+
+    await off.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run });
+    await followed(off.port, A.token, run);
+
+    const box = given(run);
+
+    assert.equal(box.tools, '', 'no built-in tool at all');
+    assert.ok(!box.allowed.includes('WebSearch') && !box.brief.includes('WebSearch'));
+  } finally {
+    off.stop();
+  }
+
+  const on = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin, AGENT_SEARCH: 'true' });
+
+  try {
+    const older = await on.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket });
+    await settled(on.call, A.token, older.body.id);
+
+    assert.ok(searching(given(older.body.id)), 'set by the operator, for whichever platform asks');
+  } finally {
+    on.stop();
   }
 });
 
