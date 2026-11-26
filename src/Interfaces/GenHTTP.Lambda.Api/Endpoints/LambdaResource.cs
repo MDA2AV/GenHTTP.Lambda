@@ -145,8 +145,10 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     [Response(ResponseStatus.NoContent, "The lambda and everything kept for it are gone.")]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is one of the installation's own, which only the operator deletes.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "delete apps");
+
         var publicKey = await meta.PublicKeyOfAsync(privateKey);
 
         await meta.DeleteAsync(privateKey);

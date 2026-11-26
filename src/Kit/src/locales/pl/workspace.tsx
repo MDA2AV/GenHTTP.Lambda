@@ -71,6 +71,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Zapytaj o ${name} albo powiedz, co zmienić…`,
   placeholderAnswer: 'Twoja odpowiedź…',
   answering: 'Twoja następna wiadomość jest odpowiedzią na pytanie agenta.',
+  askSomethingElse: 'Zapytaj o coś innego',
   files: {
     /** The paper clip beside the box. */
     attach: 'Dołącz plik',
@@ -144,6 +145,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'To już zostało cofnięte.',
     },
     changedSince: 'Część zmieniła się od tamtej pory, więc to zostało.',
+    notUndone: 'To, co było wcześniej online, nie mogło zostać przywrócone, więc to, co jest teraz online, pozostaje.',
     undoneDone: 'Cofnięto.',
     created: (name) => `Zbudowano nową aplikację: ${name}`,
     draft: 'Gotowe do wypróbowania w szkicu',

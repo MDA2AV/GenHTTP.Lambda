@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `${name}について質問するか、変えたいことを伝えてください…`,
   placeholderAnswer: '回答を入力…',
   answering: '次のメッセージが、エージェントの質問への回答になります。',
+  askSomethingElse: '代わりに別のことを質問する',
   files: {
     /** The paper clip beside the box. */
     attach: 'ファイルを添付',
@@ -143,6 +144,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'すでに取り消されています。',
     },
     changedSince: '一部はその後に変更されているため、そのまま残っています。',
+    notUndone: '以前に公開されていた内容を元に戻せなかったため、現在公開中の内容がそのまま残ります。',
     undoneDone: '取り消しました。',
     created: (name) => `新しいアプリを作成しました：${name}`,
     draft: '下書きで試せる状態です',

@@ -649,6 +649,50 @@ public sealed class AgentRunTests
     }
 
     [TestMethod]
+    public async Task WhatOnlyTheOwnerDoesIsRefusedToAnyAgentAndItsOtherCallsAreSteps()
+    {
+        var agent = new FakeAgentProvider();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("owners-own");
+
+        await StartAsync(fixture, lambda.PrivateKey, new ChangeRequest("Use my weather key abc123"));
+
+        var run = agent.Last;
+
+        // whatever agent it is, and whichever of its tools it was given
+        var refused = await AgentCalls.ToolAsync(fixture, "set_secret", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey, ["name"] = "WEATHER_KEY", ["value"] = "abc123"
+        }, run.Credential, allowError: true);
+
+        Assert.IsTrue(refused["isError"]?.GetValue<bool>() ?? refused.ToJsonString().Contains("does not enter", StringComparison.Ordinal), refused.ToJsonString());
+
+        using (var deleting = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}", HttpMethod.Delete))
+        {
+            deleting.Headers.Add(IAgentService.CredentialHeader, run.Credential);
+
+            using var deleted = await fixture.Host.GetResponseAsync(deleting);
+
+            Assert.AreEqual(HttpStatusCode.Forbidden, deleted.StatusCode, "the owner deletes an app");
+        }
+
+        // a call through the REST API is a step of the run as one through MCP is
+        using (var enabling = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/data/database", HttpMethod.Put))
+        {
+            enabling.Headers.Add(IAgentService.CredentialHeader, run.Credential);
+
+            using var enabled = await fixture.Host.GetResponseAsync(enabling);
+
+            Assert.AreEqual(HttpStatusCode.OK, enabled.StatusCode);
+        }
+
+        var state = await AgentCalls.UntilAsync(() => AgentCalls.StateAsync(fixture, lambda.PrivateKey), s => s.Job!.Steps.Any(step => step.Kind == "data"));
+
+        Assert.AreEqual("database", state.Job!.Steps.Single(step => step.Kind == "data").Data);
+    }
+
+    [TestMethod]
     public async Task ARunTheAgentSystemForgotEndsAsLostAndKeepsWhatItDid()
     {
         var agent = new FakeAgentProvider();

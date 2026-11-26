@@ -92,6 +92,8 @@ export const workspace = {
   placeholderAnswer: 'Your answer…',
   /** Above the box while the next message answers the agent's question. */
   answering: 'Your next message answers its question.',
+  /** Beside that, for whoever wants to ask about something else rather than answer. */
+  askSomethingElse: 'Ask something else instead',
 
   /** Files that go with a message, and files the agent hands back. */
   files: {
@@ -213,6 +215,8 @@ export const workspace = {
     } as Record<string, string>,
     /** After undoing: what changed since the message stayed, as it was not as the message left it. */
     changedSince: 'Some of it changed since, so that stayed.',
+    /** After undoing: what was online before could not go back online - it is gone, or does not run any more. */
+    notUndone: 'What was online before could not be put back, so what is online now stays.',
     undoneDone: 'Undone.',
     /** A new app the agent built beside this one, by its address name; its editor link is in the answer. */
     created: (name: string) => `Built a new app: ${name}`,

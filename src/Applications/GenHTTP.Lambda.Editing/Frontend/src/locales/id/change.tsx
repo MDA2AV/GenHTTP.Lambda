@@ -171,6 +171,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Sudah dibatalkan sebelumnya.',
   },
   changedSince: 'Sebagian sudah berubah sejak itu, jadi bagian itu tetap seperti adanya.',
+  notUndone: 'Versi yang online sebelumnya tidak dapat dikembalikan, jadi yang online sekarang tetap seperti adanya.',
   seeChanges: 'Lihat perubahannya',
   open: 'Buka',
   openPreview: 'Coba',

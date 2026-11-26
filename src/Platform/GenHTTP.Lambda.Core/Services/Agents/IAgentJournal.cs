@@ -46,4 +46,11 @@ public interface IAgentJournal
     /// </summary>
     ValueTask ForgetAsync(long lambdaId, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// Marks the call at hand as one the door records as a step of its own -
+    /// the MCP door does - for as long as it is not disposed of; what calls
+    /// through other doors change is recorded as steps from their effects.
+    /// </summary>
+    IDisposable Step();
+
 }

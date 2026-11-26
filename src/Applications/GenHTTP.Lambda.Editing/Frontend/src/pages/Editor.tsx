@@ -47,9 +47,10 @@ import { SimpleOverview } from '../control/SimpleOverview';
 import { SourceTab } from '../control/SourceTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
-import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '@genhttp-lambda/kit/ui/ui';
+import { AgentOrderContext, Menu, StatusBadge, TierBadge, menuItem, menuRule } from '@genhttp-lambda/kit/ui/ui';
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '@genhttp-lambda/kit/ui/words';
+import { optionsOf } from '@genhttp-lambda/kit/components/AgentChoice';
 import { useEditorT } from '../i18n';
 import { useLanguage } from '@genhttp-lambda/kit/i18n';
 import { Link as SiteLink, localize } from '@genhttp-lambda/kit/i18n/links';
@@ -504,6 +505,9 @@ export function Editor({ theme }: Props) {
     failed: t.change.readFailed,
   });
 
+  // the order of the agent's options, for the marks on what it wrote
+  const agentOrder = optionsOf(agent.state?.offer).map((option) => option.name);
+
   // where the code being edited is: the lambda's, or the open feature's
   const coding = featureKey ? (featureView === 'code' ? `${base}/features/${featureKey}/code` : null) : section === 'code' ? `${base}/code` : null;
 
@@ -862,6 +866,7 @@ export function Editor({ theme }: Props) {
    */
   return (
     <SharedWordsContext.Provider value={t.shared}>
+    <AgentOrderContext.Provider value={agentOrder}>
     <div ref={scroller} className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
     <div className={`mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
       {/* where it is taller than the window, its sections scroll on their
@@ -1331,6 +1336,7 @@ export function Editor({ theme }: Props) {
         </p>
       </Dialog>
     </div>
+    </AgentOrderContext.Provider>
     </SharedWordsContext.Provider>
   );
 }

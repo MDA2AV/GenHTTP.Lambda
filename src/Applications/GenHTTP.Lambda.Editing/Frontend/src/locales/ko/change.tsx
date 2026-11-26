@@ -165,6 +165,7 @@ export const change: EditorMessages['change'] = {
     undone: '이미 되돌려졌어요.',
   },
   changedSince: '일부는 그 뒤에 바뀌어서 그대로 두었어요.',
+  notUndone: '이전에 온라인이던 버전을 되돌리지 못해서, 지금 온라인인 버전은 그대로예요.',
   seeChanges: '바뀐 내용 보기',
   open: '열기',
   openPreview: '써 보기',

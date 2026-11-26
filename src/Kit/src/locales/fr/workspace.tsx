@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Posez une question sur ${name}, ou dites ce qui doit changer…`,
   placeholderAnswer: 'Votre réponse…',
   answering: 'Votre prochain message répond à sa question.',
+  askSomethingElse: 'Poser plutôt une autre question',
   files: {
     attach: 'Joindre un fichier',
     attachHint: (count, size) => (count === 1 ? `Joindre un fichier de ${size} au maximum` : `Joindre jusqu’à ${count} fichiers de ${size} chacun au maximum`),
@@ -135,6 +136,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Cela a déjà été annulé.',
     },
     changedSince: 'Une partie a changé depuis, donc elle reste.',
+    notUndone: 'Ce qui était en ligne auparavant n’a pas pu être remis en ligne, donc ce qui est en ligne actuellement reste en place.',
     undoneDone: 'Annulé.',
     created: (name) => `Nouvelle app créée : ${name}`,
     draft: 'Prêt à essayer dans un brouillon',

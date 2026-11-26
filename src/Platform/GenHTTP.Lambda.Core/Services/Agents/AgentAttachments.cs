@@ -5,6 +5,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Integrations.Agents;
 using GenHTTP.Lambda.Integrations.Files;
 
@@ -98,7 +99,7 @@ public sealed class AgentAttachments(AgentRunRecords records, IFileProvider file
             Name = tidy,
             MediaType = type,
             Size = content.Length,
-            Sha256 = Convert.ToHexStringLower(SHA256.HashData(content.Span)),
+            Sha256 = await Offload.Run(() => Convert.ToHexStringLower(SHA256.HashData(content.Span)), cancellation),
             Created = DateTime.UtcNow
         };
 

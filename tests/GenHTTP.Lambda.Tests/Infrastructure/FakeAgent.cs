@@ -23,6 +23,7 @@ public sealed class FakeAgent : IAsyncDisposable
 
     private readonly ConcurrentDictionary<string, JsonObject> _jobs = [];
     private readonly ConcurrentDictionary<string, string> _latest = [];
+    private readonly ConcurrentDictionary<string, List<JsonObject>> _events = [];
 
     private FakeAgent(HttpListener listener, string url)
     {
@@ -60,6 +61,28 @@ public sealed class FakeAgent : IAsyncDisposable
 
     /// <summary>How many installations its health says share it; nothing, as a runner of one says.</summary>
     public int? Installations { get; set; }
+
+    /// <summary>
+    /// Whether it speaks protocol 2, as a runner of this release does: takes
+    /// files, asks back, hands files over, and streams what happens.
+    /// </summary>
+    public bool Streams { get; set; }
+
+    /// <summary>
+    /// Tells what happens in a job the way a runner of protocol 2 streams it:
+    /// numbered in order, the time added.
+    /// </summary>
+    public void Emit(string id, JsonObject happened)
+    {
+        var events = _events.GetOrAdd(id, _ => []);
+
+        lock (events)
+        {
+            happened["seq"] = (long)(events.Count + 1);
+            happened["at"] = DateTimeOffset.UtcNow.ToString("O");
+            events.Add(happened);
+        }
+    }
 
     public static FakeAgent Start()
     {
@@ -132,14 +155,30 @@ public sealed class FakeAgent : IAsyncDisposable
                 return;
             }
 
-            try
+            // each on its own, as a stream of events stays open while other
+            // requests come in
+            _ = Task.Run(async () =>
             {
-                await AnswerAsync(context);
-            }
-            catch (Exception e)
-            {
-                await SendAsync(context, HttpStatusCode.InternalServerError, new JsonObject { ["error"] = e.Message });
-            }
+                try
+                {
+                    await AnswerAsync(context);
+                }
+                catch (Exception e) when (e is not (ObjectDisposedException or HttpListenerException))
+                {
+                    try
+                    {
+                        await SendAsync(context, HttpStatusCode.InternalServerError, new JsonObject { ["error"] = e.Message });
+                    }
+                    catch (Exception)
+                    {
+                        // gone with the listener
+                    }
+                }
+                catch (Exception)
+                {
+                    // the listener stopped under it
+                }
+            });
         }
     }
 
@@ -206,7 +245,7 @@ public sealed class FakeAgent : IAsyncDisposable
 
         if (request.HttpMethod == "GET" && path == "/health")
         {
-            await SendAsync(context, HttpStatusCode.OK, new JsonObject
+            var health = new JsonObject
             {
                 ["ok"] = true,
                 ["auth"] = SignsInWith,
@@ -224,8 +263,27 @@ public sealed class FakeAgent : IAsyncDisposable
                 ["long"] = new JsonObject { ["running"] = false, ["queued"] = 0 },
                 ["concurrency"] = Concurrency,
                 ["installations"] = Installations
-            });
+            };
 
+            if (Streams)
+            {
+                health["protocol"] = 2;
+                health["web"] = "any";
+                health["timeout"] = 600;
+                health["maxTurns"] = 60;
+                health["attachments"] = new JsonObject { ["types"] = new JsonArray("image/png", "text/*"), ["maxBytes"] = 1024 * 1024, ["maxCount"] = 3 };
+                health["files"] = true;
+                health["asks"] = true;
+            }
+
+            await SendAsync(context, HttpStatusCode.OK, health);
+
+            return;
+        }
+
+        if (request.HttpMethod == "GET" && path.StartsWith("/build/", StringComparison.Ordinal) && path.EndsWith("/events", StringComparison.Ordinal))
+        {
+            await StreamAsync(context, path["/build/".Length..^"/events".Length], long.Parse(request.QueryString["after"] ?? "0", System.Globalization.CultureInfo.InvariantCulture));
             return;
         }
 
@@ -269,6 +327,58 @@ public sealed class FakeAgent : IAsyncDisposable
         }
 
         await SendAsync(context, HttpStatusCode.NotFound, new JsonObject { ["error"] = "No such thing." });
+    }
+
+    /// <summary>
+    /// One event a line, from the position asked after, until the job ended -
+    /// or a while passed, as a stream may break off and be asked for again.
+    /// </summary>
+    private async Task StreamAsync(HttpListenerContext context, string id, long after)
+    {
+        if (!_jobs.ContainsKey(id))
+        {
+            await SendAsync(context, HttpStatusCode.NotFound, new JsonObject { ["error"] = "No such build." });
+            return;
+        }
+
+        context.Response.StatusCode = 200;
+        context.Response.ContentType = "application/x-ndjson";
+        context.Response.SendChunked = true;
+
+        var until = DateTime.UtcNow.AddSeconds(10);
+
+        try
+        {
+            while (DateTime.UtcNow < until)
+            {
+                List<JsonObject> fresh;
+
+                var events = _events.GetOrAdd(id, _ => []);
+
+                lock (events)
+                {
+                    fresh = [.. events.Where(e => e["seq"]!.GetValue<long>() > after).Select(e => (JsonObject)e.DeepClone())];
+                }
+
+                foreach (var happened in fresh)
+                {
+                    await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(happened.ToJsonString() + "\n"));
+                    after = happened["seq"]!.GetValue<long>();
+
+                    if (happened["type"]!.GetValue<string>() == "ended")
+                    {
+                        return;
+                    }
+                }
+
+                await context.Response.OutputStream.FlushAsync();
+                await Task.Delay(20);
+            }
+        }
+        finally
+        {
+            context.Response.Close();
+        }
     }
 
     private static JsonObject Copy(JsonObject job)

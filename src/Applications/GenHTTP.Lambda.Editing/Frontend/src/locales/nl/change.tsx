@@ -172,6 +172,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Dit was al ongedaan gemaakt.',
   },
   changedSince: 'Een deel is sindsdien veranderd, dus dat blijft zoals het is.',
+  notUndone: 'De versie die eerder online stond kon niet worden teruggezet, dus wat nu online staat blijft staan.',
   seeChanges: 'Wijzigingen bekijken',
   open: 'Openen',
   openPreview: 'Uitproberen',

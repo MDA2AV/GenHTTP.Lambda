@@ -7,12 +7,12 @@ public enum AgentActivityKind
 {
 
     /// <summary>It reads a web page; the subject is the site.</summary>
-    ReadsPage,
+    ReadsPage = 0,
 
     /// <summary>It searches the web.</summary>
-    Searches,
+    Searches = 1,
 
     /// <summary>Anything else; the subject names the tool, which a page shows as it is.</summary>
-    Other
+    Other = 2
 
 }

@@ -45,17 +45,38 @@ public sealed class AttachmentResource(IAgentService agents)
     [Response(ResponseStatus.NotFound, "The agent of this installation takes no files - or there is no agent.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.RequestEntityTooLarge, "The file is larger than the agent takes.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.UnsupportedMediaType, "The agent takes no files of this kind.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.TooManyRequests, "This address sent as many files as it may in an hour.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.ServiceUnavailable, "Too many files wait to be sent. Try again in a while.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The file, by the id a message names it by")]
     public async ValueTask<Result<RunFile>> Upload([Summary("What the file is called, as on the device it came from")] string? name,
                                                   [Summary("What kind of file it is, as a media type: `image/png`")] string? type,
-                                                  Stream body)
+                                                  Stream body, IRequest request)
     {
+        // refused before anything is read: anybody may send a body, and only
+        // as much as one file may take is ever held
+        var policy = agents.Offer().Attachments
+                     ?? throw new ProviderException(ResponseStatus.NotFound, "The agent of this installation takes no files.");
+
+        // what the offer says is capped by what the platform keeps of one already
+        var most = (int)policy.MaxBytes;
+
         using var read = new MemoryStream();
 
-        await body.CopyToAsync(read);
+        var chunk = new byte[64 * 1024];
 
-        return new Result<RunFile>(await agents.AttachAsync(name, type, read.ToArray())).Status(ResponseStatus.Created);
+        int got;
+
+        while ((got = await body.ReadAsync(chunk)) > 0)
+        {
+            if (read.Length + got > most)
+            {
+                throw new ProviderException(ResponseStatus.RequestEntityTooLarge, $"That file is larger than the {most / 1024 / 1024} MB the agent takes.");
+            }
+
+            read.Write(chunk, 0, got);
+        }
+
+        return new Result<RunFile>(await agents.AttachAsync(name, type, read.ToArray(), request.Client.Address)).Status(ResponseStatus.Created);
     }
 
     [ResourceMethod(":id")]

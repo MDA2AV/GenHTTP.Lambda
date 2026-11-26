@@ -88,6 +88,18 @@ public sealed class BuildResource(IAgentService agents, ILogger<BuildResource> l
     [return: Summary("Its state, its steps, and how it ended once it has")]
     public async ValueTask<BuildProgress> Get([Summary("The `id` of the build, as starting it returned")] string id) => await agents.ProgressAsync(id);
 
+    [ResourceMethod(Method.Post, ":id/stop")]
+    [Summary("Stops a build")]
+    [Remarks("""
+             One that only waited is over at once; one at work once the agent says it stopped. What it made so far stays - a new
+             lambda among it, whose editor key the build's answer then holds. A build that is stopped is not counted back.
+             """)]
+    [Response(ResponseStatus.BadRequest, "That is not the id of a build.")]
+    [Response(ResponseStatus.NotFound, "There is no build of this id, any more - or this installation has no agent.")]
+    [Response(ResponseStatus.Conflict, "The agent of this installation cannot be stopped (`build.offer.cancels` of `GET /system` is false).")]
+    [return: Summary("How the build is getting on afterwards")]
+    public async ValueTask<BuildProgress> Stop([Summary("The `id` of the build, as starting it returned")] string id) => await agents.StopBuildAsync(id);
+
     [ResourceMethod(":id/events")]
     [Summary("Follows a build as it goes on")]
     [Remarks("""

@@ -110,7 +110,7 @@ public interface IAgentService
     /// <summary>
     /// Keeps a file for a message to come, if the agent takes such files.
     /// </summary>
-    ValueTask<RunFile> AttachAsync(string? name, string? type, ReadOnlyMemory<byte> content, CancellationToken cancellation = default);
+    ValueTask<RunFile> AttachAsync(string? name, string? type, ReadOnlyMemory<byte> content, IPAddress? caller, CancellationToken cancellation = default);
 
     /// <summary>
     /// A file that travelled with a run, and what it holds - or nothing.
@@ -141,6 +141,12 @@ public interface IAgentService
     /// How a build is getting on, for anybody holding its id.
     /// </summary>
     ValueTask<BuildProgress> ProgressAsync(string id);
+
+    /// <summary>
+    /// Stops a build - at once while it waited, or once the agent says it stopped.
+    /// </summary>
+    /// <exception cref="ProviderException">There is no such build, or the agent cannot be stopped</exception>
+    ValueTask<BuildProgress> StopBuildAsync(string id);
 
     /// <summary>
     /// A build as it is now, each time it changes, until it ended - and

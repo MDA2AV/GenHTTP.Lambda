@@ -1080,8 +1080,10 @@ choosing an address for the website, checking it for mistakes, putting it
 online. The full view of this section shows every tool by name.
 
 It shares the daily allowance of `/build`, one change of a lambda runs at a
-time, and it can be stopped where the agent can stop - whatever it saved
-stays, in its feature or as a version. It runs on the values of the agent's
+time - held by the records, so two servers or a message sent twice cannot
+start two - and it can be stopped where the agent can stop (`POST
+…/agent/stop`; a build `POST /builds/:id/stop`; 409 where the agent cannot
+stop) - whatever it saved stays, in its feature or as a version. It runs on the values of the agent's
 options the owner chose, of those the operator offers (see [The build
 agent](#the-build-agent)). Its editor key is handed to the agent with the run,
 never in a log line.
@@ -1114,7 +1116,7 @@ and the agent is told the question and the answer.
 **What it waits for, and going on.** How a run ended says what the app waits
 for and whom (`result.waitsFor`): the operator's decision on connecting to
 other servers, keys and passwords to enter - read from the lambda, not from
-what the agent said. Once that is there, the run goes on with nothing typed
+what the agent said, and only for a run that wrote code or asked to connect. Once that is there, the run goes on with nothing typed
 (`continues`, no `prompt`), as does one that ran out of time or steps.
 
 **Undoing a message.** `result.undo` says what undoing it would do - the
@@ -1124,7 +1126,18 @@ view set back - and what it leaves: its versions in the history, a new app,
 a kind of data or analytics switched on (switching off deletes), files in the
 workspace. `POST …/agent/undo` (`run`, the newest where left out) does it as
 one step, and only what is still as the run left it; what changed since stays
-and is said so (`changed:…`). Undoing twice does nothing more.
+and is said so (`changed:…` - a draft somebody saved into since among it), as
+does what failed (`failed:online`: the version before is gone, or does not
+run any more). Undoing twice does nothing more.
+
+**New apps beside it.** A change may create a new app where the owner asks
+for one; the result names it (`created`) and hands its editor key to the owner
+who asked (`apps`), as a build does - the workspace remembers it.
+
+**What only the owner does** - entering or deleting a key or password,
+switching data off (which deletes it), deleting the app - the platform refuses
+to a run's calls at every door (403, or an error from the MCP tool), whatever
+agent it is and whatever tools it was given.
 
 Not every message is a change. The agent first works out what it was asked:
 a **question** about the lambda - who visits it, what was entered, whether it
@@ -2279,7 +2292,10 @@ what it would undo - is read from those records, never from what the agent
 said (`AgentOutcome`). Undoing a run (`POST …/agent/undo`) reverses what it
 recorded, where nothing changed it since (`AgentUndo`). The pages are pushed
 what changes (`GET /builds/:id/events`, `GET …/agent/events`, server-sent
-events) rather than asking.
+events) rather than asking - while a run is under way; a page reads again when
+it is looked at, since a browser keeps six connections to a site for all its
+tabs. The streams say `Cache-Control: no-cache` and `X-Accel-Buffering: no`,
+so a proxy in between passes each event on as it comes.
 
 **The platform's own: Claude Code through the runner.** `ClaudeCodeRunner`
 talks to the runner of `docker/agent` (see [The build agent](#the-build-agent)):
@@ -3663,7 +3679,8 @@ page fetch the same proxy serves (`docker/agent/fetch.mjs`, port 3129, `/mcp`):
   header `X-Fetch-Sites` of the configuration the runner writes (`*` for any),
   which no tool of the build changes. A run that may read none gets no fetch
   and no paragraph of the brief about it. **Upgrading a runner changes this**:
-  one from before read the named sites only; set `AGENT_WEB=named` to keep
+  one from before read the named sites only - and a job of a platform from
+  before still does unless `AGENT_WEB` is set; set `AGENT_WEB=named` to keep
   that.
 - **GET and HEAD, made by the proxy.** A tunnel carries TLS the proxy cannot
   read, so it could not be held to a method: the fetch makes the request

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GenHTTP.Lambda.Services.Hosting;
 
 namespace GenHTTP.Lambda.Services.Features;
@@ -40,7 +41,8 @@ public sealed record FeatureInfo(
     string? Writer = null,
     string? Model = null,
     string? Effort = null,
-    IReadOnlyDictionary<string, string>? Options = null
+    IReadOnlyDictionary<string, string>? Options = null,
+    [property: JsonIgnore] string? Run = null
 )
 {
 

@@ -48,6 +48,8 @@ public sealed record ChangeResult(
     IReadOnlyList<RunBlocker>? WaitsFor = null,
     [Summary("What undoing it would do and leave; `POST …/agent/undo` does it")]
     UndoOffer? Undo = null,
-    [Summary("New apps it created, by public key: a change may build one beside the app it was asked about, whose editor link the agent gives in its answer - the platform hands it out nowhere else")]
-    IReadOnlyList<string>? Created = null
+    [Summary("New apps it created, by public key: a change may build one beside the app it was asked about - `apps` holds their editor keys")]
+    IReadOnlyList<string>? Created = null,
+    [Summary("Those new lambdas with their editor keys, which the platform hands to nobody but the owner who asked")]
+    IReadOnlyList<CreatedApp>? Apps = null
 );

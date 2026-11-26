@@ -364,12 +364,17 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
         }
 
         var created = new List<string>();
+        var apps = new List<CreatedApp>();
 
         foreach (var made in deeds.Created.Where(c => c != run.LambdaId))
         {
             if (await records.KeysOfAsync(made, cancellation) is { } keys)
             {
                 created.Add(keys.PublicKey);
+
+                var info = await meta.GetAsync(keys.PrivateKey, cancellation);
+
+                apps.Add(new CreatedApp(keys.PublicKey, keys.PrivateKey, info?.PublicUrl, EditorOf(keys.PrivateKey)));
             }
         }
 
@@ -398,9 +403,15 @@ public sealed class AgentOutcome(AgentRunRecords records, AgentFollower follower
             Settings: deeds.Settings.Count > 0 ? deeds.Settings : null,
             Asked: asked ? true : null,
             Question: asked ? run.Message : null,
-            WaitsFor: privateKey != null ? await WaitsOfAsync(privateKey, cancellation) : null,
+            // what the app waits for is said where the run had to do with it:
+            // code it wrote may read a key, a request it made waits for the
+            // operator - an answered question waits for nothing
+            WaitsFor: privateKey != null && (deeds.Wrote || deeds.Settings.Contains("connectivity") || deeds.Settings.Contains("secrets"))
+                ? await WaitsOfAsync(privateKey, cancellation)
+                : null,
             Undo: undo,
-            Created: created.Count > 0 ? created : null);
+            Created: created.Count > 0 ? created : null,
+            Apps: apps.Count > 0 ? apps : null);
     }
 
     private async ValueTask<BuildResult> BuildResultAsync(RunRecord read, CancellationToken cancellation)

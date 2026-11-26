@@ -1,3 +1,8 @@
+using GenHTTP.Api.Content;
+using GenHTTP.Api.Protocol;
+
+using GenHTTP.Lambda.Services.Agents;
+
 namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
@@ -5,6 +10,20 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// </summary>
 internal static class AgentRequests
 {
+
+    /// <summary>
+    /// Refuses what only the owner does - a secret's value, switching data
+    /// off, deleting the lambda - to a call of a run of the installation's
+    /// agent, whatever agent it is: the platform holds the rule, not the
+    /// agent's list of tools.
+    /// </summary>
+    public static void OwnersOnly(IRequest call, string what)
+    {
+        if (AgentCallerConcern.Of(call) != null)
+        {
+            throw new ProviderException(ResponseStatus.Forbidden, $"The installation's agent does not {what} - the owner does, in the editor.");
+        }
+    }
 
     /// <summary>
     /// The values asked for, by option - with the model and the effort a page

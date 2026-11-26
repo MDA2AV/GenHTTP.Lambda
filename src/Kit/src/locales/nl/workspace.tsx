@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Vraag iets over ${name}, of zeg wat er moet veranderen…`,
   placeholderAnswer: 'Je antwoord…',
   answering: 'Je volgende bericht beantwoordt de vraag van de agent.',
+  askSomethingElse: 'Liever iets anders vragen',
   files: {
     /** The paper clip beside the box. */
     attach: 'Bestand toevoegen',
@@ -143,6 +144,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Dit was al ongedaan gemaakt.',
     },
     changedSince: 'Een deel is sindsdien veranderd, dus dat blijft zoals het is.',
+    notUndone: 'Wat eerder online stond kon niet worden teruggezet, dus wat nu online staat blijft staan.',
     undoneDone: 'Ongedaan gemaakt.',
     created: (name) => `Nieuwe app gebouwd: ${name}`,
     draft: 'Klaar om te proberen in een concept',

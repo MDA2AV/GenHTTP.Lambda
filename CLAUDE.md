@@ -137,8 +137,9 @@ question, a setting or a change.
   owner (an app offline, keys its code waits for - entered there through the
   REST API, never the agent - a draft to try, a block); under an answer: open
   the app, try or put online its draft, files it handed back, what it waits
-  for, undo. Everything else links to the editor. What happens is pushed,
-  never polled.
+  for, undo. Everything else links to the editor. What happens is pushed
+  while a run is under way, never polled; a page reads again when it is
+  looked at (a browser keeps six connections to a site for all its tabs).
 - Before anything is asked it is the prerendered page that creates a website;
   the sidebar appears once the browser knows an app.
 
@@ -152,8 +153,11 @@ from those records. These rules hold for any agent; the runner's own follow.
 
 - **It is just another client (owner)**: it reaches the platform through MCP
   and the REST API with the run's credential, holds the editor key of the app
-  it was handed, and may do what the owner may do and create new apps - never
-  anything only the operator does, nor set or delete a secret. No obfuscation
+  it was handed, and may do what the owner may do and create new apps (whose
+  editor keys go to the owner who asked) - never anything only the operator
+  does. **The platform holds what only the owner does** - a secret's value,
+  switching data off, deleting the app - refusing it to a run at every door,
+  whatever agent it is and whatever tools it was given. No obfuscation
   of keys towards it; resisting prompt injection is the integration's and the
   user's concern **(owner)**. What visitors wrote is said to be data wherever
   any client reads it.
@@ -167,9 +171,11 @@ from those records. These rules hold for any agent; the runner's own follow.
   access, limits, what it continues - is in the run. The agent system handles
   its own concurrency; the platform holds users to their allowance.
 - **The platform keeps runs** (`agent_runs`, events, files) for thirty days
-  after they ended, follows them after a restart (`AgentFollower`), and pushes
-  what changes to the pages (SSE) - never polled. A run the agent forgot is
-  `lost`, with what it did kept.
+  after they ended, follows them after a restart (`AgentFollower`; one server
+  of an installation at a time, by a lease in the records), and pushes what
+  changes to the pages (SSE). One run per lambda is held by the records. A run
+  the agent forgot, or that stays silent past its limit, is `lost`, with what
+  it did kept.
 - **Outcomes from the records, never the agent's word**: steps at the MCP door
   (`RunSteps`), effects where they are saved (`AgentJournal`), the result
   (`AgentOutcome`), undo of what is still as the run left it (`AgentUndo`).

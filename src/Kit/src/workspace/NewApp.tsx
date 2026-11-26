@@ -66,9 +66,13 @@ export function NewApp({
   const choice = useAgentChoice(offer);
   const attachments = useAttachments(offer?.attachments, words.files);
   const [sending, setSending] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const field = useRef<HTMLTextAreaElement>(null);
   const listening = useRef<(() => void) | null>(null);
+  const retry = useRef<number | undefined>(undefined);
+  const alive = useRef(true);
   const hooks = useRef({ onBuilt });
   hooks.current = { onBuilt };
 
@@ -84,7 +88,15 @@ export function NewApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending?.id]);
 
-  useEffect(() => () => listening.current?.(), []);
+  useEffect(() => {
+    alive.current = true;
+
+    return () => {
+      alive.current = false;
+      window.clearTimeout(retry.current);
+      listening.current?.();
+    };
+  }, []);
 
   /**
    * Follows a build as the platform pushes it, until it ended. Where the
@@ -92,9 +104,19 @@ export function NewApp({
    * way - and then followed again a moment later.
    */
   function follow(id: string, asked: string, at: number, files?: Turn['attachments']) {
+    if (!alive.current) return;
+
     listening.current?.();
+    window.clearTimeout(retry.current);
+
+    const again = (after: number) => {
+      window.clearTimeout(retry.current);
+      retry.current = window.setTimeout(() => follow(id, asked, at, files), after);
+    };
 
     const take = (job: BuildProgress) => {
+      if (!alive.current) return;
+
       setFollowing({
         run: { state: job.state, waiting: job.waiting ?? 0, seconds: job.seconds ?? 0, limit: job.limit ?? null, wait: job.wait ?? null },
         steps: job.steps ?? [],
@@ -116,16 +138,19 @@ export function NewApp({
         take(job);
 
         if (!isOver(job.state)) {
-          window.setTimeout(() => follow(id, asked, at, files), 3000);
+          again(3000);
         }
       } catch (error) {
+        if (!alive.current) return;
+
         // forgotten: nothing more will come of it
         if (error instanceof ApiError && error.status === 404) {
           pend(null);
           setTurn(null);
+          setEarlier([]);
           setFollowing(null);
         } else {
-          window.setTimeout(() => follow(id, asked, at, files), 5000);
+          again(5000);
         }
       }
     };
@@ -148,7 +173,8 @@ export function NewApp({
       files: job.files ?? undefined,
     };
 
-    pend(null);
+    // a question with no app yet waits here for its answer, after a reload too
+    pend(result.asked && !result.privateKey ? { id, prompt: asked, at, asked: true } : null);
     setFollowing(null);
 
     // made an app - asking something or not: the conversation goes on there
@@ -178,6 +204,7 @@ export function NewApp({
     if (asked.length < 3 || sending || attachments.uploading) return;
 
     setSending(true);
+    setProblem(null);
 
     try {
       const sent = attachments.files;
@@ -206,6 +233,12 @@ export function NewApp({
       setTurn({ id: started.id, kind: 'build', at, prompt: asked, state: 'queued', attachments: sent, continues: answering?.id });
       follow(started.id, asked, at, sent);
     } catch (error) {
+      // answering a question: the question stays, and what went wrong is said beside it
+      if (answering) {
+        setProblem(error instanceof ApiError ? error.message : said.failedToStart);
+        return;
+      }
+
       setTurn({
         id: `refused-${Date.now()}`,
         kind: 'build',
@@ -226,10 +259,34 @@ export function NewApp({
     if (!turn) return;
 
     setPrompt(turn.prompt);
-    setTurn(null);
-    setEarlier([]);
+
+    // an answer that failed is asked again as the answer, the question back in its place
+    const question = turn.continues ? earlier.at(-1) : undefined;
+
+    if (question && question.id === turn.continues) {
+      setTurn(question);
+      setEarlier(earlier.slice(0, -1));
+    } else {
+      setTurn(null);
+      setEarlier([]);
+    }
+
     window.requestAnimationFrame(() => field.current?.focus());
   };
+
+  async function stop() {
+    if (!turn) return;
+
+    setStopping(true);
+
+    try {
+      await api.builds.stop(turn.id);
+    } catch (error) {
+      setProblem(error instanceof ApiError ? error.message : said.failedToStart);
+    } finally {
+      setStopping(false);
+    }
+  }
 
   const choosing = choice.options.some((option) => option.values.length > 1);
 
@@ -317,6 +374,9 @@ export function NewApp({
 
       <div className="shrink-0 px-4 pb-4 sm:px-6">
         <div className="mx-auto w-full max-w-3xl">
+          {problem && (
+            <p className="mb-2 px-1 text-sm text-red-600 dark:text-red-400">{problem}</p>
+          )}
           {answering && <p className="mb-2 px-1 text-xs font-medium text-accent-700 dark:text-accent-400">{words.answering}</p>}
           <Composer
             value={prompt}
@@ -326,7 +386,10 @@ export function NewApp({
             label={answering ? words.placeholderAnswer : said.placeholder}
             ready={ready && !running}
             busy={sending}
-            disabled={running || !offered}
+            running={running}
+            stopping={stopping}
+            onStop={offer?.cancels === false ? undefined : stop}
+            disabled={!offered}
             field={field}
             footer={footer}
             attachments={offer?.attachments ? attachments : null}

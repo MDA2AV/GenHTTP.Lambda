@@ -178,6 +178,8 @@ export const change = {
   } as Record<string, string>,
   /** After undoing: what changed since the change stayed, as it was not as the change left it. */
   changedSince: 'Some of it changed since, so that stayed as it is.',
+  /** After undoing: the version online before could not go back online - it is gone from the history, or does not compile any more. */
+  notUndone: 'The version online before could not be put back, so what is online now stays.',
   seeChanges: 'See what changed',
   open: 'Open it',
   openPreview: 'Try it',

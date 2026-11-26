@@ -169,6 +169,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Zaten geri alınmıştı.',
   },
   changedSince: 'Bir kısmı sonradan değişti, o yüzden olduğu gibi kaldı.',
+  notUndone: 'Daha önce yayında olan sürüm geri alınamadı, bu yüzden şu an yayında olan kalıyor.',
   seeChanges: 'Neyin değiştiğini gör',
   open: 'Aç',
   openPreview: 'Dene',

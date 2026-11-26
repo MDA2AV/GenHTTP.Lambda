@@ -272,7 +272,7 @@ internal sealed class GuideDocument(LambdaOptions options, ILimitsService tiers,
             API keys, passwords, tokens. Data like the workspace; a feature has a copy, which set_secret with feature changes.
 
             - Off until enable_data 'secrets'. Secret.ReadAsync("STRIPE_KEY") returns the value or throws saying how to set it; Secret.ExistsAsync("STRIPE_KEY") checks. Read it where it is used, not into a static, so a change applies without a deploy.
-            - Write Secret.ReadAsync("NAME"), switch secrets on, and tell the user which names to enter in the editor (Secrets; Keys and passwords in the simple view) and where to get the values: no value passes through you. list_secrets names the missing ones. A value the user hands you goes to set_secret.
+            - Write Secret.ReadAsync("NAME"), switch secrets on, and tell the user which names to enter in the editor (Secrets; Keys and passwords in the simple view) and where to get the values: no value passes through you, and never ask for one. list_secrets names the missing ones. A value the user hands you anyway goes to set_secret - where you are the installation's own agent, it is refused: tell them where to enter it.
             - Never put a value in code, resources, the workspace, a log line, a specification or a change, nor return, print or repeat it. Nothing shows one again.
             - Names: letters, digits and underscores, no leading digit, case sensitive. Up to {{SecretVault.MaxSecrets}}, {{SecretVault.MaxValue / 1024}} KB each. An export reads each from the environment variable of its name.{{sealedAway}}
 

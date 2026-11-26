@@ -13,12 +13,12 @@ public enum AgentView
     /// and no files, logs or compile errors, which are the agent's to deal
     /// with.
     /// </summary>
-    Simple,
+    Simple = 0,
 
     /// <summary>
     /// A developer: the precise words - features, versions, merging, the
     /// database, secrets, files.
     /// </summary>
-    Full
+    Full = 1
 
 }

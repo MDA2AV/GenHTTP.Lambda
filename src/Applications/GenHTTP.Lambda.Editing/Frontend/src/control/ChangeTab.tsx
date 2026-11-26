@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { absoluteAddress } from '@genhttp-lambda/kit/address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '@genhttp-lambda/kit/api';
 import { FileList, RunBlockers, RunFiles, RunHeader, RunLog, RunOutcome, RunProgress, type Tone } from '@genhttp-lambda/kit/components/AgentRun';
-import { AgentChoice, useAgentChoice, useChoiceLabel } from '@genhttp-lambda/kit/components/AgentChoice';
+import { AgentChoice, useAgentChoice, useChoiceLabel, type AgentChoiceState } from '@genhttp-lambda/kit/components/AgentChoice';
 import { ConnectAgent } from '@genhttp-lambda/kit/components/ConnectAgent';
 import { Dialog } from '@genhttp-lambda/kit/components/Dialog';
 import { IconAlert, IconDraft, IconEye, IconExternal, IconPaperclip, IconPlay, IconSpark, IconSpinner, IconStop } from '@genhttp-lambda/kit/components/Icons';
@@ -49,6 +49,9 @@ export function ChangeTab({ control }: { control: Control }) {
   const state = agent.state;
   const job = state?.job ?? null;
   const running = isActive(job);
+
+  // what the box asks with, which going on from a change asks with as well
+  const choice = useAgentChoice(state?.offer);
 
   const [prompt, setPrompt] = useDraft(control.lambda.publicKey);
   const composer = useRef<HTMLTextAreaElement>(null);
@@ -131,7 +134,7 @@ export function ChangeTab({ control }: { control: Control }) {
   return (
     <Section title={heading} hint={said.hint}>
       <div className="max-w-3xl space-y-6">
-        {job && <JobCard control={control} job={job} onAgain={() => prefill(job.prompt)} />}
+        {job && <JobCard control={control} job={job} choice={choice} onAgain={() => prefill(job.prompt)} />}
 
         {!running && (
           <Composer
@@ -144,6 +147,7 @@ export function ChangeTab({ control }: { control: Control }) {
             next={job != null}
             target={target}
             answering={job?.result?.asked ? job : null}
+            choice={choice}
           />
         )}
 
@@ -248,6 +252,7 @@ function Composer({
   next,
   target,
   answering,
+  choice,
 }: {
   control: Control;
   state: AgentState;
@@ -260,6 +265,7 @@ function Composer({
   target: string | null;
   /** The change whose question the next message answers, where the last one asked. */
   answering: ChangeJob | null;
+  choice: AgentChoiceState;
 }) {
   const t = useEditorT();
   const kit = useT();
@@ -278,7 +284,6 @@ function Composer({
   const where = features.some((f) => f.key === picked) ? picked : '';
   const limit = control.summary?.limits.features ?? Infinity;
   const full = features.length >= limit;
-  const choice = useAgentChoice(state.offer);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -390,7 +395,12 @@ function Composer({
         {(attachments.files.length > 0 || attachments.uploading) && (
           <div className="flex flex-wrap items-center gap-2 px-3 pt-3">
             <FileList files={attachments.files} download={kit.workspace.files.save} onRemove={attachments.remove} remove={kit.workspace.files.remove} />
-            {attachments.uploading && <IconSpinner className="h-4 w-4 text-slate-400" />}
+            {attachments.uploading && (
+              <span role="status" className="inline-flex items-center">
+                <IconSpinner className="h-4 w-4 text-slate-400" />
+                <span className="sr-only">{kit.workspace.files.uploading}</span>
+              </span>
+            )}
           </div>
         )}
 
@@ -400,7 +410,8 @@ function Composer({
           value={prompt}
           onChange={(event) => onPrompt(event.target.value)}
           onPaste={(event) => {
-            if (policy && event.clipboardData.files.length > 0) {
+            // what comes with text as well - a copy out of a spreadsheet - is pasted as text
+            if (policy && event.clipboardData.files.length > 0 && !event.clipboardData.types.includes('text/plain')) {
               event.preventDefault();
               attachments.add([...event.clipboardData.files]);
             }
@@ -513,7 +524,7 @@ function Composer({
 
 /* ------------------------------------------------------------ one change */
 
-function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
+function JobCard({ control, job, choice, onAgain }: { control: Control; job: ChangeJob; choice: AgentChoiceState; onAgain: () => void }) {
   const said = useEditorT().change;
   const kit = useT();
   const shared = useShared();
@@ -563,7 +574,7 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
         </div>
       )}
 
-      {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} onAgain={onAgain} />}
+      {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} choice={choice} onAgain={onAgain} />}
 
       <RunFiles files={job.files ?? []} label={kit.workspace.files.forYou} download={kit.workspace.files.save} />
 
@@ -727,11 +738,13 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
   return { tone: 'warn', headline: said.results.saved(version), notes: [said.results.notOnline, still, ...timedOut] };
 }
 
-function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
+function Outcome({ control, job, choice, onAgain }: { control: Control; job: ChangeJob; choice: AgentChoiceState; onAgain: () => void }) {
   const t = useEditorT();
   const kit = useT();
+  const language = useLanguage();
   const { simple } = control;
   const [undoing, setUndoing] = useState(false);
+  const [going, setGoing] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   // the simple view says what happened to the change, not which version it became
@@ -767,11 +780,25 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const cut = result?.reason === 'timeout' || result?.reason === 'turns';
   const retry = !cut && !result?.answered && !result?.asked && (!result?.ok || (version == null && !left && !gone && result.online == null));
 
-  // going on where it stopped: what it waited for is there now, or it ran out of time
-  const goOn = () =>
-    void control.agent
-      .start({ continues: job.id, deploy: job.deploy, view: simple ? 'simple' : 'full', options: job.options ?? undefined, feature: left?.key })
-      .then(setProblem);
+  // going on where it stopped: what it waited for is there now, or it ran out
+  // of time - on what the box offers now, with the password where it needs one
+  const goOn = async () => {
+    if (going || !choice.ready) return;
+
+    setGoing(true);
+
+    const refused = await control.agent.start({
+      continues: job.id,
+      deploy: job.deploy,
+      view: simple ? 'simple' : 'full',
+      ...choice.request,
+      language,
+      feature: left?.key,
+    });
+
+    setProblem(refused);
+    setGoing(false);
+  };
 
   const words = simple ? kit.workspace.results : said;
 
@@ -786,7 +813,8 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
       detailLabel={said.log}
     >
           {cut && (
-            <button type="button" onClick={goOn} title={said.goOnTitle} className="btn-primary !px-4 !py-1.5 text-[13px]">
+            <button type="button" onClick={() => void goOn()} disabled={going || !choice.ready} title={said.goOnTitle} className="btn-primary !px-4 !py-1.5 text-[13px]">
+              {going && <IconSpinner className="h-3.5 w-3.5" />}
               {said.goOn}
             </button>
           )}
@@ -854,7 +882,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
 
     {result?.waitsFor && result.waitsFor.length > 0 && (
       <RunBlockers blockers={result.waitsFor} words={words.waitsFor}>
-        <button type="button" onClick={goOn} title={said.goOnTitle} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+        <button type="button" onClick={() => void goOn()} disabled={going || !choice.ready} title={said.goOnTitle} className="btn-ghost !px-3 !py-1.5 text-[13px]">
           {said.goOn}
         </button>
       </RunBlockers>
@@ -862,12 +890,22 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
 
     {(result?.created?.length ?? 0) > 0 && (
       <ul className="flex flex-wrap gap-2 border-t border-slate-200 px-4 py-2.5 dark:border-ink-800">
-        {result!.created!.map((name) => (
-          <li key={name} className="inline-flex items-center gap-1.5 rounded-full bg-accent-500/10 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-400">
-            <IconSpark className="h-3 w-3" />
-            {words.created(name)}
-          </li>
-        ))}
+        {result!.created!.map((name) => {
+          const made = result?.apps?.find((app) => app.publicKey === name);
+
+          return (
+            <li key={name} className="inline-flex items-center gap-1.5 rounded-full bg-accent-500/10 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-400">
+              <IconSpark className="h-3 w-3" />
+              {made?.editorUrl ? (
+                <a href={made.editorUrl} target="_blank" rel="noreferrer" className="underline">
+                  {words.created(name)}
+                </a>
+              ) : (
+                words.created(name)
+              )}
+            </li>
+          );
+        })}
       </ul>
     )}
 
@@ -890,7 +928,15 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
 
               const outcome = await control.agent.undo(job.id);
 
-              setProblem(typeof outcome === 'string' ? outcome : outcome.kept.some((kept) => kept.startsWith('changed:')) ? words.changedSince : null);
+              setProblem(
+                typeof outcome === 'string'
+                  ? outcome
+                  : outcome.kept.some((kept) => kept.startsWith('failed:'))
+                    ? words.notUndone
+                    : outcome.kept.some((kept) => kept.startsWith('changed:'))
+                      ? words.changedSince
+                      : null,
+              );
             }}
           >
             {t.simple.undo}

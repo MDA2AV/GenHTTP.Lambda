@@ -86,7 +86,29 @@ public sealed class AgentRunRecords(IDbContextFactory<LambdaDbContext> databases
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
+        var lambda = await database.AgentRuns.Where(r => r.Id == id).Select(r => r.LambdaId).FirstOrDefaultAsync(cancellation);
+
         await database.AgentRuns.Where(r => r.Id == id).ExecuteDeleteAsync(cancellation);
+
+        // whoever listens reads again, and finds it gone
+        signals.Touch(id, lambda);
+    }
+
+    /// <summary>
+    /// The newest run of a lambda a page shows: not one still being handed to
+    /// the agent system, which may not be taken - unless that has taken longer
+    /// than it should, and the run is shown for what came of it.
+    /// </summary>
+    public async ValueTask<AgentRunEntity?> NewestShownAsync(long lambda, CancellationToken cancellation = default)
+    {
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var since = DateTime.UtcNow - TimeSpan.FromMinutes(5);
+
+        return await database.AgentRuns.AsNoTracking()
+                             .Where(r => r.LambdaId == lambda && (r.State != AgentRunState.Starting || r.Created < since))
+                             .OrderByDescending(r => r.Created)
+                             .FirstOrDefaultAsync(cancellation);
     }
 
     /// <summary>

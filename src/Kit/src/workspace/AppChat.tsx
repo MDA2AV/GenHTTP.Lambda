@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
 import { api, ApiError, followRun, isActive, type AgentState, type ChangeJob, type ChangeRequest, type Feature, type LambdaSummary } from '../api';
@@ -12,7 +13,7 @@ import { useOrigin } from '../site';
 import { Switch } from '../ui/ui';
 import { Composer } from './Composer';
 import { Asked, BuildAnswer, ChangeAnswer, type AppHand, type Following } from './Turns';
-import { activeState, describe, forget, keepTurn, saidIn, touch, type KnownApp, type Turn } from './store';
+import { activeState, describe, forget, keepTurn, remember, saidIn, touch, type KnownApp, type Turn } from './store';
 
 /**
  * The conversation about one app: what it is and whether it is online at the
@@ -37,6 +38,9 @@ import { activeState, describe, forget, keepTurn, saidIn, touch, type KnownApp, 
 
 /** How many turns go along with a message, the newest ones; the server cuts them further. */
 const HISTORY = 8;
+
+/** How long the platform keeps a run - a question older than that has nothing to carry on from. */
+const KEPT_RUNS = 29 * 24 * 60 * 60 * 1000;
 
 /** Whether changes go online once they work - remembered with the editor's Change section, which asks the same. */
 const ONLINE = 'lambda-change-online';
@@ -95,6 +99,8 @@ export function AppChat({
   const [busy, setBusy] = useState(false);
   const [merging, setMerging] = useState<Feature | null>(null);
   const [undoing, setUndoing] = useState<Turn | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [, setParams] = useSearchParams();
 
   /** The draft the next message goes to, where the owner chose one; a new one otherwise. */
   const [target, setTarget] = useState<Feature | null>(null);
@@ -213,19 +219,27 @@ export function AppChat({
     [key, read, lost],
   );
 
-  // read once, so a page opened after a reload finds where things stand, then
-  // told whatever happens - a message asked here or in the editor, each step,
-  // how it ended - for as long as the page is open
+  // read once, so a page opened after a reload finds where things stand, and
+  // again whenever the page is looked at again; while a message is under way,
+  // told what happens as it happens. Listening only then: a browser keeps six
+  // connections to a site, which every open tab shares
   useEffect(() => {
     let alive = true;
     let timer: number | undefined;
     let close: (() => void) | undefined;
+    let patience = 5000;
+
+    const later = () => {
+      if (!alive) return;
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(start, patience);
+      patience = Math.min(patience * 2, 60_000);
+    };
 
     const listen = () => {
-      close = followRun<AgentState>(api.agent.events(key), 'state', (state) => alive && take(state), () => false, () => {
-        // the stream could not be had: asked again in a while
-        if (alive) timer = window.setTimeout(start, 5000);
-      });
+      close?.();
+      close = followRun<AgentState>(api.agent.events(key), 'state', (state) => alive && take(state), (state) => !isActive(state.job), later);
     };
 
     const start = async () => {
@@ -235,24 +249,34 @@ export function AppChat({
         if (!alive) return;
 
         take(state);
-        listen();
+        patience = 5000;
+
+        if (isActive(state.job)) listen();
       } catch (error) {
         if (!alive) return;
 
-        if (error instanceof ApiError && error.status === 404) {
-          setAgent(null);
-        } else {
-          timer = window.setTimeout(start, 5000);
+        // not there, not this browser's to read, or no agent: asking again changes nothing
+        if (error instanceof ApiError && [400, 403, 404].includes(error.status)) {
+          if (error.status === 404) setAgent(null);
+          return;
         }
+
+        later();
       }
     };
 
+    const onLook = () => {
+      if (document.visibilityState === 'visible') void start();
+    };
+
     void start();
+    document.addEventListener('visibilitychange', onLook);
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
       close?.();
+      document.removeEventListener('visibilitychange', onLook);
     };
   }, [key, take, round]);
 
@@ -282,9 +306,13 @@ export function AppChat({
   const possible = !sending && !running && !spent && offered && !blocked && !gone && choice.ready && !attachments.uploading;
   const ready = wanted.length >= 3 && possible;
 
-  // the newest turn asked something: the next message answers it
+  // the newest turn asked something - recently enough that its run is still
+  // kept - and the owner did not choose to ask something else: the next
+  // message answers it
   const newest = turns.at(-1);
-  const answering = !running && askedIn(newest) ? newest : undefined;
+  const [notAnswering, setNotAnswering] = useState<string | null>(null);
+  const answering =
+    !running && askedIn(newest) && newest && newest.id !== notAnswering && Date.now() - newest.at < KEPT_RUNS ? newest : undefined;
 
   /**
    * Sends a message to the agent: what was typed - or, going on from a turn
@@ -309,7 +337,8 @@ export function AppChat({
       history,
       view: 'simple',
       attachments: sent.length > 0 ? sent.map((file) => file.id) : undefined,
-      continues: continues?.id,
+      // a message for a draft the owner chose is no answer to a question
+      continues: target ? undefined : continues?.id,
       feature: target && features.some((feature) => feature.key === target.key) ? target.key : undefined,
     };
 
@@ -317,15 +346,21 @@ export function AppChat({
       const state = await api.agent.start(key, change);
 
       if (state.job) {
-        keepTurn(key, {
+        const turn: Turn = {
           id: state.job.id,
           kind: 'change',
           at: Date.now(),
           prompt: message ?? said.results.goOn,
           state: state.job.state,
           attachments: sent.length > 0 ? sent : undefined,
-          continues: continues?.id,
-        });
+          continues: change.continues,
+        };
+
+        keepTurn(key, turn);
+
+        // what take reads before the page draws again, so it does not make
+        // the turn anew from what the agent was asked
+        known.current = [...known.current.filter((was) => was.id !== turn.id), turn];
       }
 
       touch(key);
@@ -338,6 +373,9 @@ export function AppChat({
 
       setTarget(null);
       take(state);
+
+      // under way now: followed as it goes on
+      setRound((n) => n + 1);
     } catch (error) {
       setProblem(error instanceof ApiError ? error.message : t.buildBox.failedToStart);
       setRound((n) => n + 1);
@@ -405,19 +443,53 @@ export function AppChat({
     },
     undo: (turn) => setUndoing(turn),
     goOn,
+    possible,
+    open: openApp,
+    // what still waits as the app is now: keys entered since, a decision the
+    // operator made since, are nothing to wait for any more
+    live: (blockers) => {
+      const lambda = summary?.lambda;
+      const missing = summary?.storage.missingSecrets ?? [];
+
+      const still = (blockers ?? [])
+        .map((blocker) =>
+          blocker.what === 'keys' ? { ...blocker, names: (blocker.names ?? []).filter((name) => missing.includes(name)) } : blocker)
+        .filter((blocker) =>
+          blocker.what === 'keys' ? (blocker.names ?? []).length > 0 : !lambda || lambda.connectivity?.status === 'Requested');
+
+      return still.length > 0 ? still : null;
+    },
   };
 
   async function undo(turn: Turn) {
+    setNotice(null);
+
     await act(async () => {
       const outcome = await api.agent.undo(key, turn.id);
 
       // undone now, so it is not offered again; what changed since stayed
       keepTurn(key, { ...turn, result: turn.result ? { ...turn.result, undo: { possible: false, undoes: [], keeps: ['undone'] } } : turn.result });
 
+      if (outcome.kept.some((kept) => kept.startsWith('failed:'))) {
+        throw new Error(said.results.notUndone);
+      }
+
       if (outcome.kept.some((kept) => kept.startsWith('changed:'))) {
         throw new Error(said.results.changedSince);
       }
+
+      setNotice(said.results.undoneDone);
     });
+  }
+
+  /** Opens an app a message built beside this one - remembered here, as a build's is. */
+  function openApp(publicKey: string) {
+    const made = turns.flatMap((turn) => turn.result?.apps ?? []).find((app) => app.publicKey === publicKey);
+
+    if (made) {
+      remember({ privateKey: made.privateKey, publicKey: made.publicKey, online: true });
+      setParams({ app: made.publicKey });
+    }
   }
 
   const again = (turn: Turn) => {
@@ -498,7 +570,7 @@ export function AppChat({
             <div key={turn.id} className="space-y-4">
               <Asked files={turn.attachments}>{turn.prompt}</Asked>
               {turn.kind === 'build' ? (
-                <BuildAnswer turn={turn} newest={turn === newest} onGoOn={turn === newest && possible ? () => goOn(turn) : undefined} />
+                <BuildAnswer turn={turn} newest={turn === newest} live={hand.live} onGoOn={turn === newest && possible ? () => goOn(turn) : undefined} />
               ) : (
                 <ChangeAnswer
                   turn={turn}
@@ -521,7 +593,16 @@ export function AppChat({
             </p>
           )}
 
-          {answering && !target && <p className="mb-2 px-1 text-xs font-medium text-accent-700 dark:text-accent-400">{said.answering}</p>}
+          {notice && <p role="status" className="mb-2 px-1 text-sm text-emerald-700 dark:text-emerald-400">{notice}</p>}
+
+          {answering && !target && (
+            <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs">
+              <span className="font-medium text-accent-700 dark:text-accent-400">{said.answering}</span>
+              <button type="button" onClick={() => setNotAnswering(answering.id)} className="text-slate-500 underline hover:text-slate-800 dark:hover:text-slate-200">
+                {said.askSomethingElse}
+              </button>
+            </p>
+          )}
 
           {target && (
             <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-slate-500">

@@ -41,6 +41,61 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task ARunnerOfThisReleaseIsHandedTheRunAndFollowedAsItStreams()
+    {
+        await using var agent = FakeAgent.Start();
+
+        agent.Streams = true;
+
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("streamed");
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        using var response = await StartAsync(fixture, lambda.PrivateKey, "Make it blue", language: "de");
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+
+        var id = (await response.GetContentAsync<AgentState>()).Job!.Id;
+
+        // what a runner of this release is handed besides what one from before was
+        var sent = agent.Received.Single();
+
+        Assert.AreEqual(2, sent["protocol"]!.GetValue<int>());
+        Assert.AreEqual(id, sent["run"]!.GetValue<string>());
+        Assert.AreEqual(600, sent["timeout"]!.GetValue<int>(), "what the runner gives a run, where the operator set nothing");
+        Assert.AreEqual(60, sent["maxTurns"]!.GetValue<int>());
+        Assert.IsNotNull(sent["view"]);
+
+        // and what it streams is what the pages read
+        agent.Emit(id, new JsonObject { ["type"] = "started" });
+        agent.Emit(id, new JsonObject { ["type"] = "said", ["text"] = "Ich lese die App." });
+        agent.Emit(id, new JsonObject
+        {
+            ["type"] = "returned", ["name"] = "farben.md", ["mediaType"] = "text/markdown", ["content"] = Convert.ToBase64String("# Blau"u8.ToArray())
+        });
+        agent.Emit(id, new JsonObject { ["type"] = "spent", ["inputTokens"] = 1200, ["outputTokens"] = 80 });
+        agent.Emit(id, new JsonObject { ["type"] = "ended", ["ending"] = "asked", ["message"] = "Welches Blau?" });
+
+        var ended = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!;
+
+        Assert.IsTrue(ended.Result!.Asked);
+        Assert.AreEqual("Welches Blau?", ended.Result.Question);
+        Assert.AreEqual("farben.md", ended.Files!.Single().Name);
+        CollectionAssert.Contains(ended.Steps.Select(s => s.Text).ToList(), "Ich lese die App.");
+
+        // the offer follows what the runner says it can do
+        using var offer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/agent");
+
+        var said = JsonNode.Parse(await offer.Content.ReadAsStringAsync())!["offer"]!;
+
+        Assert.IsTrue(said["asks"]!.GetValue<bool>());
+        Assert.IsTrue(said["returnsFiles"]!.GetValue<bool>());
+        Assert.AreEqual(3, said["attachments"]!["maxCount"]!.GetValue<int>());
+    }
+
+    [TestMethod]
     public async Task AChangeIsHandedToTheAgentWithTheKeyAndTheLambda()
     {
         await using var agent = FakeAgent.Start();

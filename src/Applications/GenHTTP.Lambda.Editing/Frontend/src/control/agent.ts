@@ -120,7 +120,19 @@ export function useAgent({
     let alive = true;
     let timer: number | undefined;
     let close: (() => void) | undefined;
+    let patience = 10_000;
 
+    const later = () => {
+      if (!alive) return;
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(begin, patience);
+      patience = Math.min(patience * 2, 120_000);
+    };
+
+    // read once, and again when the section opens or the tab is looked at;
+    // while a change is under way, told what happens as it happens - and
+    // only then, since a browser keeps six connections to a site for every tab
     const begin = async () => {
       try {
         const next = await api.agent.state(privateKey);
@@ -130,34 +142,48 @@ export function useAgent({
         }
 
         take(next);
+        patience = 10_000;
 
-        // what happens from now on is pushed, until the page closes; a stream
-        // that cannot be had is asked for again in a while
-        close = followRun<AgentState>(api.agent.events(privateKey), 'state', (state) => alive && take(state), () => false, () => {
-          if (alive) timer = window.setTimeout(begin, 5000);
-        });
+        if (isActive(next.job)) {
+          close?.();
+          close = followRun<AgentState>(api.agent.events(privateKey), 'state', (state) => alive && take(state), (state) => !isActive(state.job), later);
+        }
       } catch (error) {
-        if (alive) {
-          setFailure(error instanceof ApiError ? error.message : failed);
-          timer = window.setTimeout(begin, 10_000);
+        if (!alive) return;
+
+        setFailure(error instanceof ApiError ? error.message : failed);
+
+        // not there, or not to be read: asking again changes nothing
+        if (!(error instanceof ApiError && [400, 403, 404].includes(error.status))) {
+          later();
         }
       }
     };
 
+    const onLook = () => {
+      if (document.visibilityState === 'visible') void begin();
+    };
+
     void begin();
+    document.addEventListener('visibilitychange', onLook);
 
     return () => {
       alive = false;
       window.clearTimeout(timer);
       close?.();
+      document.removeEventListener('visibilitychange', onLook);
     };
-  }, [privateKey, enabled, take, round, failed]);
+    // opening the section reads again, for an allowance that is up to date
+  }, [privateKey, enabled, take, round, watching, failed]);
 
   const start = useCallback(
     async (change: ChangeRequest) => {
       try {
         take(await api.agent.start(privateKey, change));
         setUnseen(false);
+
+        // under way now: followed as it goes on
+        setRound((n) => n + 1);
         return null;
       } catch (error) {
         // most likely one already under way, asked for elsewhere: show it

@@ -173,6 +173,7 @@ export const change: EditorMessages['change'] = {
     undone: 'È già stato annullato.',
   },
   changedSince: 'Una parte è cambiata nel frattempo, quindi è rimasta com’è.',
+  notUndone: 'La versione online prima non è potuta tornare online, quindi resta quella attuale.',
   seeChanges: 'Guarda cosa è cambiato',
   open: 'Aprila',
   openPreview: 'Provala',

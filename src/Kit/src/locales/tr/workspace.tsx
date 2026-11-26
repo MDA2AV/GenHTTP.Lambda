@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `${name} hakkında sorun ya da neyin değişmesi gerektiğini söyleyin…`,
   placeholderAnswer: 'Yanıtınız…',
   answering: 'Sonraki mesajınız, sorduğu soruyu yanıtlar.',
+  askSomethingElse: 'Bunun yerine başka bir şey sor',
   files: {
     /** The paper clip beside the box. */
     attach: 'Dosya ekle',
@@ -143,6 +144,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Zaten geri alınmıştı.',
     },
     changedSince: 'Bir kısmı sonradan değişti, o yüzden olduğu gibi kaldı.',
+    notUndone: 'Daha önce yayında olan geri getirilemedi, bu yüzden şu an yayında olan kalıyor.',
     undoneDone: 'Geri alındı.',
     created: (name) => `Yeni bir uygulama oluşturuldu: ${name}`,
     draft: 'Bir taslakta denemeye hazır',

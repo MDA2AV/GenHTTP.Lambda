@@ -7,12 +7,12 @@ public enum AgentWebScope
 {
 
     /// <summary>None: it reaches nothing but the platform.</summary>
-    None,
+    None = 0,
 
     /// <summary>Only those of the sites the person named in what they wrote.</summary>
-    NamedSites,
+    NamedSites = 1,
 
     /// <summary>Those of any public site.</summary>
-    Any
+    Any = 2
 
 }

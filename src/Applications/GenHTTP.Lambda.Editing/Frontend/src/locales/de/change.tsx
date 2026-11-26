@@ -168,6 +168,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Es wurde bereits rückgängig gemacht.',
   },
   changedSince: 'Einiges hat sich seitdem geändert und bleibt deshalb, wie es ist.',
+  notUndone: 'Die zuvor online befindliche Version konnte nicht wieder online gestellt werden, deshalb bleibt, was jetzt online ist.',
   seeChanges: 'Änderungen ansehen',
   open: 'Öffnen',
   openPreview: 'Ausprobieren',

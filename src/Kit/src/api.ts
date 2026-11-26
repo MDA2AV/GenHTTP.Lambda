@@ -617,6 +617,8 @@ export interface ChangeResult {
   undo?: UndoOffer | null;
   /** New apps it created beside this one, by public key. */
   created?: string[] | null;
+  /** Those apps with their editor keys, which the platform hands to nobody but the owner who asked. */
+  apps?: { publicKey: string; privateKey: string; url?: string | null; editorUrl?: string | null }[] | null;
 }
 
 export type ChangeState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
@@ -1753,7 +1755,8 @@ export interface AdminAgentChange {
 
 /** One run of the agent, as the panel lists it. */
 export interface AdminAgentRun {
-  id: string;
+  /** The start of its id, as the log names it - never the whole. */
+  ref: string;
   kind: 'build' | 'change';
   /** The lambda it was about or made, by public key. */
   lambda?: string | null;
@@ -2092,6 +2095,8 @@ export const api = {
         send({ prompt, ...choice }),
       ),
     progress: (id: string) => request<BuildProgress>(`/builds/${id}`),
+    /** Stops a build: at once while it waited, or once the agent says it stopped. */
+    stop: (id: string) => request<BuildProgress>(`/builds/${id}/stop`, { method: 'POST' }),
     /** Where a build is pushed as it goes on: see followRun. */
     events: (id: string) => `${base}/builds/${id}/events`,
   },

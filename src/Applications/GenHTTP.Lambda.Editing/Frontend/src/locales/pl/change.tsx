@@ -172,6 +172,7 @@ export const change: EditorMessages['change'] = {
     undone: 'To już zostało cofnięte.',
   },
   changedSince: 'Część zmieniła się od tamtej pory, więc to pozostało bez zmian.',
+  notUndone: 'Wersji, która była wcześniej online, nie udało się przywrócić, więc to, co jest teraz online, pozostaje.',
   seeChanges: 'Zobacz, co się zmieniło',
   open: 'Otwórz',
   openPreview: 'Wypróbuj',

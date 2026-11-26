@@ -300,7 +300,16 @@ export function FileList({ files, download, className = '', onRemove, remove }: 
               className="flex max-w-[16rem] items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[13px] transition-colors hover:border-slate-300 dark:border-ink-800 dark:bg-ink-950 dark:hover:border-ink-700"
             >
               {picture ? (
-                <img src={url} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded object-cover" />
+                <img
+                  src={url}
+                  alt=""
+                  loading="lazy"
+                  className="h-9 w-9 shrink-0 rounded object-cover"
+                  // gone with its run, a while after it ended
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
               ) : (
                 <IconFile className="h-4 w-4 shrink-0 text-slate-400" />
               )}
@@ -317,7 +326,7 @@ export function FileList({ files, download, className = '', onRemove, remove }: 
                 onClick={() => onRemove(file)}
                 aria-label={remove ? `${remove}: ${file.name}` : file.name}
                 title={remove}
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] leading-none text-white hover:bg-slate-900 dark:bg-slate-300 dark:text-ink-950"
+                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-[12px] leading-none text-white hover:bg-slate-900 dark:bg-slate-300 dark:text-ink-950"
               >
                 ×
               </button>

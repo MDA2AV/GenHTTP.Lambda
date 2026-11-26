@@ -113,7 +113,12 @@ export function Composer({
         {attachments && (attachments.files.length > 0 || attachments.uploading) && (
           <div className="flex flex-wrap items-center gap-2 px-1 pb-2 pt-1">
             <FileList files={attachments.files} download={said.files.save} onRemove={attachments.remove} remove={said.files.remove} />
-            {attachments.uploading && <IconSpinner className="h-4 w-4 text-slate-400" aria-label={said.files.uploading} />}
+            {attachments.uploading && (
+              <span role="status" className="inline-flex items-center">
+                <IconSpinner className="h-4 w-4 text-slate-400" />
+                <span className="sr-only">{said.files.uploading}</span>
+              </span>
+            )}
           </div>
         )}
 
@@ -150,8 +155,10 @@ export function Composer({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onPaste={(event) => {
-            // a picture pasted goes with the message, where the agent takes files
-            if (policy && event.clipboardData.files.length > 0) {
+            // a picture pasted goes with the message, where the agent takes
+            // files - but what comes with text as well (a copy out of a
+            // spreadsheet carries a picture of itself) is pasted as text
+            if (policy && event.clipboardData.files.length > 0 && !event.clipboardData.types.includes('text/plain')) {
               event.preventDefault();
               take(event.clipboardData.files);
             }

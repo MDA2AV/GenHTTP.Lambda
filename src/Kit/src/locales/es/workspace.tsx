@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Pregunte sobre ${name}, o diga qué debe cambiar…`,
   placeholderAnswer: 'Su respuesta…',
   answering: 'Su próximo mensaje responde a su pregunta.',
+  askSomethingElse: 'Preguntar otra cosa',
   files: {
     /** The paper clip beside the box. */
     attach: 'Adjuntar un archivo',
@@ -143,6 +144,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Ya se había deshecho.',
     },
     changedSince: 'Parte cambió desde entonces, así que se quedó como está.',
+    notUndone: 'Lo que estaba en línea antes no se pudo volver a poner en línea, así que lo que está en línea ahora se queda como está.',
     undoneDone: 'Deshecho.',
     created: (name) => `Se construyó una app nueva: ${name}`,
     draft: 'Listo para probar en un borrador',

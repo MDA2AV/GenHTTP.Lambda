@@ -381,12 +381,18 @@ function LimitsCard({ agent, saving, onSave }: { agent: AdminAgentSettings; savi
 
   const [draft, setDraft] = useState(initial);
 
-  useEffect(() => setDraft(initial()), [agent]); // eslint-disable-line react-hooks/exhaustive-deps
+  // read again where the limits changed - not where another setting was saved,
+  // which would throw away what is being typed here
+  const saved = JSON.stringify([agent.limits, agent.guardedLimits]);
 
+  useEffect(() => setDraft(initial()), [saved]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a field left as it was keeps what was saved to the second, which minutes would round
+  const kept = initial();
   const parsed = {
-    time: read(draft.time, 'minutes'),
+    time: draft.time === kept.time ? (agent.limits?.seconds ?? null) : read(draft.time, 'minutes'),
     steps: read(draft.steps, 'steps'),
-    guardedTime: read(draft.guardedTime, 'minutes'),
+    guardedTime: draft.guardedTime === kept.guardedTime ? (agent.guardedLimits?.seconds ?? null) : read(draft.guardedTime, 'minutes'),
     guardedSteps: read(draft.guardedSteps, 'steps'),
   };
 
@@ -527,9 +533,10 @@ function RunsCard({ runs }: { runs: AdminAgentRun[] | null }) {
     <Card title="Newest runs" hint="Kept for a while after they ended. Files open as they were sent or handed back." flush>
       <ul className="divide-y divide-grey-300 dark:divide-ink-800">
         {runs.map((run) => (
-          <li key={run.id} className="px-4 py-3 text-[13px]">
+          <li key={`${run.ref}-${run.created}`} className="px-4 py-3 text-[13px]">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-medium">{run.kind === 'build' ? 'Build' : 'Change'}</span>
+              <span className="font-mono text-[12px] text-slate-400" title="The start of its id, as the log names it">{run.ref}</span>
               {run.lambda && <span className="font-mono text-[12px]">{run.lambda}</span>}
               <span className={run.ending && !['completed', 'asked'].includes(run.ending) ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}>
                 {run.ending ? (ENDINGS[run.ending] ?? run.ending) : run.state}

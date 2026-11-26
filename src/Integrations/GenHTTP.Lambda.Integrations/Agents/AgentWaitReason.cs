@@ -7,15 +7,15 @@ public enum AgentWaitReason
 {
 
     /// <summary>The service behind the agent is overloaded, and is asked again shortly.</summary>
-    Overloaded,
+    Overloaded = 0,
 
     /// <summary>A limit of the account the agent runs on was reached, and is asked again once it allows.</summary>
-    RateLimited,
+    RateLimited = 1,
 
     /// <summary>The agent system makes room for the run, such as starting what it runs in.</summary>
-    Preparing,
+    Preparing = 2,
 
     /// <summary>Anything else, which the detail says.</summary>
-    Other
+    Other = 3
 
 }

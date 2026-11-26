@@ -160,6 +160,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Já tinha sido anulado.',
   },
   changedSince: 'Parte mudou entretanto, por isso ficou como está.',
+  notUndone: 'A versão que estava online antes não pôde ser reposta, por isso o que está online agora mantém-se.',
   seeChanges: 'Ver o que mudou',
   open: 'Abrir a lambda',
   openPreview: 'Experimentar',

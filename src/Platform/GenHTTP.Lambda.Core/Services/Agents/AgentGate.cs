@@ -141,11 +141,10 @@ public sealed class AgentGate(AgentSettingsStore settings, LambdaOptions options
         {
             var name = asked.TryGetValue(option.Name, out var wanted) && !string.IsNullOrWhiteSpace(wanted) ? wanted.Trim().ToLowerInvariant() : null;
 
-            if (name == null)
-            {
-                chosen[option.Name] = DefaultOf(current, option);
-                continue;
-            }
+            // nothing asked: the default, which is everybody's - checked like
+            // any other value, since the operator may have taken every value
+            // of an option from everybody
+            name ??= DefaultOf(current, option);
 
             var value = option.Value(name) ?? throw new ProviderException(ResponseStatus.BadRequest, $"There is no such {option.Label.ToLowerInvariant()} here.");
 

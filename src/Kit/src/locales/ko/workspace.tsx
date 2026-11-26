@@ -85,6 +85,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `${name}에 대해 묻거나 바꿀 점을 말해 보세요…`,
   placeholderAnswer: '답변을 입력하세요…',
   answering: '다음 메시지는 에이전트의 질문에 대한 답변이 돼요.',
+  askSomethingElse: '대신 다른 것을 물어보기',
   files: {
     attach: '파일 첨부',
     attachHint: (count, size) => (count === 1 ? `최대 ${size}까지 파일 한 개를 첨부해요` : `파일을 최대 ${count}개까지, 각각 ${size} 이하로 첨부해요`),
@@ -154,6 +155,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: '이미 되돌려졌어요.',
     },
     changedSince: '일부는 그 뒤에 바뀌어서 그대로 두었어요.',
+    notUndone: '이전에 온라인이던 것을 되돌리지 못해서, 지금 온라인인 것은 그대로예요.',
     undoneDone: '되돌렸어요.',
     created: (name) => `새 앱을 만들었어요: ${name}`,
     draft: '초안으로 써 볼 준비가 됐어요',

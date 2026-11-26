@@ -167,6 +167,7 @@ export const change: EditorMessages['change'] = {
     undone: 'すでに取り消されています。',
   },
   changedSince: '一部はその後に変更されているため、そのまま残っています。',
+  notUndone: '以前に公開されていたバージョンを元に戻せなかったため、現在公開中の内容がそのまま残ります。',
   seeChanges: '変更点を見る',
   open: '開く',
   openPreview: '試す',

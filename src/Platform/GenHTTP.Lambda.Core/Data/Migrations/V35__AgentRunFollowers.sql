@@ -7,3 +7,7 @@
 
 ALTER TABLE agent_runs ADD COLUMN follower TEXT NULL;
 ALTER TABLE agent_runs ADD COLUMN follower_until TEXT NULL;
+
+-- One run of a lambda at a time, held by the records rather than by a check
+-- before the insert: two servers, or a message sent twice, cannot start two.
+CREATE UNIQUE INDEX agent_runs_one_at_a_time ON agent_runs (lambda_id) WHERE state <> 4 AND lambda_id IS NOT NULL;

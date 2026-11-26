@@ -4,12 +4,13 @@ namespace GenHTTP.Lambda.Services.Agents;
 
 /// <remarks>
 /// For the operator, who reads the prompts in the log in full already: the
-/// files people attached are theirs to open as well, by the same rule.
+/// files people attached are theirs to open as well, by the same rule. Not
+/// the whole id: a build's id is what its editor key is fetched with.
 /// </remarks>
 [Summary("A run of the agent, as the operator sees it.")]
 public sealed record RunListing(
-    [Summary("What it is known by")]
-    string Id,
+    [Summary("The start of its id, as the log names it - never the whole, which a build's editor key is read with")]
+    string Ref,
     [Summary("`build` or `change`")]
     string Kind,
     [Summary("The lambda it worked on, by public key, once it had one")]

@@ -212,27 +212,62 @@ public sealed class AgentUndo(AgentRunRecords records, IMetaService meta, IFeatu
             var current = DeedsOnlineOf(read);
 
             // somebody put another version online since: that one stays
-            if (lambda.ActiveVersion == current)
+            if (lambda.ActiveVersion != current)
             {
-                await meta.DeployAsync(privateKey, back, VersionOrigin.Api, cancellation: cancellation);
-                done.Add("online");
+                kept.Add("changed:online");
             }
             else
             {
-                kept.Add("changed:online");
+                // the version before may be gone from the history, or not
+                // build any more - what is online then stays, and says so
+                try
+                {
+                    var deployed = await meta.DeployAsync(privateKey, back, VersionOrigin.Api, cancellation: cancellation);
+
+                    if (deployed.Success)
+                    {
+                        done.Add("online");
+                    }
+                    else
+                    {
+                        kept.Add("failed:online");
+                    }
+                }
+                catch (LambdaException)
+                {
+                    kept.Add("failed:online");
+                }
             }
         }
 
         if (plan.Drafts.Count > 0)
         {
-            var open = (await features.ListAsync(privateKey, cancellation)).Select(f => f.Key).ToHashSet(StringComparer.Ordinal);
+            var open = (await features.ListAsync(privateKey, cancellation)).ToDictionary(f => f.Key, StringComparer.Ordinal);
 
-            foreach (var draft in plan.Drafts.Where(open.Contains))
+            var discarded = false;
+
+            foreach (var draft in plan.Drafts.Where(open.ContainsKey))
             {
+                // saved into since by somebody else - the owner, another run:
+                // their work is not the run's to take back. One nobody saved
+                // into since it was started is still the run's own
+                var untouched = open[draft].Run == null && open[draft].Revision <= 1;
+
+                if (open[draft].Run != read.Run.Id && !untouched)
+                {
+                    kept.Add("changed:draft");
+                    continue;
+                }
+
                 await features.DeleteAsync(privateKey, draft, cancellation: cancellation);
+
+                discarded = true;
             }
 
-            done.Add("draft");
+            if (discarded)
+            {
+                done.Add("draft");
+            }
         }
 
         if (plan.Undoes.Contains("connectivity"))

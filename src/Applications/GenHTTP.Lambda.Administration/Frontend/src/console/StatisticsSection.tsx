@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { api, refusedToken, type Activity, type AdminStorage, type EventHistory } from '@genhttp-lambda/kit/api';
+import { api, refusedToken, type Activity, type AdminAgentOption, type AdminStorage, type EventHistory } from '@genhttp-lambda/kit/api';
 import { Chart } from '@genhttp-lambda/kit/components/Chart';
 import { Pills, Section } from '@genhttp-lambda/kit/ui/ui';
 import { BLUE, GREEN, GREY, ORANGE, PURPLE, RED, Ranked, Segments } from './charts';
@@ -24,6 +24,10 @@ const RANGES = [
 ];
 
 /** Where the versions came from, in the order the bar shows them; the rest is other. */
+/** Names in the order the agent has them, those it no longer has last. */
+const inOrder = (names: string[], order: string[]) =>
+  [...names].sort((a, b) => (order.includes(a) ? order.indexOf(a) : order.length) - (order.includes(b) ? order.indexOf(b) : order.length));
+
 /** The colours the values of an option of the agent's take, in turn - its options are its integration's, whatever they are. */
 const AGENT_COLORS = [BLUE, PURPLE, GREEN, ORANGE, GREY];
 
@@ -47,6 +51,7 @@ export function StatisticsSection({ access }: { access: Access }) {
   const [events, setEvents] = useState<EventHistory | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [storage, setStorage] = useState<AdminStorage | null>(null);
+  const [agentOptionsOffered, setAgentOptionsOffered] = useState<AdminAgentOption[]>([]);
 
   useEffect(() => {
     let current = true;
@@ -65,6 +70,9 @@ export function StatisticsSection({ access }: { access: Access }) {
 
     api.activity(token).then(setActivity).catch(failed);
     api.admin.storage(token).then(setStorage).catch(failed);
+
+    // the agent's options, for their order and labels - the counts are kept by name
+    api.admin.agent(token).then((agent) => setAgentOptionsOffered(agent.options ?? [])).catch(() => setAgentOptionsOffered([]));
   }, [token, deny]);
 
   if (overview === null) {
@@ -200,15 +208,24 @@ export function StatisticsSection({ access }: { access: Access }) {
               title="What the build agent writes"
               hint="Of those, what the agent running on this server wrote - through MCP, or as a draft of its own that was put online - by each of its options it ran on."
             >
-              {Object.entries(agentOptions).map(([option, values], index) => (
-                <div key={option} className={index > 0 ? 'mt-4' : undefined}>
-                  <Segments
-                    label={option.charAt(0).toUpperCase() + option.slice(1)}
-                    dark={dark}
-                    parts={Object.entries(values).map(([name, value], at) => ({ label: name, value, color: AGENT_COLORS[at % AGENT_COLORS.length] }))}
-                  />
-                </div>
-              ))}
+              {inOrder(Object.keys(agentOptions), agentOptionsOffered.map((o) => o.name)).map((option, index) => {
+                const offered = agentOptionsOffered.find((o) => o.name === option);
+                const values = agentOptions[option];
+
+                return (
+                  <div key={option} className={index > 0 ? 'mt-4' : undefined}>
+                    <Segments
+                      label={offered?.label ?? option.charAt(0).toUpperCase() + option.slice(1)}
+                      dark={dark}
+                      parts={inOrder(Object.keys(values), offered?.values.map((v) => v.name) ?? []).map((name, at) => ({
+                        label: offered?.values.find((v) => v.name === name)?.label ?? name,
+                        value: values[name],
+                        color: AGENT_COLORS[at % AGENT_COLORS.length],
+                      }))}
+                    />
+                  </div>
+                );
+              })}
             </Card>
           )}
         </div>

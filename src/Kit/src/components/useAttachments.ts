@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { api, ApiError, type AttachmentPolicy, type RunFile } from '../api';
 import { bytes } from '../ui/format';
@@ -37,6 +37,10 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
   const [uploading, setUploading] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
 
+  // what is on its way counts as well: a second pick while the first uploads
+  // must not end with more files than a message takes
+  const inFlight = useRef(0);
+
   async function add(picked: File[]) {
     if (!policy || picked.length === 0) {
       return;
@@ -44,7 +48,7 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
 
     setProblem(null);
 
-    const room = policy.maxCount - files.length;
+    const room = policy.maxCount - files.length - inFlight.current;
 
     if (picked.length > room) {
       setProblem(words.tooMany(policy.maxCount));
@@ -63,6 +67,7 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
       }
 
       setUploading((n) => n + 1);
+      inFlight.current++;
 
       try {
         const kept = await api.attachments.upload(file);
@@ -71,6 +76,7 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
       } catch (error) {
         setProblem(error instanceof ApiError && error.status === 413 ? words.tooLarge(file.name, bytes(policy.maxBytes)) : words.failed(file.name));
       } finally {
+        inFlight.current--;
         setUploading((n) => n - 1);
       }
     }

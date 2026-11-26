@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace GenHTTP.Lambda.Services.Agents;
 
 /// <summary>
@@ -7,61 +9,81 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// Kept in a run's events by name (<see cref="AgentEffect"/>), so a member
 /// keeps its name for good.
 /// </remarks>
+// kept in the records by these names, which stay as they are when a member is
+// renamed - as a number of a column does
 public enum AgentEffectKind
 {
 
     /// <summary>It created a lambda.</summary>
-    Created,
+    [JsonStringEnumMemberName("Created")]
+    Created = 0,
 
     /// <summary>It saved a version.</summary>
-    Saved,
+    [JsonStringEnumMemberName("Saved")]
+    Saved = 1,
 
     /// <summary>It put a version online.</summary>
-    Deployed,
+    [JsonStringEnumMemberName("Deployed")]
+    Deployed = 2,
 
     /// <summary>It started a feature.</summary>
-    Started,
+    [JsonStringEnumMemberName("Started")]
+    Started = 3,
 
     /// <summary>It saved into a feature.</summary>
-    Drafted,
+    [JsonStringEnumMemberName("Drafted")]
+    Drafted = 4,
 
     /// <summary>It merged a feature into a version.</summary>
-    Merged,
+    [JsonStringEnumMemberName("Merged")]
+    Merged = 5,
 
     /// <summary>It deleted a feature.</summary>
-    Discarded,
+    [JsonStringEnumMemberName("Discarded")]
+    Discarded = 6,
 
     /// <summary>It switched a kind of data on.</summary>
-    Enabled,
+    [JsonStringEnumMemberName("Enabled")]
+    Enabled = 7,
 
     /// <summary>It switched analytics on.</summary>
-    Counted,
+    [JsonStringEnumMemberName("Counted")]
+    Counted = 8,
 
     /// <summary>It published the source, or changed its license.</summary>
-    Published,
+    [JsonStringEnumMemberName("Published")]
+    Published = 9,
 
     /// <summary>It took the source down.</summary>
-    Withdrawn,
+    [JsonStringEnumMemberName("Withdrawn")]
+    Withdrawn = 10,
 
     /// <summary>It asked for the lambda to connect to other servers.</summary>
-    Requested,
+    [JsonStringEnumMemberName("Requested")]
+    Requested = 11,
 
     /// <summary>It withdrew such a request.</summary>
-    Unrequested,
+    [JsonStringEnumMemberName("Unrequested")]
+    Unrequested = 12,
 
     /// <summary>It listed the lambda in the showcase, or changed its entry.</summary>
-    Showcased,
+    [JsonStringEnumMemberName("Showcased")]
+    Showcased = 13,
 
     /// <summary>It took the lambda out of the showcase.</summary>
-    Unshowcased,
+    [JsonStringEnumMemberName("Unshowcased")]
+    Unshowcased = 14,
 
     /// <summary>It changed how the lambda's editor opens.</summary>
-    Viewed,
+    [JsonStringEnumMemberName("Viewed")]
+    Viewed = 15,
 
     /// <summary>It wrote a file into the lambda's workspace.</summary>
-    Wrote,
+    [JsonStringEnumMemberName("Wrote")]
+    Wrote = 16,
 
     /// <summary>It removed a file from the lambda's workspace.</summary>
-    Removed
+    [JsonStringEnumMemberName("Removed")]
+    Removed = 17
 
 }

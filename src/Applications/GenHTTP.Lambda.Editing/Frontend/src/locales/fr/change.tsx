@@ -174,6 +174,7 @@ export const change: EditorMessages['change'] = {
     undone: 'Cela a déjà été annulé.',
   },
   changedSince: 'Une partie a changé depuis, donc elle reste en l’état.',
+  notUndone: 'La version en ligne auparavant n’a pas pu être remise en ligne, donc ce qui est en ligne actuellement reste en place.',
   seeChanges: 'Voir ce qui a changé',
   open: 'Ouvrir',
   openPreview: 'Essayer',

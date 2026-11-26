@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Fragen Sie zu ${name} oder sagen Sie, was sich ändern soll …`,
   placeholderAnswer: 'Ihre Antwort …',
   answering: 'Ihre nächste Nachricht beantwortet die Frage des Agenten.',
+  askSomethingElse: 'Stattdessen etwas anderes fragen',
   files: {
     attach: 'Datei anhängen',
     attachHint: (count, size) => (count === 1 ? `Eine Datei mit bis zu ${size} anhängen` : `Bis zu ${count} Dateien mit je bis zu ${size} anhängen`),
@@ -135,6 +136,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Es wurde bereits rückgängig gemacht.',
     },
     changedSince: 'Einiges hat sich seitdem geändert und bleibt deshalb.',
+    notUndone: 'Was zuvor online war, konnte nicht wieder online gestellt werden, deshalb bleibt, was jetzt online ist.',
     undoneDone: 'Rückgängig gemacht.',
     created: (name) => `Neue App gebaut: ${name}`,
     draft: 'Bereit zum Ausprobieren in einem Entwurf',

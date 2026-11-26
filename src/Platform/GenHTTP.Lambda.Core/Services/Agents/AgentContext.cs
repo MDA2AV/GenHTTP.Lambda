@@ -19,8 +19,8 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// none - and the files are those of this message and of the earlier ones,
 /// so "the logo from before" can be found.
 /// </remarks>
-public sealed class AgentContext(AgentRunRecords records, AgentAttachments attachments, ISettingsService settings, IBrandingService branding,
-                                 LambdaOptions options)
+public sealed class AgentContext(AgentRunRecords records, AgentAttachments attachments, AgentOutcome outcome, ISettingsService settings,
+                                 IBrandingService branding, LambdaOptions options)
 {
 
     /// <summary>
@@ -58,7 +58,7 @@ public sealed class AgentContext(AgentRunRecords records, AgentAttachments attac
         var limits = new AgentLimits(run.TimeLimit is { } seconds ? TimeSpan.FromSeconds(seconds) : null, run.StepLimit);
 
         return new AgentRun(run.Id, run.Kind == AgentRunKind.Build ? AgentTask.Build : AgentTask.Change, run.Prompt, files, conversation, audience, access,
-                            lambda, StoredOptions.Read(run.Options), limits, ContinuationOf(run, previous));
+                            lambda, StoredOptions.Read(run.Options), limits, await ContinuationOfAsync(run, previous, cancellation));
     }
 
     /// <summary>
@@ -111,14 +111,52 @@ public sealed class AgentContext(AgentRunRecords records, AgentAttachments attac
     /// What a run carries on from, as the agent is told it - the earlier run
     /// asked, the question it ended with, and what the platform recorded of it.
     /// </summary>
-    private static AgentContinuation? ContinuationOf(AgentRunEntity run, AgentRunEntity? previous)
+    private async ValueTask<AgentContinuation?> ContinuationOfAsync(AgentRunEntity run, AgentRunEntity? previous, CancellationToken cancellation)
     {
         if (previous == null || run.Continuation is not { } kind)
         {
             return null;
         }
 
-        return new AgentContinuation(kind, previous.Id, previous.Prompt, previous.Ending == AgentEnding.Asked ? previous.Message : null, previous.Message);
+        var deeds = AgentOutcome.DeedsOf(await outcome.ReadAsync(previous, cancellation));
+
+        return new AgentContinuation(kind, previous.Id, previous.Prompt, previous.Ending == AgentEnding.Asked ? previous.Message : null, FactsOf(deeds));
+    }
+
+    /// <summary>
+    /// What a run did, as the records say it, in plain English for the agent
+    /// that carries on - or nothing, where it did nothing the records know.
+    /// </summary>
+    private static string? FactsOf(AgentOutcome.Deeds deeds)
+    {
+        var facts = new List<string>();
+
+        if (deeds.Feature != null)
+        {
+            facts.Add($"it worked in the draft '{deeds.FeatureName ?? deeds.Feature}' (feature {deeds.Feature})");
+        }
+
+        if (deeds.Saved is { } saved)
+        {
+            facts.Add($"it saved version {saved}");
+        }
+
+        if (deeds.Online is { } online)
+        {
+            facts.Add($"it put version {online} online");
+        }
+
+        if (deeds.Settings.Count > 0)
+        {
+            facts.Add($"it changed these settings: {string.Join(", ", deeds.Settings)}");
+        }
+
+        if (!deeds.Wrote && facts.Count == 0)
+        {
+            return "it saved nothing.";
+        }
+
+        return string.Join("; ", facts) + ".";
     }
 
 }

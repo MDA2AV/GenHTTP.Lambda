@@ -41,7 +41,7 @@ const config = JSON.parse(process.env.AGENT_MCP_CONFIG);
 const mcp = new URL(config.mcpServers.genhttp.url);
 const brief = process.env.AGENT_BRIEF;
 const allowed = args.slice(args.indexOf('--allowedTools') + 1, args.indexOf('--disallowedTools'));
-writeFileSync(process.env.STAND_IN_DIR + '/' + box + '.json', JSON.stringify({ config, direct: process.env.NO_PROXY, brief, allowed, turns: args[args.indexOf('--max-turns') + 1] }));
+writeFileSync(process.env.STAND_IN_DIR + '/job-' + process.env.AGENT_JOB + '.json', JSON.stringify({ config, box, direct: process.env.NO_PROXY, brief, allowed, turns: args.includes('--max-turns') ? args[args.indexOf('--max-turns') + 1] : null }));
 const say = event => process.stdout.write(JSON.stringify(event) + '\\n');
 const at = mcp.hostname;
 const answer = () => {
@@ -148,7 +148,7 @@ async function settled(call, token, id) {
 }
 
 /** What the stand-in was given for a job. */
-const given = id => JSON.parse(readFileSync(join(folder, `build-${id.replace(/[^a-z0-9]/gi, '').slice(0, 24)}.json`), 'utf8'));
+const given = id => JSON.parse(readFileSync(join(folder, `job-${id}.json`), 'utf8'));
 
 const shared = extra => start({ AGENT_HOSTS: JSON.stringify([A, B]), ...extra });
 

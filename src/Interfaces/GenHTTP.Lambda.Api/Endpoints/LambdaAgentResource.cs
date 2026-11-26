@@ -56,7 +56,8 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
     [return: Summary("Whether there is an agent, how many messages this caller has left today, and the one under way or the last one")]
     public async ValueTask<AgentState> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
-        var lambda = await meta.RequireEditableAsync(privateKey);
+        // reading stays where changing does not - a blocked lambda among them
+        var lambda = await ReadableAsync(privateKey);
 
         return await agents.StateAsync(lambda, request.Client.Address);
     }
@@ -71,7 +72,7 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
     [Response(ResponseStatus.Ok, "The events", ContentType = "text/event-stream")]
     public async ValueTask<IHandlerBuilder> Events([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
-        var lambda = await meta.RequireEditableAsync(privateKey);
+        var lambda = await ReadableAsync(privateKey);
 
         var caller = request.Client.Address;
 
@@ -127,16 +128,14 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/stop")]
     [Summary("Stops the message under way")]
     [Remarks("What it saved so far stays saved - in its feature, or as a version - and whatever is online stays online. A message that is stopped is not counted back.")]
+    [Response(ResponseStatus.Conflict, "The agent of this installation cannot be stopped (`offer.cancels` is false); the run ends by itself.")]
     [return: Summary("The state afterwards")]
     public async ValueTask<AgentState> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
         var lambda = await meta.RequireEditableAsync(privateKey);
 
-        var state = await agents.StopAsync(lambda, request.Client.Address);
-
-        logger.LogInformation("Stopped change of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
-
-        return state;
+        // the service logs what it stopped, where there was something
+        return await agents.StopAsync(lambda, request.Client.Address);
     }
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/undo")]
@@ -169,6 +168,8 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
     [Remarks("The newest first, while the platform keeps the messages they came with. `GET /attachments/{id}` answers with one.")]
     [return: Summary("The files")]
     public async ValueTask<IReadOnlyList<RunFile>> Files([Summary(ApiDocumentation.PrivateKey)] string privateKey)
-        => await agents.AttachedToAsync(await meta.RequireEditableAsync(privateKey));
+        => await agents.AttachedToAsync(await ReadableAsync(privateKey));
+
+    private ValueTask<long> ReadableAsync(string privateKey) => meta.RequireOwnAsync(privateKey);
 
 }

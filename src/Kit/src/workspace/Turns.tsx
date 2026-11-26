@@ -124,13 +124,15 @@ function Said({ steps, lines, running }: { steps?: AgentStep[]; lines?: string[]
  * asking something before it goes on, waiting for somebody, or failed.
  * onGoOn carries on where it stopped; offered on the newest turn only.
  */
-export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }: {
+export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true, live }: {
   turn: Turn;
   following?: Following | null;
   onAgain?: () => void;
   onGoOn?: () => void;
   /** Whether it is the newest turn: what the app waits for is said under that one only. */
   newest?: boolean;
+  /** What still waits, as the app is now. */
+  live?: (blockers?: RunBlocker[] | null) => RunBlocker[] | null;
 }) {
   const t = useT();
   const said = t.buildBox;
@@ -155,7 +157,7 @@ export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }:
     return (
       <>
         <Answered>
-          <RunOutcome tone="answer" headline={words.results.asked} notes={[words.results.answerBelow]} summary={<Reply text={result.question} />} icon={false} />
+          <RunOutcome tone="answer" headline={words.results.asked} notes={newest ? [words.results.answerBelow] : []} summary={<Reply text={result.question} />} icon={false} />
           {files}
           <Said lines={turn.said} running={false} />
         </Answered>
@@ -165,15 +167,29 @@ export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }:
     );
   }
 
+  // what cut it short, after it had made the app: as far as it got, and it can go on
+  const cutNote =
+    result?.reason === 'timeout' ? words.results.timedOut
+      : result?.reason === 'turns' ? words.results.usedUp
+        : result?.reason === 'failed' ? words.results.brokeOff
+          : result?.reason === 'lost' ? words.results.lost
+            : null;
+
   if (turn.state === 'done' && result?.ok) {
     return (
       <>
         <Answered>
           <RunOutcome
-            tone={result.deployed === false ? 'warn' : 'good'}
+            tone={result.deployed === false || cutNote ? 'warn' : 'good'}
             headline={result.deployed === false ? said.notOnline : said.online}
+            notes={cutNote ? [cutNote] : []}
             summary={result.summary ? <Reply text={result.summary} /> : null}
           >
+            {cutNote && onGoOn && (
+              <button type="button" className="btn-ghost !px-3 !py-1.5 text-[13px]" onClick={onGoOn} title={words.results.goOnTitle}>
+                {words.results.goOn}
+              </button>
+            )}
             {result.url && result.deployed !== false && (
               <a href={result.url} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
                 <IconExternal className="h-3.5 w-3.5" />
@@ -181,7 +197,7 @@ export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }:
               </a>
             )}
           </RunOutcome>
-          {newest && <Waits blockers={result.waitsFor} onGoOn={onGoOn} />}
+          {newest && <Waits blockers={live ? live(result.waitsFor) : result.waitsFor} onGoOn={onGoOn} />}
           {files}
           <Said lines={turn.said} running={false} />
         </Answered>
@@ -200,7 +216,8 @@ export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }:
     <Answered>
       <RunOutcome
         tone={result?.declined ? 'quiet' : cut ? 'warn' : 'bad'}
-        headline={result?.declined ? null : result?.reason === 'timeout' ? words.results.timedOut : result?.reason === 'turns' ? words.results.usedUp : (result?.error ?? said.failed)}
+        headline={result?.declined ? null : cut ? cutNote : said.failed}
+        notes={result?.declined || cut ? [] : failedNotes(result, words.results)}
         summary={result?.declined ? result.error : null}
         detail={result?.detail}
         detailLabel={words.results.whatWentWrong}
@@ -220,6 +237,22 @@ export function BuildAnswer({ turn, following, onAgain, onGoOn, newest = true }:
       <Said lines={turn.said} running={false} />
     </Answered>
   );
+}
+
+/** Why a build failed, in this page's words where the platform said why - its own English otherwise. */
+function failedNotes(result: BuildResult | null | undefined, said: ReturnType<typeof useT>['workspace']['results']): string[] {
+  switch (result?.reason) {
+    case 'unauthorised':
+      return [said.unauthorised];
+    case 'lost':
+      return [said.lost];
+    case 'failed':
+      return [said.nothingSaved];
+    case 'cancelled':
+      return [said.stopped];
+    default:
+      return result?.error ? [result.error] : [];
+  }
 }
 
 /** The editor link of what was just built: the one thing that cannot be got back, said once. */
@@ -280,6 +313,12 @@ export interface AppHand {
   undo: (turn: Turn) => void;
   /** Carries a turn on where it stopped: it waited for somebody, or ran out of time. */
   goOn: (turn: Turn) => void;
+  /** Opens an app this browser knows, by its public key - one a message built beside this one. */
+  open?: (publicKey: string) => void;
+  /** Whether a message can go now: one left today, nothing under way, the password where one is needed. */
+  possible: boolean;
+  /** What of what a turn waited for still waits, as the app is now. */
+  live: (blockers?: RunBlocker[] | null) => RunBlocker[] | null;
 }
 
 /**
@@ -394,7 +433,7 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
       <Answered>
         <RunOutcome tone="answer" headline={said.results.asked} notes={newest ? [said.results.answerBelow] : []} summary={<Reply text={result.question} />} icon={false} />
         {files}
-        <Settings settings={result.settings ?? []} created={result.created ?? []} publicKey={app.publicKey} />
+        <Settings settings={result.settings ?? []} created={result.created ?? []} publicKey={app.publicKey} open={app.open} />
         <Said lines={turn.said} running={false} />
       </Answered>
     );
@@ -413,7 +452,9 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
   const live = online != null && app.active === online;
   // what the platform says it can undo; a turn kept from before it said so
   // offers what it always did - the version online before, back online
-  const undoable = result?.undo ? result.undo.possible : live && before != null && before !== online;
+  // only the newest: what an older message did may have been undone or
+  // changed since, and its record says nothing of that
+  const undoable = newest && (result?.undo ? result.undo.possible : live && before != null && before !== online);
   const deployable = version != null && online == null && result?.compiles !== false && app.active !== version;
   const cut = result?.reason === 'timeout' || result?.reason === 'turns';
   const retry = !cut && (turn.state === 'failed' || (result != null && !result.ok && !result.answered && !result.declined && !result.summary));
@@ -465,7 +506,7 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
         )}
 
         {cut && newest && (
-          <button type="button" onClick={() => app.goOn(turn)} disabled={app.busy} title={said.results.goOnTitle} className="btn-primary !px-4 !py-1.5 text-[13px]">
+          <button type="button" onClick={() => app.goOn(turn)} disabled={app.busy || !app.possible} title={said.results.goOnTitle} className="btn-primary !px-4 !py-1.5 text-[13px]">
             {said.results.goOn}
           </button>
         )}
@@ -490,11 +531,11 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
       </RunOutcome>
 
       {/* what the app waits for is as of now, so it is said once, under the newest */}
-      {newest && <Waits blockers={result?.waitsFor} onGoOn={() => app.goOn(turn)} />}
+      {newest && <Waits blockers={app.live(result?.waitsFor)} onGoOn={app.possible ? () => app.goOn(turn) : undefined} />}
 
       {files}
 
-      <Settings settings={result?.settings ?? []} created={result?.created ?? []} publicKey={app.publicKey} />
+      <Settings settings={result?.settings ?? []} created={result?.created ?? []} publicKey={app.publicKey} open={app.open} />
 
       <Said lines={turn.said} running={false} />
     </Answered>
@@ -502,7 +543,7 @@ export function ChangeAnswer({ turn, following, app, onAgain, newest = false }: 
 }
 
 /** The settings a message changed, and the apps it built beside this one, each a small mark under the answer. */
-function Settings({ settings, created, publicKey }: { settings: string[]; created: string[]; publicKey: string }) {
+function Settings({ settings, created, publicKey, open }: { settings: string[]; created: string[]; publicKey: string; open?: (publicKey: string) => void }) {
   const said = useT().workspace.results;
   const words: Record<string, string> = said.settings;
   const known = settings.filter((setting) => words[setting]);
@@ -516,7 +557,13 @@ function Settings({ settings, created, publicKey }: { settings: string[]; create
       {created.map((name) => (
         <li key={`created-${name}`} className="inline-flex items-center gap-1.5 rounded-full bg-accent-500/10 px-2.5 py-0.5 text-xs font-medium text-accent-700 dark:text-accent-400">
           <IconSpark className="h-3 w-3" />
-          {said.created(name)}
+          {open ? (
+            <button type="button" onClick={() => open(name)} className="underline">
+              {said.created(name)}
+            </button>
+          ) : (
+            said.created(name)
+          )}
         </li>
       ))}
       {known.map((setting) => (

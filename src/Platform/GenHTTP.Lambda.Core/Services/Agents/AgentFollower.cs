@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 
 using GenHTTP.Lambda.Data.Entities;
@@ -45,6 +46,9 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
     private static readonly TimeSpan Overdue = TimeSpan.FromMinutes(15);
 
     private static readonly TimeSpan Longest = TimeSpan.FromDays(1);
+
+    /// <summary>How long handing a run to the agent system may take before it is given up.</summary>
+    private static readonly TimeSpan HandOver = TimeSpan.FromMinutes(5);
 
     /// <summary>How long a server's claim to follow a run holds without being renewed.</summary>
     public static readonly TimeSpan Lease = TimeSpan.FromMinutes(2);
@@ -99,6 +103,19 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
             if (provider == null)
             {
                 await EndAsync(run.Id, AgentEnding.Lost, "This installation has no agent any more.", cancellation);
+                continue;
+            }
+
+            // one being handed over is the server's that hands it over, which
+            // follows it once the agent system took it; one that stayed there
+            // was never taken - its server went away in between
+            if (run.State == AgentRunState.Starting)
+            {
+                if (DateTime.UtcNow - run.Created > HandOver)
+                {
+                    await EndAsync(run.Id, AgentEnding.Lost, "The run was never handed to the agent.", cancellation);
+                }
+
                 continue;
             }
 
@@ -159,7 +176,23 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
                 }
                 catch (OperationCanceledException) when (turn.IsCancellationRequested)
                 {
-                    // time to renew the claim: asked again from where it got to
+                    // time to renew the claim, and asked again from where it got
+                    // to - unless the run went silent for longer than it may take,
+                    // which the agent system telling nothing must not hide
+                    var silent = await records.GetAsync(run.Id, stopping);
+
+                    if (silent == null || silent.State == AgentRunState.Ended)
+                    {
+                        return;
+                    }
+
+                    if (IsOverdue(silent))
+                    {
+                        await provider!.CancelAsync(new AgentRunHandle(run.Id, run.Reference), CancellationToken.None);
+                        await EndAsync(run.Id, AgentEnding.Lost, "Nothing came of the run for longer than it may take.", stopping);
+                        return;
+                    }
+
                     continue;
                 }
                 catch (Exception e)
@@ -260,10 +293,19 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
                     run.WaitReason = null;
                     run.WaitUntil = null;
 
+                    // the agent may hold a run to less than the platform set,
+                    // never to more: the platform's limit is what it watches
                     if (started.Limits is { } limits)
                     {
-                        run.TimeLimit = limits.Time is { } time ? (int)time.TotalSeconds : null;
-                        run.StepLimit = limits.Steps;
+                        if (limits.Time is { } time && (run.TimeLimit == null || time.TotalSeconds < run.TimeLimit))
+                        {
+                            run.TimeLimit = (int)time.TotalSeconds;
+                        }
+
+                        if (limits.Steps is { } steps && (run.StepLimit == null || steps < run.StepLimit))
+                        {
+                            run.StepLimit = steps;
+                        }
                     }
 
                     run.Followed = happened.Sequence;
@@ -291,10 +333,18 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
 
             case AgentSaid said when !string.IsNullOrWhiteSpace(said.Text):
             {
-                var run = await MarkAsync(id, happened.Sequence, cancellation);
+                // recorded before the position moves on, and once by the
+                // agent's number - so a crash in between neither loses it nor,
+                // asked again from the position before, records it twice
+                var run = await records.GetAsync(id, cancellation);
 
-                await records.AppendAsync(id, run?.LambdaId, AgentRunEventKind.Said, new AgentStep(0, "say", Text: Clip(said.Text.Trim(), 400)), at: at,
-                                          cancellation: cancellation);
+                if (!await HasAsync(id, Told(happened), cancellation))
+                {
+                    await records.AppendAsync(id, run?.LambdaId, AgentRunEventKind.Said, new AgentStep(0, "say", Text: Clip(said.Text.Trim(), 400)),
+                                              Told(happened), at, cancellation);
+                }
+
+                await MarkAsync(id, happened.Sequence, cancellation);
                 break;
             }
 
@@ -354,6 +404,9 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
         }
     }
 
+    /// <summary>What an event of the agent system's is recorded under, so it is recorded once.</summary>
+    private static string Told(AgentEvent happened) => $"#{happened.Sequence.ToString(CultureInfo.InvariantCulture)}";
+
     private ValueTask<AgentRunEntity?> MarkAsync(string id, long sequence, CancellationToken cancellation)
         => records.UpdateAsync(id, run =>
         {
@@ -387,13 +440,18 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
     /// </summary>
     private async ValueTask KeepAsync(string id, AgentReturned returned, DateTime at, CancellationToken cancellation)
     {
-        var run = await MarkAsync(id, returned.Sequence, cancellation);
+        var run = await records.GetAsync(id, cancellation);
 
         var file = returned.File;
 
-        if (file.Content.Length is 0 or > LongestFile)
+        if (file.Content.Length is 0 or > LongestFile || await HasAsync(id, Told(returned), cancellation))
         {
-            logger.LogWarning("Left out a file of run {Run} of {Size} bytes", id, file.Content.Length);
+            if (file.Content.Length is 0 or > LongestFile)
+            {
+                logger.LogWarning("Left out a file of run {Run} of {Size} bytes", id, file.Content.Length);
+            }
+
+            await MarkAsync(id, returned.Sequence, cancellation);
             return;
         }
 
@@ -418,10 +476,12 @@ public sealed class AgentFollower(AgentRunRecords records, IFileProvider files, 
             Created = at
         }, cancellation);
 
-        await records.AppendAsync(id, run?.LambdaId, AgentRunEventKind.Returned, new AgentStep(0, "file", Files: [name], Path: key, Done: true), at: at,
-                                  cancellation: cancellation);
+        await records.AppendAsync(id, run?.LambdaId, AgentRunEventKind.Returned, new AgentStep(0, "file", Files: [name], Path: key, Done: true),
+                                  Told(returned), at, cancellation);
 
-        logger.LogInformation("Kept file {Name} of run {Run} type {Type} size {Size}", name, id, type, file.Content.Length);
+        await MarkAsync(id, returned.Sequence, cancellation);
+
+        logger.LogInformation("Kept file '{Name}' of run {Run} type {Type} size {Size}", name, id, type, file.Content.Length);
     }
 
     /// <summary>

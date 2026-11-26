@@ -892,7 +892,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, VersionOriginNames.Name(feature.Origin),
                    feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
                    feature.Previewed, feature.Revision, VersionWriterNames.Name(feature.Writer), options?.GetValueOrDefault(AgentModelNames.ModelOption),
-                   options?.GetValueOrDefault(AgentModelNames.EffortOption), options is { Count: > 0 } ? options : null);
+                   options?.GetValueOrDefault(AgentModelNames.EffortOption), options is { Count: > 0 } ? options : null, feature.AgentRun);
     }
 
     /// <summary>

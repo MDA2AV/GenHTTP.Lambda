@@ -42,6 +42,7 @@
  */
 
 import { createServer, request as plain } from 'node:http';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { request as secure } from 'node:https';
 import { BlockList, isIP } from 'node:net';
 import { lookup } from 'node:dns';
@@ -85,8 +86,10 @@ for (const [network, prefix] of [
   ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4]
 ]) PRIVATE.addSubnet(network, prefix, 'ipv4');
 
+// ::/96 carries an IPv4 address the old way and ::ffff:0:0:0/96 the
+// translated way; neither is a public address of its own
 for (const [network, prefix] of [
-  ['::', 127], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 23],
+  ['::', 96], ['::ffff:0:0:0', 96], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 23],
   ['2001:db8::', 32], ['2002::', 16], ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]
 ]) PRIVATE.addSubnet(network, prefix, 'ipv6');
 
@@ -329,14 +332,14 @@ const BREAKS = new Set(['p', 'div', 'section', 'article', 'header', 'footer', 'm
  * a script would put on the page is not there.
  */
 function readable(html, address) {
-  html = html.replace(/<!--[\s\S]*?-->/g, '');
+  html = defused(html);
 
   let base = address;
   const baseTag = /<base\b([^>]*)>/i.exec(html);
   if (baseTag) base = whole(attributes(baseTag[1]).href, address) ?? address;
 
   const facts = [];
-  const title = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
+  const title = between(html, 'title');
   if (title?.trim()) facts.push(`Title: ${entities(title.replace(/\s+/g, ' ').trim())}`);
 
   const lang = /<html\b([^>]*)>/i.exec(html);
@@ -364,15 +367,17 @@ function readable(html, address) {
   if (icons.length) facts.push(`Icon: ${icons[0]}`);
   if (styles.length) facts.push(`Stylesheets: ${styles.slice(0, 10).join(', ')}`);
 
-  const inline = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)].reduce((n, m) => n + m[1].length, 0);
-  if (inline > 0) facts.push(`Inline styles: ${inline} characters (raw: true shows them)`);
-
   const body = /<body\b[^>]*>([\s\S]*)$/i.exec(html)?.[1] ?? html;
+
+  // inline styles are counted over the whole page, the head among it
+  const { styled } = without(html, ['style']);
+  if (styled > 0) facts.push(`Inline styles: ${styled} characters (raw: true shows them)`);
+
+  const { kept } = without(body, HIDDEN);
 
   const links = [];
 
-  const text = body
-    .replace(/<(script|style|noscript|template|svg|iframe|object|canvas|head)\b[\s\S]*?<\/\1\s*>/gi, ' ')
+  const text = kept
     .replace(/\s+/g, ' ')
     .replace(/<(\/?)([a-z][a-z0-9]*)\b([^>]*)>/gi, (_, closing, tag, rest) => {
       tag = tag.toLowerCase();
@@ -426,6 +431,125 @@ function readable(html, address) {
     .trim();
 
   return `${facts.join('\n')}${facts.length ? '\n\n' : ''}${said}`;
+}
+
+/**
+ * The page with what the patterns below would take quadratic time over taken
+ * out first, in one pass each: comments - one left open runs to the end - and
+ * a tag that never closes, whose rest is text. A page is somebody else's, and
+ * the server reads it on the proxy's own thread of every build.
+ */
+function defused(html) {
+  let out = '';
+  let at = 0;
+
+  for (;;) {
+    const open = html.indexOf('<!--', at);
+
+    if (open < 0) {
+      out += html.slice(at);
+      break;
+    }
+
+    out += html.slice(at, open);
+
+    const close = html.indexOf('-->', open + 4);
+
+    if (close < 0) break;
+
+    at = close + 3;
+  }
+
+  // what comes after the last > cannot close a tag
+  const last = out.lastIndexOf('>');
+
+  return last < 0 ? out.replaceAll('<', '&lt;') : out.slice(0, last + 1) + out.slice(last + 1).replaceAll('<', '&lt;');
+}
+
+/** What a page holds that is no text to read. */
+const HIDDEN = ['script', 'style', 'noscript', 'template', 'svg', 'iframe', 'object', 'canvas', 'head'];
+
+/** The text of the first element of a name, found in one pass. */
+function between(html, name) {
+  const lower = html.toLowerCase();
+  const open = lower.indexOf(`<${name}`);
+
+  if (open < 0) return undefined;
+
+  const start = lower.indexOf('>', open);
+  const close = start < 0 ? -1 : lower.indexOf(`</${name}`, start);
+
+  return close < 0 ? undefined : html.slice(start + 1, close);
+}
+
+/**
+ * The page without the elements of the names given, and how much of it was
+ * inline style - in one pass, where a pattern would look for the end of an
+ * element from every place one starts. One that is never closed runs to the
+ * end.
+ */
+function without(html, names) {
+  const lower = html.toLowerCase();
+
+  let kept = '';
+  let styled = 0;
+  let at = 0;
+  let from = 0;
+
+  for (;;) {
+    const open = lower.indexOf('<', from);
+
+    if (open < 0) break;
+
+    const name = names.find(n => lower.startsWith(n, open + 1) && !/[a-z0-9-]/.test(lower[open + 1 + n.length] ?? ''));
+
+    if (!name) {
+      from = open + 1;
+      continue;
+    }
+
+    kept += html.slice(at, open) + ' ';
+
+    const start = lower.indexOf('>', open);
+    const close = start < 0 ? -1 : lower.indexOf(`</${name}`, start);
+
+    if (close < 0) {
+      at = html.length;
+      break;
+    }
+
+    if (name === 'style') styled += close - start - 1;
+
+    const end = lower.indexOf('>', close);
+
+    at = from = end < 0 ? html.length : end + 1;
+  }
+
+  return { kept: kept + html.slice(at), styled };
+}
+
+/** How long turning one page into text may take, on a thread of its own. */
+const READING = 5000;
+
+/**
+ * A page as text, worked out on a thread of its own and given up after a
+ * while: however a page is made, the proxy goes on serving every build.
+ */
+function readableApart(html, address) {
+  return new Promise(resolve => {
+    const worker = new Worker(new URL(import.meta.url), { workerData: { readable: true, html, address } });
+
+    const done = text => {
+      clearTimeout(timer);
+      worker.terminate();
+      resolve(text);
+    };
+
+    const timer = setTimeout(() => done(null), READING);
+
+    worker.once('message', text => done(text));
+    worker.once('error', () => done(null));
+  });
 }
 
 /* ------------------------------------------------------------------ tool */
@@ -540,7 +664,9 @@ async function fetchPage(args, sites) {
 
   const html = mime === 'text/html' || mime === 'application/xhtml+xml' || (!mime && /^\s*<(!doctype|html)/i.test(body.subarray(0, 512).toString('latin1')));
   const decoded = decode(body, type, html);
-  const content = html && args?.raw !== true ? readable(decoded, page.url.href) : decoded;
+  const content = html && args?.raw !== true
+    ? (await readableApart(decoded, page.url.href)) ?? '(The page is too tangled to be read as text in time. raw: true gives it as it is.)'
+    : decoded;
   const part = content.slice(start, start + LENGTH);
 
   lines.push('');
@@ -587,10 +713,18 @@ async function answer(message, sites) {
     case 'tools/call': {
       if (params?.name === HAND_OVER.name) {
         const name = String(params.arguments?.name ?? '').trim();
+        const content = params.arguments?.content;
+        const base64 = params.arguments?.encoding === 'base64';
 
-        return typeof params.arguments?.content === 'string' && name
-          ? result({ content: [{ type: 'text', text: `Handed ${name} over: it is shown to them beside your answer.` }] })
-          : result({ content: [{ type: 'text', text: 'A file has a name and a content.' }], isError: true });
+        if (typeof content !== 'string' || !name || content.length === 0) {
+          return result({ content: [{ type: 'text', text: 'A file has a name and a content.' }], isError: true });
+        }
+
+        if (base64 && !/^[A-Za-z0-9+/]+={0,2}$/.test(content.replace(/\s+/g, ''))) {
+          return result({ content: [{ type: 'text', text: 'That is no base64: give binary content in base64, or text as it is without encoding.' }], isError: true });
+        }
+
+        return result({ content: [{ type: 'text', text: `Handed ${name} over: it is shown to them beside your answer.` }] });
       }
 
       if (params?.name !== TOOL.name || sites.length === 0) return error(-32602, `There is no tool ${params?.name}.`);
@@ -679,4 +813,9 @@ export function serveFetch(port) {
 }
 
 // for fetch.test.mjs, which checks the rules without a server
-export const forTests = { refusalOf, readable, isPublic, vetted };
+export const forTests = { refusalOf, readable, readableApart, isPublic, vetted };
+
+// a thread that turns one page into text, started by readableApart
+if (!isMainThread && workerData?.readable) {
+  parentPort.postMessage(readable(workerData.html, workerData.address));
+}

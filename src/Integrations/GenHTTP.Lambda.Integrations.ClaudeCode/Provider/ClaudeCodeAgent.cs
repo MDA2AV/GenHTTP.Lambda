@@ -138,7 +138,9 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
             if (health.Web != AgentWebScope.None)
             {
                 destinations.Add(new AgentDestination("Web sites", health.Web == AgentWebScope.Any ? "any public site" : "the sites a request names",
-                                                      "Requests for their pages, GET and HEAD only, made by the runner's proxy; what was asked is not sent there."));
+                                                      health.Web == AgentWebScope.Any
+                                                          ? "Requests for their pages, GET and HEAD only, made by the runner's proxy - to addresses the agent chooses, which may carry words of what was asked, as a search does."
+                                                          : "Requests for their pages, GET and HEAD only, made by the runner's proxy; what was asked is not sent there."));
             }
 
             if (health.Searches)
@@ -268,7 +270,9 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
 
     public async ValueTask<AgentAcceptance> StartAsync(AgentRun run, CancellationToken cancellation = default)
     {
-        var health = _health ?? await RefreshAsync(cancellation);
+        // which protocol the run is handed over in decides how it is followed
+        // for good, so it is asked rather than taken from an old answer
+        var health = _health is { } known && DateTime.UtcNow - _asked < HealthAge ? known : await RefreshAsync(cancellation);
 
         var v2 = health.Protocol >= 2;
 
@@ -318,8 +322,9 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
                 _ => "home"
             };
             job["installationName"] = run.Audience.InstallationName;
-            job["timeout"] = run.Limits.Time is { } time ? (int)time.TotalSeconds : null;
-            job["maxTurns"] = run.Limits.Steps;
+            // none is 0: left out, the runner would give a run its own
+            job["timeout"] = run.Limits.Time is { } time ? (int)time.TotalSeconds : 0;
+            job["maxTurns"] = run.Limits.Steps ?? 0;
             job["attachments"] = new JsonArray([.. run.Attachments.Select(a => (JsonNode)new JsonObject
             {
                 ["id"] = a.Id,
@@ -373,9 +378,7 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
 
             var position = body?["queued"] is JsonValue place && place.TryGetValue<int>(out var queued) ? queued : 1;
 
-            // a change is stopped by the tag it is filed under, which the
-            // platform keeps with the reference
-            return new AgentAcceptance(Math.Max(0, position), tag != null ? $"{id}|{tag}" : id);
+            return new AgentAcceptance(Math.Max(0, position), ReferenceOf(v2, id, tag));
         }
         catch (HttpRequestException e)
         {
@@ -385,12 +388,28 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
         }
         catch (TaskCanceledException e) when (!cancellation.IsCancellationRequested)
         {
+            // a runner of this protocol may have taken the run and answered
+            // too late: it is followed by the platform's id, and is lost
+            // where the runner knows nothing of it - rather than left working
+            // for nobody
+            if (v2)
+            {
+                _logger.LogWarning("The agent's runner did not answer in time for run {Run}; following it all the same", run.Id);
+
+                return new AgentAcceptance(1, ReferenceOf(true, run.Id, tag));
+            }
+
             throw new AgentRefusedException(AgentRefusal.Unavailable, "The agent is not answering. Try again in a moment.", e);
         }
     }
 
+    /// <remarks>
+    /// A run is followed in the protocol it was handed over in, which its
+    /// reference says - never in what the runner says now: the two number
+    /// what they tell differently.
+    /// </remarks>
     public IAsyncEnumerable<AgentEvent> FollowAsync(AgentRunHandle run, long after, CancellationToken cancellation = default)
-        => (_health?.Protocol ?? 1) >= 2 ? StreamAsync(run, after, cancellation) : PollAsync(run, after, cancellation);
+        => Split(run).Streamed ? StreamAsync(run, after, cancellation) : PollAsync(run, after, cancellation);
 
     /// <summary>
     /// What a runner of this protocol streams of a run, line by line, as it
@@ -398,7 +417,7 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
     /// </summary>
     private async IAsyncEnumerable<AgentEvent> StreamAsync(AgentRunHandle run, long after, [EnumeratorCancellation] CancellationToken cancellation)
     {
-        var (id, _) = Split(run);
+        var (id, _, _) = Split(run);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, $"build/{id}/events?after={after.ToString(CultureInfo.InvariantCulture)}");
 
@@ -452,7 +471,7 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
     /// </summary>
     private async IAsyncEnumerable<AgentEvent> PollAsync(AgentRunHandle run, long after, [EnumeratorCancellation] CancellationToken cancellation)
     {
-        var (id, _) = Split(run);
+        var (id, _, _) = Split(run);
 
         var told = after;
 
@@ -496,7 +515,7 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
 
     public async ValueTask<bool> CancelAsync(AgentRunHandle run, CancellationToken cancellation = default)
     {
-        var (id, tag) = Split(run);
+        var (id, tag, _) = Split(run);
 
         try
         {
@@ -518,16 +537,35 @@ internal sealed class ClaudeCodeAgent : IAgentProvider
         => [.. conversation.Select(t => (JsonNode)new JsonObject { ["prompt"] = t.Message, ["reply"] = t.Reply })];
 
     /// <summary>
-    /// The runner's id of a run and the tag it filed a change under, as the
-    /// reference keeps them.
+    /// What the platform keeps of a run handed over: the runner's id of it,
+    /// the tag it filed a change under, and - for a runner of this protocol,
+    /// which is followed by streaming - a mark saying so.
     /// </summary>
-    private static (string Id, string Tag) Split(AgentRunHandle run)
+    private static string ReferenceOf(bool streamed, string id, string? tag)
+        => $"{(streamed ? Streaming : "")}{id}{(tag != null ? "|" + tag : "")}";
+
+    private const string Streaming = "2:";
+
+    /// <summary>
+    /// The runner's id of a run, the tag it filed a change under and whether it
+    /// is streamed, as the reference keeps them. A run without a reference yet
+    /// - stopped as it is handed over - is the platform's id, which a runner of
+    /// this protocol files it under.
+    /// </summary>
+    private static (string Id, string Tag, bool Streamed) Split(AgentRunHandle run)
     {
-        var reference = run.Reference ?? run.Id;
+        var reference = run.Reference ?? Streaming + run.Id;
+
+        var streamed = reference.StartsWith(Streaming, StringComparison.Ordinal);
+
+        if (streamed)
+        {
+            reference = reference[Streaming.Length..];
+        }
 
         var bar = reference.IndexOf('|', StringComparison.Ordinal);
 
-        return bar < 0 ? (reference, "") : (reference[..bar], reference[(bar + 1)..]);
+        return bar < 0 ? (reference, "", streamed) : (reference[..bar], reference[(bar + 1)..], streamed);
     }
 
     /// <summary>

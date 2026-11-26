@@ -70,6 +70,7 @@ export const workspace: KitMessages['workspace'] = {
   placeholderApp: (name) => `Tanyakan tentang ${name}, atau katakan apa yang harus diubah…`,
   placeholderAnswer: 'Jawaban Anda…',
   answering: 'Pesan Anda berikutnya menjawab pertanyaannya.',
+  askSomethingElse: 'Ajukan pertanyaan lain',
   files: {
     attach: 'Lampirkan file',
     attachHint: (count, size) => (count === 1 ? `Lampirkan satu file hingga ${size}` : `Lampirkan hingga ${count} file, masing-masing hingga ${size}`),
@@ -135,6 +136,7 @@ export const workspace: KitMessages['workspace'] = {
       undone: 'Sudah dibatalkan sebelumnya.',
     },
     changedSince: 'Sebagian sudah berubah sejak itu, jadi bagian itu tetap.',
+    notUndone: 'Yang online sebelumnya tidak dapat dikembalikan, jadi yang online sekarang tetap seperti adanya.',
     undoneDone: 'Dibatalkan.',
     created: (name) => `Aplikasi baru dibuat: ${name}`,
     draft: 'Siap dicoba di draf',

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isDemo } from '../api';
 import { IconBranch, IconDots, IconInfo, IconSpark } from '../components/Icons';
@@ -219,6 +219,13 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
 }
 
 /**
+ * The order of the agent's options, as its integration has them, where the
+ * page knows it - so the mark says "opus · high" rather than the order they
+ * are kept in.
+ */
+export const AgentOrderContext = createContext<string[] | null>(null);
+
+/**
  * That an agent wrote something, or - where the page is for somebody who
  * works with code - that it was pushed with git. The only origins worth
  * marking: the rest - the template, the owner, the platform - are what
@@ -233,6 +240,7 @@ export function AgentMark({ origin, git = false, written, detail = false }: {
   detail?: boolean;
 }) {
   const words = useShared();
+  const order = useContext(AgentOrderContext);
 
   // the agent of this server, with the values it ran on by the names its
   // integration gives them - opus · high - the same in every language; a
@@ -240,7 +248,12 @@ export function AgentMark({ origin, git = false, written, detail = false }: {
   // an effort, which are two of them
   if (written?.writer === 'build-agent') {
     const values = written.options ?? { model: written.model ?? '', effort: written.effort ?? '' };
-    const ranOn = Object.values(values).filter(Boolean).join(' · ');
+    const place = (name: string) => (order && order.includes(name) ? order.indexOf(name) : Number.MAX_SAFE_INTEGER);
+    const ranOn = Object.keys(values)
+      .sort((a, b) => place(a) - place(b))
+      .map((name) => values[name])
+      .filter(Boolean)
+      .join(' · ');
     const title = words.writtenByBuildAgent(ranOn);
 
     return (

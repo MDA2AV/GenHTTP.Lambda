@@ -89,8 +89,10 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The kind of data, switched off and empty")]
     public async ValueTask<DataStoreResponse> Disable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                                      [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
+                                                      [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind, IRequest call)
     {
+        AgentRequests.OwnersOnly(call, "switch data off, which deletes it");
+
         var store = await data.DisableAsync(privateKey, kind);
 
         logger.LogInformation("Disabled and deleted {Kind} of lambda {Lambda}", store.Kind, await meta.PublicKeyOfAsync(privateKey));

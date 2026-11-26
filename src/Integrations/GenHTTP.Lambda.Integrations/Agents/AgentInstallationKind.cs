@@ -8,12 +8,12 @@ public enum AgentInstallationKind
 {
 
     /// <summary>A public platform anybody uses.</summary>
-    Public,
+    Public = 0,
 
     /// <summary>Somebody's own installation, for them and the people around them.</summary>
-    Home,
+    Home = 1,
 
     /// <summary>An organization's, whose colleagues have tools built: no "Made with" line, nothing of the platform's own links.</summary>
-    Enterprise
+    Enterprise = 2
 
 }

@@ -11,6 +11,7 @@ using GenHTTP.Lambda.Integrations.Agents;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Services.Agents;
@@ -47,7 +48,8 @@ namespace GenHTTP.Lambda.Services.Agents;
 /// can still take either box away in the panel.
 /// </para>
 /// </remarks>
-public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, BuildAllowance allowance, AgentCredentials credentials, AgentRunRecords records,
+public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, BuildAllowance allowance, UploadAllowance uploads, AgentCredentials credentials,
+                                 AgentRunRecords records,
                                  AgentAttachments attachments, AgentContext context, AgentFollower follower, AgentOutcome outcome, AgentUndo undo,
                                  AgentSignals signals, IMetaService meta, ILogger<AgentService> logger,
                                  IAgentProvider? provider = null) : IAgentService
@@ -184,7 +186,7 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
             var own = files.Where(f => f.RunId == run.Id).ToList();
 
-            listed.Add(new RunListing(run.Id, AgentRunKindNames.Name(run.Kind), lambda, StateNameOf(run.State), EndingNameOf(run.Ending),
+            listed.Add(new RunListing(run.Id[..8], AgentRunKindNames.Name(run.Kind), lambda, StateNameOf(run.State), EndingNameOf(run.Ending),
                                       StoredOptions.Read(run.Options), run.Created,
                                       run.Started is { } started ? (int)Math.Max(0, ((run.Ended ?? DateTime.UtcNow) - started).TotalSeconds) : 0,
                                       run.Prompt,
@@ -222,7 +224,8 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
     #region Files
 
-    public async ValueTask<RunFile> AttachAsync(string? name, string? type, ReadOnlyMemory<byte> content, CancellationToken cancellation = default)
+    public async ValueTask<RunFile> AttachAsync(string? name, string? type, ReadOnlyMemory<byte> content, IPAddress? caller,
+                                                CancellationToken cancellation = default)
     {
         var agent = Require();
 
@@ -231,10 +234,15 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
             throw new ProviderException(ResponseStatus.NotFound, "Nothing is asked of the agent from here on this installation.");
         }
 
+        if (!uploads.Spend(caller, content.Length))
+        {
+            throw new ProviderException(ResponseStatus.TooManyRequests, "This address sent as many files as it may in an hour. Try again later.");
+        }
+
         var file = await attachments.AttachAsync(CapabilitiesOf(agent).Attachments, name, type, content, cancellation);
 
         // as the prompts are: what came, how large, and what it holds by its hash
-        logger.LogInformation("Received attachment {File} name {Name} type {Type} size {Size} sha256 {Sha256}", file.Id, file.Name, file.MediaType,
+        logger.LogInformation("Received attachment {File} name '{Name}' type {Type} size {Size} sha256 {Sha256}", file.Id, file.Name, file.MediaType,
                               file.Size, file.Sha256);
 
         return AgentAttachments.Show(file);
@@ -279,8 +287,7 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
         var position = await HandOverAsync(agent, run, ask, previous, null, caller);
 
-        logger.LogInformation("Started build {Build}", run.Entity.Id);
-
+        // the door logs it, with what was asked
         choice.Options.TryGetValue(AgentModelNames.ModelOption, out var model);
         choice.Options.TryGetValue(AgentModelNames.EffortOption, out var effort);
 
@@ -367,7 +374,7 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
             return new AgentState(false, PerDay, 0, Offer(), null);
         }
 
-        var newest = await records.NewestOfAsync(lambda);
+        var newest = await records.NewestShownAsync(lambda);
 
         return new AgentState(true, PerDay, allowance.Left(caller), Offer(), newest != null ? await outcome.ChangeAsync(newest) : null);
     }
@@ -442,7 +449,7 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
         // the key is never logged: it is the only thing standing between
         // somebody reading this log and the ability to change the lambda
-        logger.LogInformation("Started change {Change} of lambda #{LambdaId}", run.Entity.Id, lambda);
+        // the door logs it, with what was asked
 
         return await StateAsync(lambda, caller);
     }
@@ -453,20 +460,49 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
         if (await records.NewestOfAsync(lambda) is { State: not AgentRunState.Ended } current)
         {
-            var known = CapabilitiesOf(agent).Cancels && await agent.CancelAsync(new AgentRunHandle(current.Id, current.Reference));
-
-            // one that only waited is off the agent system's queue at once, and
-            // one it has no run of any more is over as far as anybody here is
-            // concerned; one at work ends once the agent system says it did
-            if (!known || current.State is AgentRunState.Starting or AgentRunState.Queued)
-            {
-                await follower.EndAsync(current.Id, AgentEnding.Cancelled, known ? "Stopped while it waited." : "Stopped before the agent knew of it.");
-            }
-
-            logger.LogInformation("Stopped run {Run} of lambda #{LambdaId}", current.Id, lambda);
+            await StopRunAsync(agent, current);
         }
 
         return await StateAsync(lambda, caller);
+    }
+
+    public async ValueTask<BuildProgress> StopBuildAsync(string id)
+    {
+        var agent = Require();
+
+        var run = await BuildOfAsync(id);
+
+        if (run.State != AgentRunState.Ended)
+        {
+            await StopRunAsync(agent, run);
+        }
+
+        return await outcome.BuildAsync((await records.GetAsync(run.Id))!);
+    }
+
+    /// <summary>
+    /// Stops a run: one that only waited is over at once, one the agent system
+    /// does not know (any more) as well, one at work once the agent system says
+    /// it is - and one the agent cannot stop is refused rather than said to be.
+    /// </summary>
+    private async ValueTask StopRunAsync(IAgentProvider agent, AgentRunEntity current)
+    {
+        if (!CapabilitiesOf(agent).Cancels)
+        {
+            throw new ProviderException(ResponseStatus.Conflict, "The agent of this installation cannot be stopped. The run ends by itself.");
+        }
+
+        var known = await agent.CancelAsync(new AgentRunHandle(current.Id, current.Reference));
+
+        // one that only waited is off the agent system's queue at once, and
+        // one it has no run of any more is over as far as anybody here is
+        // concerned; one at work ends once the agent system says it did
+        if (!known || current.State is AgentRunState.Starting or AgentRunState.Queued)
+        {
+            await follower.EndAsync(current.Id, AgentEnding.Cancelled, known ? "Stopped while it waited." : "Stopped before the agent knew of it.");
+        }
+
+        logger.LogInformation("Stopped run {Run}", current.Id);
     }
 
     public async ValueTask<UndoOutcome> UndoAsync(long lambda, string privateKey, string? run, CancellationToken cancellation = default)
@@ -537,7 +573,18 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
     /// <returns>Its place in the agent system's queue</returns>
     private async ValueTask<int> HandOverAsync(IAgentProvider agent, NewRunOf run, AgentAsk ask, AgentRunEntity? previous, AgentLambda? target, IPAddress? caller)
     {
-        await records.CreateAsync(run.Entity);
+        try
+        {
+            await records.CreateAsync(run.Entity);
+        }
+        catch (DbUpdateException)
+        {
+            // another message about the lambda got there first - on another
+            // server, or the same one sent twice
+            allowance.Refund(caller);
+
+            throw new ProviderException(ResponseStatus.Conflict, "A change of this lambda is already under way. Wait for it, or stop it first.");
+        }
 
         AgentAcceptance accepted;
 
@@ -579,6 +626,15 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
                 r.Started ??= accepted.Position > 0 ? null : DateTime.UtcNow;
             }
         });
+
+        // stopped while it was handed over: the agent system took it all the
+        // same, and is told now
+        if (taken?.State == AgentRunState.Ended)
+        {
+            await agent.CancelAsync(new AgentRunHandle(run.Entity.Id, accepted.Reference));
+
+            return accepted.Position;
+        }
 
         follower.Follow(taken ?? run.Entity);
 

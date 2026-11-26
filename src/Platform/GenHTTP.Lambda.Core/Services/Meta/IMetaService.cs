@@ -213,6 +213,13 @@ public interface IMetaService
     ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
+    /// The id of a lambda whose owner reads what is theirs - its messages to the
+    /// agent, say - which stays readable while it is blocked.
+    /// </summary>
+    /// <remarks>Refuses a demo, whose editor key is announced.</remarks>
+    ValueTask<long> RequireOwnAsync(string privateKey, CancellationToken cancellation = default);
+
+    /// <summary>
     /// One page of the lambdas on the installation, narrowed and ordered as asked.
     /// </summary>
     ValueTask<LambdaPage> ListAsync(LambdaQuery query, int skip = 0, int take = int.MaxValue, CancellationToken cancellation = default);

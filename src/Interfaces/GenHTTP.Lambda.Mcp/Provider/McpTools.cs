@@ -372,13 +372,31 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// what the call changes, so what the run did is recorded there whichever
     /// door it came through. A call of nobody known records nothing.
     /// </remarks>
+    /// <summary>
+    /// What only the owner does, which a run of the installation's agent is
+    /// refused whatever agent it is - the platform holds the rule, not the
+    /// agent's list of tools.
+    /// </summary>
+    private static readonly HashSet<string> OwnersOnly = ["set_secret", "delete_secret"];
+
     private async ValueTask<object> RecordingAsync(IRequest request, string tool, AgentStep step, Func<VersionAuthor?, ValueTask<object>> work)
     {
         var author = AgentCallerConcern.Of(request);
 
+        if (author != null && OwnersOnly.Contains(tool))
+        {
+            return Failed(new
+            {
+                ok = false,
+                error = "The installation's agent does not enter or delete keys and passwords. Name the ones the app needs; the owner enters them in the editor (Keys and passwords)."
+            });
+        }
+
         var number = await journal.BeginAsync(author, step);
 
         object answer;
+
+        using var stepping = journal.Step();
 
         try
         {
@@ -390,7 +408,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             throw;
         }
 
-        await journal.CompleteAsync(author, number, RunSteps.Finish(tool, step, answer));
+        // read off the answer only for a run's call: every other client's goes on as it is
+        if (author != null)
+        {
+            await journal.CompleteAsync(author, number, RunSteps.Finish(tool, step, answer));
+        }
 
         return answer;
     }

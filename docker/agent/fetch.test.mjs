@@ -169,3 +169,26 @@ test('the server speaks MCP and refuses what is not a named public site', async 
     server.close();
   }
 });
+
+test('a page made to take long is read in time, and nothing waits for it meanwhile', async () => {
+  const { readable, readableApart } = forTests;
+
+  // what took minutes with the patterns alone
+  for (const hostile of ['<!--'.repeat(200_000), '<a x=1 '.repeat(100_000), '<script>'.repeat(100_000)]) {
+    const started = Date.now();
+    readable(hostile, 'https://example.org/');
+    assert.ok(Date.now() - started < 2000, `read in ${Date.now() - started} ms`);
+  }
+
+  // and apart from the thread that serves every build, given up after a while
+  const text = await readableApart('<html><body><h1>Hi</h1><!-- not closed', 'https://example.org/');
+  assert.match(text, /# Hi/);
+});
+
+test('addresses that carry an IPv4 address inside an IPv6 one are not public', () => {
+  const { isPublic } = forTests;
+
+  assert.equal(isPublic('::7f00:1', 6), false);
+  assert.equal(isPublic('::ffff:0:7f00:1', 6), false);
+  assert.equal(isPublic('2606:4700::6810:84e5', 6), true);
+});
