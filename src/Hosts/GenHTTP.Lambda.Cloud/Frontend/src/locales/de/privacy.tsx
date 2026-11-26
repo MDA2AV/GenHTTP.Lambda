@@ -34,15 +34,15 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Was Sie dem Build-Agenten sagen',
     agent: (policy) => (
       <>
-        Was Sie auf der Seite „App bauen“ oder im Bereich „Ändern“ im Editor eines Lambdas eintippen, geht an Anthropic
-        PBC in den USA. Anthropic betreibt Claude, das Modell, das die App schreibt – von der Bauen-Seite zusammen mit
-        den letzten Nachrichten davor und dem, was der Agent geantwortet hat, damit er versteht, was Sie meinen. Um zu
-        antworten oder eine Änderung vorzunehmen, liest der Agent außerdem das Lambda – seinen Code, die Notizen zu
-        seinen Versionen, sein Log, das seine Requests und seine Ausgaben enthält, aber nicht die IP-Adressen seiner
-        Besucher, und, wenn Sie danach fragen, seine Einträge und die Zahlen seiner Besucher. Auch was er dabei liest,
-        wird dorthin geschickt. Nennen Sie eine Website, liest er auch Seiten dieser Website – von diesem Server aus, die
-        Website sieht also unsere Adresse und nicht Ihre –, und sie werden auf dieselbe Weise dorthin geschickt. Was
-        Anthropic damit macht, steht in{' '}
+        Was Sie auf der Seite „App bauen“ oder im Bereich „Ändern“ im Editor eines Lambdas eintippen, und die Dateien, die
+        Sie dabei mitschicken, gehen an Anthropic PBC in den USA. Anthropic betreibt Claude, das Modell, das die App
+        schreibt – zusammen mit den letzten Nachrichten zur selben App und dem, was der Agent geantwortet hat, damit er
+        versteht, was Sie meinen. Um zu antworten oder eine Änderung vorzunehmen, liest der Agent außerdem das Lambda –
+        seinen Code, die Notizen zu seinen Versionen, sein Log, das seine Requests und seine Ausgaben enthält, aber nicht
+        die IP-Adressen seiner Besucher, und, wenn Sie danach fragen, seine Einträge und die Zahlen seiner Besucher. Auch
+        was er dabei liest, wird dorthin geschickt. Nennen Sie eine Website, liest er auch Seiten dieser Website – von
+        diesem Server aus, die Website sieht also unsere Adresse und nicht Ihre –, und sie werden auf dieselbe Weise
+        dorthin geschickt. Was Anthropic damit macht, steht in{' '}
         {policy('der Datenschutzerklärung von Anthropic')}. Die USA schützen personenbezogene Daten nicht so wie die EU.
         Ihre Anfrage wird dorthin geschickt, weil das nötig ist, um zu bauen oder zu ändern, was Sie möchten
         (Art. 6 Abs. 1 lit. b und Art. 49 Abs. 1 lit. b DSGVO). Schreiben Sie also nichts hinein, was Sie nicht
@@ -50,7 +50,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die Anfrage selbst wird vollständig in das Log des Servers geschrieben, ihre ersten paar hundert Zeichen zusätzlich in das Log des Build-Dienstes, das auch die Namen der Websites vermerkt, von denen der Agent Seiten gelesen hat; beide haben ebenfalls eine feste Größe. Die Nachrichten davor, die die Bauen-Seite mitschickt, werden nicht aufgezeichnet. Die Bauen-Seite bewahrt die Editor-Links Ihrer Apps und das Gespräch zu jeder im eigenen Speicher Ihres Browsers auf und sonst nirgends: Wir behalten keine Kopie, und wer denselben Browser nutzt, kann sie öffnen. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
+      'Der Server speichert jede Anfrage, die Sie dem Agenten schicken – mit den Dateien, die Sie mitgeschickt haben, den Antworten des Agenten, den Schritten, die er unternommen hat, und den Dateien, die er Ihnen übergeben hat –, bis 30 Tage nach ihrem Ende, damit die Bauen-Seite und der Editor sie erneut anzeigen können und der Agent die früheren Nachrichten zur selben App lesen kann. Eine Datei, die Sie hochladen, aber nie absenden, wird nach einer Stunde gelöscht, und alles wird mit der App gelöscht, wenn die App gelöscht wird. Administratoren können die Anfragen lesen und die Dateien öffnen, so wie sie das Log des Servers lesen können. Die Anfrage wird außerdem vollständig in das Log des Servers geschrieben, ihre ersten paar hundert Zeichen zusätzlich in das Log des Build-Dienstes, das auch die Namen der Websites vermerkt, von denen der Agent Seiten gelesen hat; beide haben eine feste Größe. Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die Bauen-Seite bewahrt außerdem die Editor-Links Ihrer Apps und das Gespräch zu jeder im eigenen Speicher Ihres Browsers auf, wo jeder, der denselben Browser nutzt, sie öffnen kann. Die Rechtsgrundlage ist dieselbe wie für das Senden. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
 
     lambdasTitle: 'Was ein Lambda tut, entscheidet sein Besitzer',
     lambdas:

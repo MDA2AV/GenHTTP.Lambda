@@ -37,9 +37,9 @@ export const privacy = {
     agentTitle: 'What you ask the build agent',
     agent: (policy: (text: string) => ReactNode) => (
       <>
-        What you type on the build page, or into the Change section of a lambda's editor, is sent to Anthropic PBC in the
-        United States, which runs Claude, the model that writes the app - from the build page together with the last few
-        messages before it and what the agent answered, so that it understands what you mean. To answer
+        What you type on the build page, or into the Change section of a lambda's editor, and the files you send with it,
+        are sent to Anthropic PBC in the United States, which runs Claude, the model that writes the app - together with
+        the last few messages about the same app and what the agent answered, so that it understands what you mean. To answer
         or make a change, the agent also reads the lambda - its code, the notes on its versions, its log, which holds its
         requests and what it printed but not its visitors' IP addresses, and where you ask about them its records and the
         counts of its visitors - and what it reads is sent there too. Where you name a website, it reads pages of that
@@ -51,7 +51,7 @@ export const privacy = {
       </>
     ),
     agentKept:
-      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log, which also notes the names of the websites the agent read pages of; both have a fixed size as well. The messages before it, which the build page sends along, are not written down. The build page keeps your apps' editor links and the conversation about each in your browser's own storage, and nowhere else: we do not keep a copy, and whoever uses the same browser can open them. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
+      "The server keeps each request you send the agent - with the files you sent along, what the agent answered, the steps it took and the files it handed you - for 30 days after it ended, so that the build page and the editor can show it again and the agent can read the earlier messages about the same app; a file you upload but never send is deleted after an hour, and everything goes with the app when the app is deleted. Administrators can read the requests and open the files, as they can read the server's log. The request is also written in full into the server's log, and its first few hundred characters into the build service's log, which also notes the names of the websites the agent read pages of; both have a fixed size. The agent saves your request, often in its own words, as the note on the version it writes. The build page also keeps your apps' editor links and the conversation about each in your browser's own storage, where whoever uses the same browser can open them. The legal basis is the same as for sending it. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
 
     lambdasTitle: 'What a lambda does is up to its owner',
     lambdas:
