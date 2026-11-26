@@ -1,5 +1,7 @@
 using GenHTTP.Modules.Git;
 
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Git;
 
 /// <summary>
@@ -21,7 +23,7 @@ public interface IGitService
     /// or nothing when no lambda has the key.
     /// </summary>
     /// <param name="origin">The address it was reached at, for the addresses a push answers with</param>
-    ValueTask<IGitRepository?> OpenAsync(string privateKey, string origin, CancellationToken cancellation = default);
+    ValueTask<IGitRepository?> OpenAsync(string privateKey, string origin, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// The published source at a public key, to read, or nothing where none

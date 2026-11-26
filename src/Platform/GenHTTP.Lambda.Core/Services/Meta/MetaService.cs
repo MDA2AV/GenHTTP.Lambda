@@ -3,7 +3,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Blocking;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
@@ -93,6 +93,8 @@ public sealed class MetaService : IMetaService
 
     private EditorAddresses Editors { get; }
 
+    private IAgentJournal Journal { get; }
+
     private ILogger Logger { get; }
 
     /// <summary>
@@ -120,8 +122,10 @@ public sealed class MetaService : IMetaService
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
         LambdaOptions options, ILimitsService limits, ILogBook book, IDatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
         LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, LambdaListing listing, VersionFactsCache facts, EventReader events,
-        EditorAddresses editors, DatabaseChanges changes, IAddressBlocks blocks, ILogger<MetaService> logger)
+        EditorAddresses editors, DatabaseChanges changes, IAddressBlocks blocks, IAgentJournal journal, ILogger<MetaService> logger)
     {
+        Journal = journal;
+
         ByKey = new ResolutionCache<string>(changes);
         ById = new ResolutionCache<long>(changes);
 
@@ -164,7 +168,7 @@ public sealed class MetaService : IMetaService
     public ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default)
         => Hosting.ChangeTierAsync(privateKey, tier, cancellation);
 
-    public async ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default)
+    public async ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
@@ -183,6 +187,8 @@ public sealed class MetaService : IMetaService
 
             Logger.LogInformation("Changed view of lambda {Lambda} #{LambdaId} from {Previous} to {View}",
                                   lambda.PublicKey, lambda.Id, previous, view);
+
+            await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Viewed, lambda.Id, Name: EditorViewNames.Name(previous)), CancellationToken.None);
         }
 
         return await Describer.DescribeAsync(database, lambda, CancellationToken.None);
@@ -192,7 +198,8 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, CancellationToken cancellation = default)
+    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full, VersionAuthor? author = null,
+                                                   CancellationToken cancellation = default)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
 
@@ -269,6 +276,8 @@ public sealed class MetaService : IMetaService
 
             Logger.LogInformation("Created lambda {Lambda} #{LambdaId}", entity.PublicKey, entity.Id);
 
+            await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Created, entity.Id), CancellationToken.None);
+
             return await Describer.DescribeAsync(database, entity, CancellationToken.None);
         }
 
@@ -327,6 +336,16 @@ public sealed class MetaService : IMetaService
 
     #region Reading
 
+    /// <summary>
+    /// The options the agent wrote a version on, where it wrote it: those
+    /// stored with it, or the model and effort stored before.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string>? AuthorOptions(VersionWriter? writer, string? stored, AgentModel? model, AgentEffort? effort)
+        => writer == null ? null : StoredOptions.Of(stored, model, effort) is { Count: > 0 } options ? options : null;
+
+    private static IReadOnlyDictionary<string, string>? Author(DeploymentEntity deployment)
+        => AuthorOptions(deployment.Writer, deployment.AgentOptions, deployment.AgentModel, deployment.AgentEffort);
+
     public async ValueTask<LambdaInfo?> GetAsync(string privateKey, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
@@ -380,12 +399,19 @@ public sealed class MetaService : IMetaService
 
         var lambda = await LambdaGuard.RequireAsync(database, privateKey, cancellation);
 
-        return await database.Deployments.AsNoTracking()
-                             .Where(d => d.LambdaId == lambda.Id)
-                             .OrderByDescending(d => d.Version)
-                             .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, VersionOriginNames.Name(d.Origin), VersionWriterNames.Name(d.Writer),
-                                                                AgentCatalog.NameOf(d.AgentModel), AgentCatalog.NameOf(d.AgentEffort)))
-                             .ToListAsync(cancellation);
+        var rows = await database.Deployments.AsNoTracking()
+                                 .Where(d => d.LambdaId == lambda.Id)
+                                 .OrderByDescending(d => d.Version)
+                                 .Select(d => new { d.Version, d.Created, d.Specification, d.Change, d.Origin, d.Writer, d.AgentOptions, d.AgentModel, d.AgentEffort })
+                                 .ToListAsync(cancellation);
+
+        return [.. rows.Select(d =>
+        {
+            var options = AuthorOptions(d.Writer, d.AgentOptions, d.AgentModel, d.AgentEffort);
+
+            return new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, VersionOriginNames.Name(d.Origin), VersionWriterNames.Name(d.Writer),
+                                         options?.GetValueOrDefault(AgentModelNames.ModelOption), options?.GetValueOrDefault(AgentModelNames.EffortOption), options);
+        })];
     }
 
     public async ValueTask<LambdaVersionContent> GetVersionAsync(string privateKey, int version, CancellationToken cancellation = default)
@@ -402,7 +428,8 @@ public sealed class MetaService : IMetaService
                  ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
         return new LambdaVersionContent(deployment.Version, deployment.Created, files, deployment.Specification, deployment.Change, VersionOriginNames.Name(deployment.Origin),
-                                        VersionWriterNames.Name(deployment.Writer), AgentCatalog.NameOf(deployment.AgentModel), AgentCatalog.NameOf(deployment.AgentEffort));
+                                        VersionWriterNames.Name(deployment.Writer), Author(deployment)?.GetValueOrDefault(AgentModelNames.ModelOption),
+                                        Author(deployment)?.GetValueOrDefault(AgentModelNames.EffortOption), Author(deployment));
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
@@ -508,6 +535,12 @@ public sealed class MetaService : IMetaService
 
         Logger.LogInformation("Saved lambda #{LambdaId} version {Version}", locked.Id, version.Version);
 
+        // a merge records itself, for whoever merged - not for whoever wrote the feature
+        if (!note.Merged)
+        {
+            await Journal.RecordAsync(note.Author, new AgentEffect(AgentEffectKind.Saved, locked.Id, version.Version), CancellationToken.None);
+        }
+
         return version;
     }
 
@@ -540,7 +573,8 @@ public sealed class MetaService : IMetaService
     /// build it finds with the version online and builds again where they
     /// differ.
     /// </remarks>
-    public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, CancellationToken cancellation = default)
+    public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, VersionOrigin? origin = null, VersionAuthor? author = null,
+                                                         CancellationToken cancellation = default)
     {
         long id;
 
@@ -584,7 +618,7 @@ public sealed class MetaService : IMetaService
             outcome = await Deployments.ActivateAsync(id, target, settings, cancellation);
         }
 
-        return await ActivatedAsync(privateKey, target, origin, outcome);
+        return await ActivatedAsync(privateKey, target, origin, outcome, author);
     }
 
     /// <summary>
@@ -594,7 +628,7 @@ public sealed class MetaService : IMetaService
     /// Without a cancellation token: what was built is written down once it
     /// was, or the version online and what serves it would differ.
     /// </remarks>
-    private async ValueTask<DeploymentResult> ActivatedAsync(string privateKey, int target, VersionOrigin? origin, CompilationOutcome outcome)
+    private async ValueTask<DeploymentResult> ActivatedAsync(string privateKey, int target, VersionOrigin? origin, CompilationOutcome outcome, VersionAuthor? author)
     {
         await using var database = await Databases.CreateDbContextAsync();
 
@@ -625,6 +659,8 @@ public sealed class MetaService : IMetaService
 
         var now = DateTime.UtcNow;
 
+        var before = lambda.ActiveVersion;
+
         lambda.ActiveVersion = target;
         lambda.Deployed = now;
         lambda.Modified = now;
@@ -636,6 +672,8 @@ public sealed class MetaService : IMetaService
         await database.SaveChangesAsync();
 
         await History.PruneActivationsAsync(database, lambda.Id);
+
+        await Journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Deployed, lambda.Id, target, before), CancellationToken.None);
 
         return new DeploymentResult(true, await Describer.DescribeAsync(database, lambda), outcome.Diagnostics);
     }

@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
@@ -129,7 +130,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
                                                                            [Summary(ApiDocumentation.Specification)] string? specification,
                                                                            [Summary(ApiDocumentation.Change)] string? change,
                                                                            [Summary(ApiDocumentation.Layout)] string? layout,
-                                                                           Stream body)
+                                                                           Stream body, IRequest call)
     {
         var laid = LayoutOf(layout);
 
@@ -139,7 +140,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         using var staged = await UnpackAsync(body, lambda.Policy.MaxVersionBytes, laid, await meta.LatestFilesAsync(privateKey), options.StagingDirectory);
 
-        return await SaveAsync(privateKey, staged.Files, deploy, specification, change);
+        return await SaveAsync(privateKey, staged.Files, deploy, specification, change, AgentCallerConcern.Of(call));
     }
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/changes")]
@@ -155,11 +156,11 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<SavedVersionResponse>> Change([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionChangeRequest request)
+                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionChangeRequest request, IRequest call)
     {
         var files = LambdaChanges.Apply(await meta.LatestFilesAsync(privateKey), request.Files, request.Remove, request.Edits);
 
-        return await SaveAsync(privateKey, files, deploy, request.Specification, request.Change);
+        return await SaveAsync(privateKey, files, deploy, request.Specification, request.Change, AgentCallerConcern.Of(call));
     }
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions")]
@@ -178,8 +179,8 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public async ValueTask<Result<SavedVersionResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionRequest request)
-        => await SaveAsync(privateKey, FilesOf(request.Files), deploy, request.Specification, request.Change);
+                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionRequest request, IRequest call)
+        => await SaveAsync(privateKey, FilesOf(request.Files), deploy, request.Specification, request.Change, AgentCallerConcern.Of(call));
 
     /// <summary>
     /// Stores the files as a new version and deploys it if asked to.
@@ -189,9 +190,9 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// it went online is in the deployment it carries.
     /// </remarks>
     private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<VersionFile> files, bool? deploy,
-                                                                     string? specification, string? change)
+                                                                     string? specification, string? change, VersionAuthor? author)
     {
-        var note = new VersionNote(specification, change, VersionOrigin.Api);
+        var note = new VersionNote(specification, change, VersionOrigin.Api, author);
 
         var version = await meta.SaveAsync(privateKey, files, note);
 
@@ -203,7 +204,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         if (deploy == true)
         {
-            var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigin.Api);
+            var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigin.Api, author);
 
             logger.Deployed(result, publicKey, version.Version);
 
@@ -237,7 +238,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
             : LambdaArchive.UnpackAsync(body, maxBytes, basis, staging);
 
     internal static VersionResponse Describe(LambdaVersionInfo version)
-        => new(version.Version, version.Created, version.Specification, version.Change, version.Origin, version.Writer, version.Model, version.Effort);
+        => new(version.Version, version.Created, version.Specification, version.Change, version.Origin, version.Writer, version.Model, version.Effort, version.Options);
 
     /// <summary>
     /// A version with the files of a folder, or all of them when none is
@@ -245,7 +246,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// </summary>
     internal static async ValueTask<VersionContentResponse> DescribeAsync(LambdaVersionContent content, string? folder = null)
         => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, await SentAsync(Below(content.Files, folder)),
-               content.Writer, content.Model, content.Effort);
+               content.Writer, content.Model, content.Effort, content.Options);
 
     /// <summary>
     /// The files below a folder, or all of them when none is named - before

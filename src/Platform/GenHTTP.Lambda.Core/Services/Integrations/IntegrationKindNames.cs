@@ -18,6 +18,7 @@ public static class IntegrationKindNames
         IntegrationKind.Database => "database",
         IntegrationKind.Files => "files",
         IntegrationKind.Secrets => "secrets",
+        IntegrationKind.Agent => "agent",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "There is no such kind of integration.")
     };
 

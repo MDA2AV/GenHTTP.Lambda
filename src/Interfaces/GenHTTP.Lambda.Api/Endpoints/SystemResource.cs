@@ -6,7 +6,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 [Tag(ApiDocumentation.Platform)]
 [Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
 [Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
-public sealed class SystemResource(ILimitsService limits, IBuildService builds, ILambdaAddresses addresses, IBrandingService branding,
+public sealed class SystemResource(ILimitsService limits, IAgentService agents, ILambdaAddresses addresses, IBrandingService branding,
                                     ISettingsService settings, IDatabaseProvider database, LambdaOptions options)
 {
 
@@ -47,7 +47,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             (int)current.RemovedAfter.TotalDays,
             ModuleCatalog.ImportsFor(database.Binding),
             CompletionCatalog.Items,
-            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.Offer()),
+            new BuildAvailability(agents.BuildsOffered(), agents.PerDay, agents.Offer()),
             addresses.Template,
             new OperatorResponse(options.Contact, options.AbuseContact, options.LegalPages, options.StartPage),
             TierDescription.Of(limits, current.DefaultTier),

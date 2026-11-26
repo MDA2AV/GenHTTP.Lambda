@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Analytics;
 
 /// <summary>
@@ -30,7 +32,7 @@ public interface IAnalyticsService
     /// Starts counting the visits of a lambda. Nothing happens where they are
     /// counted already.
     /// </summary>
-    ValueTask<LambdaAnalytics> EnableAsync(string privateKey, CancellationToken cancellation = default);
+    ValueTask<LambdaAnalytics> EnableAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Stops counting the visits of a lambda and deletes what was counted.

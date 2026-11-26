@@ -2,6 +2,7 @@ using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
 
 using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.ErrorHandling;
@@ -34,6 +35,7 @@ public static class ApiLayout
                             .Add("showcases", Resource<ShowcaseResource>(services, mode))
                             .Add("sources", Resource<SourceResource>(services, mode))
                             .Add("builds", Resource<BuildResource>(services, mode))
+                            .Add("attachments", Resource<AttachmentResource>(services, mode))
                             .Add("system", Resource<SystemResource>(services, mode))
                             .Add("shared", Resource<SharedFileResource>(services, mode))
                             .Add(Resource<LambdaResource>(services, mode))
@@ -90,6 +92,9 @@ public static class ApiLayout
                    .Add("telemetry", Resource<TelemetryResource>(services, mode).Add(AdminAuthentication.Create(options)))
                    .Add("logs", Resource<LogResource>(services, mode).Add(AdminAuthentication.Create(options)));
         }
+
+        // a call of a run of the agent is the run's, whichever route it takes
+        version.Add(ServiceConcern.Of<AgentCallerConcern>(services));
 
         return Layout.Create().Add("v1", version);
     }

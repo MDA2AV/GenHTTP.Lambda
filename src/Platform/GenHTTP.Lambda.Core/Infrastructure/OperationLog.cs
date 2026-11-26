@@ -1,6 +1,6 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Branding;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Guide;
 using GenHTTP.Lambda.Services.Meta;
@@ -167,12 +167,12 @@ public static class OperationLog
     }
 
     public static void AgentSettingsChanged(this ILogger logger, AgentSettings saved)
-        => logger.LogInformation("Updated agent settings builds {Builds} changes {Changes} models {Models} model {Model} efforts {Efforts} effort {Effort} by operator",
+        => logger.LogInformation("Updated agent settings builds {Builds} changes {Changes} access {Access} defaults {Defaults} limits {Limits} guarded {Guarded} by operator",
                                  saved.Builds, saved.Changes,
-                                 string.Join(',', saved.Models.Select(m => $"{AgentCatalog.NameOf(m.Model)}:{AgentCatalog.NameOf(m.Access)}")),
-                                 AgentCatalog.NameOf(saved.DefaultModel),
-                                 string.Join(',', saved.Efforts.Select(AgentCatalog.NameOf)),
-                                 AgentCatalog.NameOf(saved.DefaultEffort));
+                                 string.Join(',', saved.Access.SelectMany(o => o.Value.Select(v => $"{o.Key}.{v.Key}:{OptionAccessNames.Name(v.Value)}"))),
+                                 string.Join(',', saved.Defaults.Select(d => $"{d.Key}:{d.Value}")),
+                                 $"{saved.Limits.Seconds?.ToString() ?? "agent"}s/{saved.Limits.Steps?.ToString() ?? "agent"}",
+                                 $"{saved.GuardedLimits.Seconds?.ToString() ?? "agent"}s/{saved.GuardedLimits.Steps?.ToString() ?? "agent"}");
 
     public static void GuideSectionChanged(this ILogger logger, GuideSection section)
         => logger.LogInformation("Changed guide section '{Title}' bytes {Bytes} by operator", section.Title, section.Bytes);

@@ -4,6 +4,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -98,7 +99,7 @@ public sealed class GitRoutes : IHandler
         var origin = RequestOrigin.Of(request);
 
         var repository = route.Owner
-            ? await _service.OpenAsync(route.Key, origin)
+            ? await _service.OpenAsync(route.Key, origin, AgentCallerConcern.Of(request))
             : await _service.ReadAsync(route.Key, origin);
 
         if (repository == null)

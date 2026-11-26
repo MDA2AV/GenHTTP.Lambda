@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -67,9 +67,10 @@ public sealed class AgentTests
         Assert.AreEqual("de", sent["language"]!.GetValue<string>());
         Assert.AreEqual(1, sent["before"]!.GetValue<int>(), "what was online, to offer putting it back");
 
-        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
-
-        Assert.AreEqual(id!.Value.ToString(), sent["lambda"]!.GetValue<string>(), "filed under the lambda, to be found by it");
+        // filed under a tag of the lambda, which a runner from before needs to
+        // run one change of it at a time - and under the platform's own id
+        StringAssert.Matches(sent["lambda"]!.GetValue<string>(), new System.Text.RegularExpressions.Regex("^[0-9]{1,18}$"));
+        Assert.AreEqual(state.Job.Id, sent["run"]!.GetValue<string>());
 
         Assert.IsTrue(agent.Tokens.All(t => t == "a secret"), "every call carries the shared secret");
 
@@ -141,9 +142,14 @@ public sealed class AgentTests
 
         Assert.IsNull((await StateAsync(fixture, other.PrivateKey)).Job, "another lambda has a change of its own or none");
 
-        agent.Finish(id, new JsonObject { ["ok"] = true, ["version"] = 2, ["online"] = 2, ["deployed"] = true, ["summary"] = "Dark now." });
+        // what the agent does, it does through the platform's doors - which is
+        // where what the page says came of it is read from
+        await AgentCalls.ToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = changed.PrivateKey, ["files"] = AgentCalls.Code("dark"), ["deploy"] = true },
+                                   agent.Received.Single()["ticket"]!.GetValue<string>());
 
-        var ended = await StateAsync(fixture, changed.PrivateKey);
+        agent.Finish(id, new JsonObject { ["ok"] = true, ["summary"] = "Dark now." });
+
+        var ended = await AgentCalls.EndedAsync(fixture, changed.PrivateKey);
 
         Assert.AreEqual("done", ended.Job!.State);
         Assert.AreEqual(2, ended.Job.Result!.Online);
@@ -246,6 +252,8 @@ public sealed class AgentTests
         var id = (await first.GetContentAsync<AgentState>()).Job!.Id;
 
         agent.Finish(id, new JsonObject { ["ok"] = true, ["version"] = 2 });
+
+        await AgentCalls.EndedAsync(fixture, lambda.PrivateKey);
 
         using var second = await StartAsync(fixture, lambda.PrivateKey, "Add a leaderboard");
 
@@ -387,9 +395,7 @@ public sealed class AgentTests
             ["error"] = "That is not an application, so the builder does not do it."
         }, "failed");
 
-        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
-
-        var progress = await read.GetContentAsync<BuildProgress>();
+        var progress = await AgentCalls.BuiltAsync(fixture, id);
 
         Assert.AreEqual("failed", progress.State);
         Assert.IsTrue(progress.Result!.Declined, "the page can tell a refusal from a build that went wrong");
@@ -406,13 +412,17 @@ public sealed class AgentTests
 
         var id = (await build.GetContentAsync<BuildStarted>()).Id;
 
-        agent.Step(id, new JsonObject { ["at"] = 2, ["kind"] = "create", ["done"] = true });
-        agent.Step(id, new JsonObject { ["at"] = 5, ["kind"] = "data", ["data"] = "database", ["done"] = true });
-        agent.Step(id, new JsonObject { ["at"] = 9, ["kind"] = "write", ["files"] = new JsonArray("lambda.cs"), ["whole"] = true, ["online"] = true, ["done"] = true });
+        // what the agent does through the platform's doors, the platform
+        // records itself, whichever agent it is
+        var ticket = agent.Received.Single()["ticket"]!.GetValue<string>();
 
-        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
+        var created = await AgentCalls.ToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "guest-book" }, ticket);
+        var key = created["privateKey"]!.GetValue<string>();
 
-        var progress = await read.GetContentAsync<BuildProgress>();
+        await AgentCalls.ToolAsync(fixture, "enable_data", new JsonObject { ["privateKey"] = key, ["kind"] = "database" }, ticket);
+        await AgentCalls.ToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = key, ["files"] = AgentCalls.Code(), ["deploy"] = true }, ticket);
+
+        var progress = await AgentCalls.UntilAsync(() => AgentCalls.BuildAsync(fixture, id), b => b.Steps.Count(s => s.Done == true) == 3);
 
         // facts rather than English sentences, so /build says them in the
         // language of whoever asked, and in their words rather than the tools'
@@ -434,9 +444,7 @@ public sealed class AgentTests
 
         agent.Step(id, new JsonObject { ["at"] = 4, ["kind"] = "web", ["site"] = "myoldhomepage.com", ["done"] = true });
 
-        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
-
-        var step = (await read.GetContentAsync<BuildProgress>()).Steps.Single();
+        var step = (await AgentCalls.UntilAsync(() => AgentCalls.BuildAsync(fixture, id), b => b.Steps.Any(s => s.Done == true))).Steps.Single();
 
         // the site, which is what the person named, so /build can say "Looking
         // at myoldhomepage.com" - never the address, which may hold anything
@@ -458,14 +466,13 @@ public sealed class AgentTests
         agent.Step(id, new JsonObject { ["at"] = 3, ["kind"] = "say", ["text"] = "Ich lege das Gästebuch an." });
         agent.Clock(id, seconds: 42, limit: 600);
 
-        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
+        var progress = await AgentCalls.UntilAsync(() => AgentCalls.BuildAsync(fixture, id), b => b.Steps.Count > 0);
 
-        var progress = await read.GetContentAsync<BuildProgress>();
-
-        // the page counts on from these, and fills the bar against the limit,
-        // the way the control center does for a change
-        Assert.AreEqual(42, progress.Seconds);
-        Assert.AreEqual(600, progress.Limit);
+        // the page counts on from these - counted by the platform from when
+        // the agent says it began - and fills the bar against the limit it
+        // gave the run, the way the control center does for a change
+        Assert.IsTrue(progress.Seconds is >= 0 and <= 60, $"{progress.Seconds} seconds");
+        Assert.AreEqual(600, progress.Limit, "what a runner from before holds a run to");
         Assert.AreEqual("Ich lege das Gästebuch an.", progress.Steps.Single().Text, "and what the agent said, as it said it");
     }
 
@@ -490,7 +497,7 @@ public sealed class AgentTests
             ["summary"] = "Das ist keine Änderung an Ihrer App, deshalb macht der Agent das nicht."
         });
 
-        var result = (await StateAsync(fixture, lambda.PrivateKey)).Job!.Result!;
+        var result = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!.Result!;
 
         Assert.IsTrue(result.Declined);
         Assert.IsTrue(result.Unchanged, "nothing was touched");
@@ -584,17 +591,17 @@ public sealed class AgentTests
 
         var id = (await started.GetContentAsync<AgentState>()).Job!.Id;
 
-        agent.Step(id, new JsonObject { ["at"] = 3, ["kind"] = "analytics", ["done"] = true });
+        // the agent switches analytics on through the tool, as it would
+        await AgentCalls.ToolAsync(fixture, "analytics", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["enable"] = true },
+                                   agent.Received.Single()["ticket"]!.GetValue<string>());
 
         agent.Finish(id, new JsonObject
         {
             ["ok"] = true,
-            ["answered"] = true,
-            ["settings"] = new JsonArray("analytics"),
             ["summary"] = "Analytics were off, so I switched them on: from now on every visit is counted."
         });
 
-        var job = (await StateAsync(fixture, lambda.PrivateKey)).Job!;
+        var job = (await AgentCalls.EndedAsync(fixture, lambda.PrivateKey)).Job!;
 
         Assert.IsTrue(job.Result!.Answered, "the page shows an answer, not a change");
         Assert.AreEqual("analytics", job.Result.Settings!.Single(), "and the settings it changed, read off the tools");
@@ -871,10 +878,13 @@ public sealed class AgentTests
         var runner = settings.Runner!;
 
         Assert.IsTrue(runner.Reachable);
-        Assert.AreEqual("api-key", runner.SignsInWith);
-        Assert.AreEqual("claude-fable-5-2", runner.Models!["fable"]);
-        Assert.AreEqual("2.1.329", runner.Cli);
-        Assert.IsTrue(runner.ReadsPages, "whether a build may read the sites its request names");
+
+        string? Fact(string label) => runner.Facts?.FirstOrDefault(f => f.Label == label)?.Value;
+
+        Assert.AreEqual("an API key", Fact("Signs in with"));
+        Assert.AreEqual("claude-fable-5-2", Fact("Model fable"));
+        Assert.AreEqual("2.1.329", Fact("Claude Code"));
+        Assert.AreEqual("of the sites a request names", Fact("Reads pages"), "whether a build may read the sites its request names");
 
         var raw = await response.Content.ReadAsStringAsync();
 
@@ -891,7 +901,7 @@ public sealed class AgentTests
         var alone = (await (await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent")).GetContentAsync<AgentSettingsResponse>()).Runner!;
 
         Assert.IsNull(alone.Concurrency, "a runner from before says nothing of it");
-        Assert.IsNull(alone.Installations, "a runner of this installation alone says nothing of others");
+        Assert.IsNull(alone.Facts?.FirstOrDefault(f => f.Label == "Installations"), "a runner of this installation alone says nothing of others");
 
         agent.Concurrency = 4;
         agent.Installations = 3;
@@ -899,7 +909,7 @@ public sealed class AgentTests
         var shared = (await (await fixture.SendAsOperatorAsync(HttpMethod.Get, "/api/v1/admin/agent")).GetContentAsync<AgentSettingsResponse>()).Runner!;
 
         Assert.AreEqual(4, shared.Concurrency);
-        Assert.AreEqual(3, shared.Installations);
+        Assert.AreEqual("3", shared.Facts?.Single(f => f.Label == "Installations").Value);
     }
 
     [TestMethod]
@@ -938,9 +948,12 @@ public sealed class AgentTests
         await using (var database = await fixture.Platform.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>().CreateDbContextAsync())
         {
             Assert.AreEqual("true", (await database.Settings.FindAsync("build-box"))!.Value, "and kept in the same row");
-            Assert.AreEqual("password", (await database.Settings.FindAsync("agent.model.fable"))!.Value);
-            Assert.AreEqual("high", (await database.Settings.FindAsync("agent.default-effort"))!.Value);
         }
+
+        var settings = await on.GetContentAsync<AgentSettingsResponse>();
+
+        Assert.AreEqual("password", settings.Models.Single(m => m.Name == "fable").Access, "the rest as it was");
+        Assert.AreEqual("high", settings.Effort);
     }
 
     #region Helpers

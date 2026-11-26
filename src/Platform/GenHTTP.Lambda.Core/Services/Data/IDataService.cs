@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Data;
 
 /// <summary>
@@ -27,7 +29,7 @@ public interface IDataService
     /// <summary>
     /// Switches a kind of data on. Nothing happens if it is on already.
     /// </summary>
-    ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default);
+    ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Switches a kind of data off, deleting everything it held - the copies

@@ -49,6 +49,12 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<SharedFileEntity> SharedFiles => Set<SharedFileEntity>();
 
+    public DbSet<AgentRunEntity> AgentRuns => Set<AgentRunEntity>();
+
+    public DbSet<AgentRunEventEntity> AgentRunEvents => Set<AgentRunEventEntity>();
+
+    public DbSet<AgentFileEntity> AgentFiles => Set<AgentFileEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -123,6 +129,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.Writer).HasColumnName("writer").HasConversion<short>();
         deployments.Property(d => d.AgentModel).HasColumnName("agent_model").HasConversion<short>();
         deployments.Property(d => d.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
+        deployments.Property(d => d.AgentRun).HasColumnName("agent_run");
+        deployments.Property(d => d.AgentOptions).HasColumnName("agent_options");
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
 
@@ -246,6 +254,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         features.Property(f => f.Writer).HasColumnName("writer").HasConversion<short>();
         features.Property(f => f.AgentModel).HasColumnName("agent_model").HasConversion<short>();
         features.Property(f => f.AgentEffort).HasColumnName("agent_effort").HasConversion<short>();
+        features.Property(f => f.AgentRun).HasColumnName("agent_run");
+        features.Property(f => f.AgentOptions).HasColumnName("agent_options");
         features.Property(f => f.Created).HasColumnName("created");
         features.Property(f => f.Modified).HasColumnName("modified");
         features.Property(f => f.Preview).HasColumnName("preview");
@@ -386,6 +396,82 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         tickets.Property(t => t.Model).HasColumnName("model").HasConversion<short>();
         tickets.Property(t => t.Effort).HasColumnName("effort").HasConversion<short>();
         tickets.Property(t => t.Expires).HasColumnName("expires");
+
+        var runs = builder.Entity<AgentRunEntity>();
+
+        runs.ToTable("agent_runs");
+
+        runs.HasKey(r => r.Id);
+
+        runs.Property(r => r.Id).HasColumnName("id");
+        runs.Property(r => r.Kind).HasColumnName("kind").HasConversion<short>();
+        runs.Property(r => r.LambdaId).HasColumnName("lambda_id");
+        runs.Property(r => r.State).HasColumnName("state").HasConversion<short>();
+        runs.Property(r => r.Ending).HasColumnName("ending").HasConversion<short>();
+        runs.Property(r => r.Prompt).HasColumnName("prompt");
+        runs.Property(r => r.Options).HasColumnName("options");
+        runs.Property(r => r.Guarded).HasColumnName("guarded");
+        runs.Property(r => r.Language).HasColumnName("language");
+        runs.Property(r => r.View).HasColumnName("view").HasConversion(view => (short)view, number => StoredValues.View(number));
+        runs.Property(r => r.Deploy).HasColumnName("deploy");
+        runs.Property(r => r.Feature).HasColumnName("feature");
+        runs.Property(r => r.Before).HasColumnName("before_version");
+        runs.Property(r => r.Continues).HasColumnName("continues");
+        runs.Property(r => r.Continuation).HasColumnName("continuation").HasConversion<short>();
+        runs.Property(r => r.Reference).HasColumnName("reference");
+        runs.Property(r => r.Position).HasColumnName("position");
+        runs.Property(r => r.WaitReason).HasColumnName("wait_reason").HasConversion<short>();
+        runs.Property(r => r.WaitUntil).HasColumnName("wait_until");
+        runs.Property(r => r.TimeLimit).HasColumnName("time_limit");
+        runs.Property(r => r.StepLimit).HasColumnName("step_limit");
+        runs.Property(r => r.Message).HasColumnName("message");
+        runs.Property(r => r.Detail).HasColumnName("detail");
+        runs.Property(r => r.InputTokens).HasColumnName("input_tokens");
+        runs.Property(r => r.OutputTokens).HasColumnName("output_tokens");
+        runs.Property(r => r.Cost).HasColumnName("cost");
+        runs.Property(r => r.Currency).HasColumnName("currency");
+        runs.Property(r => r.Followed).HasColumnName("followed");
+        runs.Property(r => r.Ticket).HasColumnName("ticket");
+        runs.Property(r => r.Created).HasColumnName("created");
+        runs.Property(r => r.Started).HasColumnName("started");
+        runs.Property(r => r.Ended).HasColumnName("ended");
+
+        runs.HasIndex(r => r.Ticket).IsUnique();
+        runs.HasIndex(r => new { r.LambdaId, r.Created });
+        runs.HasIndex(r => r.State);
+
+        var happened = builder.Entity<AgentRunEventEntity>();
+
+        happened.ToTable("agent_run_events");
+
+        happened.HasKey(e => new { e.RunId, e.Number });
+
+        happened.Property(e => e.RunId).HasColumnName("run_id");
+        happened.Property(e => e.Number).HasColumnName("number");
+        happened.Property(e => e.At).HasColumnName("at");
+        happened.Property(e => e.Kind).HasColumnName("kind").HasConversion<short>();
+        happened.Property(e => e.Key).HasColumnName("key");
+        happened.Property(e => e.Data).HasColumnName("data");
+
+        var travelled = builder.Entity<AgentFileEntity>();
+
+        travelled.ToTable("agent_files");
+
+        travelled.HasKey(f => f.Id);
+
+        travelled.Property(f => f.Id).HasColumnName("id");
+        travelled.Property(f => f.Direction).HasColumnName("direction").HasConversion<short>();
+        travelled.Property(f => f.RunId).HasColumnName("run_id");
+        travelled.Property(f => f.LambdaId).HasColumnName("lambda_id");
+        travelled.Property(f => f.Name).HasColumnName("name");
+        travelled.Property(f => f.MediaType).HasColumnName("media_type");
+        travelled.Property(f => f.Size).HasColumnName("size");
+        travelled.Property(f => f.Sha256).HasColumnName("sha256");
+        travelled.Property(f => f.Description).HasColumnName("description");
+        travelled.Property(f => f.Created).HasColumnName("created");
+
+        travelled.HasIndex(f => f.RunId);
+        travelled.HasIndex(f => f.LambdaId);
 
         var shared = builder.Entity<SharedFileEntity>();
 

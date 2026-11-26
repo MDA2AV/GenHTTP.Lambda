@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Connectivity;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -60,9 +61,9 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
     [Response(ResponseStatus.BadRequest, "No purpose was given.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public async ValueTask<ConnectivityResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ConnectivityRequest request)
+    public async ValueTask<ConnectivityResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ConnectivityRequest request, IRequest call)
     {
-        var asked = await connectivity.RequestAsync(privateKey, request.Purpose);
+        var asked = await connectivity.RequestAsync(privateKey, request.Purpose, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Requested connectivity for lambda {Lambda} status {Status}", await meta.PublicKeyOfAsync(privateKey), Said(asked));
 
@@ -78,9 +79,9 @@ public sealed class LambdaConnectivityResource(IConnectivityService connectivity
              """)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo + " Or it is blocked.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Where it stands afterwards")]
-    public async ValueTask<ConnectivityResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<ConnectivityResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
     {
-        var withdrawn = await connectivity.WithdrawAsync(privateKey);
+        var withdrawn = await connectivity.WithdrawAsync(privateKey, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Withdrew connectivity of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
 

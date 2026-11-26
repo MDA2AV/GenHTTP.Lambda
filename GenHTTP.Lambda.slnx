@@ -5,6 +5,7 @@
     </Folder>
     <Folder Name="/src/Integrations/">
         <Project Path="src/Integrations/GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+        <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.ClaudeCode/GenHTTP.Lambda.Integrations.ClaudeCode.csproj" />
         <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.Local/GenHTTP.Lambda.Integrations.Local.csproj" />
         <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.Sqlite/GenHTTP.Lambda.Integrations.Sqlite.csproj" />
         <Project Path="src/Integrations/GenHTTP.Lambda.Integrations.PostgreSql/GenHTTP.Lambda.Integrations.PostgreSql.csproj" />

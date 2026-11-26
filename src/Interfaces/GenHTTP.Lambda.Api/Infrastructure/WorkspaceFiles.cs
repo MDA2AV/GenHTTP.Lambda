@@ -1,6 +1,7 @@
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -63,7 +64,7 @@ internal static class WorkspaceFiles
 
         var body = request.GetBody(HeaderAccess.Release)?.AsStream() ?? Stream.Null;
 
-        return await workspace.WriteAsync(lambdaId, path, body, expected, featureId);
+        return await workspace.WriteAsync(lambdaId, path, body, expected, featureId, AgentCallerConcern.Of(request));
     }
 
     public static async ValueTask<WorkspaceListing> CreateFolderAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path)

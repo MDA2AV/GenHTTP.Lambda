@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Analytics;
 
 using GenHTTP.Modules.Reflection;
@@ -54,9 +55,9 @@ public sealed class LambdaAnalyticsResource(IAnalyticsService analytics, ILogger
     [Remarks("Counting starts with the next request. Nothing happens if it is on already.")]
     [Response(ResponseStatus.Forbidden, "The lambda is a demo, whose visitors are not counted.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Analytics, switched on")]
-    public async ValueTask<AnalyticsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask<AnalyticsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
     {
-        var enabled = await analytics.EnableAsync(privateKey);
+        var enabled = await analytics.EnableAsync(privateKey, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Switched on analytics of lambda {Lambda}", enabled.PublicKey);
 

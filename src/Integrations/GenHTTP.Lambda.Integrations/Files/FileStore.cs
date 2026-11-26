@@ -24,6 +24,12 @@ public enum FileStore
     /// The files whoever runs the installation shares across it, by what they
     /// hold.
     /// </summary>
-    Shared
+    Shared,
+
+    /// <summary>
+    /// What travelled with a message to the installation's agent: the files
+    /// a person attached, and those the agent handed back - by their ids.
+    /// </summary>
+    AgentFiles
 
 }

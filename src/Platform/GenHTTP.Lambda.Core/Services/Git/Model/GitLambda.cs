@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Meta.Model;
 
 namespace GenHTTP.Lambda.Services.Git;
 
@@ -12,4 +13,6 @@ namespace GenHTTP.Lambda.Services.Git;
 /// <param name="Blocked">Whether the operator blocked it, which refuses every push</param>
 /// <param name="Project">What the platform's files of a commit made now say</param>
 /// <param name="Origin">The address it was reached at, for the addresses a push answers with</param>
-public sealed record GitLambda(long Id, string PrivateKey, string PublicKey, bool ReadOnly, RepositoryProject Project, string Origin, bool Blocked = false);
+/// <param name="Author">Who pushes, where the platform knows: a run of the agent, by the credential its push carries</param>
+public sealed record GitLambda(long Id, string PrivateKey, string PublicKey, bool ReadOnly, RepositoryProject Project, string Origin, bool Blocked = false,
+                               VersionAuthor? Author = null);

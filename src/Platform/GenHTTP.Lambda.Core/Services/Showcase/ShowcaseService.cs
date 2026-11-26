@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
@@ -20,7 +22,7 @@ namespace GenHTTP.Lambda.Services.Showcase;
 /// database. The row says what the picture is and how large.
 /// </remarks>
 public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, IFileProvider files, ITelemetryService telemetry,
-                                    ILimitsService limits, ILogger<ShowcaseService> logger) : IShowcaseService
+                                    ILimitsService limits, IAgentJournal journal, ILogger<ShowcaseService> logger) : IShowcaseService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -37,7 +39,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                            .FirstOrDefaultAsync(cancellation);
     }
 
-    public async ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default)
+    public async ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         var title = Tidy(draft.Title);
         var description = Tidy(draft.Description);
@@ -138,12 +140,14 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         // the picture is written, so the row that names it is, whoever cancels
         await database.SaveChangesAsync(CancellationToken.None);
 
+        await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Showcased, lambda.Id, Was: entry != null), CancellationToken.None);
+
         return await Entries(database.Showcases.Where(s => s.LambdaId == lambda.Id))
                            .Select(e => e.Info)
                            .FirstAsync(CancellationToken.None);
     }
 
-    public async ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default)
+    public async ValueTask RemoveAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
@@ -152,6 +156,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
         if (await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation) > 0)
         {
             logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
+
+            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Unshowcased, lambda.Id, Was: true), CancellationToken.None);
         }
 
         await files.DeleteAsync(FileStore.Showcase, PictureNames.Showcase(lambda.Id), cancellation);

@@ -1,5 +1,3 @@
-using GenHTTP.Lambda.Services.Building;
-
 namespace GenHTTP.Lambda.Data.Entities;
 
 /// <summary>
@@ -78,6 +76,19 @@ public sealed class FeatureEntity
     /// The effort the build agent ran at.
     /// </summary>
     public AgentEffort? AgentEffort { get; set; }
+
+    /// <summary>
+    /// The run of the installation's agent that wrote it, where one did - kept
+    /// as long as the run is, and only as an id: the run may be gone.
+    /// </summary>
+    public string? AgentRun { get; set; }
+
+    /// <summary>
+    /// The value of each option of the agent integration the run ran on, as a
+    /// JSON object - kept for good, unlike the run. Empty for what was written
+    /// before, whose model and effort are in the columns above.
+    /// </summary>
+    public string? AgentOptions { get; set; }
 
     public DateTime Created { get; set; }
 

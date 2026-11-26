@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
@@ -67,9 +68,9 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The kind of data, switched on")]
     public async ValueTask<DataStoreResponse> Enable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
-                                                     [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
+                                                     [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind, IRequest call)
     {
-        var store = await data.EnableAsync(privateKey, kind);
+        var store = await data.EnableAsync(privateKey, kind, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, await meta.PublicKeyOfAsync(privateKey));
 

@@ -2,6 +2,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
@@ -22,7 +24,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// Keeps whether a lambda's source is published, and serves it packed.
 /// </summary>
 public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, SourceCache cache, ILambdaAddresses addresses,
-                                  StarGuard stars, ILimitsService limits, LambdaOptions options, ILogger<SourceService> logger) : ISourceService
+                                  StarGuard stars, ILimitsService limits, LambdaOptions options, IAgentJournal journal, ILogger<SourceService> logger) : ISourceService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -45,7 +47,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         return source == null ? null : Settings(lambda.PublicKey, source);
     }
 
-    public async ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, CancellationToken cancellation = default)
+    public async ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, VersionAuthor? by = null, CancellationToken cancellation = default)
     {
         // what is asked for is checked before anything is looked up, so a
         // request that is wrong changes nothing at all
@@ -62,6 +64,8 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         var source = await database.Sources.FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
         var now = DateTime.UtcNow;
+
+        var was = source?.Published == true;
 
         if (source == null)
         {
@@ -102,10 +106,12 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         logger.LogInformation("Published source of lambda #{LambdaId} license {License}", lambda.Id, source.License);
 
+        await journal.RecordAsync(by, new AgentEffect(AgentEffectKind.Published, lambda.Id, Name: source.License, Was: was), CancellationToken.None);
+
         return Settings(lambda.PublicKey, source);
     }
 
-    public async ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default)
+    public async ValueTask<SourceSettings?> WithdrawAsync(string privateKey, VersionAuthor? by = null, CancellationToken cancellation = default)
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
@@ -121,6 +127,8 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
             await database.SaveChangesAsync(cancellation);
 
             logger.LogInformation("Unpublished source of lambda #{LambdaId}", lambda.Id);
+
+            await journal.RecordAsync(by, new AgentEffect(AgentEffectKind.Withdrawn, lambda.Id, Was: true), CancellationToken.None);
         }
 
         // nobody may read it any more, so there is nothing to keep it packed for

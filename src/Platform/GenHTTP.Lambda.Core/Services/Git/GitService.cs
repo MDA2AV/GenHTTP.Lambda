@@ -38,14 +38,15 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
 
     #region Functionality
 
-    public async ValueTask<IGitRepository?> OpenAsync(string privateKey, string origin, CancellationToken cancellation = default)
+    public async ValueTask<IGitRepository?> OpenAsync(string privateKey, string origin, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         if (await meta.GetAsync(privateKey, cancellation) is not { } info || await meta.GetIdAsync(privateKey, cancellation) is not { } id)
         {
             return null;
         }
 
-        var lambda = await DescribeAsync(info, id, origin, cancellation);
+        // a push of a run of the agent saves as the run, as every door does
+        var lambda = await DescribeAsync(info, id, origin, cancellation) with { Author = author };
 
         var index = await SyncAsync(lambda, true, cancellation);
 

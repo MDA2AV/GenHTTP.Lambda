@@ -1,5 +1,7 @@
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Branding;
 using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Web;
@@ -39,7 +41,9 @@ public sealed class EditorBuilder(LambdaPlatform platform) : IHandlerBuilder<Edi
 
     public IHandler Build()
     {
-        var repositories = ActivatorUtilities.CreateInstance<GitRoutesBuilder>(platform.Services, GitArea.Owned);
+        // a push of a run of the agent is the run's, as its other calls are
+        var repositories = ActivatorUtilities.CreateInstance<GitRoutesBuilder>(platform.Services, GitArea.Owned)
+                                             .Add(ServiceConcern.Of<AgentCallerConcern>(platform.Services));
 
         /*
          * The editor key is in the address of every page, so none of them

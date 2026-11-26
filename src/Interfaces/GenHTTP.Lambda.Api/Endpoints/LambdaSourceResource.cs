@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
@@ -57,9 +58,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("What it is published under now")]
-    public async ValueTask<SourceSettingsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request)
+    public async ValueTask<SourceSettingsResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request, IRequest call)
     {
-        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author));
+        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author), AgentCallerConcern.Of(call));
 
         logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
 
@@ -75,9 +76,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
              """)]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+    public async ValueTask Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest call)
     {
-        var source = await sources.WithdrawAsync(privateKey);
+        var source = await sources.WithdrawAsync(privateKey, AgentCallerConcern.Of(call));
 
         logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
     }

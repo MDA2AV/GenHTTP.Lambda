@@ -21,6 +21,13 @@ public enum IntegrationKind
     /// <summary>
     /// The API keys and passwords a lambda reads and nobody sees.
     /// </summary>
-    Secrets
+    Secrets,
+
+    /// <summary>
+    /// The agent that builds and changes apps for the people who ask on the
+    /// installation's pages - optional: without one, nothing is built from a
+    /// request there.
+    /// </summary>
+    Agent
 
 }

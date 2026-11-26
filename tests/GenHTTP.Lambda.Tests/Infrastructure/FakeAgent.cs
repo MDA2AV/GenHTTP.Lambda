@@ -43,6 +43,9 @@ public sealed class FakeAgent : IAsyncDisposable
     /// <summary>Every token a request came with.</summary>
     public ConcurrentQueue<string?> Tokens { get; } = [];
 
+    /// <summary>Whether it files a job under an id of its own, as a runner from before runs were the platform's does.</summary>
+    public bool IgnoresRun { get; set; }
+
     /// <summary>When set, a new job is refused with this status, as a full queue is.</summary>
     public HttpStatusCode? Refuse { get; set; }
 
@@ -165,7 +168,9 @@ public sealed class FakeAgent : IAsyncDisposable
                 return;
             }
 
-            var id = Guid.NewGuid().ToString();
+            // a runner of this release files a job under the platform's id,
+            // one from before under an id of its own
+            var id = !IgnoresRun && body["run"]?.GetValue<string>() is { Length: 36 } run ? run : Guid.NewGuid().ToString();
             var key = body["key"]?.GetValue<string>();
 
             var job = new JsonObject

@@ -82,7 +82,7 @@ public interface IFeatureService
     /// Removes a feature, its preview and its copy of the data.
     /// </summary>
     /// <returns>The name it had, which is all there is left to say about it</returns>
-    ValueTask<string> DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default);
+    ValueTask<string> DeleteAsync(string privateKey, string feature, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// The identities a feature's files and data are kept under, for the

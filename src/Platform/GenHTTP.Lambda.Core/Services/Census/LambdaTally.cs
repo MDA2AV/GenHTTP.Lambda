@@ -1,6 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Census;
 /// policy, which the database does not hold. Awaited, like every query of the
 /// platform's records, one after another on the one context.
 /// </remarks>
-public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, ILimitsService limits)
+public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, ILimitsService limits, IAgentService agents)
 {
 
     /// <summary>
@@ -81,15 +81,19 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
                     .ThenBy(g => g.Key, StringComparer.Ordinal)
                     .ToDictionary(g => g.Key ?? "unknown", g => g.Sum(o => o.Count));
 
-        // what the build agent wrote of those, by model and by effort
+        // what the agent wrote of those, by each value of each option - those
+        // written before the options were the integration's by their model
+        // and effort, which are the options model and effort now
         var written = await database.Deployments.AsNoTracking()
                                     .Where(d => d.Created >= recent && d.Writer == VersionWriter.BuildAgent && !demos.Contains(d.Lambda!.Tier))
-                                    .GroupBy(d => new { d.AgentModel, d.AgentEffort })
-                                    .Select(g => new { g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
+                                    .GroupBy(d => new { d.AgentOptions, d.AgentModel, d.AgentEffort })
+                                    .Select(g => new { g.Key.AgentOptions, g.Key.AgentModel, g.Key.AgentEffort, Count = g.Count() })
                                     .ToListAsync(cancellation);
 
-        var models = AgentCatalog.Models.ToDictionary(m => m.Name, m => written.Where(w => w.AgentModel == m.Model).Sum(w => w.Count));
-        var efforts = AgentCatalog.Efforts.ToDictionary(e => e.Name, e => written.Where(w => w.AgentEffort == e.Effort).Sum(w => w.Count));
+        var options = StoredOptions.Tally(written.Select(w => (StoredOptions.Of(w.AgentOptions, w.AgentModel, w.AgentEffort), w.Count)), KnownOptions());
+
+        var models = options.GetValueOrDefault(AgentModelNames.ModelOption) ?? new Dictionary<string, int>();
+        var efforts = options.GetValueOrDefault(AgentModelNames.EffortOption) ?? new Dictionary<string, int>();
 
         var product = limits.Get();
 
@@ -136,13 +140,22 @@ public sealed class LambdaTally(IDbContextFactory<LambdaDbContext> databases, IL
             saved,
             models,
             efforts,
-            lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).Min(l => l.ConnectivityChanged)
+            lambdas.Where(l => l.Connectivity == ConnectivityStatus.Requested).Min(l => l.ConnectivityChanged),
+            options
         );
     }
 
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// The values of the agent's options, counted at zero where nothing ran on
+    /// them - so the panel lists every value it offers.
+    /// </summary>
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> KnownOptions()
+        => agents.Capabilities?.Options.ToDictionary(o => o.Name, o => (IReadOnlyList<string>)[.. o.Values.Select(v => v.Name)], StringComparer.Ordinal)
+           ?? new Dictionary<string, IReadOnlyList<string>>();
 
     private sealed record Row(long Id, LambdaTier Tier, int? ActiveVersion, DateTime? Blocked, DateTime Created, DateTime Modified,
                               DateTime? LastSeen, DateTime? TierChanged, EditorView View, string? Domain, DateTime? AnalyticsSince,

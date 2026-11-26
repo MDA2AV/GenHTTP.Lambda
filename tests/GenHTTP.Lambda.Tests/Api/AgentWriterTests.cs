@@ -5,10 +5,11 @@ using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Integrations;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Services.Background;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.UsageReports;
 using GenHTTP.Lambda.Tests.Infrastructure;
@@ -288,17 +289,16 @@ public sealed class AgentWriterTests
 
         await using var database = await Databases(fixture).CreateDbContextAsync();
 
-        var kept = await database.AgentTickets.AsNoTracking().ToListAsync();
+        var kept = await database.AgentRuns.AsNoTracking().ToListAsync();
 
         Assert.HasCount(1, kept);
-        Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(ticket))), kept[0].Hash,
+        Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(ticket))), kept[0].Ticket,
                         "what the records hold cannot be presented as the ticket");
-        Assert.AreEqual(AgentModel.Opus, kept[0].Model);
-        Assert.AreEqual(AgentEffort.Low, kept[0].Effort);
+        Assert.AreEqual("{\"effort\":\"low\",\"model\":\"opus\"}", kept[0].Options);
     }
 
     [TestMethod]
-    public async Task AnExpiredTicketMarksNothingAndIsRemoved()
+    public async Task ATicketOfARunThatEndedLongAgoMarksNothing()
     {
         await using var agent = FakeAgent.Start();
         await using var fixture = await WithAgentAsync(agent);
@@ -309,20 +309,58 @@ public sealed class AgentWriterTests
 
         await using (var database = await Databases(fixture).CreateDbContextAsync())
         {
-            await database.AgentTickets.ExecuteUpdateAsync(t => t.SetProperty(e => e.Expires, DateTime.UtcNow.AddMinutes(-1)));
+            await database.AgentRuns.ExecuteUpdateAsync(r => r.SetProperty(e => e.State, AgentRunState.Ended).SetProperty(e => e.Ended, DateTime.UtcNow.AddHours(-1)));
         }
 
         await CallToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["files"] = Files() }, ticket);
 
-        Assert.IsNull((await VersionsAsync(fixture, lambda.PrivateKey))[0]!["writer"], "a ticket a day old is nobody's");
+        Assert.IsNull((await VersionsAsync(fixture, lambda.PrivateKey))[0]!["writer"], "a run that is over is nobody's any more");
+    }
 
-        var job = fixture.Platform.Services.GetServices<IBackgroundJob>().OfType<AgentTicketJob>().Single();
+    [TestMethod]
+    public async Task ATicketFromBeforeRunsWereKeptStillMarksForADayAndIsThenRemoved()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync("upgraded");
+
+        // what an installation upgraded while a job ran had issued it
+        const string ticket = "0123456789abcdef0123456789abcdef";
+
+        await using (var database = await Databases(fixture).CreateDbContextAsync())
+        {
+            database.AgentTickets.Add(new AgentTicketEntity
+            {
+                Hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(ticket))),
+                Model = AgentModel.Haiku,
+                Effort = AgentEffort.Max,
+                Expires = DateTime.UtcNow.AddHours(1)
+            });
+
+            await database.SaveChangesAsync();
+        }
+
+        await CallToolAsync(fixture, "write_code", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["files"] = Files() }, ticket);
+
+        var marked = (await VersionsAsync(fixture, lambda.PrivateKey))[0]!;
+
+        Assert.AreEqual("build-agent", marked["writer"]!.GetValue<string>());
+        Assert.AreEqual("haiku", marked["model"]!.GetValue<string>(), "as the model it was issued for");
+        Assert.AreEqual("max", marked["effort"]!.GetValue<string>());
+
+        await using (var database = await Databases(fixture).CreateDbContextAsync())
+        {
+            await database.AgentTickets.ExecuteUpdateAsync(t => t.SetProperty(e => e.Expires, DateTime.UtcNow.AddMinutes(-1)));
+        }
+
+        var job = fixture.Platform.Services.GetServices<IBackgroundJob>().OfType<AgentRetentionJob>().Single();
 
         await job.ExecuteAsync(CancellationToken.None);
 
         await using (var database = await Databases(fixture).CreateDbContextAsync())
         {
-            Assert.IsFalse(await database.AgentTickets.AnyAsync(), "and the job takes it away");
+            Assert.IsFalse(await database.AgentTickets.AnyAsync(), "and the job takes it away once its day is over");
         }
     }
 

@@ -1,10 +1,11 @@
+using GenHTTP.Api.Content;
 using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -18,70 +19,93 @@ namespace GenHTTP.Lambda.Api;
 /// <remarks>
 /// Behind the editor key like everything else about a lambda, and refused for
 /// a demo like everything else that would change one. The agent is the same
-/// one the build page uses, in the same kind of container and on the same
-/// queue; what differs is that it is handed the key, told to change rather
-/// than create, and cannot create anything.
+/// one the build page uses, on the same allowance; what differs is that it is
+/// handed the key and the app it works on.
 ///
 /// A process rather than a thing, so it is read at <c>agent</c> and driven
 /// with verbs, the way a deployment is.
 /// </remarks>
 [Tag(ApiDocumentation.Changes)]
-[Summary("The build agent of the installation, changing a lambda - and answering questions about it - for whoever holds its editor key.")]
+[Summary("The agent of the installation, changing a lambda - and answering questions about it - for whoever holds its editor key.")]
 [Remarks("""
-         What the Change section of the editor does: the owner says what should be different, and the agent changes the lambda
-         in a feature - a new one, or one named - and tries it at its preview. With `deploy` (the default) it merges the feature
-         and puts the new version online once it works; without, it leaves the feature for the owner to try and merge. What is
-         online stays online until then.
+         What the workspace on `/build` and the Change section of the editor do: the owner writes what they would like to know
+         or have different, and the agent answers it, changes a setting, or changes the lambda in a feature - a new one, or one
+         named - and tries it at its preview. With `deploy` (the default) it merges the feature and puts the new version online
+         once it works; without, it leaves the feature for the owner to try and merge. What is online stays online until then.
 
-         One change of a lambda runs at a time. Changes count against the same daily allowance as builds, per address, which
+         What a message came to - what it saved, put online, switched on, what the app waits for afterwards - is read from what
+         the platform recorded of its calls, never from what the agent said. It may end with a question (`result.asked`), which the
+         next message answers (`continues`); and what it did can be undone, where that can be (`result.undo`,
+         `POST …/agent/undo`).
+
+         One message of a lambda runs at a time. Messages count against the same daily allowance as builds, per address, which
          starts again at midnight UTC. Demos cannot be changed. Errors that come from the agent carry `status` and `message`
          only.
          """)]
 [Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
+public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
 {
 
     [ResourceMethod("lambdas/:privateKey/agent")]
-    [Summary("Reads how a change is getting on")]
+    [Summary("Reads how a message is getting on")]
     [Remarks("""
-             Asked again while a change runs. The agent remembers a change for an hour after it was asked for; after that there
-             is nothing to report, and what it saved is in the history of the lambda and its features.
+             The message under way, or the last one, while the platform keeps it - a while after it ended; after that, what it
+             saved is in the history of the lambda and its features. `GET …/agent/events` pushes the same each time it changes.
              """)]
-    [return: Summary("Whether there is an agent, how many changes this caller has left today, and the change under way or the last one")]
+    [return: Summary("Whether there is an agent, how many messages this caller has left today, and the one under way or the last one")]
     public async ValueTask<AgentState> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
         var lambda = await meta.RequireEditableAsync(privateKey);
 
-        return await builds.StateAsync(lambda, request.Client.Address);
+        return await agents.StateAsync(lambda, request.Client.Address);
+    }
+
+    [ResourceMethod("lambdas/:privateKey/agent/events")]
+    [Summary("Follows the messages about a lambda as they go on")]
+    [Remarks("""
+             A stream of server-sent events: a `state` event with what `GET …/agent` answers, sent at once and again each time it
+             changes - a message started here or anywhere else, a step it took, how it ended - for as long as the page listens. A
+             browser's `EventSource` reconnects by itself.
+             """)]
+    [Response(ResponseStatus.Ok, "The events", ContentType = "text/event-stream")]
+    public async ValueTask<IHandlerBuilder> Events([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
+    {
+        var lambda = await meta.RequireEditableAsync(privateKey);
+
+        var caller = request.Client.Address;
+
+        return PushedStream.Of("state", cancellation => agents.FollowAsync(lambda, caller, cancellation));
     }
 
     /// <remarks>
-    /// One change of a lambda at a time, since two agents writing the same
+    /// One message of a lambda at a time, since two agents writing the same
     /// files would each undo the other. The feature is looked up here, so one
     /// that does not exist is refused before anything is spent on it.
     /// </remarks>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/start")]
-    [Summary("Asks the agent to change a lambda")]
+    [Summary("Writes to the agent about a lambda")]
     [Remarks("""
-             The change is queued and runs in the background; `GET …/agent` follows it. The prompt is logged in full, so the
-             operator knows what people ask for, and cut past 2000 characters. A question about the application is answered
-             rather than made a change of (`result.answered`), and a setting the agent may change - analytics, a kind of data,
-             an earlier version back online, a feature merged or deleted, the source published - is changed without a
-             feature (`result.settings`). A request that is not about the application is declined, and the result says why.
+             The message is queued and runs in the background; `GET …/agent` and `GET …/agent/events` follow it. The prompt is
+             logged in full, so the operator knows what people ask for, and cut past 2000 characters; the files it comes with are
+             named in the log as they are uploaded, and may be opened by the operator. A question about the application is answered
+             rather than made a change of (`result.answered`), and a setting the agent may change - analytics, a kind of data, an
+             earlier version back online, a feature merged or deleted, the source published - is changed without a feature
+             (`result.settings`). A request that is not about the application is declined, and the result says why.
 
-             `history` is the conversation so far, as the page that holds it sent it: the newest turns that fit, each cut, are
-             handed to the agent as context and are not logged. The agent keeps nothing between messages.
+             The agent is handed the newest earlier messages about the app and their answers as the platform keeps them, as context;
+             `history`, the conversation as the page keeps it, is handed on only where the platform keeps none. Neither is logged.
+             With `continues` the prompt may be left out: the message carries on with what the earlier one was asked.
              """)]
-    [Response(ResponseStatus.Accepted, "The change was taken on.")]
-    [Response(ResponseStatus.BadRequest, "The prompt says too little, or the model or the effort is not one offered here.")]
-    [Response(ResponseStatus.Forbidden, "The model asked for needs the installation's password, and this is not it - or the lambda is a demo.",
+    [Response(ResponseStatus.Accepted, "The message was taken on.")]
+    [Response(ResponseStatus.BadRequest, "The prompt says too little, an option or a value is not one offered here, a file is not there any more, or the message to carry on from is not.")]
+    [Response(ResponseStatus.Forbidden, "A value asked for needs the installation's password, and this is not it - or the lambda is a demo.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [Response(ResponseStatus.Conflict, "A change of this lambda is under way already. Wait for it, or stop it first.")]
-    [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature to go on with, or this installation takes no changes from here.",
+    [Response(ResponseStatus.Conflict, "A message about this lambda is under way already. Wait for it, or stop it first.")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature to go on with, or this installation takes no messages from here.",
               Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
-    [Response(ResponseStatus.TooManyRequests, "This address asked for as many builds and changes today as one may.")]
-    [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering. Nothing was counted.")]
+    [Response(ResponseStatus.TooManyRequests, "This address asked for as many builds and messages today as one may.")]
+    [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering, or too busy to take another. Nothing was counted.")]
     public async ValueTask<Result<AgentState>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, ChangeRequest body, IRequest request)
     {
         var lambda = await meta.RequireEditableAsync(privateKey);
@@ -90,31 +114,60 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
 
         var feature = body?.Feature is { Length: > 0 } key ? (await features.GetAsync(privateKey, key)).Feature.Key : null;
 
-        var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
-                                             body?.Model, body?.Effort, body?.Password, body?.Language, feature, body?.History,
-                                             request.Client.Address);
+        var state = await agents.ChangeAsync(lambda, privateKey, current.ActiveVersion, (body ?? new ChangeRequest(null)).Ask(feature), request.Client.Address);
 
         // logged in full, as the prompts of the build page are - the message
         // only: what was said before was logged when it was asked
-        logger.LogInformation("Started change {Change} of lambda {Lambda} model {Model} effort {Effort} prompt {Prompt}",
-                              state.Job?.Id, current.PublicKey, state.Job?.Model, state.Job?.Effort, body?.Prompt?.Trim());
+        logger.LogInformation("Started change {Change} of lambda {Lambda} options {Options} attachments {Attachments} prompt {Prompt}",
+                              state.Job?.Id, current.PublicKey, BuildResource.OptionsOf(state.Job?.Options), body?.Attachments?.Count ?? 0, body?.Prompt?.Trim());
 
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }
 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/stop")]
-    [Summary("Stops the change under way")]
-    [Remarks("What it saved so far stays saved - in its feature, or as a version - and whatever is online stays online. A change that is stopped is not counted back.")]
+    [Summary("Stops the message under way")]
+    [Remarks("What it saved so far stays saved - in its feature, or as a version - and whatever is online stays online. A message that is stopped is not counted back.")]
     [return: Summary("The state afterwards")]
     public async ValueTask<AgentState> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
         var lambda = await meta.RequireEditableAsync(privateKey);
 
-        var state = await builds.StopAsync(lambda, request.Client.Address);
+        var state = await agents.StopAsync(lambda, request.Client.Address);
 
         logger.LogInformation("Stopped change of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
 
         return state;
     }
+
+    [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/undo")]
+    [Summary("Undoes what a message did")]
+    [Remarks("""
+             As one step, where it can be undone, and only where it is still as the message left it: the version that was online
+             before goes back online - the message's versions stay in the history - a draft it started is discarded, a request to
+             connect it made is withdrawn, the source it published taken down, the showcase entry it made taken out, the view it
+             changed set back. What would delete data stays - a kind of data or analytics switched on, files in the workspace - and
+             so does a new app; the answer says what was undone and what was left. Undoing twice does nothing more.
+             """)]
+    [Response(ResponseStatus.NotFound, "There is no such message about this lambda, or no agent.")]
+    [Response(ResponseStatus.Conflict, "The message is still under way. Stop it first.")]
+    [return: Summary("What was undone, and what was left")]
+    public async ValueTask<UndoOutcome> Undo([Summary(ApiDocumentation.PrivateKey)] string privateKey, UndoRequest? body)
+    {
+        var lambda = await meta.RequireEditableAsync(privateKey);
+
+        var undone = await agents.UndoAsync(lambda, privateKey, body?.Run);
+
+        logger.LogInformation("Undid change {Change} of lambda {Lambda} undone {Undone} kept {Kept}", body?.Run ?? "(newest)", await meta.PublicKeyOfAsync(privateKey),
+                              string.Join(',', undone.Undone), string.Join(',', undone.Kept));
+
+        return undone;
+    }
+
+    [ResourceMethod("lambdas/:privateKey/agent/files")]
+    [Summary("Lists the files attached to messages about a lambda")]
+    [Remarks("The newest first, while the platform keeps the messages they came with. `GET /attachments/{id}` answers with one.")]
+    [return: Summary("The files")]
+    public async ValueTask<IReadOnlyList<RunFile>> Files([Summary(ApiDocumentation.PrivateKey)] string privateKey)
+        => await agents.AttachedToAsync(await meta.RequireEditableAsync(privateKey));
 
 }

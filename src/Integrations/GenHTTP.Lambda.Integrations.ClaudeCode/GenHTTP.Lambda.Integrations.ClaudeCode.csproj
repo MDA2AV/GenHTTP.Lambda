@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+        The agent integration of the platform's own: Claude Code in a
+        throwaway container per run, driven by the runner in docker/agent,
+        which this speaks to over HTTP. What it can do is what the runner
+        says of itself, so an older runner is spoken to as it was and a newer
+        one offers more.
+    -->
+    <PropertyGroup>
+        <RootNamespace>GenHTTP.Lambda.Integrations.ClaudeCode</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Integrations.ClaudeCode</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../GenHTTP.Lambda.Integrations/GenHTTP.Lambda.Integrations.csproj" />
+    </ItemGroup>
+
+</Project>

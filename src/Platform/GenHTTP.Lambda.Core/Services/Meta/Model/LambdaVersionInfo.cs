@@ -7,7 +7,9 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="Change">What it changed, in a line</param>
 /// <param name="Origin">Where it came from: template, api or agent</param>
 /// <param name="Writer">Who wrote it, where the platform knows it: build-agent</param>
-/// <param name="Model">The model the build agent ran on, by the name it was offered by</param>
-/// <param name="Effort">The effort it ran at</param>
+/// <param name="Model">The value of the agent's option <c>model</c> it ran on, where it had one</param>
+/// <param name="Effort">The value of its option <c>effort</c></param>
+/// <param name="Options">The value of every option the agent ran on, by option</param>
 public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Specification = null, string? Change = null, string? Origin = null,
-                                       string? Writer = null, string? Model = null, string? Effort = null);
+                                       string? Writer = null, string? Model = null, string? Effort = null,
+                                       IReadOnlyDictionary<string, string>? Options = null);

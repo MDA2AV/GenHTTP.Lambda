@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Agents;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
@@ -25,7 +27,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// </remarks>
 public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> databases, AnalyticsStore store, AnalyticsQueue queue, DailyVisitors visitors,
                                      VisitorClassifier classifier, CrawlerRanges ranges, ILimitsService limits, LambdaOptions options, ILambdaAddresses addresses,
-                                     ILogger<AnalyticsService> logger) : IAnalyticsService
+                                     IAgentJournal journal, ILogger<AnalyticsService> logger) : IAnalyticsService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -60,7 +62,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
         return await DescribeAsync(lambda, days, now ?? DateTime.UtcNow, cancellation);
     }
 
-    public async ValueTask<LambdaAnalytics> EnableAsync(string privateKey, CancellationToken cancellation = default)
+    public async ValueTask<LambdaAnalytics> EnableAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default)
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
@@ -84,6 +86,8 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
             lambda.AnalyticsSince = DateTime.UtcNow;
 
             await database.SaveChangesAsync(cancellation);
+
+            await journal.RecordAsync(author, new AgentEffect(AgentEffectKind.Counted, lambda.Id), CancellationToken.None);
         }
 
         return await DescribeAsync(lambda, null, DateTime.UtcNow, cancellation);

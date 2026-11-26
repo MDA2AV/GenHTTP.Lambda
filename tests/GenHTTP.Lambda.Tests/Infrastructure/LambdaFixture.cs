@@ -27,6 +27,8 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Sources;
 using GenHTTP.Lambda.Integrations;
+using GenHTTP.Lambda.Integrations.Agents;
+using GenHTTP.Lambda.Integrations.ClaudeCode;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Integrations.Secrets;
@@ -147,7 +149,14 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// </param>
     public static Task<LambdaFixture> CreateAsync(Func<LambdaOptions, LambdaOptions>? configure = null, ServerSettings? server = null,
                                                   bool compiled = false)
-        => CreateAsync(Edition.Cloud, configure, server, compiled, null, null, null);
+        => CreateAsync(Edition.Cloud, configure, server, compiled, null, null, null, null);
+
+    /// <summary>
+    /// Creates and starts the cloud's composition with the given agent - one
+    /// played in the test's own process (<see cref="FakeAgentProvider"/>).
+    /// </summary>
+    public static Task<LambdaFixture> CreateWithAgentAsync(IIntegrationBuilder<IAgentProvider> agent, Func<LambdaOptions, LambdaOptions>? configure = null)
+        => CreateAsync(Edition.Cloud, configure, null, false, null, null, null, agent);
 
     /// <summary>
     /// Creates and starts the community edition: put together the way its
@@ -163,11 +172,12 @@ internal sealed class LambdaFixture : IAsyncDisposable
                                                            IIntegrationBuilder<IDatabaseProvider>? database = null,
                                                            IIntegrationBuilder<IFileProvider>? files = null,
                                                            IIntegrationBuilder<ISecretProvider>? secrets = null)
-        => CreateAsync(Edition.Community, configure, null, false, database, files, secrets);
+        => CreateAsync(Edition.Community, configure, null, false, database, files, secrets, null);
 
     private static async Task<LambdaFixture> CreateAsync(Edition edition, Func<LambdaOptions, LambdaOptions>? configure, ServerSettings? server,
                                                          bool compiled, IIntegrationBuilder<IDatabaseProvider>? database,
-                                                         IIntegrationBuilder<IFileProvider>? files, IIntegrationBuilder<ISecretProvider>? secrets)
+                                                         IIntegrationBuilder<IFileProvider>? files, IIntegrationBuilder<ISecretProvider>? secrets,
+                                                         IIntegrationBuilder<IAgentProvider>? agent)
     {
         var root = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
 
@@ -220,6 +230,17 @@ internal sealed class LambdaFixture : IAsyncDisposable
         if (secrets != null)
         {
             building.Secrets(secrets);
+        }
+
+        if (agent != null)
+        {
+            building.Agent(agent);
+        }
+        else if (options.AgentUrl != null)
+        {
+            // the runner of the platform's own agent, as an installation names
+            // it - asked after its runs often, so a test does not wait long
+            building.Agent(ClaudeCodeRunner.Create(options.AgentUrl).Token(options.AgentToken).Poll(TimeSpan.FromMilliseconds(40)));
         }
 
         var platform = await building.BuildAsync();

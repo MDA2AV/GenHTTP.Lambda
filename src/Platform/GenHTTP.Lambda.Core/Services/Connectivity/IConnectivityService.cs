@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Connectivity;
 
 /// <summary>
@@ -33,14 +35,14 @@ public interface IConnectivityService
     /// allowed. Refused for a demo and a blocked lambda, like every change.
     /// </remarks>
     /// <param name="purpose">What it connects to and why, in the owner's words - required</param>
-    ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, CancellationToken cancellation = default);
+    ValueTask<ConnectivityInfo> RequestAsync(string privateKey, string? purpose, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the request back while it waits, or gives up what was allowed -
     /// code that connects then no longer compiles. Nothing happens when
     /// nothing was asked or it was declined.
     /// </summary>
-    ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
+    ValueTask<ConnectivityInfo> WithdrawAsync(string privateKey, VersionAuthor? author = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// The operator's decision: allow the lambda to connect, asked for or not,

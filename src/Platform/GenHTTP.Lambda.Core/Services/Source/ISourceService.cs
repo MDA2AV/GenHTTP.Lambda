@@ -1,5 +1,7 @@
 using System.Net;
 
+using GenHTTP.Lambda.Services.Meta.Model;
+
 namespace GenHTTP.Lambda.Services.Source;
 
 /// <summary>
@@ -33,13 +35,13 @@ public interface ISourceService
     /// Publishes the source of a lambda, or changes the license it is
     /// published under.
     /// </summary>
-    ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, CancellationToken cancellation = default);
+    ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, VersionAuthor? by = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the source down. Its stars are kept for when it is published
     /// again; nothing happens when it was not published.
     /// </summary>
-    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
+    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, VersionAuthor? by = null, CancellationToken cancellation = default);
 
     #endregion
 

@@ -247,6 +247,8 @@ public sealed class OperatorMcpTests
         ["DELETE /admin/guide"] = "remove_guide_section",
         ["GET /admin/agent"] = "read_agent_settings",
         ["PUT /admin/agent"] = "change_agent_settings",
+        ["GET /admin/agent/runs"] = "list_agent_runs",
+        ["GET /admin/agent/usage"] = "read_agent_usage",
         ["GET /admin/integrations"] = "list_integrations",
         ["GET /admin/usage-report"] = "read_usage_report",
         ["GET /admin/quiet-hours"] = "read_quiet_hours",
@@ -522,10 +524,11 @@ public sealed class OperatorMcpTests
         Assert.IsFalse(agent["builds"]!.GetValue<bool>());
         Assert.IsTrue(agent["changes"]!.GetValue<bool>(), "left as it was");
 
+        // without an agent there is no option to decide anything about
         var unoffered = await ToolAsync(fixture, "change_agent_settings", new JsonObject { ["efforts"] = new JsonArray("low"), ["effort"] = "high" });
 
-        Assert.IsTrue(unoffered["result"]!["isError"]!.GetValue<bool>(), "a default that is not offered is refused");
-        Assert.AreEqual("high", (await CallAsync(fixture, "read_agent_settings"))["effort"]!.GetValue<string>());
+        Assert.IsTrue(unoffered["result"]!["isError"]!.GetValue<bool>(), "an option there is none of is refused");
+        Assert.IsFalse((await CallAsync(fixture, "read_agent_settings"))["agentConfigured"]!.GetValue<bool>());
     }
 
     [TestMethod]
