@@ -231,11 +231,18 @@ public sealed class AgentAttachments(AgentRunRecords records, IFileProvider file
     /// A file's media type as it is kept: the type sent where it is one, or
     /// the one its extension stands for, or a plain stream of bytes.
     /// </summary>
+    /// <remarks>
+    /// A browser sends what the machine it runs on thinks a file is, and a
+    /// stream of bytes - or nothing - where it does not know, as for a Word
+    /// document where no office suite is installed. The extension says more
+    /// than that.
+    /// </remarks>
     public static string TidyType(string? sent, string name)
     {
         var type = (sent ?? "").Split(';', 2)[0].Trim().ToLowerInvariant();
 
-        if (type.Length is > 0 and < 100 && type.Count(c => c == '/') == 1 && type.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or '.' or '+' or '-'))
+        if (type != "application/octet-stream" && type.Length is > 0 and < 100 && type.Count(c => c == '/') == 1
+            && type.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or '.' or '+' or '-'))
         {
             return type;
         }
@@ -253,6 +260,12 @@ public sealed class AgentAttachments(AgentRunRecords records, IFileProvider file
             ".csv" => "text/csv",
             ".json" => "application/json",
             ".html" or ".htm" => "text/html",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".odt" => "application/vnd.oasis.opendocument.text",
+            ".ods" => "application/vnd.oasis.opendocument.spreadsheet",
+            ".odp" => "application/vnd.oasis.opendocument.presentation",
             _ => "application/octet-stream"
         };
     }

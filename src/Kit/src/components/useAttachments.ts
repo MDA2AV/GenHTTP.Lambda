@@ -15,6 +15,42 @@ export interface AttachWords {
   failed: (name: string) => string;
 }
 
+/**
+ * The kinds of file people attach, by their extension. A browser takes a
+ * file for what the machine it runs on says, and that is often nothing or a
+ * stream of bytes (a Word document where no office suite is installed) or
+ * something else (a CSV file where Excel is) - so where the extension is one
+ * of these, it decides.
+ */
+const KINDS: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  txt: 'text/plain',
+  md: 'text/markdown',
+  csv: 'text/csv',
+  html: 'text/html',
+  htm: 'text/html',
+  json: 'application/json',
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  odt: 'application/vnd.oasis.opendocument.text',
+  ods: 'application/vnd.oasis.opendocument.spreadsheet',
+  odp: 'application/vnd.oasis.opendocument.presentation',
+};
+
+/** The kind of a file, as it is sent: by its extension where that is known, else as the browser says. */
+export function kindOf(file: File): string {
+  const dot = file.name.lastIndexOf('.');
+
+  return (dot > 0 && KINDS[file.name.slice(dot + 1).toLowerCase()]) || file.type || 'application/octet-stream';
+}
+
 /** Whether a media type is one of the policy's, a range such as image/* included. */
 export function accepts(policy: AttachmentPolicy, type: string): boolean {
   const kind = type.toLowerCase();
@@ -24,6 +60,18 @@ export function accepts(policy: AttachmentPolicy, type: string): boolean {
 
     return range.endsWith('/*') ? kind.startsWith(range.slice(0, -1)) : kind === range;
   });
+}
+
+/**
+ * What the file picker offers: the kinds, and the extensions they stand for,
+ * since a picker that knows no kind for .docx would hide every Word document.
+ */
+function pickable(policy: AttachmentPolicy): string {
+  const extensions = Object.entries(KINDS)
+    .filter(([, kind]) => accepts(policy, kind))
+    .map(([extension]) => `.${extension}`);
+
+  return [...policy.types, ...extensions].join(',');
 }
 
 /**
@@ -56,7 +104,9 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
     }
 
     for (const file of picked) {
-      if (!accepts(policy, file.type || 'application/octet-stream')) {
+      const kind = kindOf(file);
+
+      if (!accepts(policy, kind)) {
         setProblem(words.kind(file.name));
         continue;
       }
@@ -70,7 +120,7 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
       inFlight.current++;
 
       try {
-        const kept = await api.attachments.upload(file);
+        const kept = await api.attachments.upload(file, kind);
 
         setFiles((was) => [...was, kept]);
       } catch (error) {
@@ -96,7 +146,7 @@ export function useAttachments(policy: AttachmentPolicy | null | undefined, word
     /** What a message names them by. */
     ids: files.map((file) => file.id),
     /** What the file picker offers. */
-    accept: policy?.types.join(',') ?? '',
+    accept: policy ? pickable(policy) : '',
   };
 }
 

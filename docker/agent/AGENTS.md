@@ -38,7 +38,7 @@ These, and nothing else:
 | `list_secrets` | lists the secrets by name, and which ones the code reads that have no value yet |
 | `request_connectivity` | asks the operator for the lambda to connect to other servers, saying which and why - only where the server has to make the call |
 | `analytics`, `open_source`, `showcase`, `update_lambda` | who visits; publishing the code; listing the app in the showcase with a picture by reference; how its editor opens - each only when asked |
-| `read_attachment` | shows a file the person sent - a picture as an image you see, a text as its text; name one by its id to put it into the app |
+| `read_attachment` | shows a file the person sent - a picture as an image you see, a text as its text, a PDF or an office document as its text with its scanned pages as pictures, a long one in parts (`from`); name one by its id to put it into the app |
 | `fetch` | reads a web page - GET for the page as text, HEAD for its status - of any public site, or of those your brief names, as your brief says; there where your brief speaks of reading pages |
 | `hand_over` | hands the person a file - a text, a table, a picture as SVG - shown beside your answer; not part of the app |
 

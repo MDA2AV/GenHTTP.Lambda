@@ -1097,18 +1097,38 @@ the agent says), and the pages say it in their words.
 size of one, how many), a message may come with files: uploaded first (`POST
 /attachments?name=…&type=…`, the body as it is, read only up to the size the
 agent takes; 100 MB an hour per address, 429 beyond - counted in the server's
-memory), named by id in the message (`attachments`). They are kept with the
-run - a file nobody sends is removed
-after an hour - offered to every later run about the app as earlier ones, so
-"the logo from before" is found, and read by the agent through the platform
-(`read_attachment`, a picture as an image the model sees). It puts one into
-the app by its id (`attachment` in a file of `write_code`/`change_code`, or of
-`upload_file`), never by its bytes. Files the agent hands back are kept with
-the run as well. Either kind is read at `GET /attachments/:id`: a picture
-(PNG, JPEG, GIF, WebP) to be shown, any other file - SVG and HTML among them -
-to be saved, never as a page or a script of the site (`Content-Disposition:
-attachment`, `nosniff`, a sandboxing policy). The operator may open every
-file, as they read every prompt; they go with the run after thirty days.
+memory), named by id in the message (`attachments`). A file's kind is taken
+from its extension where the page knows the extension - a machine without an
+office suite says nothing of a `.docx`, one with Excel calls a CSV file a
+spreadsheet - and by the server where the kind sent is none or a stream of
+bytes. They are kept with the run - a file nobody sends is removed after an
+hour - and offered to every later run about the app as earlier ones, so "the
+logo from before" is found. The agent puts one into the app by its id
+(`attachment` in a file of `write_code`/`change_code`, or of `upload_file`),
+never by its bytes. Files the agent hands back are kept with the run as well.
+Either kind is read at `GET /attachments/:id`: a picture (PNG, JPEG, GIF,
+WebP) to be shown, any other file - SVG and HTML among them - to be saved,
+never as a page or a script of the site (`Content-Disposition: attachment`,
+`nosniff`, a sandboxing policy). The operator may open every file, as they
+read every prompt; they go with the run after thirty days.
+
+**How the agent reads them.** Through the platform (`read_attachment`), as
+it has nothing else to open a file with: a picture as an image the model
+sees, a text as its text, and a PDF or an office document - Word, Excel,
+PowerPoint (`.docx`, `.xlsx`, `.pptx`) and OpenDocument (`.odt`, `.ods`,
+`.odp`), not the old binary formats - as its text, read out by the platform
+(`Mcp/Provider/Documents`; PdfPig for PDFs, the packages' XML for the rest).
+Pages, sheets and slides come under headings, a table with a tab between its
+cells, a sheet's cells in their columns; headers, footers, comments, speaker
+notes and deleted text are left out. A page of a PDF without text - a scan -
+is shown as its largest picture, three to an answer. A long text comes in
+parts of 60,000 characters, the answer naming where the next starts (`next`,
+passed back as `from`). A document is a stranger's file read in the server's
+process, so what its parts unpack to (64 MB), how deep they nest and how far
+it is read are bounded, and one that cannot be read is said to be one. The
+Claude Code runner takes these kinds, 10 MB a file, five to a message; a
+runner of 0.13 beside an installation from before offers documents that
+platform shows the agent only as files - upgrade the installation first.
 
 **Asking back.** Where the agent may ask, a run that cannot go on well
 without something only the owner knows ends with a question (`result.asked`,
