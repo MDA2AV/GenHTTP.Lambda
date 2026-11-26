@@ -44,7 +44,7 @@ import { BlockList, isIP } from 'node:net';
 import { lookup } from 'node:dns';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 
-import { belongs, sitesFrom } from './sites.mjs';
+import { ANY, belongs, sitesFrom } from './sites.mjs';
 
 /** What a page may come to, decompressed: more is cut, and said to be. */
 const LARGEST = 4 * 1024 * 1024;
@@ -447,7 +447,39 @@ const TOOL = {
   annotations: { readOnlyHint: true, openWorldHint: true }
 };
 
+/*
+ * Handing the person a file - a text the agent wrote for them, a table, a
+ * picture as SVG. Nothing is kept here: the runner reads the file off the
+ * call in the build's output, and hands it to the platform, which keeps it
+ * with the run. So this only checks that it is one, and says it was taken.
+ */
+const HAND_OVER = {
+  name: 'hand_over',
+  title: 'Hand the person a file',
+  description: 'Hands the person who asked a file - a text you wrote for them, a table, a picture as SVG - shown to them '
+    + 'beside your answer. It is not part of the application: what the application serves goes into its code or '
+    + 'resources. Text as it is, or base64 with encoding set.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', maxLength: 120, description: 'What to call it, with its extension: notes.md' },
+      mediaType: { type: 'string', maxLength: 100, description: 'What kind of file it is: text/markdown, image/svg+xml, text/csv' },
+      content: { type: 'string', maxLength: 3_000_000, description: 'What it holds' },
+      encoding: { type: 'string', enum: ['base64'], description: 'base64 for a binary file; left out for text' },
+      description: { type: 'string', maxLength: 400, description: 'A line about it for them, in their language' }
+    },
+    required: ['name', 'mediaType', 'content'],
+    additionalProperties: false
+  },
+  annotations: { readOnlyHint: true, openWorldHint: false }
+};
+
 const size = n => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${Math.round(n / 1024)} kB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+
+/** The fetch as a build is offered it: for the sites it may read, or any public one. */
+const describe = sites => (sites.includes(ANY)
+  ? { ...TOOL, description: TOOL.description.replace('Reads a page of one of the sites the request names', 'Reads a page of any public site').replace(' Only those sites are read, at public addresses; any other address is refused, and so are redirects that leave them.', ' Only public addresses are read; any other is refused, and so are redirects that lead to one.') }
+  : TOOL);
 
 /** The answer to one call: text for the model, and whether it is an error. */
 async function fetchPage(args, sites) {
@@ -543,10 +575,19 @@ async function answer(message, sites) {
       return result({});
 
     case 'tools/list':
-      return result({ tools: [TOOL] });
+      // a build that may read no site has no fetch to call
+      return result({ tools: sites.length > 0 ? [describe(sites), HAND_OVER] : [HAND_OVER] });
 
     case 'tools/call': {
-      if (params?.name !== TOOL.name) return error(-32602, `There is no tool ${params?.name}.`);
+      if (params?.name === HAND_OVER.name) {
+        const name = String(params.arguments?.name ?? '').trim();
+
+        return typeof params.arguments?.content === 'string' && name
+          ? result({ content: [{ type: 'text', text: `Handed ${name} over: it is shown to them beside your answer.` }] })
+          : result({ content: [{ type: 'text', text: 'A file has a name and a content.' }], isError: true });
+      }
+
+      if (params?.name !== TOOL.name || sites.length === 0) return error(-32602, `There is no tool ${params?.name}.`);
 
       if (running >= AT_ONCE) {
         return result({ content: [{ type: 'text', text: 'Too many pages are being read at once. Try again in a moment.' }], isError: true });
@@ -625,7 +666,7 @@ export function serveFetch(port) {
     });
   });
 
-  server.listen(port, () => console.log(`page fetch on ${port}: GET and HEAD, to public addresses of the sites a build names`));
+  server.listen(port, () => console.log(`page fetch on ${port}: GET and HEAD, to public addresses of the sites a build may read; handing over files`));
 
   return server;
 }

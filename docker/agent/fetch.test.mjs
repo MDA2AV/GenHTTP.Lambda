@@ -135,8 +135,20 @@ test('the server speaks MCP and refuses what is not a named public site', async 
     assert.equal((await call({ jsonrpc: '2.0', method: 'notifications/initialized' })).status, 202);
 
     const list = await call({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-    assert.deepEqual(list.body.result.tools.map(t => t.name), ['fetch']);
+    assert.deepEqual(list.body.result.tools.map(t => t.name), ['fetch', 'hand_over']);
     assert.equal(list.body.result.tools[0].annotations.readOnlyHint, true);
+
+    // a build that may read no site has nothing to fetch with, but may hand a file over
+    const none = await call({ jsonrpc: '2.0', id: 9, method: 'tools/list' }, '');
+    assert.deepEqual(none.body.result.tools.map(t => t.name), ['hand_over']);
+
+    const handed = await call({ jsonrpc: '2.0', id: 10, method: 'tools/call', params: { name: 'hand_over', arguments: { name: 'notes.md', mediaType: 'text/markdown', content: '# Hi' } } });
+    assert.match(handed.body.result.content[0].text, /Handed notes.md over/, 'kept nowhere here: the runner reads it off the call');
+
+    // where the runner reads any public site, any name is one - and its address is checked all the same
+    const any = await call({ jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'fetch', arguments: { url: 'http://127.0.0.1/' } } }, '*');
+    assert.match(any.body.result.content[0].text, /not a public address/);
+    assert.match((await call({ jsonrpc: '2.0', id: 12, method: 'tools/list' }, '*')).body.result.tools[0].description, /any public site/);
 
     const inside = await call({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'fetch', arguments: { url: `http://127.0.0.1:${port}/mcp` } } });
     assert.equal(inside.body.result.isError, true);

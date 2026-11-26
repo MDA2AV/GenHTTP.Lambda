@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content.Documentation;
 
-using GenHTTP.Lambda.Integrations;
-
 namespace GenHTTP.Lambda.Services.Agents;
 
 /// <remarks>
@@ -20,5 +18,5 @@ public sealed record AgentSystem(
     [Summary("How many runs it works on at once, every installation's together, where it says")]
     int? Concurrency = null,
     [Summary("What else it says of itself, as label and value - what it signs in with, the version it runs - never a credential")]
-    IReadOnlyList<IntegrationDetail>? Facts = null
+    IReadOnlyList<AgentFact>? Facts = null
 );

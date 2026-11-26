@@ -83,7 +83,7 @@ public sealed class McpTests
                            .Order()
                            .ToList();
 
-        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "list_secrets", "platform_guide", "read_database", "read_lambda", "read_logs" },
+        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "list_secrets", "platform_guide", "read_attachment", "read_database", "read_lambda", "read_logs" },
                                   reading, "these look and change nothing, so a client may call them without asking");
 
         var delete = tools.Single(t => t!["name"]!.GetValue<string>() == "delete_file")!;

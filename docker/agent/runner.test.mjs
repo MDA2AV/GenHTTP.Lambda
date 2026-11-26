@@ -117,7 +117,7 @@ async function start(env) {
     return { status: response.status, body: await response.json() };
   };
 
-  return { call, output: () => output, stop: () => child.kill() };
+  return { call, port, output: () => output, stop: () => child.kill() };
 }
 
 /** Asks after a job until it has ended. */
@@ -332,6 +332,74 @@ test('an installation added to the file while the runner runs has its builds mad
     assert.equal((await settled(runner.call, A.token, held.id)).result.editorUrl, 'https://a.example.com/editor/key-of-lambda-a');
   } finally {
     rmSync(join(folder, 'release'), { force: true });
+    runner.stop();
+  }
+});
+
+/* ------------------------------------------------------------ protocol 2 */
+
+/** The events of a job as a platform of protocol 2 follows them, until it ended. */
+async function followed(port, token, id, after = 0) {
+  const response = await fetch(`http://127.0.0.1:${port}/build/${id}/events?after=${after}`, { headers: { 'x-agent-token': token } });
+
+  assert.equal(response.status, 200);
+
+  const text = await response.text();
+
+  return text.split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+}
+
+test('a platform of protocol 2 names the run and follows what happens in it as events', { skip }, async () => {
+  const runner = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+  const { port } = runner;
+
+  try {
+    const run = '0f0e0d0c-0b0a-4908-8706-050403020100';
+
+    const taken = await runner.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, protocol: 2, run, view: 'simple', timeout: 120, maxTurns: 7,
+      attachments: [{ id: 'a'.repeat(32), name: 'logo.png', type: 'image/png', size: 2048 }] });
+
+    assert.equal(taken.status, 202);
+    assert.equal(taken.body.id, run, 'filed under the platform\'s own id');
+
+    const events = await followed(port, A.token, run);
+
+    assert.equal(events[0].type, 'queued');
+    assert.ok(events.some(e => e.type === 'started'));
+
+    const ended = events.at(-1);
+
+    assert.equal(ended.type, 'ended');
+    assert.equal(ended.ending, 'completed');
+    assert.equal(ended.message, 'Built at lambda-a.');
+    assert.ok(events.every((e, i) => i === 0 || e.seq > events[i - 1].seq), 'numbered in order');
+
+    // asked again from a position, only what came after it
+    assert.deepEqual((await followed(port, A.token, run, ended.seq - 1)).map(e => e.type), ['ended']);
+
+    // its MCP has the hand-over beside the platform's, and no fetch: the runner reads no page here
+    assert.ok(given(run).config.mcpServers.genhttp);
+  } finally {
+    runner.stop();
+  }
+});
+
+test('an older platform is answered as it always was', { skip }, async () => {
+  const runner = await start({ AGENT_TOKEN: A.token, AGENT_MCP_URL: A.mcp, AGENT_PUBLIC_ORIGIN: A.origin });
+
+  try {
+    const taken = await runner.call(A.token, 'POST', '/build', { prompt: 'a guest book', ticket, run: '0f0e0d0c-0b0a-4908-8706-050403020101' });
+
+    const built = await settled(runner.call, A.token, taken.body.id);
+
+    assert.equal(built.state, 'done');
+    assert.equal(built.result.publicKey, 'made-at-lambda-a', 'with the result it reads');
+
+    const health = await runner.call(A.token, 'GET', '/health');
+
+    assert.equal(health.body.protocol, 2, 'and the protocol it may speak instead');
+    assert.equal(health.body.fetch, false, 'still said the way it understands');
+  } finally {
     runner.stop();
   }
 });

@@ -132,7 +132,7 @@ public sealed class AgentService(AgentSettingsStore settings, AgentGate gate, Bu
 
         var load = await provider.LoadAsync(cancellation);
 
-        return new AgentSystem(load.Reachable, load.Running, load.Queued, load.Capacity, load.Facts);
+        return new AgentSystem(load.Reachable, load.Running, load.Queued, load.Capacity, [.. load.Facts.Select(f => new AgentFact(f.Label, f.Value))]);
     }
 
     public async ValueTask<AgentUsageSummary> UsageAsync(int days, CancellationToken cancellation = default)

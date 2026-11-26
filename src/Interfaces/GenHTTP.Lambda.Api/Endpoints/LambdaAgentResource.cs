@@ -148,7 +148,8 @@ public sealed class LambdaAgentResource(IAgentService agents, IMetaService meta,
              changed set back. What would delete data stays - a kind of data or analytics switched on, files in the workspace - and
              so does a new app; the answer says what was undone and what was left. Undoing twice does nothing more.
              """)]
-    [Response(ResponseStatus.NotFound, "There is no such message about this lambda, or no agent.")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, there is no such message about it, or no agent.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.Conflict, "The message is still under way. Stop it first.")]
     [return: Summary("What was undone, and what was left")]
     public async ValueTask<UndoOutcome> Undo([Summary(ApiDocumentation.PrivateKey)] string privateKey, UndoRequest? body)

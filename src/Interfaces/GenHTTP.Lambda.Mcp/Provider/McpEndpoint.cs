@@ -137,8 +137,10 @@ public static class McpEndpoint
         "saved with what it built - nothing is built here: platform_guide, code.",
         "",
         "If you can make HTTP requests, the REST API ({home}api/v1/openapi.json) does the same",
-        "with fewer tokens: download a feature as a zip, edit locally, put it back. It also lists a",
-        "lambda on the showcase, which no tool does - only when the user asks: platform_guide, showcase.",
+        "with fewer tokens: download a feature as a zip, edit locally, put it back.",
+        "",
+        "Say what an app here cannot do, or needs somebody for - the operator's permission, a key of the",
+        "user's own - rather than build something that pretends: platform_guide, possible.",
         "",
         "If you can run git, clone the lambda instead (read_lambda's gitUrl) - AGENTS.md in it says how: a",
         "commit pushed to main is a version, a branch pushed is a feature - platform_guide, git."

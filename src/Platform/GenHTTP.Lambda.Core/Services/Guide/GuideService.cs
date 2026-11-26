@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Integrations.Agents;
 using GenHTTP.Lambda.Integrations.Databases;
 using GenHTTP.Lambda.Integrations.Files;
 using GenHTTP.Lambda.Integrations.Secrets;
@@ -30,13 +31,13 @@ namespace GenHTTP.Lambda.Services.Guide;
 /// </remarks>
 public sealed class GuideService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses,
                                  IBrandingService branding, ISettingsService settings, IDatabaseProvider database, IFileProvider files,
-                                 ISecretProvider secrets, ISharedFiles shared) : IGuideService
+                                 ISecretProvider secrets, ISharedFiles shared, IAgentProvider? agent = null) : IGuideService
 {
     private const string TitleKey = "guide.title";
 
     private const string TextKey = "guide.text";
 
-    private readonly GuideDocument _document = new(options, tiers, addresses, database, files, secrets);
+    private readonly GuideDocument _document = new(options, tiers, addresses, database, files, secrets, agent);
 
     /// <summary>
     /// Who is changing the section: one at a time, across the write.
