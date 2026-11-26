@@ -20,6 +20,9 @@ const useMeasure = typeof window === 'undefined' ? useEffect : useLayoutEffect;
  * Where the agent takes files, a paper clip picks them - pasting or dropping
  * one works as well - and they are shown above what is typed until sent.
  * Where it takes none there is no paper clip, rather than one that refuses.
+ * In the large box the clip and the button sit in a row under the words, so
+ * the words start at the edge of the box; at the foot of a conversation they
+ * frame a single line.
  */
 export function Composer({
   value,
@@ -89,6 +92,85 @@ export function Composer({
   // a phone's keyboard sends with its button; Enter there is a new line
   const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
+  const clip = policy && (
+    <>
+      <input
+        ref={picker}
+        type="file"
+        multiple={policy.maxCount > 1}
+        accept={attachments?.accept}
+        className="hidden"
+        tabIndex={-1}
+        onChange={(event) => {
+          take(event.target.files);
+          event.target.value = '';
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => picker.current?.click()}
+        disabled={disabled || full}
+        aria-label={said.files.attach}
+        title={said.files.attachHint(policy.maxCount, bytes(policy.maxBytes))}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-ink-850 dark:hover:text-slate-200"
+      >
+        <IconPaperclip className="h-[18px] w-[18px]" />
+      </button>
+    </>
+  );
+
+  const words = (
+    <textarea
+      ref={box}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onPaste={(event) => {
+        // a picture pasted goes with the message, where the agent takes
+        // files - but what comes with text as well (a copy out of a
+        // spreadsheet carries a picture of itself) is pasted as text
+        if (policy && event.clipboardData.files.length > 0 && !event.clipboardData.types.includes('text/plain')) {
+          event.preventDefault();
+          take(event.clipboardData.files);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' && !event.shiftKey && !coarse && !event.nativeEvent.isComposing) {
+          event.preventDefault();
+
+          if (ready && !running) {
+            onSend();
+          }
+        }
+      }}
+      rows={large ? 2 : 1}
+      maxLength={2000}
+      disabled={disabled}
+      aria-label={label}
+      placeholder={placeholder}
+      className={`block w-full resize-none bg-transparent px-3 py-2 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed dark:placeholder:text-slate-500 ${
+        large ? 'min-h-[4.5rem] text-lg leading-relaxed' : 'min-h-[2.5rem] text-[15px] leading-relaxed'
+      }`}
+    />
+  );
+
+  const send =
+    running && onStop ? (
+      <button
+        type="button"
+        onClick={onStop}
+        disabled={stopping}
+        aria-label={stopping ? said.stopping : said.stop}
+        title={stopping ? said.stopping : said.stop}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-ink-950 dark:hover:bg-white"
+      >
+        {stopping ? <IconSpinner className="h-4 w-4" /> : <IconStop className="h-3.5 w-3.5" />}
+      </button>
+    ) : (
+      <button type="button" onClick={onSend} disabled={!ready || running || disabled} aria-label={said.send} title={said.send} className="btn-send h-9 w-9 shrink-0">
+        {busy ? <IconSpinner className="h-4 w-4" /> : <IconArrowUp className="h-4 w-4" />}
+      </button>
+    );
+
   return (
     <div>
       <div
@@ -122,90 +204,25 @@ export function Composer({
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-        {policy && (
+        {large ? (
+          // the first box of a page: what is typed spans the box, the paper
+          // clip and the button wait in a row below it - nothing beside the
+          // words pushes them in
           <>
-            <input
-              ref={picker}
-              type="file"
-              multiple={policy.maxCount > 1}
-              accept={attachments?.accept}
-              className="hidden"
-              tabIndex={-1}
-              onChange={(event) => {
-                take(event.target.files);
-                event.target.value = '';
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => picker.current?.click()}
-              disabled={disabled || full}
-              aria-label={said.files.attach}
-              title={said.files.attachHint(policy.maxCount, bytes(policy.maxBytes))}
-              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:hover:bg-ink-850 dark:hover:text-slate-200"
-            >
-              <IconPaperclip className="h-[18px] w-[18px]" />
-            </button>
+            {words}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center">{clip}</div>
+              {send}
+            </div>
           </>
-        )}
-
-        <textarea
-          ref={box}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onPaste={(event) => {
-            // a picture pasted goes with the message, where the agent takes
-            // files - but what comes with text as well (a copy out of a
-            // spreadsheet carries a picture of itself) is pasted as text
-            if (policy && event.clipboardData.files.length > 0 && !event.clipboardData.types.includes('text/plain')) {
-              event.preventDefault();
-              take(event.clipboardData.files);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && !coarse && !event.nativeEvent.isComposing) {
-              event.preventDefault();
-
-              if (ready && !running) {
-                onSend();
-              }
-            }
-          }}
-          rows={large ? 3 : 1}
-          maxLength={2000}
-          disabled={disabled}
-          aria-label={label}
-          placeholder={placeholder}
-          className={`block w-full resize-none bg-transparent px-3 py-2 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed dark:placeholder:text-slate-500 ${
-            large ? 'min-h-[5.5rem] text-lg leading-relaxed' : 'min-h-[2.5rem] text-[15px] leading-relaxed'
-          }`}
-        />
-
-        {running && onStop ? (
-          <button
-            type="button"
-            onClick={onStop}
-            disabled={stopping}
-            aria-label={stopping ? said.stopping : said.stop}
-            title={stopping ? said.stopping : said.stop}
-            className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-ink-950 dark:hover:bg-white"
-          >
-            {stopping ? <IconSpinner className="h-4 w-4" /> : <IconStop className="h-3.5 w-3.5" />}
-          </button>
         ) : (
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={!ready || running || disabled}
-            aria-label={said.send}
-            title={said.send}
-            className="btn-send mb-0.5 h-9 w-9 shrink-0"
-          >
-            {busy ? <IconSpinner className="h-4 w-4" /> : <IconArrowUp className="h-4 w-4" />}
-          </button>
+          // at the foot of a conversation, one line as in any chat
+          <div className="flex items-end gap-2">
+            {clip && <div className="mb-0.5 flex">{clip}</div>}
+            {words}
+            <div className="mb-0.5 flex">{send}</div>
+          </div>
         )}
-        </div>
       </div>
 
       {attachments?.problem && (
